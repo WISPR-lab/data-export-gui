@@ -31,7 +31,7 @@ tsctl create-user admin --password pwd
 Do not use these in a prod environment, obviously.
 
 
-## Editing
+## Development
 
 Everytime you make an edit to the `timesketch/` directory, you'll need to rebuild/install the package locally: `pip install -e`.
 pip install -e
