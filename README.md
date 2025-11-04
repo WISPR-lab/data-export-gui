@@ -33,5 +33,9 @@ Do not use these in a prod environment, obviously.
 
 ## Development
 
-Everytime you make an edit to the `timesketch/` directory, you'll need to rebuild/install the package locally: `pip install -e`.
-pip install -e
+If you make changes to the `timesketch/` directory that aren't updating correctly, you may need to rebuild/install the package locally: `pip install -e`.
+
+To take down and reconfigure the opensearch node, run
+```sh
+    source setup_scripts/opensearch.sh --down --rm-data
+```
