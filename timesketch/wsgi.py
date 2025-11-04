@@ -34,7 +34,7 @@ Example configuration for Apache with mod_wsgi (a2enmod mod_wsgi):
 import os
 import logging
 
-from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
+# from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
 
 from timesketch.app import configure_logger
 from timesketch.app import create_app
@@ -48,9 +48,9 @@ application_legacy = create_app(legacy_ui=True)
 application_v3 = create_app(v3_ui=True)
 
 # Setup metrics endpoint.
-if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
-    logger.info("Metrics server enabled")
-    GunicornPrometheusMetrics(application, group_by="endpoint")
+# if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+#     logger.info("Metrics server enabled")
+    # GunicornPrometheusMetrics(application, group_by="endpoint")
 
 
 # pylint: disable=unused-argument

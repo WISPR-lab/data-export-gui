@@ -18,7 +18,7 @@ import multiprocessing.managers
 import time
 from typing import Any
 
-import prometheus_client
+# import prometheus_client
 from flask import request, abort, jsonify, Response
 from flask_login import login_required, current_user
 from flask_restful import Resource
@@ -41,26 +41,26 @@ class LLMResource(resources.ResourceMixin, Resource):
     and delegates the actual processing to the feature implementations.
     """
 
-    METRICS = {
-        "llm_requests_total": prometheus_client.Counter(
-            "llm_requests_total",
-            "Total number of LLM requests received",
-            ["sketch_id", "feature"],
-            namespace=METRICS_NAMESPACE,
-        ),
-        "llm_errors_total": prometheus_client.Counter(
-            "llm_errors_total",
-            "Total number of errors during LLM processing",
-            ["sketch_id", "feature", "error_type"],
-            namespace=METRICS_NAMESPACE,
-        ),
-        "llm_duration_seconds": prometheus_client.Summary(
-            "llm_duration_seconds",
-            "Time taken to process an LLM request (in seconds)",
-            ["sketch_id", "feature"],
-            namespace=METRICS_NAMESPACE,
-        ),
-    }
+    # METRICS = {
+    #     "llm_requests_total": prometheus_client.Counter(
+    #         "llm_requests_total",
+    #         "Total number of LLM requests received",
+    #         ["sketch_id", "feature"],
+    #         namespace=METRICS_NAMESPACE,
+    #     ),
+    #     "llm_errors_total": prometheus_client.Counter(
+    #         "llm_errors_total",
+    #         "Total number of errors during LLM processing",
+    #         ["sketch_id", "feature", "error_type"],
+    #         namespace=METRICS_NAMESPACE,
+    #     ),
+    #     "llm_duration_seconds": prometheus_client.Summary(
+    #         "llm_duration_seconds",
+    #         "Time taken to process an LLM request (in seconds)",
+    #         ["sketch_id", "feature"],
+    #         namespace=METRICS_NAMESPACE,
+    #     ),
+    # }
     # TODO(itsmvd): Make this configurable
     _LLM_TIMEOUT_WAIT_SECONDS = 30
 
@@ -85,7 +85,7 @@ class LLMResource(resources.ResourceMixin, Resource):
         sketch = self._validate_sketch(sketch_id)
         form = self._validate_request_data()
         feature_instance = self._get_feature(form.get("feature"))
-        self._increment_request_metric(sketch_id, feature_instance.NAME)
+        # self._increment_request_metric(sketch_id, feature_instance.NAME)
         timeline_ids = self._validate_indices(sketch, form.get("filter", {}))
 
         try:
@@ -100,11 +100,11 @@ class LLMResource(resources.ResourceMixin, Resource):
                 e,
                 exc_info=True,
             )
-            self.METRICS["llm_errors_total"].labels(
-                sketch_id=str(sketch_id),
-                feature=feature_instance.NAME,
-                error_type="provider_creation_error",
-            ).inc()
+            # self.METRICS["llm_errors_total"].labels(
+            #     sketch_id=str(sketch_id),
+            #     feature=feature_instance.NAME,
+            #     error_type="provider_creation_error",
+            # ).inc()
             abort(
                 definitions.HTTP_STATUS_CODE_INTERNAL_SERVER_ERROR,
                 f"Error initializing LLM provider: {str(e)}",
@@ -138,7 +138,7 @@ class LLMResource(resources.ResourceMixin, Resource):
                     feature_instance, sketch, form, timeline_ids, llm_provider
                 )
 
-            self._record_duration(sketch_id, feature_instance.NAME, start_time)
+            # self._record_duration(sketch_id, feature_instance.NAME, start_time)
             return jsonify(result)
 
         except ValueError as e:
@@ -148,11 +148,11 @@ class LLMResource(resources.ResourceMixin, Resource):
                 sketch_id,
                 e,
             )
-            self.METRICS["llm_errors_total"].labels(
-                sketch_id=str(sketch_id),
-                feature=feature_instance.NAME,
-                error_type="value_error",
-            ).inc()
+            # self.METRICS["llm_errors_total"].labels(
+            #     sketch_id=str(sketch_id),
+            #     feature=feature_instance.NAME,
+            #     error_type="value_error",
+            # ).inc()
             abort(
                 definitions.HTTP_STATUS_CODE_BAD_REQUEST,
                 f"Unable to execute LLM feature ({feature_instance.NAME}): {str(e)}.",
@@ -165,11 +165,11 @@ class LLMResource(resources.ResourceMixin, Resource):
                 e,
                 exc_info=True,
             )
-            self.METRICS["llm_errors_total"].labels(
-                sketch_id=str(sketch_id),
-                feature=feature_instance.NAME,
-                error_type="unhandled_exception",
-            ).inc()
+            # self.METRICS["llm_errors_total"].labels(
+            #     sketch_id=str(sketch_id),
+            #     feature=feature_instance.NAME,
+            #     error_type="unhandled_exception",
+            # ).inc()
             abort(
                 definitions.HTTP_STATUS_CODE_INTERNAL_SERVER_ERROR,
                 f"An unexpected error occurred: {str(e)}",
@@ -412,11 +412,11 @@ class LLMResource(resources.ResourceMixin, Resource):
                 )
                 process.terminate()
                 process.join()
-                self.METRICS["llm_errors_total"].labels(
-                    sketch_id=str(sketch_id),
-                    feature=feature.NAME,
-                    error_type="llm_call_timeout",
-                ).inc()
+                # self.METRICS["llm_errors_total"].labels(
+                #     sketch_id=str(sketch_id),
+                #     feature=feature.NAME,
+                #     error_type="llm_call_timeout",
+                # ).inc()
                 abort(
                     definitions.HTTP_STATUS_CODE_GATEWAY_TIMEOUT,
                     "LLM call timed out. The operation took too long to complete.",
@@ -430,11 +430,11 @@ class LLMResource(resources.ResourceMixin, Resource):
                     sketch_id,
                     error_msg,
                 )
-                self.METRICS["llm_errors_total"].labels(
-                    sketch_id=str(sketch_id),
-                    feature=feature.NAME,
-                    error_type="llm_api_error",
-                ).inc()
+                # self.METRICS["llm_errors_total"].labels(
+                #     sketch_id=str(sketch_id),
+                #     feature=feature.NAME,
+                #     error_type="llm_api_error",
+                # ).inc()
                 abort(
                     definitions.HTTP_STATUS_CODE_INTERNAL_SERVER_ERROR,
                     f"Error during LLM processing: {error_msg}",
@@ -442,38 +442,38 @@ class LLMResource(resources.ResourceMixin, Resource):
 
             return shared_response.get("response")
 
-    def _increment_request_metric(self, sketch_id: int, feature_name: str) -> None:
-        """Increments the Prometheus counter for total LLM requests.
+    # def _increment_request_metric(self, sketch_id: int, feature_name: str) -> None:
+    #     """Increments the Prometheus counter for total LLM requests.
 
-        This method is called at the beginning of a request to track the usage
-        of different LLM features per sketch.
+    #     This method is called at the beginning of a request to track the usage
+    #     of different LLM features per sketch.
 
-        Args:
-            sketch_id: The ID of the sketch for which the request is made.
-            feature_name: The name of the LLM feature being requested.
-        """
-        self.METRICS["llm_requests_total"].labels(
-            sketch_id=str(sketch_id), feature=feature_name
-        ).inc()
+    #     Args:
+    #         sketch_id: The ID of the sketch for which the request is made.
+    #         feature_name: The name of the LLM feature being requested.
+    #     """
+    #     self.METRICS["llm_requests_total"].labels(
+    #         sketch_id=str(sketch_id), feature=feature_name
+    #     ).inc()
 
-    def _record_duration(
-        self, sketch_id: int, feature_name: str, start_time: float
-    ) -> None:
-        """Records the duration of the LLM request processing in a Prometheus summary.
+    # def _record_duration(
+    #     self, sketch_id: int, feature_name: str, start_time: float
+    # ) -> None:
+    #     """Records the duration of the LLM request processing in a Prometheus summary.
 
-        This method calculates the time elapsed since the start_time and records
-        it in the `llm_duration_seconds` metric.
+    #     This method calculates the time elapsed since the start_time and records
+    #     it in the `llm_duration_seconds` metric.
 
-        Args:
-            sketch_id: The ID of the sketch for which the request was made.
-            feature_name: The name of the LLM feature that was executed.
-            start_time: The timestamp (from time.time()) when the request
-                processing started.
-        """
-        duration = time.time() - start_time
-        self.METRICS["llm_duration_seconds"].labels(
-            sketch_id=str(sketch_id), feature=feature_name
-        ).observe(duration)
+    #     Args:
+    #         sketch_id: The ID of the sketch for which the request was made.
+    #         feature_name: The name of the LLM feature that was executed.
+    #         start_time: The timestamp (from time.time()) when the request
+    #             processing started.
+    #     """
+    #     duration = time.time() - start_time
+    #     self.METRICS["llm_duration_seconds"].labels(
+    #         sketch_id=str(sketch_id), feature=feature_name
+    #     ).observe(duration)
 
     def _get_content_with_timeout(
         self,

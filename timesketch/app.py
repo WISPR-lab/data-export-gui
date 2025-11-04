@@ -18,10 +18,11 @@ import logging
 import os
 import sys
 from typing import Optional, Union
+import traceback
 
 
 from flask import Flask
-from celery import Celery
+# from celery import Celery
 
 from flask_login import LoginManager
 from flask_login import login_required
@@ -56,27 +57,35 @@ def create_app(
         Application object (instance of flask.Flask).
     """
     # Determine which frontend assets to serve
-    if legacy_ui:
-        template_folder = "frontend/dist"
-        static_folder = "frontend/dist"
-    elif v3_ui:
-        template_folder = "frontend-v3/dist"
-        static_folder = "frontend-v3/dist/assets"
-    else:
-        template_folder = "frontend-ng/dist"
-        static_folder = "frontend-ng/dist"
+    # if legacy_ui:
+    #     template_folder = "frontend/dist"
+    #     static_folder = "frontend/dist"
+    # elif v3_ui:
+    #     template_folder = "frontend-v3/dist"
+    #     static_folder = "frontend-v3/dist/assets"
+    # else:
+    #     template_folder = "frontend-ng/dist"
+    #     static_folder = "frontend-ng/dist"
+
+    template_folder = "frontend-ng/dist"
+    static_folder = "frontend-ng/dist"
 
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
+
+    print("testing print")
+
 
     if not config:
         # Where to find the config file
         default_path = "/etc/timesketch/timesketch.conf"
         # Fall back to legacy location of the config file
-        legacy_path = "/etc/timesketch.conf"
+        # legacy_path = "/etc/timesketch.conf"
+        legacy_path = "../timesketch.conf"
         if os.path.isfile(default_path):
             config = default_path
         else:
             config = legacy_path
+
 
     if isinstance(config, str):
         os.environ["TIMESKETCH_SETTINGS"] = config
@@ -89,7 +98,8 @@ def create_app(
                     "Please update timesketch.conf."
                 )
         except OSError:
-            sys.stderr.write(f"Config file {config} does not exist.\n")
+            sys.stderr.write(f"Config file {config} incomplete.\n")
+            traceback.print_exc()
             sys.exit()
     else:
         app.config.from_object(config)
@@ -216,26 +226,26 @@ def configure_logger():
         handler.addFilter(logger_filter)
 
 
-def create_celery_app():
-    """Create a Celery app instance."""
-    app = create_app()
-    celery = Celery(app.import_name, broker=app.config["CELERY_BROKER_URL"])
-    celery.conf.update(app.config)
-    TaskBase = celery.Task
+# def create_celery_app():
+#     """Create a Celery app instance."""
+#     app = create_app()
+#     celery = Celery(app.import_name, broker=app.config["CELERY_BROKER_URL"])
+#     celery.conf.update(app.config)
+#     TaskBase = celery.Task
 
-    class ContextTask(TaskBase):
-        """Add Flask context to the Celery tasks created."""
+#     class ContextTask(TaskBase):
+#         """Add Flask context to the Celery tasks created."""
 
-        abstract = True
+#         abstract = True
 
-        def __call__(self, *args, **kwargs):
-            """Return Task within a Flask app context.
+#         def __call__(self, *args, **kwargs):
+#             """Return Task within a Flask app context.
 
-            Returns:
-                A Task (instance of Celery.celery.Task)
-            """
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
+#             Returns:
+#                 A Task (instance of Celery.celery.Task)
+#             """
+#             with app.app_context():
+#                 return TaskBase.__call__(self, *args, **kwargs)
 
-    celery.Task = ContextTask
-    return celery
+#     celery.Task = ContextTask
+#     return celery

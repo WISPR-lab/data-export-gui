@@ -16,7 +16,7 @@ import fnmatch
 import collections
 import logging
 
-import prometheus_client
+# import prometheus_client
 
 from flask import jsonify
 from flask import request
@@ -37,15 +37,15 @@ from timesketch.models.sketch import AnalysisSession
 from timesketch.models.sketch import Sketch
 from timesketch.models.sketch import Timeline
 
-# Metrics definitions
-METRICS = {
-    "analyzer_run": prometheus_client.Counter(
-        "timesketch_analyzer_run",
-        "Number of runs per analyzer",
-        ["name"],
-        namespace=METRICS_NAMESPACE,
-    )
-}
+# # Metrics definitions
+# METRICS = {
+#     "analyzer_run": prometheus_client.Counter(
+#         "timesketch_analyzer_run",
+#         "Number of runs per analyzer",
+#         ["name"],
+#         namespace=METRICS_NAMESPACE,
+#     )
+# }
 
 # Set up logging
 logger = logging.getLogger("timesketch.analysis_api")
@@ -286,7 +286,7 @@ class AnalyzerRunResource(resources.ResourceMixin, Resource):
         for analyzer in analyzer_names:
             for correct_name in all_analyzers:
                 if fnmatch.fnmatch(correct_name, analyzer):
-                    METRICS["analyzer_run"].labels(name=correct_name).inc()
+                    # METRICS["analyzer_run"].labels(name=correct_name).inc()
                     analyzers.append(correct_name)
 
         if not analyzers:

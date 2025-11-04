@@ -18,7 +18,7 @@ import io
 import json
 import zipfile
 
-import prometheus_client
+# import prometheus_client
 
 from flask import abort
 from flask import jsonify
@@ -50,14 +50,14 @@ from timesketch.models.sketch import Facet
 from timesketch.models.sketch import InvestigativeQuestion
 
 # Metrics definitions
-METRICS = {
-    "searchhistory": prometheus_client.Counter(
-        "searchhistory",
-        "Search History actions",
-        ["action"],
-        namespace=METRICS_NAMESPACE,
-    )
-}
+# METRICS = {
+#     "searchhistory": prometheus_client.Counter(
+#         "searchhistory",
+#         "Search History actions",
+#         ["action"],
+#         namespace=METRICS_NAMESPACE,
+#     )
+# }
 
 
 class ExploreResource(resources.ResourceMixin, Resource):
@@ -410,11 +410,14 @@ class ExploreResource(resources.ResourceMixin, Resource):
                 # Create metric if user creates a new branch.
                 if new_search.parent:
                     if len(new_search.parent.children) > 1:
-                        METRICS["searchhistory"].labels(action="branch").inc()
+                        # METRICS["searchhistory"].labels(action="branch").inc()
+                        pass
             else:
-                METRICS["searchhistory"].labels(action="ignore_same_query").inc()
+                # METRICS["searchhistory"].labels(action="ignore_same_query").inc()
+                pass
         else:
-            METRICS["searchhistory"].labels(action="incognito").inc()
+            # METRICS["searchhistory"].labels(action="incognito").inc()
+            pass
 
         search_node = new_search if new_search.id else previous_search
 
