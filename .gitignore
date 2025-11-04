@@ -4,6 +4,8 @@ data/opensearch/
 data/*.db
 
 
+pyvenv.cfg
+
 .DS_Store
 
 # Back-up files
