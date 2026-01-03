@@ -25,7 +25,7 @@ limitations under the License.
         <v-row align="center" justify="center">
           <v-sheet class="pa-4" style="background: transparent">
             <center>
-              <v-img src="/dist/empty-state.png" max-height="100" max-width="300"></v-img>
+              <v-img src="/empty-state.png" max-height="100" max-width="300"></v-img>
               <div style="font-size: 2em" class="mb-3 mt-3">It's empty around here</div>
               <ts-upload-timeline-form-button btn-size="normal" btn-type="rounded"></ts-upload-timeline-form-button>
             </center>
@@ -38,7 +38,7 @@ limitations under the License.
         <v-row align="center" justify="center">
           <v-sheet class="pa-4">
             <center>
-              <v-img src="/dist/empty-state.png" max-height="100" max-width="300"></v-img>
+              <v-img src="/empty-state.png" max-height="100" max-width="300"></v-img>
               <div style="font-size: 2em" class="mb-3 mt-3">This sketch is archived</div>
               <v-btn rounded depressed color="primary" @click="unArchiveSketch()"> Bring it back </v-btn>
             </center>
@@ -80,6 +80,7 @@ limitations under the License.
             <v-img src="/dist/timesketch-color.png" max-height="25" max-width="25" contain></v-img>
           </router-link>
         </v-avatar> -->
+        
 
         <v-hover v-slot="{ hover }">
           <div class="d-flex flex-wrap">
@@ -96,10 +97,10 @@ limitations under the License.
               "
               :title="sketch.name"
             >
-              {{ sketch.name }}
+              <span class="font-weight-bold">Project:</span>&nbsp;  {{ sketch.name }}
             </div>
             <div>
-              <v-icon title="Rename sketch" small class="ml-1" v-if="hover" @click="renameSketchDialog = true"
+              <v-icon title="Rename Project" small class="ml-1" v-if="hover" @click="renameSketchDialog = true"
                 >mdi-pencil</v-icon
               >
             </div>
@@ -121,7 +122,9 @@ limitations under the License.
         <!-- <v-avatar color="grey lighten-1" size="25" class="ml-2">
           <span class="white--text">{{ currentUser | initialLetter }}</span>
         </v-avatar> -->
-        <v-menu offset-y>
+
+        <PageHeaderMobileMenu visibilityClass="" />
+        <!-- <v-menu offset-y>
           <template v-slot:activator="{ on, attrs }">
             <v-avatar>
               <v-btn small icon v-bind="attrs" v-on="on">
@@ -179,14 +182,14 @@ limitations under the License.
                   </v-list-item-content>
                 </v-list-item>
 
-                <!-- <v-list-item @click="archiveSketch()" :disabled="isArchived">
+                <v-list-item @click="archiveSketch()" :disabled="isArchived">
                   <v-list-item-icon>
                     <v-icon>mdi-archive</v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>Archive sketch</v-list-item-title>
                   </v-list-item-content>
-                </v-list-item> -->
+                </v-list-item>
 
                 <v-list-item v-if="meta.permissions && meta.permissions.delete" @click="deleteSketch()">
                   <v-list-item-icon>
@@ -215,7 +218,7 @@ limitations under the License.
                   </v-list-item-content>
                 </v-list-item>
 
-                <!-- <a href="/logout/" style="text-decoration: none; color: inherit">
+                <a href="/logout/" style="text-decoration: none; color: inherit">
                   <v-list-item>
                     <v-list-item-icon>
                       <v-icon>mdi-logout</v-icon>
@@ -225,11 +228,12 @@ limitations under the License.
                       <v-list-item-title>Logout</v-list-item-title>
                     </v-list-item-content>
                   </v-list-item>
-                </a> -->
+                </a>
               </v-list-item-group>
             </v-list>
           </v-card>
-        </v-menu>
+        </v-menu> -->
+
       </v-app-bar>
 
       <!-- Left panel -->
@@ -358,6 +362,7 @@ limitations under the License.
 import BrowserDB from '../database.js'
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
+import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.vue'
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
@@ -382,6 +387,7 @@ import TsInvestigation from '../components/LeftPanel/Investigation.vue'
 export default {
   props: ['sketchId'],
   components: {
+    PageHeaderMobileMenu,
     TsSavedSearches,
     TsDataTypes,
     TsTags,
@@ -440,13 +446,15 @@ export default {
     }
   },
   mounted() {
+    const sketchID = Number(this.sketchId)
     this.loadingSketch = true
     
     // Load sketch and related data directly from BrowserDB
-    BrowserDB.getSketch(this.sketchId).then(response => {
+    BrowserDB.getSketch(sketchID).then(response => {
       const sketch = response.data.objects[0]
+
       // Load timelines for this sketch
-      return BrowserDB.getTimelines(this.sketchId).then(timelinesResponse => {
+      return BrowserDB.getTimelines(sketchID).then(timelinesResponse => {
         sketch.timelines = timelinesResponse.data.objects || []
         sketch.active_timelines = sketch.timelines // Default to all timelines active
         this.$store.commit('SET_SKETCH', { objects: [sketch], meta: response.data.meta || {} })

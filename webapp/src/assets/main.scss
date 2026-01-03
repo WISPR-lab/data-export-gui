@@ -1,3 +1,13 @@
+// Utility classes (from SearchDropdown.vue conventions)
+.gap-2 {
+  gap: 8px;
+}
+.gap-3 {
+  gap: 12px;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
 html {
   overflow-y: auto;
 }
@@ -208,3 +218,21 @@ html {
   -o-transition: none !important;
   transition: none !important;
 }
+
+
+.line-height-relaxed {
+  line-height: 1.6;
+}
+
+
+// .primary {
+
+// }
+
+// .primary-font {
+//   color: #1976d2;
+// }
+// .primary-btn {
+//   background-color: #1976d2;
+//   color: #fff;
+// }

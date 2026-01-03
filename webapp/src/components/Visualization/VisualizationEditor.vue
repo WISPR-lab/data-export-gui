@@ -88,7 +88,7 @@ limitations under the License.
         <v-col cols="8" :class="chartSeries == null? 'd-flex justify-center align-center' : ''">
           <v-img
             v-if="chartSeries == null"
-            src="/dist/vis_placeholder.png"
+            src="/vis_placeholder.png"
             max-width="600"
             max-height="500"
             contain

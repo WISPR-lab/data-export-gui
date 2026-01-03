@@ -19,7 +19,7 @@ limitations under the License.
     <v-toolbar flat color="transparent">
       <v-avatar class="mt-2 ml-n3">
         <router-link to="/">
-          <v-img src="/dist/timesketch-color.png" max-height="25" max-width="25" contain></v-img>
+          <v-img src="/timesketch-color.png" max-height="25" max-width="25" contain></v-img>
         </router-link>
       </v-avatar>
       <span style="font-size: 1.2em">timesketch</span>

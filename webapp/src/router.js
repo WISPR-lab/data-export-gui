@@ -19,6 +19,7 @@ import VueRouter from 'vue-router'
 import Home from './views/Home.vue'
 import Canvas from './views/Canvas.vue'
 import Sketch from './views/Sketch.vue'
+import HowToRequest from './views/HowToRequest.vue'
 
 Vue.use(VueRouter)
 
@@ -27,6 +28,11 @@ const routes = [
     name: 'Home',
     path: '/',
     component: Home,
+  },
+  {
+    name: 'HowToRequest',
+    path: '/how-to-request',
+    component: HowToRequest,
   },
   {
     // Sketch
