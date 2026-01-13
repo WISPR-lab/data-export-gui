@@ -1,0 +1,81 @@
+# do not change
+
+top_level_fields:
+  required: 
+    manifest_version: integer
+    id: string
+    name: string
+    last_updated: date
+    data_types: list
+  optional: 
+
+data_type_fields:
+  required:
+    temporal: enum(event, state)
+    category: string
+    files: list
+  optional:
+
+file_fields:
+  required:
+    path: string
+    parser: dict
+  optional: 
+    identifiers: dict
+
+event_file_fields:
+  required:
+    primary_date: string
+  optional:
+
+state_file_fields:
+  required:
+  optional:
+    first_date: string
+    last_date: string
+
+parser_fields:
+  required:
+  optional:
+    format: enum(csv, multi_csv, json, jsonl)
+    filter: string
+
+
+identifier_fields:
+  required:
+  optional:
+    app_info: string
+    ip: string
+    browser: string
+    serial: string
+    imei: string
+    meid: string
+    user_agent: string
+    device_model: string
+    model: string
+    model_ver: string
+    model_ver_code: string
+    os: string
+    os_ver: string
+    cookie: string
+    cookie_redacted: string
+    given_name: string
+    internal_device_id: string
+    internal_hardware_id: string
+    google_ad_id: string
+    android_id: string
+    fb_ad_id: string
+    session_id: string
+
+
+valid_categories:
+  auth:
+    login: [attempt, success, failure]
+    logout: []
+    checkpoint: [initiate, pass]
+    sessions: []
+    pwd: [change, reset_request]
+    primary_email: [change, change_attempt]
+    primary_phone: [change, change_attempt]
+    recovery_email: [addition, removal]
+  data_export: [request, completion]

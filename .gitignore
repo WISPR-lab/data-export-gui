@@ -1,5 +1,9 @@
 *# Files to ignore by git
 
+
+takeout-tool.code-workspace
+*/reference_docs/
+
 data/opensearch/
 data/*.db
 

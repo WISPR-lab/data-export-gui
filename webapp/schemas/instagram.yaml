@@ -1,0 +1,88 @@
+manifest_version: 1
+id: instagram
+name: "Instagram"
+last_updated: "2025-11-24"
+
+data_types:
+
+# LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login"
+  files:
+  - path: "security_and_login_information/login_and_profile_creation/login_activity.json"
+    parser:
+      format: "json"
+      json_root: "account_history_login_history[]"
+    fields:
+    - {name: "primary_timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+    - {name: "ip", source: "string_map_data.'IP Address'.value", type: "string"}
+    - {name: "user_agent", source: "string_map_data.'User Agent'.value", type: "string"}
+    - {name: "cookie_redacted", source: "string_map_data.'Cookie Name'.value", type: "string"}
+
+  # LOGOUT EVENTS
+- temporal: "event" 
+  category: "auth.logout"
+  files:
+  - path: "security_and_login_information/login_and_profile_creation/logout_activity.json"
+    parser:
+      format: "json"
+      json_root: "account_history_logout_history[]"
+    fields:
+    - {name: "primary_timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+    - {name: "ip", source: "string_map_data.'IP Address'.value", type: "string"}
+    - {name: "user_agent", source: "string_map_data.'User Agent'.value", type: "string"}
+    - {name: "cookie_redacted", source: "string_map_data.'Cookie Name'.value", type: "string"}
+
+# PASSWORD CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.pwd.change"
+  files:
+  - path: "security_and_login_information/login_and_profile_creation/password_change_activity.json"
+    parser:
+      format: "json"
+      json_root: "account_history_password_change_history[]"
+    fields:
+    - {name: "primary_timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+
+
+# RECOVERY/LEGACY CONTACT EVENTS
+- temporal: "event" 
+  category: "auth.primary_email.addition"
+  files:
+  - path: "personal_information/personal_information/profile_changes.json"
+    parser:
+      format: "json"
+      json_root: "profile_profile_change[]"
+      filter:
+        - {field: "string_map_data.Changed.value", value: "Email"}
+    fields:
+    - {name: "primary_timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+    - {name: "old_email", source: "string_map_data.'Previous Value'.value", type: "string"}
+    - {name: "new_email", source: "string_map_data.'New Value'.value", type: "string"}
+
+
+# DATA TAKEOUT EVENTS
+- temporal: "event" 
+  category: "data_export.request"
+  files:
+  - path:  "your_instagram_activity/other_activity/your_information_download_requests.json"
+    parser:
+      format: "json_label_values"
+      json_root: "[]"
+    fields:
+    - {name: "primary_timestamp", source: "timestamp", type: "datetime"}
+
+# ---------------------------------------------- #
+
+# AUTHENTICATED DEVICES
+- temporal: "state" 
+  category: "auth.sessions"
+  files:
+  - path: "personal_information/device_information/devices.json"
+    parser:
+      format: "json"
+      json_root: "devices_devices[]"
+    fields: 
+    - {name: "last_timestamp", source: "string_map_data.'Last Login'.timestamp", type: "datetime"}
+    - {name: "user_agent", source: "string_map_data.'User Agent'.value", type: "string"}
+

@@ -1,0 +1,88 @@
+manifest_version: 1
+id: google
+name: "Google"
+last_updated: "2025-11-24"
+
+data_types:
+
+  # LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login"
+  files:
+  - path: "Google Account/*.SubscriberInfo.html"
+    parser: #todo
+    primary_date: "Timestamp"
+    identifiers: 
+      ip: "IP Address"
+      user_agent: "Raw User Agents"
+  
+# FAILED LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login.failed"
+  files:
+  - path: "Google Account/*.SubscriberInfo.html"
+    parser: #todo
+    primary_date: "Timestamp"
+    identifiers: 
+      ip: "IP Address"
+      user_agent: "Raw User Agents"
+
+# PASSWORD CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.pwd.change"
+  files:
+  - path: "Google Account/*.ChangeHistory.html"
+    parser: #todo
+    primary_date: "Timestamp"
+    identifiers: 
+      ip: "IP Address"
+
+
+# RECOVERY/LEGACY CONTACT EVENTS
+- temporal: "event" 
+  category: "auth.recovery_email.addition"
+  files:
+  - path: "Google Account/*.ChangeHistory.html"
+    parser: #todo - group by REcivery ID
+    primary_date: "Timestamp"
+    identifiers: 
+      ip: "IP Address"
+
+
+# DATA TAKEOUT EVENTS
+- temporal: "event" 
+  category: "data_export.request"
+  files:
+  - path: "My Activity/Takeout/MyActivity.html"
+    parser: #todo - group by Request ID
+
+# ---------------------------------------------- #
+# AUTHENTICATED DEVICES
+- temporal: "state" 
+  category: "auth.sessions"
+  files:
+    - path: "Access Log Activity/Devices - A list of devices*.csv"
+      parser: #todo
+      first_date: 
+      last_date: "Last Activity Time"
+      identifiers:
+        model_ver: "Marketing Name"
+        model_ver_code: "Device Model"
+        os: "OS"
+        os_ver: "OS Version"
+        given_name: "User Given Name"
+
+    - path: "Timeline/Settings.json"
+      parser: #todo
+      first_date: "<D>deviceSettings<L><D>deviceCreationTime"
+      last_date:
+      identifiers:
+        model_ver_code: "<D>deviceSettings<L><D>deviceSpec<D>device"
+        os: "<D>deviceSettings<L><D>platformType"
+        os_ver: "<D>deviceSettings<L><D>iosVersion"
+        given_name: "<D>deviceSettings<L><D>devicePrettyName"
+        internal_device_id: "<D>deviceSettings<L><D>deviceTag"
+
+    
+  
+
