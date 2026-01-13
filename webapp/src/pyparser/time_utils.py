@@ -104,3 +104,13 @@ def get_tzinfo(date: Union[str, datetime], fuzzy=True) -> str:
         date = parse_date(date, fuzzy, fail_action='raise')
     return date.tzinfo
 
+
+# --------
+
+def unix_ms(dt: datetime) -> int:
+    """Convert datetime to unix timestamp in milliseconds."""
+    if dt is None:
+        return 0
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=pytz.UTC)
+    return int(dt.timestamp() * 1000)

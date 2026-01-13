@@ -1,4 +1,4 @@
-from .format_handler import FormatHandler
+from .base import BaseParser
 import re
 
 
@@ -11,14 +11,10 @@ contains multiple sections separated by titles and newlines.
 """       
 
 
-class CSVMulti_Handler(FormatHandler):
+class CSVMultiParser(BaseParser):
 
-    def __init__(self, **args):
-        super().__init__()
-        # TODO
-    
-
-    def _validate_filetype(s: str, path: str):
+    @classmethod
+    def _is_concatenated(cls, s: str, path: str):
         
         pattern = re.compile(r'^[^\n",]*(\n\s*){2,}[^\n",]*', re.MULTILINE)
         match = pattern.search(s)
@@ -28,4 +24,5 @@ class CSVMulti_Handler(FormatHandler):
             if "iCloudUsageData" in path:
                 return True
         return False
+
         

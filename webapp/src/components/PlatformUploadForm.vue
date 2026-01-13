@@ -44,8 +44,8 @@ It replaces the generic UploadForm for the new workflow.
             <div class="d-flex align-center mb-4">
               <v-icon size="48" color="primary" class="mr-4">{{ platformIcon }}</v-icon>
               <div>
-                <h3 class="text-body1 font-weight-medium">{{ platformName }} Data Export</h3>
-                <p class="text-caption text-muted mb-0">ZIP file from {{ platformName }} Takeout/Data Download</p>
+                <h3 class="text-body1 font-weight-medium">Upload your {{ platformName }} data export</h3>
+                <!-- <p class="text-caption text-muted mb-0">ZIP file from {{ platformName }} Takeout/Data Download</p> -->
               </div>
             </div>
           </div>
@@ -93,6 +93,11 @@ It replaces the generic UploadForm for the new workflow.
               @change="handleFileSelected"
               @click:clear="clearFile"
             ></v-file-input>
+            <!-- Debug: Upload Sample Data Button -->
+            <v-btn small color="secondary" class="mt-2" @click="uploadSampleData">
+              <v-icon left small>mdi-database-import</v-icon>
+              Upload Sample Data (Debug)
+            </v-btn>
           </div>
 
           <!-- Timeline Name Input (appears after file selection) -->
@@ -102,7 +107,7 @@ It replaces the generic UploadForm for the new workflow.
               label="Timeline Name"
               outlined
               dense
-              placeholder="e.g., 'John's Account - January 2025'"
+              :placeholder="`e.g., '${platformName} Data Export'`"
               :rules="nameRules"
               counter="255"
               hint="Choose a descriptive name for this analysis"
@@ -145,7 +150,9 @@ It replaces the generic UploadForm for the new workflow.
 </template>
 
 <script>
+
 import BrowserDB from '../database.js'
+import { samplePlatformData, pushSampleEventsToDB } from './samplePlatformData.js'
 
 export default {
   name: 'PlatformUploadForm',
@@ -221,6 +228,39 @@ export default {
 
       this.fileValid = true
       this.timelineName = file.name.replace(/\.zip$/i, '')
+    },
+    async uploadSampleData() {
+      // Debug: Upload sample data directly to the database
+      try {
+        this.isUploading = true;
+        this.statusMessage = 'Uploading sample data...';
+        this.percentCompleted = 0;
+        // Simulate progress
+        for (let i = 0; i <= 100; i += 25) {
+          this.percentCompleted = i;
+          await new Promise(r => setTimeout(r, 150));
+        }
+        // Actually upload sample events
+        await pushSampleEventsToDB();
+        // Force UI to reload sketch/timelines so new timeline appears
+        if (this.$store && this.$store.dispatch && this.$store.state.sketch && this.$store.state.sketch.id) {
+          await this.$store.dispatch('updateSketch', this.$store.state.sketch.id);
+        }
+        this.statusMessage = 'Sample data uploaded!';
+        this.isUploading = false;
+        // Prompt for timeline metadata editing (emit event or set flag)
+        this.$emit('edit-timeline-metadata', {
+          name: samplePlatformData.name,
+          provider: samplePlatformData.provider,
+          context: samplePlatformData.context,
+          total_file_size: samplePlatformData.total_file_size,
+          sketch_id: samplePlatformData.sketch_id,
+        });
+      } catch (e) {
+        this.errors.push('Sample data upload failed: ' + (e.message || e));
+        console.error(e);
+        this.isUploading = false;
+      }
     },
     clearFile() {
       this.selectedFile = null

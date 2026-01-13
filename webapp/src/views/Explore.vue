@@ -673,16 +673,9 @@ export default {
       }
       this.selectedFields = this.currentQueryFilter.fields
       if (this.currentQueryFilter.indices[0] === '_all' || this.currentQueryFilter.indices === '_all') {
-        let allIndices = []
-        this.sketch.active_timelines.forEach((timeline) => {
-          let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
-          if (isLegacy) {
-            allIndices.push(timeline.searchindex.index_name)
-          } else {
-            allIndices.push(timeline.id)
-          }
-        })
-        this.currentQueryFilter.indices = allIndices
+        // Dexie-native: just use timeline IDs
+        let allIds = this.sketch.active_timelines.map(timeline => timeline.id)
+        this.currentQueryFilter.indices = allIds
       }
       let chips = this.currentQueryFilter.chips
       if (chips) {
@@ -766,11 +759,7 @@ export default {
       let timeline = this.sketch.active_timelines.find((timeline) => {
         return timeline.id === parseInt(this.params.indexName, 10)
       })
-
-      let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
-      if (isLegacy) {
-        this.currentQueryFilter.indices = [timeline.searchindex.index_name]
-      } else {
+      if (timeline) {
         this.currentQueryFilter.indices = [timeline.id]
       }
       doSearch = true

@@ -19,9 +19,9 @@ proceeds to the file upload dialog.
     <v-card>
       <!-- Step 1: Platform Selection -->
       <div v-if="step === 'platform-selection'" class="pa-8">
-        <h2 class="text-h5 font-weight-medium mb-2">Select Your Platform</h2>
+        <h2 class="text-h5 font-weight-medium mb-2">Select Platform</h2>
         <p class="text-body2 text-muted mb-6">
-          Choose which service's data export you'd like to analyze. We support the following platforms:
+          Choose which service's data export you'd like to analyze to start. You will be able to upload more data later.
         </p>
 
         <!-- Platform Grid -->
@@ -133,37 +133,37 @@ export default {
           id: 'google',
           name: 'Google',
           icon: 'mdi-google',
-          description: 'Gmail, Drive, Photos, Activity',
+          description: 'Includes Gmail, Drive, Photos',
         },
         {
           id: 'discord',
           name: 'Discord',
           icon: 'mdi-discord',
-          description: 'Messages, Servers, Activity',
+          description: '',
         },
         {
           id: 'apple',
           name: 'Apple',
           icon: 'mdi-apple',
-          description: 'iCloud, Messages, Activity',
+          description: 'Includes iCloud activity, but not iMessages',
         },
         {
           id: 'facebook',
-          name: 'Facebook / Meta',
+          name: 'Facebook',
           icon: 'mdi-facebook',
-          description: 'Posts, Messages, Activity',
+          description: 'Includes Meta account data if connected',
         },
         {
           id: 'instagram',
           name: 'Instagram',
           icon: 'mdi-instagram',
-          description: 'Posts, Messages, Activity',
+          description: 'Includes Meta account data if connected',
         },
         {
           id: 'snapchat',
           name: 'Snapchat',
           icon: 'mdi-snapchat',
-          description: 'Messages, Friends, Activity',
+          description: '',
         },
       ],
     }

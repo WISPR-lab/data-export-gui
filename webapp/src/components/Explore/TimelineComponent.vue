@@ -34,7 +34,6 @@ limitations under the License.
         <v-app-bar flat dense>Importing events to timeline "{{ timeline.name }}"</v-app-bar>
         <div class="pa-5">
           <ul>
-            <li><strong>Opensearch index: </strong>{{ timeline.searchindex.index_name }}</li>
             <li v-if="timelineStatus === 'processing' || timelineStatus === 'ready'">
               <strong>Number of events: </strong>
               {{ allIndexedEvents | compactNumber }}
@@ -184,7 +183,6 @@ limitations under the License.
               <div class="pa-4">
                 <ul style="list-style-type: none">
                   <li><strong>Timeline name: </strong>{{ timeline.name }}</li>
-                  <li><strong>Opensearch index: </strong>{{ timeline.searchindex.index_name }}</li>
                   <li v-if="timelineStatus === 'processing' || timelineStatus === 'ready'">
                     <strong>Number of events: </strong>
                     {{ allIndexedEvents | compactNumber }}
@@ -260,7 +258,6 @@ limitations under the License.
                 <ul style="list-style-type: none">
                   <li><strong>Name: </strong>{{ timeline.name }}</li>
                   <li><strong>Status: </strong>{{ timelineStatus }}</li>
-                  <li><strong>Opensearch index: </strong>{{ timeline.searchindex.index_name }}</li>
                   <li v-if="timelineStatus === 'processing' || timelineStatus === 'ready'">
                     <strong>Number of events: </strong>
                     {{ allIndexedEvents | compactNumber }}

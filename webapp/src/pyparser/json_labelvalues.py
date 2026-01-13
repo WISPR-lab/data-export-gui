@@ -1,50 +1,45 @@
-from .json_ import JSON_Handler
-
-TRIVIAL = lambda x: (x is None) \
-    or (isinstance(x, str) and x.strip() == "") \
-    or (x == []) \
-    or (isinstance(x, list) and all((e == "" or e is None or e == []) for e in x))
-
-VALUE_KEYS = ["value", "timestamp_value", "vec", "dict"]
+from .json_ import JSONParser
 
 
-class JSONLabelValues_Handler(JSON_Handler):
-
-    def __init__(self):
-        super().__init__()
-
-    def batch():
-        pass
-
-    @override
-    def parse_str(self, s: str):
-        
-        jsonobj = self.str_to_jsonobj()
+class JSONLabelValuesParser(JSONParser):
 
 
-    def flatten_lv(self, jsonobj: dict | list):
+    @classmethod
+    def str_to_json(cls, s: str) -> str:
+        # differs between inherited classes
+        raw_json = cls.basic_str_to_json(s) # this is inherited
+        flat_json = cls._flatten_lv(raw_json)
+        return flat_json
+
+
+    @classmethod
+    def _flatten_lv(cls, jsonobj: dict | list):
         if isinstance(jsonobj, dict):
             lv_list = jsonobj.get("label_values", None)
             if lv_list is None:
                 return jsonobj
-            return self._parse_lv_dict(lv_list)
+            return cls._flatten_lv_dict(lv_list)
         
         if isinstance(jsonobj, list):
             res = []
             for e in jsonobj:
-                if TRIVIAL(e):
+                if cls._is_trivial(e):
                     continue
                 if isinstance(e, dict):
                     lv_list = e.get("label_values")
                     if lv_list is not None:
-                        res.append(self._parse_lv_dict(lv_list))
+                        dct = cls._flatten_lv_dict(lv_list)
+                        ts = e.get("timestamp", None)
+                        if not cls._is_trivial(ts):
+                            dct.update({"timestamp": ts})
+                        res.append(dct)
                         continue
                 res.append({"PARSER_INVALID_DATA": str(e)})
             return res
 
 
-
-    def _parse_lv_dict(self, l: list):
+    @classmethod
+    def _flatten_lv_dict(cls, l: list):
         """
         l = [
             { "label": "Something", "value": "12345"}, ...
@@ -52,7 +47,7 @@ class JSONLabelValues_Handler(JSON_Handler):
 
         --> { "Something": "12345", ... }
         """
-        if TRIVIAL(l):
+        if cls._is_trivial(l):
             return ""
         if not isinstance(l, list):
             return str(l)
@@ -61,7 +56,7 @@ class JSONLabelValues_Handler(JSON_Handler):
         
         res = {}
         for e in l:
-            if TRIVIAL(e):
+            if cls._is_trivial(e):
                 continue
             if not isinstance(e, dict) \
             or ("label" not in e.keys() and "title" not in e.keys()):
@@ -71,26 +66,15 @@ class JSONLabelValues_Handler(JSON_Handler):
                     res.update({"PARSER_INVALID_DATA": str(e)})
                 continue
 
-            key = e.get("label", key = e.get("title", ""))
+            key = e.get("label", e.get("title", ""))
             if key == "":
                 key = f"UNNAMED_LABEL_{label_num}"
                 label_num += 1
             
-            if key in res and (not TRIVIAL(res[key])):
+            if key in res and (not cls._is_trivial(res[key])):
                 continue # label value already in dict and has nontrivial value
 
-            if "dict" in e:
-                res[key] = self._parse_lv_dict(e["dict"])
-            elif "vec" in e:
-                res[key] = self._parse_lv_list(e["vec"])
-            elif "timestamp_value" in e:
-                res[key] = self._parse_value(e["timestamp_value"])
-            else: 
-                res[key] = self._parse_value(e.get("value", ""))
-
-            if TRIVIAL(res[key]):
-                res[key] = ""
-        
+            res[key] = cls._get_val(e)
         
         if all(k.startswith("UNNAMED_LABEL_") for k in res.keys()):
             res = list(res.values())
@@ -99,38 +83,49 @@ class JSONLabelValues_Handler(JSON_Handler):
        
 
 
-    def _parse_lv_list(self, lv_list: list):
+    @classmethod
+    def _flatten_lv_list(cls, lv_list: list):
         res = []
         if not isinstance(lv_list, list) or len(lv_list) == 0:
             return res
         for e in lv_list:
             if isinstance(e, dict) and len(e) > 0:
-                if "dict" in e:
-                    vf = self._parse_lv_dict(e["dict"])
-                elif "vec" in e:
-                    vf = self._parse_lv_list(e["vec"])
-                elif "timestamp_value" in e:
-                    vf =self._parse_value(e["timestamp_value"])
-                else: # "value" in d.keys():
-                    vf = self._parse_value(e.get("value", ""))
-                res.append(vf)
-            elif TRIVIAL(e):
+                res.append(cls._get_val(e))
+            elif cls._is_trivial(e):
                 res.append("")
             else:
-                res.append(self._parse_value(e))
+                res.append(cls._flatten_val(e))
         
-        if TRIVIAL(res):
+        if cls._is_trivial(res):
             return ""
         return res
+    
+
+    @classmethod
+    def _get_val(cls, e: dict):
+        val = ""
+        if "dict" in e:
+            val = cls._flatten_lv_dict(e["dict"])
+        elif "vec" in e:
+            val = cls._flatten_lv_list(e["vec"])
+        elif "timestamp_value" in e:
+            val = cls._flatten_val(e["timestamp_value"])
+        else: # "value" in d.keys():
+            val = cls._flatten_val(e.get("value", ""))
+        if cls._is_trivial(val):
+            val = ""
+        return val
 
 
-    def _parse_value(self, v):
-        if TRIVIAL(v):
+
+    @classmethod
+    def _flatten_val(cls, v):
+        if cls._is_trivial(v):
             return ""
         if isinstance(v, list):
-            return self._parse_lv_list(v)
+            return cls._flatten_lv_list(v)
         if isinstance(v, dict):
-            return self._parse_lv_dict(v)
+            return cls._flatten_lv_dict(v)
         
         try:
             return int(v)

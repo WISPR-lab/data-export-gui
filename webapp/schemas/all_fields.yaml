@@ -1,0 +1,63 @@
+valid_categories:
+  auth:
+    login:
+    - attempt
+    - success
+    - failure
+    logout: 
+    checkpoint:
+    - initiate
+    - pass
+    sessions:
+    pwd:
+    - change
+    - reset_request
+    primary_email:
+    - change
+    - change_attempt
+    primary_phone:
+    - change
+    - change_attempt
+    recovery_email:
+    - addition
+    - removal
+  data_export:
+  - request
+  - completion
+
+
+time_fields:
+- primary_timestamp
+- first_timestamp
+- last_timestamp
+
+device_id_fields:
+  - app_info
+  - ip
+  - browser
+  - serial
+  - imei
+  - meid
+  - user_agent
+  - device_model
+  - model
+  - model_ver
+  - model_ver_code
+  - os
+  - os_ver
+  - cookie
+  - cookie_redacted
+  - given_name
+  - internal_device_id
+  - internal_hardware_id
+  - google_ad_id
+  - android_id
+  - fb_ad_id
+  - session_id
+  - app_info
+
+
+misc_fields:
+- old_email
+- new_email
+

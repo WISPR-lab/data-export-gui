@@ -1,0 +1,219 @@
+manifest_version: 1
+id: facebook
+name: "Facebook"
+last_updated: "2025-11-24"
+
+# TODO
+# "security_and_login_information/your_recent_account_recovery_successes.json"
+
+
+ip_ua_cookie: &ip_ua_cookie
+  ip:  "ip_address"
+  user_agent: "user_agent"
+  cookie: "datr_cookie"
+
+nested_ip_ua_cookie: &nested_ip_ua_cookie
+  ip:  "session<D>ip_address"
+  user_agent: "session<D>user_agent"
+  cookie: "session<D>datr_cookie"
+
+
+data_types:
+
+# LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login"
+  files:
+  # account_activity
+  - path: "security_and_login_information/account_activity.json"
+    parser: 
+      format: "json"
+      json_list_of_dicts: "<D>account_activity_v2<L>" # find the list of dicts to parse
+      filter: "action == Login"
+    primary_date: "timestamp"
+    identifiers: *ip_ua_cookie
+  # logins_logouts
+  - path: "security_and_login_information/logins_and_logouts.json"
+    parser: 
+      format: "json"
+      json_list_of_dicts: "<D>account_accesses_v2<L>"
+      filter: "action == Login"
+    primary_date: "timestamp"
+    identifiers: 
+      ip:  "ip_address"
+
+# AUTH CHECKPOINT INITIATE
+- temporal: "event" 
+  category: "auth.checkpoint.initiate"
+  files:
+  # account_activity -- N/A
+  # record_details
+  - path: "security_and_login_information/record_details.json"
+    parser: 
+      format: "json" # ok for nested dictionaries within dictionaries, but not nested lists
+      json_list_of_dicts: "<D>admin_records_v2<L>"
+      filter:
+        logic: "any"
+        conditions:
+        - {field: "event", op: "==", value: "Checkpoint"}
+        - {field: "event", op: "==", value: "Checkpoint:*"}
+        - {field: "event", op: "==", value: "Two-factor authentication"}
+    primary_date: "session<D>created_timestamp"
+    identifiers: *nested_ip_ua_cookie
+
+# AUTH CHECKPOINT PASS
+- temporal: "event" 
+  category: "auth.checkpoint.pass"
+  files:
+  # account_activity -- N/A
+  # record_details
+  - path: "security_and_login_information/record_details.json"
+    parser: 
+      format: "json" # ok for nested dictionaries within dictionaries, but not nested lists
+      json_list_of_dicts: "<D>admin_records_v2<L>"
+      filter: "event == Checkpoint passed"
+    primary_date: "session<D>created_timestamp"
+    identifiers: *nested_ip_ua_cookie
+
+  
+# LOGOUT EVENTS
+- temporal: "event" 
+  category: "auth.logout"
+  files:
+  # account_activity
+  - path: "security_and_login_information/account_activity.json"
+    parser:
+      format: "json"
+      json_list_of_dicts: "<D>account_activity_v2<L>" # find the
+      filter: "action == Log out"
+    primary_date: "timestamp"
+    identifiers: *ip_ua_cookie
+
+  # logins_logouts
+  - path: "security_and_login_information/logins_and_logouts.json"
+    parser: 
+      format: "json"
+      json_list_of_dicts: "<D>account_accesses_v2<L>"
+      filter: "action == Log out"
+    primary_date: "timestamp"
+    identifiers: 
+      ip:  "ip_address"
+  # record_details -- N/A
+
+
+
+# PASSWORD CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.pwd.change"
+  files:
+  # account_activity
+  - path: "security_and_login_information/account_activity.json"
+    parser:
+      format: "json"
+      json_list_of_dicts: "<D>account_activity_v2<L>"
+      filter: "Password Change"
+    primary_date: "timestamp"
+    identifiers: *ip_ua_cookie
+
+  # record_details
+  - path: "security_and_login_information/record_details.json"
+    parser:
+      format: "json" # ok for nested dictionaries within dictionaries, but not nested lists
+      json_list_of_dicts: "<D>admin_records_v2<L>"
+      filter: "event == Password Change"
+    primary_date: "session<D>created_timestamp"
+    identifiers: *nested_ip_ua_cookie
+
+# PASSWORD RESET EVENTS
+- temporal: "event" 
+  category: "auth.pwd.reset_request"
+  files:
+  # account_activity
+  - path: "security_and_login_information/account_activity.json"
+    parser:
+      format: "json"
+      json_list_of_dicts: "<D>account_activity_v2<L>"
+      filter: "Requested Password Reset"
+    primary_date: "timestamp"
+    identifiers: *ip_ua_cookie
+  # record_details -- N/A
+
+
+# RECOVERY/LEGACY CONTACT EVENTS
+- temporal: "event" 
+  category: "auth.primary_email.addition"
+  files:
+    # account activity
+    - path: "security_and_login_information/account_activity.json"
+      parser:
+        format: "json"
+        json_list_of_dicts: "<D>account_activity_v2<L>"
+        filter: "Email Added"
+      primary_date: "timestamp"
+      identifiers: *ip_ua_cookie
+
+    # record_details
+    - path: "security_and_login_information/record_details.json"
+      parser:
+        format: "json" # ok for nested dictionaries within dictionaries, but not nested lists
+        json_list_of_dicts: "<D>admin_records_v2<L>"
+        filter: "event == Email Added"
+      primary_date: "session<D>created_timestamp"
+      identifiers: *nested_ip_ua_cookie
+
+
+# DATA TAKEOUT EVENTS
+- temporal: "event"
+  category: "your_facebook_activity/other_activity/your_information_download_requests.json"
+  files:
+  - path:  
+    parser:
+      format: "json"
+      #TODO
+    primary_date: "<L><D>timestamp"
+
+
+# ---------------------------------------------- #
+# AUTHENTICATED DEVICES
+- temporal: "state" 
+  category: "auth.sessions"
+  files:
+  - path: "security_and_login_information/mobile_devices.json"
+    parser: 
+      # todo
+    first_date: 
+    last_date: "<D>devices_v2<L><D>update_time"
+    identifiers:
+      model_ver_code: "<D>devices_v2<L><D>type"
+      os_ver: "<D>devices_v2<L><D>os"
+      internal_device_id: "<D>devices_v2<L><D>push_tokens<L0><D>device_id"
+      fb_ad_id: "<D>devices_v2<L><D>advertiser_id"
+
+  - path: "personal_information/profile_information/your_devices.json"
+    parser:
+      format: "json_label_values"
+      # TODO
+    first_date: "<L><D>label_values<LV>Device ID details<LV>first_seen_time"
+    last_date: "<L><D>label_values<LV>Device ID details<LV>last_seen_time"
+    identifiers:
+      internal_device_id: "<L><D>label_values<LV>Device ID"
+      internal_hardware_id: "<L><D>label_values<LV>Hardware ID"
+      google_ad_id: "<L><D>label_values<LV>Google advertiser ID"
+      android_id: "<L><D>label_values<LV>Android ID"
+      fb_ad_id: 
+      os: "<L><D>label_values<LV>OS type"
+      os_ver: "<L><D>label_values<LV>OS version"
+      model_ver_code: "<L><D>label_values<LV>Device type"
+      user_agent: "<L><D>label_values<LV>User agent"
+  
+  - path: "security_and_login_information/recognized_devices.json"
+    parser: # todo
+    first_date: 
+    last_date: "<D>recognized_devices_v2<L><D>updated_timestamp" # unreliable?? last heartbeat vs login
+    identifiers:
+      user_agent: "<D>recognized_devices_v2<L><D>user_agent"
+      ip_address: "<D>recognized_devices_v2<L><D>ip_address"
+      cookie: "<D>recognized_devices_v2<L><D>datr_cookie"
+
+
+# new data type: interval? 

@@ -154,7 +154,7 @@
       <v-divider class="my-8"></v-divider>
       <footer class="py-4 text-center">
         <p class="text-caption secondary--text mb-0">
-          &copy; 2026 takeout-tool
+          &copy; 2026 TOOLNAME &nbsp;|&nbsp;
           <v-btn text x-small href="#">Privacy</v-btn>
           <v-btn text x-small href="#">Terms</v-btn>
         </p>

@@ -10,21 +10,27 @@ data_types:
   category: "auth.login"
   files:
   - path: "Apple ID account and device information/Apple ID SignOn Information.csv"
-    parser: #todo
-    primary_date: "Logged In Date"
-    identifiers: 
-      ip: "IP Address"
-      internal_device_id: "Device Identifier"
+    parser:
+      format: "csv"
+    fields:
+    - {name: "primary_timestamp", source: "Logged In Date", type: "datetime"}
+    - {name: "ip", source: "IP Address", type: "string"}
+    - {name: "internal_device_id", source: "Device Identifier", type: "string"}
+    - {name: "app_info", source: "Application", type: "string"}
 
 # PASSWORD CHANGE EVENTS
 - temporal: "event" 
   category: "auth.pwd.change"
   files:
   - path: "Apple ID account and device information/Apple ID Account Information.csv"
-    parser: #todo
-    primary_date: "Last Password Change Date"
-    identifiers: 
-      ip: "Last Changed From IP Address"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Last Password Change Date"], keep: "last"}
+    fields:
+    - {name: "primary_timestamp", source: "Last Password Change Date", type: "datetime"}
+    - {name: "ip", source: "Advanced Data Protection - Device IP Address", type: "string"}
+    - {name: "given_name", source: "Advanced Data Protection - Device Name", type: "string"}
+    - {name: "serial", source: "Advanced Data Protection - Device Serial Number", type: "string"}
 
 
 # RECOVERY/LEGACY CONTACT EVENTS
@@ -32,25 +38,33 @@ data_types:
   category: "auth.recovery_email.addition"
   files:
   - path: "Apple ID account and device information/Apple ID Account Recovery Contacts Information.csv"
-    parser: #todo - group by REcivery ID
-    primary_date: "Recovery Create Date"
-    identifiers: 
-      ip: "Recovery IP Address"
-      model_ver: "Device Model"
+    parser: 
+      format: "csv"
+      drop_duplicates: { subset: ["Recovery ID"], keep: "most_complete"}
+    fields:
+    - {name: "primary_timestamp", source: "Recovery Create Date", type: "datetime"}
+    - {name: "ip", source: "Recovery IP Address", type: "string"}
+    - {name: "model_ver", source: "Device Model", type: "string"}
+
   - path: "Apple ID account and device information/Apple ID Account Legacy Contacts Information.csv"
-    parser: #todo
-    primary_date: "Beneficiary Create Date"
-    identifiers: 
-      ip: "Beneficiary IP Address"
-      model_ver: "Device Model Name"
+    parser: 
+      format: "csv"
+      drop_duplicates: { subset: ["Beneficiary ID"], keep: "most_complete"}
+    fields:
+    - {name: "primary_timestamp", source: "Beneficiary Create Date", type: "datetime"}
+    - {name: "ip", source: "Beneficiary IP Address", type: "string"}
+    - {name: "model_ver", source: "Device Model Name", type: "string"}
 
 # DATA TAKEOUT EVENTS
 - temporal: "event" 
   category: "data_export.request"
   files:
   - path: "Apple ID account and device information/Data & Privacy Request History.csv"
-    parser: #todo - group by Request ID
-    primary_date: "Request Time"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Request ID"], keep: last}
+    fields:
+    - {name: "primary_timestamp", source: "Request Time", type: "datetime"}
   
 # ---------------------------------------------- #
 # AUTHENTICATED DEVICES
@@ -58,23 +72,28 @@ data_types:
   category: "auth.sessions"
   files:
   - path: "Apple ID account and device information/Apple ID Device Information.csv"
-    parser: #todo
-    first_date: "Device Added Date"
-    last_date: "Device Last Heartbeat Timestamp"
-    identifiers:
-      ip: "IP Address"
-      imei: "Device IMEI"
-      serial: "Device Serial Number"
-      model: "Device Model Name"
-      given_name: "Device Name"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Device Serial Number"], keep: "last"}
+
+    fields:
+    - {name: "last_timestamp", source: "Device Last Heartbeat Timestamp", type: "datetime"}
+    - {name: "first_timestamp", source: "Device Added Date", type: "datetime"}
+    - {name: "given_name", source: "Device Name", type: "string"}
+    - {name: "serial", source: "Device Serial Number", type: "string"}
+    - {name: "model", source: "Device Model Name", type: "string"}
+    - {name: 'imei', source: "Device IMEI", type: "string"}
+    - {name: "meid", source: "Device MEID", type: "string"}
+    - {name: "ip", source: "Device Last Heartbeat IP Address", type: "string"}
   
   - path: "Devices Registered with Apple Messaging.json"
-    parser: #todo
-    identifiers:
-      ip: "IP Address"
-      model_ver: "<D>devices<L><D>hardware-version" # todo documentation
-      user_agent:  "<D>devices<L><D>os-version"
-      given_name:  "<D>devices<L><D>device-name"
+    parser: 
+      format: "json"
+      json_root: "devices[]"
+    fields:
+    - {name: "model_ver_code", source: "hardware-version", type: "string"}
+    - {name: "given_name", source: "device-name", type: "string"}
+    - {name: "os_ver", source: "os-version", type: "string"}
 
 
 

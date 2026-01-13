@@ -1,31 +1,34 @@
 import yaml
 
+
+
 class Schema:
     def __init__(self, schema_yaml_str: str, validation_str: str = "", validate = False):
         
-        self.schema_yaml_str = schema_yaml_str
+        self.schema = yaml.safe_load(schema_yaml_str)
+        self.errors = []
+        self.healthy = True
 
         if validate:
             if not validation_str:
                 raise RuntimeError("validation string required for schema validation")
-            errors = self.validate_schema(schema_yaml_str, validation_str)
+            self.errors = self.validate_schema(validation_str)
 
 
 
-
-
-    def validate_schema(self, schema_str, validation_str):
-        schema = yaml.safe_load(schema_str)
+    def validate_schema(self, validation_str):
         validator = yaml.safe_load(validation_str)
         errors = []
         valid_categories = self._flatten_categories(validator['valid_categories'])
-        errors = self._validate_helper(errors, schema, validator['top_level_fields'])
+        errors = self._validate_helper(errors, self.schema, validator['top_level_fields'])
         if errors:
+            self.healthy = False
             return errors + ['fatal']
 
-        for i, dtype in enumerate(schema.get('data_types', [])):
+        for i, dtype in enumerate(self.schema.get('data_types', [])):
             errors += self._validate_helper(dtype, validator['data_type_fields'], f"data_types[{i}]")
             if errors:
+                self.healthy = False
                 return errors + ['fatal']
             if dtype.get('category') not in valid_categories:
                 errors.append(f"Invalid value for in data_types[{i}].category")
@@ -94,14 +97,17 @@ class Schema:
         return True  # fallback
 
 
-    def _missing(self, name, postfix=None):
+    @staticmethod
+    def _missing(name, postfix=None):
         s = f"Missing required field: {name}"
         if postfix:
             s += f" in {postfix}"
         return s
 
-    def _invalid_type(self, name, type_):
+    @staticmethod
+    def _invalid_type(name, type_):
         return f"Invalid type for field {name}: expected {type_}"
+
 
     def _flatten_categories(self, obj, prefix='', result=None):
         if result is None:

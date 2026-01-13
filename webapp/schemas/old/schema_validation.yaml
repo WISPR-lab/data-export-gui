@@ -44,6 +44,7 @@ parser_fields:
 identifier_fields:
   required:
   optional:
+    app_info: string
     ip: string
     browser: string
     serial: string
@@ -60,11 +61,11 @@ identifier_fields:
     cookie_redacted: string
     given_name: string
     internal_device_id: string
-    internal_harware_id: string
+    internal_hardware_id: string
     google_ad_id: string
     android_id: string
-    fb_ad_id": string
-    session_id: [string, list]
+    fb_ad_id: string
+    session_id: string
 
 
 valid_categories:

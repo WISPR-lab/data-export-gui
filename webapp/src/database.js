@@ -42,10 +42,10 @@ function createResponse(objects = [], meta = null) {
 
 function getIdentifierFieldsFromYaml() {
   try {
-    const schemaPath = path.resolve(__dirname, '../schemas/schema_validation.yaml');
+    const schemaPath = path.resolve(__dirname, '../schemas/all_fields.yaml');
     const fileContents = readFileSync(schemaPath, 'utf8');
     const doc = yaml.load(fileContents);
-    const identifierFields = doc.identifier_fields;
+    const identifierFields = doc.device_id_fields;
     const required = identifierFields.required || {};
     const optional = identifierFields.optional || {};
     const allFields = new Set([
@@ -80,8 +80,8 @@ db.version(1).stores({
 });
 
 db.version(2).stores({
-  events: `++id, sketch_id, timeline_id, document_id, document_line, timestamp, tags, labels, attributes, created_at, updated_at, raw_str, parse_category${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
-  states: `++id, sketch_id, timeline_id, document_id, document_line, tags, labels, attributes, created_at, updated_at, raw_str, parse_category, first_timestamp, last_timestamp${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
+  events: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
+  states: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
   document_metadata: '++id, sketch_id, timeline_id, platform_name, labels, path, document_created_at, document_updated_at, size_bytes, mime_type, source_type, source_config, hash_sha256, created_at, updated_at',
 
   timelines: '++id, sketch_id, name, platform_name, description, status, color, label_string, datasources, deleted, created_at, updated_at',
@@ -432,7 +432,49 @@ const BrowserDB = {
   
   // ----------------------------------------------------------
   // Search
-  async search(sketchId, formData) {},
+  async search(sketchId, formData) {
+    let eventsQuery = db.events.where('sketch_id').equals(sketchId);
+    let indices = undefined;
+    if (formData && formData.filter && formData.filter.indices !== undefined) {
+      indices = formData.filter.indices;
+    }
+    let filterAll = false;
+    if (
+      indices === undefined ||
+      indices === null ||
+      (Array.isArray(indices) && (indices.length === 0 || indices.includes('_all')))
+      || indices === '_all'
+    ) {
+      filterAll = true;
+    }
+    if (!filterAll && Array.isArray(indices)) {
+      eventsQuery = eventsQuery.filter(ev => indices.includes(ev.timeline_id));
+    }
+    // Basic pagination
+    let from = 0;
+    let size = 40;
+    if (formData && formData.filter) {
+      from = formData.filter.from || 0;
+      size = formData.filter.size || 40;
+    }
+    let allEvents = await eventsQuery.toArray();
+    // Sort by timestamp desc by default
+    allEvents.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    // Paginate
+    const pagedEvents = allEvents.slice(from, from + size);
+    // Wrap in Timesketch-style _source
+    const objects = pagedEvents.map(ev => ({ _id: ev.document_id, _source: ev }));
+    // Meta info
+    const meta = {
+      es_total_count: allEvents.length,
+      es_total_count_complete: allEvents.length,
+      es_time: 0,
+      count_per_timeline: {},
+      count_per_index: {},
+      summary: '',
+    };
+    return createResponse(objects, meta);
+  },
   async exportSearchResult(sketchId, formData) {},
   async getSearchHistory(sketchId, limit = null, question = null) {},
   async getSearchHistoryTree(sketchId) {},
@@ -610,4 +652,5 @@ const BrowserDB = {
 }
 
 export default BrowserDB;
+export { db };
 
