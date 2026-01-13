@@ -19,10 +19,23 @@ import { createVuePlugin } from 'vite-plugin-vue2'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+ root: './',
  plugins: [ createVuePlugin() ],
+ server: {
+   fs: {
+     allow: ['..']
+   }
+ },
  test:{
+  include: ['src/**/*.{test,spec}.{js,ts}', '../tests/js/**/*.{test,spec}.{js,ts}'],
   alias: {
     '@/': new URL('./src/', import.meta.url).pathname,
+    'jszip': new URL('./node_modules/jszip/', import.meta.url).pathname,
+  },
+  server: {
+    deps: {
+      inline: [],
+    },
   },
   globals:true,
   environment: 'happy-dom',

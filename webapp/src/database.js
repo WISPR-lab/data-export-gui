@@ -3,8 +3,6 @@
 
 import Dexie from 'dexie';
 import yaml from 'js-yaml';
-import { readFileSync } from 'fs';
-import path from 'path';
 import { tagMetadata } from './tag_metadata.js';
 
 
@@ -40,57 +38,59 @@ function createResponse(objects = [], meta = null) {
 
 
 
-function getIdentifierFieldsFromYaml() {
+async function getIdentifierFieldsFromYaml() {
   try {
-    const schemaPath = path.resolve(__dirname, '../schemas/all_fields.yaml');
-    const fileContents = readFileSync(schemaPath, 'utf8');
-    const doc = yaml.load(fileContents);
-    const identifierFields = doc.device_id_fields;
-    const required = identifierFields.required || {};
-    const optional = identifierFields.optional || {};
-    const allFields = new Set([
-      ...Object.keys(required),
-      ...Object.keys(optional)
-    ]);
-    return Array.from(allFields);
+    const response = await fetch('/schemas/all_fields.yaml');
+    const text = await response.text();
+    const doc = yaml.load(text);
+    const identifierFields = doc.device_id_fields || [];
+    // all_fields.yaml has device_id_fields as a list of strings now
+    return Array.isArray(identifierFields) ? identifierFields : [];
   } catch (e) {
+    console.error('Error loading identifier fields:', e);
     return [];
   }
 }
 
-const identifierFields = getIdentifierFieldsFromYaml();
-const identifierFieldsStr = identifierFields.join(', ');
+let identifierFields = [];
+let identifierFieldsStr = '';
+
+// Initialize database with dynamic fields
+async function initDB() {
+  identifierFields = await getIdentifierFieldsFromYaml();
+  identifierFieldsStr = identifierFields.join(', ');
+
+  db.version(1).stores({
+    sketches: '++id, name, description, user_id, label_string, status, created_at, updated_at',
+    timelines: '++id, sketch_id, name, user_id, description, status, color, label_string, datasources, deleted, created_at, updated_at',
+    events: '++id, sketch_id, timeline_id, document_id, timestamp, message, data_type, tags, labels, attributes, created_at, updated_at',
+    annotations: '++id, event_id, type, content, user_id, created_at, updated_at',
+    stories: '++id, sketch_id, title, content, user_id, labels, created_at, updated_at',
+    views: '++id, sketch_id, name, query, filter, dsl, user_id, created_at, updated_at',
+    
+    graphs: '++id, user_id, sketch_id, name, description, graph_config, graph_elements, graph_thumbnail, num_nodes, num_edges, created_at, updated_at',
+    sigma_rules: '++id, sketch_id, rule_uuid, title, description, rule_yaml, user_id, status, created_at, updated_at',
+    scenarios: '++id, sketch_id, user_id, name, display_name, description, summary, dfiq_identifier, uuid, spec_json, created_at, updated_at',
+    facets: '++id, sketch_id, scenario_id, user_id, name, display_name, description, dfiq_identifier, uuid, spec_json, created_at, updated_at',
+    questions: '++id, sketch_id, user_id, scenario_id, facet_id, name, display_name, description, dfiq_identifier, uuid, spec_json, created_at, updated_at',
+  });
+
+  db.version(2).stores({
+    events: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category ${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
+    states: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category ${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
+    document_metadata: '++id, sketch_id, timeline_id, platform_name, labels, path, document_created_at, document_updated_at, size_bytes, mime_type, source_type, source_config, hash_sha256, created_at, updated_at',
+
+    timelines: '++id, sketch_id, name, platform_name, description, status, color, label_string, datasources, deleted, created_at, updated_at',
+    sketches: '++id, name, description, user_id, label_string, status, created_at, updated_at',
+    
+    annotations: '++id, object_type, object_id, type, content, created_at, updated_at',
+    stories: '++id, sketch_id, title, content, user_id, labels, created_at, updated_at',
+    views: '++id, sketch_id, name, query, filter, dsl, user_id, created_at, updated_at',
+  });
+}
 
 const db = new Dexie('TimesketchBrowser');
-
-// timeline = platform
-db.version(1).stores({
-  sketches: '++id, name, description, user_id, label_string, status, created_at, updated_at',
-  timelines: '++id, sketch_id, name, user_id, description, status, color, label_string, datasources, deleted, created_at, updated_at',
-  events: '++id, sketch_id, timeline_id, document_id, timestamp, message, data_type, tags, labels, attributes, created_at, updated_at',
-  annotations: '++id, event_id, type, content, user_id, created_at, updated_at',
-  stories: '++id, sketch_id, title, content, user_id, labels, created_at, updated_at',
-  views: '++id, sketch_id, name, query, filter, dsl, user_id, created_at, updated_at',
-  
-  graphs: '++id, user_id, sketch_id, name, description, graph_config, graph_elements, graph_thumbnail, num_nodes, num_edges, created_at, updated_at',
-  sigma_rules: '++id, sketch_id, rule_uuid, title, description, rule_yaml, user_id, status, created_at, updated_at',
-  scenarios: '++id, sketch_id, user_id, name, display_name, description, summary, dfiq_identifier, uuid, spec_json, created_at, updated_at',
-  facets: '++id, sketch_id, scenario_id, user_id, name, display_name, description, dfiq_identifier, uuid, spec_json, created_at, updated_at',
-  questions: '++id, sketch_id, user_id, scenario_id, facet_id, name, display_name, description, dfiq_identifier, uuid, spec_json, created_at, updated_at',
-});
-
-db.version(2).stores({
-  events: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
-  states: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
-  document_metadata: '++id, sketch_id, timeline_id, platform_name, labels, path, document_created_at, document_updated_at, size_bytes, mime_type, source_type, source_config, hash_sha256, created_at, updated_at',
-
-  timelines: '++id, sketch_id, name, platform_name, description, status, color, label_string, datasources, deleted, created_at, updated_at',
-  sketches: '++id, name, description, user_id, label_string, status, created_at, updated_at',
-  
-  annotations: '++id, object_type, object_id, type, content, created_at, updated_at',
-  stories: '++id, sketch_id, title, content, user_id, labels, created_at, updated_at',
-  views: '++id, sketch_id, name, query, filter, dsl, user_id, created_at, updated_at',
-});
+initDB();
 
 
 // --- API-mirrored methods ---
@@ -177,15 +177,16 @@ const BrowserDB = {
     throwTodoImplement();
   },
   
-  async saveSketchTimeline(sketchId, timelineId, name, description, color) {
-    // Update timeline metadata (name, description, color)
+  async saveSketchTimeline(sketchId, timelineId, name, description, color, status) {
+    // Update timeline metadata
     const now = new Date().toISOString();
-    await db.timelines.update(timelineId, {
-      name,
-      description,
-      color,
-      updated_at: now,
-    });
+    const updateObj = { updated_at: now };
+    if (name !== undefined) updateObj.name = name;
+    if (description !== undefined) updateObj.description = description;
+    if (color !== undefined) updateObj.color = color;
+    if (status !== undefined) updateObj.status = status;
+
+    await db.timelines.update(timelineId, updateObj);
     const updated_timeline = await db.timelines.get(timelineId);
     return createResponse([updated_timeline]);
   },
@@ -233,6 +234,26 @@ const BrowserDB = {
     return createResponse([newEvent]);
   },
 
+  async createState(sketchId, datetime, message, timestampDesc, attributes, config) {
+    // Create a new state (manual state creation)
+    const now = new Date().toISOString();
+    const state = {
+      sketch_id: sketchId,
+      timeline_id: null,
+      timestamp: datetime ? new Date(datetime).getTime() * 1000 : Date.now() * 1000,
+      message: message || 'No message string',
+      data_type: attributes && attributes.data_type ? attributes.data_type : 'manual',
+      tags: attributes && attributes.tag ? attributes.tag : [],
+      labels: [],
+      attributes: attributes || {},
+      created_at: now,
+      updated_at: now,
+    };
+    const id = await db.states.add(state);
+    const newState = await db.states.get(id);
+    return createResponse([newState]);
+  },
+
   async getEvent(sketchId, eventId, includeProcessingTimelines) {
     // Find event by document_id and searchindex_name
     const event = await db.events.where({
@@ -251,6 +272,33 @@ const BrowserDB = {
   async countSketchStates(sketchId) {
     const count = await db.states.where('sketch_id').equals(sketchId).count();
     return createResponse([], { count });
+  },
+
+  async bulkInsert(sketchId, timelineId, events = [], states = []) {
+    const now = new Date().toISOString();
+    
+    const prepareRow = (row) => ({
+      ...row,
+      sketch_id: sketchId,
+      timeline_id: timelineId,
+      created_at: row.created_at || now,
+      updated_at: now,
+      tags: row.tags || [],
+      labels: row.labels || [],
+      attributes: row.attributes || {}
+    });
+
+    if (events.length > 0) {
+      const preparedEvents = events.map(prepareRow);
+      await db.events.bulkAdd(preparedEvents);
+    }
+    
+    if (states.length > 0) {
+      const preparedStates = states.map(prepareRow);
+      await db.states.bulkAdd(preparedStates);
+    }
+    
+    return true;
   },
 
 

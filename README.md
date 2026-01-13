@@ -26,9 +26,11 @@ The frontend usually runs on `http://localhost:5001`
 
 1. UI (JavaScript): The user selects a platform (e.g., Facebook) and drops a ZIP file into the browser.
 
-2. Unzip (Java Script): JS unzips the uploaded file in local browser storage and discards files not mentioned in `webapp/schemas`.
+2. Unzip (JavaScript): JS unzips the uploaded file in local browser storage and discards files not mentioned in the platform schemas.
 
-3. Parsing engine (Python/Pyodide): JavaScript passes each remaining file string AND the schema YAML to the functions in  `webapp/src/pyparser/`. Python handles all the data cleaning and field name standardization.
+3. Parsing engine (Python/Pyodide): JavaScript passes each remaining file string AND the schema YAML to the functions in `pyparser/`. Python handles all the data cleaning and field name standardization.
+
+> **Note**: The `pyparser` logic is developed in the root directory and `pyodideWorker.js` in `webapp/src/`, but they are automatically synced to `webapp/public/` when the development server or build runs to bypass legacy build limitations.
 
 4. Storage (Dexie.js/IndexedDB): Python/Pyodide passes "rows" of data in JSON back to Java Script. This is saved into a searchable database (IndexedDB) with a Dexie.js wrapper.
 
@@ -39,7 +41,7 @@ The way I like to think about it, the Python/Pyodide engine pretends to be the "
 
 ## Understanding and writing new schema
 
-The YAML files in `webapp/schemas` provide instructions for the Python engine. The goal of this is to minimize how much of the Python engine in `pyparser` we have to rewrite if we want to add support for a new platform or if the platforms change file formats. 
+The YAML files in `schemas/` provide instructions for the Python engine. The goal of this is to minimize how much of the Python engine in `pyparser` we have to rewrite if we want to add support for a new platform or if the platforms change file formats. 
 
 Under `data_types` is a list of every "type" of event or state (i.e., login events, sent message events, all trusted devices) present in the whole ZIP data export 
 *TODO DEFINE THIS BETTER*
@@ -47,7 +49,7 @@ Under `data_types` is a list of every "type" of event or state (i.e., login even
 - `temporal` must be `event` (point in time) or `state` (persistent status/settings)
     - the primary timestamp associated with an event should be added to the `fields` section (see below) as
     `{name: "primary_timestamp", source: <ur timestamp key>, type: "datetime"}`
-- `category` must be one of the `valid_categories` in `webapp/schemas/all_fields.yaml` where hierarchies are separated by `.`
+- `category` must be one of the `valid_categories` in `schemas/all_fields.yaml` where hierarchies are separated by `.`
 - `files` must be a list 
 
 The same type of event (i.e., trusted devices) might pop up across several files. For each file, add an entry to `files`. 
@@ -70,7 +72,7 @@ The attributes under `file: parser:` describe the shape of the file and how the 
 
 #### Fields block
 
-The fields list defines the output schema. Every item must have a `name` (the clean/standardized database key; must be present in `webapp/schemas/all_fields.yaml`) and a `source` (the raw data key in the file), and optionally a `type` and `transform`.
+The fields list defines the output schema. Every item must have a `name` (the clean/standardized database key; must be present in `schemas/all_fields.yaml`) and a `source` (the raw data key in the file), and optionally a `type` and `transform`.
 
 
 JSON (and jsonl, json_label_values) `source` fields support path traversal for nested dictionaries via dot notation and . Use single quotes for keys containing spaces.

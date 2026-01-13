@@ -4,6 +4,12 @@
 takeout-tool.code-workspace
 */reference_docs/
 
+webapp/public/pyparser/
+webapp/public/schemas/
+webapp/public/pyodideWorker.js
+
+.github/*
+
 data/opensearch/
 data/*.db
 
@@ -48,6 +54,8 @@ pnpm-debug.log*
 # Test files
 .coverage
 tests-coverage.txt
+tests/zip_data/
+tests/tmp_outputs/
 
 # Exclude Vagrant runtime files
 vagrant/.vagrant/

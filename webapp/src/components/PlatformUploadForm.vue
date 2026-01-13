@@ -152,6 +152,7 @@ It replaces the generic UploadForm for the new workflow.
 <script>
 
 import BrowserDB from '../database.js'
+import { processUpload } from '../upload.js'
 import { samplePlatformData, pushSampleEventsToDB } from './samplePlatformData.js'
 
 export default {
@@ -171,9 +172,7 @@ export default {
         (v) => !!v || 'Timeline name is required',
         (v) => (v && v.length <= 255) || 'Name must be less than 255 characters',
       ],
-      isUploading: false,
-      percentCompleted: 0,
-      statusMessage: 'Validating file...',
+      // We'll use compute properties to mirror store uploadState
       errors: [],
       fileValid: false,
       platforms: {
@@ -196,8 +195,33 @@ export default {
       return platform ? platform.icon : 'mdi-package'
     },
     canSubmit() {
-      return this.selectedFile && this.fileValid && this.timelineName.trim().length > 0
+      return this.selectedFile && this.fileValid && this.timelineName.trim().length > 0 && !this.isUploading
     },
+    isUploading() {
+      return this.$store.state.uploadState.isProcessing
+    },
+    percentCompleted() {
+      return this.$store.state.uploadState.progress
+    },
+    statusMessage() {
+      return this.$store.state.uploadState.status
+    },
+    uploadError() {
+      return this.$store.state.uploadState.error
+    }
+  },
+  watch: {
+    uploadError(newVal) {
+      if (newVal) {
+        this.errors.push(newVal)
+      }
+    },
+    statusMessage(newVal) {
+      if (newVal === 'complete') {
+        this.$emit('success')
+        this.closeDialog()
+      }
+    }
   },
   methods: {
     handleFileSelected(file) {
@@ -221,33 +245,25 @@ export default {
         return
       }
 
-      // TODO: Add ZIP validation here
-      // - Verify ZIP structure
-      // - Check for expected platform directories
-      // - Validate against platform schema
-
       this.fileValid = true
       this.timelineName = file.name.replace(/\.zip$/i, '')
     },
     async uploadSampleData() {
       // Debug: Upload sample data directly to the database
       try {
-        this.isUploading = true;
-        this.statusMessage = 'Uploading sample data...';
-        this.percentCompleted = 0;
-        // Simulate progress
-        for (let i = 0; i <= 100; i += 25) {
-          this.percentCompleted = i;
-          await new Promise(r => setTimeout(r, 150));
-        }
+        this.$store.commit('START_UPLOAD', 'Sample Data')
+        this.$store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'uploading', progress: 50 })
+        
         // Actually upload sample events
         await pushSampleEventsToDB();
-        // Force UI to reload sketch/timelines so new timeline appears
-        if (this.$store && this.$store.dispatch && this.$store.state.sketch && this.$store.state.sketch.id) {
-          await this.$store.dispatch('updateSketch', this.$store.state.sketch.id);
-        }
-        this.statusMessage = 'Sample data uploaded!';
-        this.isUploading = false;
+        
+        // Force UI to reload sketch/timelines
+        const sketchId = this.$store.state.sketch.id
+        const timelines = await BrowserDB.getTimelines(sketchId)
+        this.$store.commit('SET_TIMELINES', timelines)
+        
+        this.$store.commit('COMPLETE_UPLOAD')
+        
         // Prompt for timeline metadata editing (emit event or set flag)
         this.$emit('edit-timeline-metadata', {
           name: samplePlatformData.name,
@@ -257,9 +273,8 @@ export default {
           sketch_id: samplePlatformData.sketch_id,
         });
       } catch (e) {
-        this.errors.push('Sample data upload failed: ' + (e.message || e));
+        this.$store.commit('FAIL_UPLOAD', e.message || e)
         console.error(e);
-        this.isUploading = false;
       }
     },
     clearFile() {
@@ -273,29 +288,21 @@ export default {
         return
       }
 
-      this.isUploading = true
-      this.percentCompleted = 0
-      this.errors = []
+      const sketchId = this.$store.state.sketch.id
+      if (!sketchId) {
+        this.errors.push('No active sketch found')
+        return
+      }
 
       try {
-        // TODO: Implement actual ZIP processing logic here
-        // Steps:
-        // 1. Read ZIP file
-        // 2. Validate against platform schema
-        // 3. Extract relevant files
-        // 4. Parse files and create events/states
-        // 5. Store in database
-        // 6. Navigate to analysis view
-
-        // For now, simulate the process
-        await this.simulateUploadProcess()
-
-        // Emit success event
-        this.$emit('success')
-        this.closeDialog()
+        await processUpload(
+          this.selectedFile,
+          this.selectedPlatform,
+          sketchId,
+          this.$store
+        )
       } catch (error) {
         this.errors.push(error.message || 'An error occurred during upload')
-        this.isUploading = false
       }
     },
     simulateUploadProcess() {

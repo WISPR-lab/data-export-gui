@@ -18,7 +18,7 @@ import {mount} from "@vue/test-utils"
 import UploadFormButton from './UploadFormButton.vue'
 import Vuetify from 'vuetify'
 import Vue from "vue"
-import { expect } from "chai"
+import { expect } from "vitest"
 import { vi } from "vitest"
 
 let vuetify
