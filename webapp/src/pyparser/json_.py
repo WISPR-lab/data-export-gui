@@ -10,16 +10,30 @@ from typing import Callable, Any, List
 class JSONParser(BaseParser):
 
     @classmethod
-    def get(row: Any, path: str, default: Any = "") -> Any:
+    def get(row: Any, path: str, default: Any = "NULL") -> Any:
         if not path or row is None: return default
         if path in row: return row[path] if row[path] is not None else default
         curr = row
         for part in path.split('.'):
             p = part[1:-1] if len(part) > 1 and part.startswith("'") and part.endswith("'") else part
-            if isinstance(curr, dict):
+
+            # handle array indexing: e.g., push_tokens[0]
+            if "[" in p and p.endswith("]"):
+                p, idx_str = p[:-1].split("[")
+                try:
+                    idx = int(idx_str)
+                except ValueError:
+                    return default
+                curr = curr.get(p) if isinstance(curr, dict) else None
+                if isinstance(curr, list) and len(curr) > idx:
+                    curr = curr[idx]
+                else:
+                    return default
+            elif isinstance(curr, dict):
                 curr = curr.get(p)
             else:
                 return default
+                
         return curr if curr is not None else default
 
     @classmethod
