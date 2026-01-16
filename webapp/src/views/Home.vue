@@ -164,7 +164,6 @@
 </template>
 
 <script>
-import BrowserDB from '../database.js'
 import PageHeader from '../components/Navigation/PageHeader.vue'
 
 export default {
@@ -186,32 +185,7 @@ export default {
       supportedPlatforms: ['Google', 'Discord', 'Apple', 'Facebook', 'Instagram', 'Snapchat'],
     }
   },
-  mounted() {
-    this.ensureDefaultSketch()
-  },
   methods: {
-    async ensureDefaultSketch() {
-      try {
-        const response = await BrowserDB.getSketch(1)
-        if (response.data.objects[0]) {
-          return
-        }
-      } catch (e) {
-        // Sketch doesn't exist
-      }
-
-      try {
-        await BrowserDB.createSketch({
-          name: 'My Data',
-          description: 'Personal forensic timeline',
-          user_id: 'local-user',
-          label_string: 'default',
-          status: 'active',
-        })
-      } catch (e) {
-        console.error('Error creating default sketch:', e)
-      }
-    },
     goToSketch() {
       this.$router.push({ name: 'Explore', params: { sketchId: 1 } })
     },

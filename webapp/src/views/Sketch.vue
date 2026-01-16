@@ -58,6 +58,9 @@ limitations under the License.
         <ts-settings-dialog></ts-settings-dialog>
       </v-dialog>
 
+      <!-- Delete all data dialog -->
+      <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog>
+
       <!-- Top horizontal toolbar -->
       <v-app-bar
         v-if="!loadingSketch"
@@ -83,7 +86,7 @@ limitations under the License.
         
 
         <v-hover v-slot="{ hover }">
-          <div class="d-flex flex-wrap">
+          <div class="d-flex align-center" style="flex: 1;">
             <div
               class="flex-1-0"
               @dblclick="renameSketchDialog = true"
@@ -93,20 +96,21 @@ limitations under the License.
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                max-width: 900px;
               "
               :title="sketch.name"
             >
               <span class="font-weight-bold">Project:</span>&nbsp;  {{ sketch.name }}
             </div>
-            <div>
-              <v-icon title="Rename Project" small class="ml-1" v-if="hover" @click="renameSketchDialog = true"
-                >mdi-pencil</v-icon
-              >
-            </div>
+            <v-icon title="Rename Project" small class="ml-3" v-if="hover" @click="renameSketchDialog = true"
+              >mdi-pencil</v-icon
+            >
           </div>
         </v-hover>
+        
         <v-spacer></v-spacer>
+
+        <!-- Delete All Data button -->
+        <delete-all-data-button @click="showDeleteDialog = true"></delete-all-data-button>
 
         <!-- Sharing dialog -->
         <!-- <v-dialog v-model="shareDialog" width="500">
@@ -383,6 +387,8 @@ import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
 import TsQuestionCard from '../components/Scenarios/QuestionCard.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
 import TsInvestigation from '../components/LeftPanel/Investigation.vue'
+import DeleteAllDataDialog from '../components/DeleteAllDataDialog.vue'
+import DeleteAllDataButton from '../components/DeleteAllDataButton.vue'
 
 export default {
   props: ['sketchId'],
@@ -407,6 +413,8 @@ export default {
     TsQuestionCard,
     TsSettingsDialog,
     TsInvestigation,
+    DeleteAllDataDialog,
+    DeleteAllDataButton,
   },
   data() {
     return {
@@ -424,6 +432,7 @@ export default {
       showHidden: false,
       shareDialog: false,
       loadingSketch: false,
+      showDeleteDialog: false,
       // Context
       timelineViewHeight: 60,
       showTimelineView: false,
@@ -447,11 +456,49 @@ export default {
   },
   mounted() {
     const sketchID = Number(this.sketchId)
+    
+    // Enforce single-sketch per user - only sketch/1 allowed
+    if (sketchID !== 1) {
+      console.warn(`Invalid sketch ID ${sketchID}. Redirecting to sketch/1/explore.`)
+      this.$router.push({ name: 'Explore', params: { sketchId: 1 } })
+      return
+    }
+    
     this.loadingSketch = true
     
     // Load sketch and related data directly from BrowserDB
     BrowserDB.getSketch(sketchID).then(response => {
-      const sketch = response.data.objects[0]
+      let sketch = response.data.objects[0]
+
+      // Handle missing sketch - auto-create it
+      if (!sketch) {
+        console.log(`Sketch ${sketchID} not found. Creating default sketch...`)
+        return BrowserDB.createSketch({
+          name: 'My Data',
+          description: 'Personal forensic timeline',
+          user_id: 'local-user',
+          label_string: 'default',
+          status: 'active',
+        }).then(createResponse => {
+          sketch = createResponse.data.objects[0]
+          
+          // Load timelines for the newly created sketch
+          return BrowserDB.getTimelines(sketchID).then(timelinesResponse => {
+            sketch.timelines = timelinesResponse.data.objects || []
+            sketch.active_timelines = sketch.timelines
+            this.$store.commit('SET_SKETCH', { objects: [sketch], meta: createResponse.data.meta || {} })
+            this.loadingSketch = false
+          })
+        }).catch(createError => {
+          console.error('Error creating default sketch:', createError)
+          this.$store.dispatch('setSnackBar', {
+            message: 'Error creating sketch: ' + createError.message,
+            color: 'error',
+            timeout: 5000,
+          })
+          this.loadingSketch = false
+        })
+      }
 
       // Load timelines for this sketch
       return BrowserDB.getTimelines(sketchID).then(timelinesResponse => {
@@ -462,6 +509,11 @@ export default {
       })
     }).catch(error => {
       console.error('Error loading sketch:', error)
+      this.$store.dispatch('setSnackBar', {
+        message: 'Error loading sketch: ' + error.message,
+        color: 'error',
+        timeout: 5000,
+      })
       this.loadingSketch = false
     })
     

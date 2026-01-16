@@ -761,6 +761,23 @@ const BrowserDB = {
     const newTimeline = await db.timelines.get(timelineId);
     return createResponse([newTimeline]);
   },
+
+  // ----------------------------------------------------------
+  async wipeAllData() {
+    /**
+     * Nuclear wipe: Delete the entire IndexedDB database.
+     * No trace remains that this tool was ever accessed.
+     * Schema will be recreated automatically on next app load.
+     */
+    try {
+      await db.delete();
+      console.log('[BrowserDB] Entire IndexedDB database deleted - no trace remains');
+      return { success: true, message: 'All data permanently deleted' };
+    } catch (error) {
+      console.error('[BrowserDB] Error wiping database:', error);
+      throw error;
+    }
+  },
 }
 
 export default BrowserDB;
