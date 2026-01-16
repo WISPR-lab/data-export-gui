@@ -190,10 +190,10 @@ export default {
       return counter
     },
     activeAnalyzers() {
-      return new Set(this.activeAnalyses.map((a) => a.analyzer_name))
+      return new Set((this.activeAnalyses || []).map((a) => a.analyzer_name))
     },
     activeAnalyzerSessionIds() {
-      return Array.from(new Set(this.activeAnalyses.map((a) => a.analysissession_id)))
+      return Array.from(new Set((this.activeAnalyses || []).map((a) => a.analysissession_id)))
     },
     activeAnalyzerDisplayCount() {
       return this.activeAnalyzerSessionIds.length > 0 ? this.activeAnalyzerSessionIds.length : ''

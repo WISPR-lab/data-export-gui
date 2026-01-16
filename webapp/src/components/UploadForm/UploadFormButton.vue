@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <template>
-  <!-- <ts-upload-timeline-form> -->
   <PlatformSelector>
     <template v-slot="slotProps">
       <v-btn v-if="btnType === 'small'" small text rounded color="primary" v-bind="slotProps.attrs" v-on="slotProps.on">
@@ -26,18 +25,14 @@ limitations under the License.
         Add Data Export
       </v-btn>
     </template>
-  <!-- </ts-upload-timeline-form> -->
-</PlatformSelector>
+  </PlatformSelector>
 </template>
 <script>
-
-// import TsUploadTimelineForm from './UploadForm.vue'
 import PlatformSelector from './PlatformSelector.vue';
 
 export default {
   props: ['btnType'],
   components: {
-    // TsUploadTimelineForm,
     PlatformSelector,
   },
 }

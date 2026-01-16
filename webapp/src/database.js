@@ -28,6 +28,23 @@ function throwTodoError(type = 'implement') {
 const throwTodoImplement = () => throwTodoError('implement');
 const throwTodoDeprecate = () => throwTodoError('deprecate');
 
+/**
+ * Configuration for data processing and storage
+ */
+export const DB_CONFIG = {
+  // Dexie insertion: Max rows per IndexedDB transaction
+  // (Prevents UI freeze on large inserts; 5000 is safe for browser)
+  BULK_INSERT_CHUNK_SIZE: 5000,
+};
+
+export const TIMELINE_STATUS = {
+  PROCESSING: 'processing',  // Initial state: ZIP being parsed, data being inserted
+  READY: 'ready',           // Success: all data loaded and queryable
+  ERROR: 'error',           // Failure: parsing or DB error during import
+  ARCHIVED: 'archived',     // User manually archived this timeline
+};
+
+
 
 // formats data to vue's expectation { data: { objects: [...], meta: {...} } }
 function createResponse(objects = [], meta = null) {
@@ -55,11 +72,9 @@ async function getIdentifierFieldsFromYaml() {
 let identifierFields = [];
 let identifierFieldsStr = '';
 
-// Initialize database with dynamic fields
-async function initDB() {
-  identifierFields = await getIdentifierFieldsFromYaml();
-  identifierFieldsStr = identifierFields.join(', ');
-
+// Initialize database schema (synchronous - just registers versions)
+// Dexie schemas must be registered synchronously
+function initDB() {
   db.version(1).stores({
     sketches: '++id, name, description, user_id, label_string, status, created_at, updated_at',
     timelines: '++id, sketch_id, name, user_id, description, status, color, label_string, datasources, deleted, created_at, updated_at',
@@ -92,6 +107,12 @@ async function initDB() {
 const db = new Dexie('TimesketchBrowser');
 initDB();
 
+// Load identifier fields in background (async, non-blocking)
+getIdentifierFieldsFromYaml().then(fields => {
+  identifierFields = fields;
+  identifierFieldsStr = fields.join(', ');
+});
+
 
 // --- API-mirrored methods ---
 const BrowserDB = {
@@ -118,6 +139,23 @@ const BrowserDB = {
   async getTimelines(sketchId) {
     const timelines = await db.timelines.where('sketch_id').equals(sketchId).toArray();
     return createResponse(timelines);
+  },
+  async getNextTimelineNameForPlatform(sketchId, platformName) {
+    try {
+      const timelines = await db.timelines
+        .where('sketch_id').equals(sketchId)
+        .filter(tl => tl.platform_name === platformName)
+        .toArray();
+      
+      if (timelines.length === 0) {
+        return platformName;
+      }
+      
+      return `${platformName}-${timelines.length + 1}`;
+    } catch (error) {
+      console.warn(`Error suggesting timeline name for ${platformName}:`, error);
+      return platformName;
+    }
   },
   async createSketch(formData) {
     const now = new Date().toISOString();
@@ -275,7 +313,16 @@ const BrowserDB = {
   },
 
   async bulkInsert(sketchId, timelineId, events = [], states = []) {
+    /**
+     * Bulk insert events and states in a single transaction.
+     * 
+     * If ANY operation fails (events or states), the ENTIRE transaction rolls back.
+     * This prevents orphaned data where events exist but states don't, or vice versa.
+     * 
+     * Inserts are chunked to prevent UI freeze, but all chunks are within one transaction.
+     */
     const now = new Date().toISOString();
+    const chunkSize = DB_CONFIG.BULK_INSERT_CHUNK_SIZE;
     
     const prepareRow = (row) => ({
       ...row,
@@ -288,17 +335,34 @@ const BrowserDB = {
       attributes: row.attributes || {}
     });
 
-    if (events.length > 0) {
-      const preparedEvents = events.map(prepareRow);
-      await db.events.bulkAdd(preparedEvents);
-    }
-    
-    if (states.length > 0) {
-      const preparedStates = states.map(prepareRow);
-      await db.states.bulkAdd(preparedStates);
-    }
-    
-    return true;
+    // Single transaction wrapping both events and states
+    return db.transaction('rw', db.events, db.states, async () => {
+      // Chunk and insert events
+      if (events.length > 0) {
+        const preparedEvents = events.map(prepareRow);
+        
+        for (let i = 0; i < preparedEvents.length; i += chunkSize) {
+          const batch = preparedEvents.slice(i, i + chunkSize);
+          await db.events.bulkAdd(batch);
+          const batchNum = Math.ceil((i + chunkSize) / chunkSize);
+          const totalBatches = Math.ceil(preparedEvents.length / chunkSize);
+          console.log(`[BulkInsert] Events batch ${batchNum}/${totalBatches} inserted (${batch.length} rows)`);
+        }
+      }
+      
+      // Chunk and insert states (within same transaction)
+      if (states.length > 0) {
+        const preparedStates = states.map(prepareRow);
+        
+        for (let i = 0; i < preparedStates.length; i += chunkSize) {
+          const batch = preparedStates.slice(i, i + chunkSize);
+          await db.states.bulkAdd(batch);
+          const batchNum = Math.ceil((i + chunkSize) / chunkSize);
+          const totalBatches = Math.ceil(preparedStates.length / chunkSize);
+          console.log(`[BulkInsert] States batch ${batchNum}/${totalBatches} inserted (${batch.length} rows)`);
+        }
+      }
+    });
   },
 
 

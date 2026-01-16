@@ -116,7 +116,7 @@ proceeds to the file upload dialog.
 </template>
 
 <script>
-import PlatformUploadForm from './PlatformUploadForm.vue'
+import PlatformUploadForm from './UploadForm.vue'
 
 export default {
   name: 'PlatformSelector',

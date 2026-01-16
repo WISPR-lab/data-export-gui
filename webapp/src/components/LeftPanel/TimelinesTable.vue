@@ -171,7 +171,7 @@ limitations under the License.
 import EventBus from '../../event-bus.js'
 import BrowserDB from '../../database.js'
 
-import TsUploadTimelineForm from '../UploadForm.vue'
+import TsUploadTimelineForm from '../UploadForm/UploadFormButton.vue'
 import TsTimelineComponent from '../Explore/TimelineComponent.vue'
 
 export default {

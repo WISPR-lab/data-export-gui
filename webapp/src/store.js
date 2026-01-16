@@ -27,6 +27,7 @@ const defaultState = (currentUser) => {
     timelines: [],
     tags: [],
     enabledTimelines: [],
+    activeAnalyses: [],
     
     // Upload processing state
     uploadState: {
@@ -35,6 +36,10 @@ const defaultState = (currentUser) => {
       progress: 0,
       status: '', // 'validating', 'parsing', 'inserting', 'complete', 'error'
       error: null,
+      errorType: null, // Specific error category from ERROR_TYPES
+      errors: [], // Array of error messages
+      warnings: [], // Non-fatal warnings
+      success: false, // True when import completes successfully
     },
     
     // UI state
@@ -125,21 +130,32 @@ export default new Vuex.Store({
         error: error || null,
       })
     },
-    COMPLETE_UPLOAD(state) {
+    COMPLETE_UPLOAD(state, payload = {}) {
+      // Accept optional summary object with warnings
       Vue.set(state, 'uploadState', {
         isProcessing: false,
         currentFile: null,
         progress: 100,
         status: 'complete',
         error: null,
+        errorType: null,
+        errors: [],
+        warnings: payload.warnings || [],
+        success: true,
       })
     },
-    FAIL_UPLOAD(state, error) {
+    FAIL_UPLOAD(state, payload) {
+      // Accept summary object with errorType, errors, warnings
+      const errorObj = typeof payload === 'string' ? { errors: [payload] } : payload;
       Vue.set(state, 'uploadState', {
         ...state.uploadState,
         isProcessing: false,
         status: 'error',
-        error,
+        error: (errorObj.errors && errorObj.errors[0]) || errorObj.error || 'Upload failed',
+        errorType: errorObj.errorType || null,
+        errors: errorObj.errors || [],
+        warnings: errorObj.warnings || [],
+        success: false,
       })
     },
     
@@ -155,6 +171,9 @@ export default new Vuex.Store({
     },
     SET_TIME_FILTERS(state, payload) {
       Vue.set(state, 'timeFilters', payload)
+    },
+    SET_ACTIVE_ANALYSES(state, analyses) {
+      Vue.set(state, 'activeAnalyses', analyses || [])
     },
     RESET_STATE(state, payload) {
       Object.assign(state, defaultState('localuser'))
@@ -183,6 +202,18 @@ export default new Vuex.Store({
     },
     toggleEnabledTimeline(context, timelineId) {
       context.commit('TOGGLE_ENABLED_TIMELINE', timelineId)
+    },
+    updateSigmaList(context, sigmaList) {
+      // Placeholder for sigma rules list update
+    },
+    updateAnalyzerResults(context, results) {
+      // Placeholder for analyzer results update
+    },
+    updateActiveAnalyses(context, analyses) {
+      context.commit('SET_ACTIVE_ANALYSES', analyses)
+    },
+    updateSavedVisualizationList(context, visualizations) {
+      // Placeholder for saved visualization list update
     },
   },
 })

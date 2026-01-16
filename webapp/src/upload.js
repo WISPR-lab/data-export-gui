@@ -1,9 +1,17 @@
 import BrowserDB from './database';
 import JSZip from 'jszip';
+import { classifyError, ERROR_TYPES } from './errorTypes';
+import { TIMELINE_STATUS } from './database';
 
 const DEBUG_LOGGING = true;
 const pyodideWorker = new Worker('/pyodideWorker.js');
 let workerMessageId = 0;
+
+
+const UPLOAD_CONFIG = {
+  JSONL_CHUNK_SIZE: 1000,
+};
+
 
 function log(...args) {
   if (DEBUG_LOGGING) { console.log('[UploadService]', ...args); }
@@ -12,7 +20,9 @@ function log(...args) {
 function logError(...args) { console.error('[UploadService]', ...args); }
 
 /**
- * Sends a command to the Pyodide Worker and returns a promise.
+ * sends a command to the Pyodide Worker
+ * 
+ * @returns {Promise<{result, errorType?, source?}>} Worker response
  */
 function callWorker(command, args) {
   return new Promise((resolve, reject) => {
@@ -23,7 +33,10 @@ function callWorker(command, args) {
         if (event.data.success) {
           resolve(event.data.result);
         } else {
-          reject(new Error(event.data.error));
+          const error = new Error(event.data.error); // error with type info attached for UI classification
+          error.errorType = event.data.errorType || classifyError(event.data.error, event.data.source);
+          error.source = event.data.source || 'worker';
+          reject(error);
         }
       }
     };
@@ -32,9 +45,7 @@ function callWorker(command, args) {
   });
 }
 
-/**
- * Reads a file from the public schemas directory as text
- */
+// reads files from /public/schemas/  as text
 async function readSchemaFile(filename) {
   try {
     const response = await fetch(`/schemas/${filename}`);
@@ -48,9 +59,7 @@ async function readSchemaFile(filename) {
   }
 }
 
-/**
- * Validates that the uploaded file is a valid zip
- */
+// is the uploaded file a valid zip?
 async function validateZipFile(file) {
   try {
     const zip = new JSZip();
@@ -62,24 +71,7 @@ async function validateZipFile(file) {
   }
 }
 
-/**
- * Validates the zip contents using pyodide validation function
- */
-async function validateZipContents(schemaValidationYaml, platformYaml) {
-  try {
-    log('Validating zip contents with schemas...');
-    // We'll pass the manifest to worker to ensure it's valid
-    const result = await callWorker('group_schema_by_path', { schemaYaml: platformYaml });
-    return { valid: true, errors: [], path_schemas: result.path_schemas };
-  } catch (error) {
-    logError('Error during zip contents validation:', error);
-    return { valid: false, errors: [error.message] };
-  }
-}
-
-/**
- * Processes a single file through the pyodide parser
- */
+// processes a single file through the pyodide parser
 async function processFileWithPyodide(fileContent, platformYaml, filename) {
   try {
     log(`Processing ${filename} with pyodide parser...`);
@@ -95,10 +87,8 @@ async function processFileWithPyodide(fileContent, platformYaml, filename) {
   }
 }
 
-/**
- * Chunks JSONL content for processing large files
- */
-function chunkJSONL(content, chunkSize = 1000) {
+// chunks JSONL content for processing large files
+function chunkJSONL(content, chunkSize = UPLOAD_CONFIG.JSONL_CHUNK_SIZE) {
   const lines = content.split('\n').filter(line => line.trim());
   const chunks = [];
   for (let i = 0; i < lines.length; i += chunkSize) {
@@ -107,12 +97,9 @@ function chunkJSONL(content, chunkSize = 1000) {
   return chunks;
 }
 
-/**
- * Processes a JSONL file in chunks
- */
+// chunks JSONL files
 async function processLargeJSONLFile(fileContent, platformYaml, filename) {
-  const chunkSize = 1000;
-  const chunks = chunkJSONL(fileContent, chunkSize);
+  const chunks = chunkJSONL(fileContent);
   
   log(`Processing ${filename} in ${chunks.length} chunks...`);
   
@@ -148,6 +135,10 @@ async function processLargeJSONLFile(fileContent, platformYaml, filename) {
 
 /**
  * Main upload and processing function
+ * 
+ * returns summary with optional errorType field for UI classification:
+ * - errorType: string (one of ERROR_TYPES) - helps UI show appropriate message
+ * - errors: array of strings - individual errors encountered
  */
 export async function processUpload(file, platform, sketchId, store) {
   const startTime = Date.now();
@@ -157,6 +148,7 @@ export async function processUpload(file, platform, sketchId, store) {
     totalEventsAdded: 0,
     totalStatesAdded: 0,
     errors: [],
+    errorType: null,  // Will be set on first fatal error
     warnings: [],
     processingTimeMs: 0
   };
@@ -208,7 +200,7 @@ export async function processUpload(file, platform, sketchId, store) {
         sketch_id: sketchId,
         name: `${platform} - ${new Date().toLocaleString()}`,
         platform_name: platform,
-        status: 'processing'
+        status: TIMELINE_STATUS.PROCESSING
       });
       timelineId = timelineResponse.data.objects[0].id;
     } catch (error) {
@@ -268,7 +260,14 @@ export async function processUpload(file, platform, sketchId, store) {
         
         fileContent = null; 
       } catch (error) {
-        summary.errors.push(`Error processing ${zipFilename}: ${error.message}`);
+        // Preserve error type information from worker
+        const errorMsg = `Error processing ${zipFilename}: ${error.message}`;
+        summary.errors.push(errorMsg);
+        
+        // Set error type on first fatal error (only if not already set)
+        if (!summary.errorType && error.errorType) {
+          summary.errorType = error.errorType;
+        }
       }
     }
     
@@ -286,10 +285,10 @@ export async function processUpload(file, platform, sketchId, store) {
       summary.success = true;
       
       // Mark timeline as ready
-      await BrowserDB.saveSketchTimeline(sketchId, timelineId, undefined, undefined, undefined, 'ready');
+      await BrowserDB.saveSketchTimeline(sketchId, timelineId, undefined, undefined, undefined, TIMELINE_STATUS.READY);
       
       if (store) {
-        store.commit('COMPLETE_UPLOAD');
+        store.commit('COMPLETE_UPLOAD', summary);
         // Refresh timelines in store
         const timelines = await BrowserDB.getTimelines(sketchId);
         store.commit('SET_TIMELINES', timelines.data);
@@ -298,11 +297,25 @@ export async function processUpload(file, platform, sketchId, store) {
       log('Database insertion complete');
     } catch (dbError) {
       summary.errors.push(`Database error: ${dbError.message}`);
-      if (store) store.commit('FAIL_UPLOAD', dbError.message);
+      if (!summary.errorType) {
+        summary.errorType = ERROR_TYPES.DATABASE_ERROR;
+      }
+      
+      // Mark timeline as error state
+      try {
+        await BrowserDB.saveSketchTimeline(sketchId, timelineId, undefined, undefined, undefined, TIMELINE_STATUS.ERROR);
+      } catch (updateError) {
+        logError(`Failed to mark timeline as error:`, updateError);
+      }
+      
+      if (store) store.commit('FAIL_UPLOAD', summary);
     }
     
   } catch (error) {
     summary.errors.push(`Unexpected error: ${error.message}`);
+    if (!summary.errorType) {
+      summary.errorType = error.errorType || ERROR_TYPES.UNKNOWN_ERROR;
+    }
     if (store) store.commit('FAIL_UPLOAD', error.message);
   } finally {
     summary.processingTimeMs = Date.now() - startTime;
