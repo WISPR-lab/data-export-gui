@@ -6,7 +6,10 @@ from conftest import validate_results
 @pytest.mark.format("csv")
 def test_csv_parse(test_case):
     content = test_case.read_content()
-    events, states, errors = CSVParser.parse(content, test_case.filename, test_case.schema)
+    result = CSVParser.parse(content, test_case.filename, test_case.schema)
+    events = result.events
+    states = result.states
+    errors = result.errors
 
     if events:
         print("\n\n ==== Printing first event === \n" + json.dumps(events[0], indent=2))

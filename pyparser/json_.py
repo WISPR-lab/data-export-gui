@@ -4,6 +4,8 @@ import json5
 import demjson3
 import uuid
 from base import BaseParser
+from parseresult import ParseResult
+from errors import FileLevelError, RecordLevelError, FieldLevelError
 from time_utils import parse_date, unix_ms
 from typing import Callable, Any, List
 
@@ -44,36 +46,80 @@ class JSONParser(BaseParser):
             ...
         ]
         """
-        events, states, errors = [], [], []
+        result = ParseResult()
 
-        raw_json = cls.str_to_json(s)
-        json_lst = cls._resolve_root(raw_json, cfg[0].get("parser", {}))  # assume all cfg share the same root
+        try:
+            parsed = cls.str_to_json(s)
+            # Handle both old (single return) and new (tuple with errors) formats
+            if isinstance(parsed, tuple) and len(parsed) == 2:
+                raw_json, str_to_json_errors = parsed
+                for err in str_to_json_errors:
+                    result.add_error(err)
+            else:
+                raw_json = parsed
+        except Exception as e:
+            result.add_error(FileLevelError(f"Failed to parse JSON: {str(e)}", 
+                                          context={'filename': filename, 'error_type': type(e).__name__}))
+            return result
+        
+        try:
+            json_lst = cls._resolve_root(raw_json, cfg[0].get("parser", {}))  # assume all cfg share the same root
+        except Exception as e:
+            result.add_error(FileLevelError(f"Failed to resolve JSON root: {str(e)}", 
+                                          context={'filename': filename}))
+            return result
+        
+        if not json_lst:
+            result.add_error(RecordLevelError(f"No records found after resolving root", 
+                                            context={'filename': filename}))
+            return result
+        
         filters = cls.make_filter(cfg)
+        result.stats['total_records_attempted'] = len(json_lst)
 
-        for e in json_lst:
-            in_category_i = [f(e) for f in filters] # list of bools eq in length to cfg
-            if len(in_category_i) > 1 and all(in_category_i):
-                errors.append(f"entry matches multiple categories in {filename}: {str(e)}")
-            category_idx = next((i for i, val in enumerate(in_category_i) if val), None)
+        for idx, e in enumerate(json_lst):
+            try:
+                in_category_i = [f(e) for f in filters]  # list of bools
+                if len(in_category_i) > 1 and all(in_category_i):
+                    result.add_error(RecordLevelError(f"Entry matches multiple categories",
+                                                     context={'filename': filename, 'row_idx': idx}))
+                    result.stats['records_failed'] += 1
+                    continue
+                
+                category_idx = next((i for i, val in enumerate(in_category_i) if val), None)
 
-            if category_idx is not None:
-                parser_cfg = cfg[category_idx]
-                data = cls.map_fields(e, parser_cfg.get("fields", []), default)
-                data.update({
-                    'id': uuid.uuid4().hex,
-                    'sketch_id': kwargs.get('sketch_id', default),
-                    'timeline_id': kwargs.get('timeline_id', default),
-                    'source_file': filename,
-                    'category': parser_cfg.get("category", "default"),
-                    'original_record': str(e),
-                    'created_at': kwargs.get('created_at', default),
-                })
+                if category_idx is not None:
+                    parser_cfg = cfg[category_idx]
+                    try:
+                        data = cls.map_fields(e, parser_cfg.get("fields", []), default)
+                        result.stats['fields_extracted'] += len([f for f in parser_cfg.get("fields", []) if f.get("name") in data])
+                        
+                        data.update({
+                            'id': uuid.uuid4().hex,
+                            'sketch_id': kwargs.get('sketch_id', default),
+                            'timeline_id': kwargs.get('timeline_id', default),
+                            'source_file': filename,
+                            'category': parser_cfg.get("category", "default"),
+                            'original_record': str(e),
+                            'created_at': kwargs.get('created_at', default),
+                        })
 
-                if parser_cfg.get("temporal", "") == "event":
-                    events.append(data)
-                elif parser_cfg.get("temporal", "") == "state":
-                    states.append(data)
-        return events, states, errors
+                        if parser_cfg.get("temporal", "") == "event":
+                            result.events.append(data)
+                            result.stats['records_successful'] += 1
+                        elif parser_cfg.get("temporal", "") == "state":
+                            result.states.append(data)
+                            result.stats['records_successful'] += 1
+                    except Exception as e:
+                        result.add_error(RecordLevelError(f"Failed to map fields: {str(e)}",
+                                                         context={'filename': filename, 'row_idx': idx}))
+                        result.stats['records_failed'] += 1
+            except Exception as e:
+                result.add_error(RecordLevelError(f"Failed to process record: {str(e)}",
+                                                 context={'filename': filename, 'row_idx': idx}))
+                result.stats['records_failed'] += 1
+        
+        return result
 
     
     @classmethod
@@ -100,14 +146,20 @@ class JSONParser(BaseParser):
             lambda st: hjson.loads(st, use_decimal=True, object_pairs_hook=dict)
         ]
 
-        for _, method in enumerate(robust_parsing_methods):
+        errors_encountered = []
+        jsonobj = None
+        
+        for method_idx, method in enumerate(robust_parsing_methods):
             try:
                 jsonobj = method(s)
                 break
             except Exception as e:
+                errors_encountered.append(f"Method {method_idx}: {type(e).__name__}: {str(e)}")
                 continue
+        
         if jsonobj is None:
-            raise RuntimeError("unable to parse") # TODO custom err
+            raise FileLevelError(f"Unable to parse JSON with any method. Attempts: {'; '.join(errors_encountered)}")
+        
         return jsonobj
     
 

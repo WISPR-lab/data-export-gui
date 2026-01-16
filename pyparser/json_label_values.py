@@ -1,4 +1,5 @@
 from json_ import JSONParser
+from errors import RecordLevelError
 
 
 class JSONLabelValuesParser(JSONParser):
@@ -7,9 +8,14 @@ class JSONLabelValuesParser(JSONParser):
     @classmethod
     def str_to_json(cls, s: str) -> str:
         # differs between inherited classes
-        raw_json = cls.basic_str_to_json(s) # this is inherited
-        flat_json = cls._flatten_lv(raw_json)
-        return flat_json
+        # Returns (flat_json, errors) tuple
+        try:
+            raw_json = cls.basic_str_to_json(s) # this is inherited
+            flat_json = cls._flatten_lv(raw_json)
+            return flat_json, []
+        except Exception as e:
+            return [], [RecordLevelError(f"Label-values parsing error: {str(e)}", 
+                                         context={'error_type': type(e).__name__})]
 
 
     @classmethod

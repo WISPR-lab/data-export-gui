@@ -5,50 +5,71 @@ from pyparser.pyodide import parse
 
 @pytest.mark.format("json")
 def test_pyodide_json_sanity(test_case):
-    # Basic sanity check for the pyodide bridge with json data
+    """Verify JSON parsing returns expected structure with records."""
     from conftest import loader, repo_root
     
-    # full schema string for the platform
+    # Load schema
     platform_info = loader.config["platforms"][test_case.platform]
     schema_path = os.path.join(repo_root, platform_info["schema_path"])
-    
     with open(schema_path, "r") as f:
         schema_str = f.read()
 
+    # Load test data
     content = test_case.read_content()
     
-    # main pyodide entry point
+    # Parse via pyodide bridge
     result = parse(schema_str, content, test_case.filename)
     
-    assert "fatal" in result, "Result should have 'fatal' key"
-    assert result.get("fatal") is False, f"Fatal error occurred: {result.get('errors')}"
+    # Verify result structure
+    assert "success" in result, "Result should have 'success' key"
+    assert "events" in result, "Result should have 'events' key"
+    assert "states" in result, "Result should have 'states' key"
+    assert "errors" in result, "Result should have 'errors' key"
     
-    total_records = len(result.get("events", [])) + len(result.get("states", []))
-    assert total_records > 0, f"No records parsed for {test_case.filename} via Pyodide bridge"
+    # Verify parse succeeded
+    success = result.get("success")
+    assert success is True, f"Parse should succeed. Success={success}, Errors={result.get('errors')}"
+    
+    # Verify records were extracted
+    events = result.get("events", [])
+    states = result.get("states", [])
+    total_records = len(events) + len(states)
+    assert total_records > 0, f"Should extract records from {test_case.filename}"
 
 
 
 @pytest.mark.format("csv")
 def test_pyodide_csv_sanity(test_case):
-    # Basic sanity check for the pyodide bridge with csv data
+    """Verify CSV parsing returns expected structure with records."""
     from conftest import loader, repo_root
     
-    # full schema string for the platform
+    # Load schema
     platform_info = loader.config["platforms"][test_case.platform]
     schema_path = os.path.join(repo_root, platform_info["schema_path"])
-    
     with open(schema_path, "r") as f:
         schema_str = f.read()
 
+    # Load test data
     content = test_case.read_content()
 
-    # main pyodide entry point
+    # Parse via pyodide bridge
     result = parse(schema_str, content, test_case.filename)
     
-    assert result.get("fatal") is False, f"Fatal error occurred: {result.get('errors')}"
+    # Verify result structure
+    assert "success" in result, "Result should have 'success' key"
+    assert "events" in result, "Result should have 'events' key"
+    assert "states" in result, "Result should have 'states' key"
+    assert "errors" in result, "Result should have 'errors' key"
     
-    total_records = len(result.get("events", [])) + len(result.get("states", []))
-    assert total_records > 0, f"No records parsed for {test_case.filename} via Pyodide bridge"
+    # Verify parse succeeded
+    success = result.get("success")
+    assert success is True, f"Parse should succeed. Success={success}, Errors={result.get('errors')}"
+    
+    # Verify records were extracted
+    events = result.get("events", [])
+    states = result.get("states", [])
+    total_records = len(events) + len(states)
+    assert total_records > 0, f"Should extract records from {test_case.filename}"
 
 
 # def test_pyodide_environment_sanity():

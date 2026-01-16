@@ -1,5 +1,8 @@
 # TODO abstract
 from typing import Callable, List
+from errors import ParseError, FileLevelError, RecordLevelError, FieldLevelError
+from parseresult import ParseResult
+
 
 class BaseParser(object):
 
@@ -24,6 +27,5 @@ class BaseParser(object):
 
     
     @classmethod
-    def parse(cls, s: str, platform: str, filename: str,
-              parser_info: list[dict], *args):
+    def parse(cls, s: str, filename: str, cfg: List[dict], default="", **kwargs):
         pass

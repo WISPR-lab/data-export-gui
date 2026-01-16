@@ -4,6 +4,8 @@ import uuid
 import csv
 import json
 from base import BaseParser
+from parseresult import ParseResult
+from errors import FileLevelError, RecordLevelError
 from time_utils import parse_date, unix_ms
 from typing import Callable, Any, List, Tuple
 
@@ -20,23 +22,33 @@ class CSVParser(BaseParser):
             ...
         ]
         """
-        events, states, errors = [], [], []
+        result = ParseResult()
 
         try:
             df, bad_lines = cls.str_to_df(s)
-            errors.extend(bad_lines)
+            for msg in bad_lines:
+                result.add_error(RecordLevelError(msg, context={'filename': filename}))
         except Exception as e:
-            return [], [], [f"Fatal CSV error in {filename}: {str(e)}"]
+            result.add_error(FileLevelError(f"Fatal CSV error: {str(e)}", 
+                                          context={'filename': filename}))
+            return result
 
         if df.empty:
-            return [], [], errors
+            result.add_error(RecordLevelError("DataFrame is empty after parsing", 
+                                            context={'filename': filename}))
+            return result
+        
+        result.stats['total_records_attempted'] = len(df)
         
         for single_cfg in cfg:
-            e, s = cls.df_to_elements(filename, df, single_cfg, default, **kwargs)
-            events.extend(e)
-            states.extend(s)
+            e, s, cfg_errors = cls.df_to_elements(filename, df, single_cfg, default, **kwargs)
+            result.events.extend(e)
+            result.states.extend(s)
+            result.stats['records_successful'] += len(e) + len(s)
+            for err_msg in cfg_errors:
+                result.add_error(RecordLevelError(err_msg, context={'filename': filename}))
         
-        return events, states, errors
+        return result
         
         
 
@@ -44,19 +56,35 @@ class CSVParser(BaseParser):
     def df_to_elements(cls, filename: str, df: pd.DataFrame, 
                         single_cfg: dict, # { "temporal": "", "category": "",  "parser": { ... }, "fields": [ ... ] }
                         default: Any = "", **kwargs):
+        """
+        Returns: (events, states, errors)
+        - errors: list of RecordLevelError objects
+        """
         parser_cfg = single_cfg.get("parser", {})
         fields = single_cfg.get("fields", [])
         temporal = single_cfg.get("temporal", "event")
         category = single_cfg.get("category", "default")
+        cfg_errors = []
 
-        if "filter" in parser_cfg:
-            df = cls.filter_df(df, parser_cfg["filter"])
-        if "drop_duplicates" in parser_cfg:
-            df = cls.drop_duplicates(df, parser_cfg["drop_duplicates"])
+        try:
+            if "filter" in parser_cfg:
+                df = cls.filter_df(df, parser_cfg["filter"])
+            if "drop_duplicates" in parser_cfg:
+                df = cls.drop_duplicates(df, parser_cfg["drop_duplicates"])
+        except Exception as e:
+            cfg_errors.append(RecordLevelError(f"filter/dedup error: {str(e)}", 
+                                               context={'filename': filename}))
+            # Continue with un-filtered data
  
-        original_record_col = df.apply(lambda r: json.dumps(r.to_dict()), axis=1)
+        try:
+            original_record_col = df.apply(lambda r: json.dumps(r.to_dict()), axis=1)
+            mapped_field_df = cls.map_fields(df, fields, default)
+        except Exception as e:
+            cfg_errors.append(RecordLevelError(f"Field mapping error: {str(e)}", 
+                                               context={'filename': filename}))
+            # Return empty if mapping completely failed
+            return [], [], cfg_errors
 
-        mapped_field_df = cls.map_fields(df, fields, default)
         mapped_field_df['id'] = [uuid.uuid4().hex for _ in range(len(mapped_field_df))]
         mapped_field_df['sketch_id'] = kwargs.get('sketch_id', default)
         mapped_field_df['timeline_id'] = kwargs.get('timeline_id', default)
@@ -71,7 +99,7 @@ class CSVParser(BaseParser):
             events = mapped_field_df.to_dict(orient='records')
         elif temporal == "state":
             states = mapped_field_df.to_dict(orient='records')
-        return events, states
+        return events, states, cfg_errors
 
 
 

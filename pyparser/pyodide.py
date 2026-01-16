@@ -50,7 +50,7 @@ def group_schema_by_path(schema_str: str):
 
 def parse(schema_str: str, file_content: str, filename: str):
     # the main entry point for JS --> pyodide. 
-    # result = { "events": [...], "states": [...], "errors": [...] }
+    # result = ParseResult.to_dict() 
     global _CACHED_SCHEMA_GROUPED, _CACHED_SCHEMA_STR
 
     try:
@@ -63,12 +63,12 @@ def parse(schema_str: str, file_content: str, filename: str):
             grouped_schemas = _CACHED_SCHEMA_GROUPED.get(base_filename, [])
             
         if not grouped_schemas:
-            return {
-                "events": [],
-                "states": [],
-                "fatal": False,
-                "errors": [{"msg": f"No schema found for file: {filename}"}]
-            }
+            from parseresult import ParseResult
+            result = ParseResult()
+            from errors import RecordLevelError
+            result.add_error(RecordLevelError(f"No schema found for file: {filename}",
+                                            context={'filename': filename}))
+            return result.to_dict()
 
         # determine the parser type from the first dtype (they should match for same file)
         fmt = grouped_schemas[0].get('parser', {}).get('format', 'json').upper()
@@ -90,27 +90,27 @@ def parse(schema_str: str, file_content: str, filename: str):
             from csv_multi import CSVMultiParser
             handler = CSVMultiParser
         else:
-            return {
-                "events": [],
-                "states": [],
-                "fatal": True,
-                "errors": [{"msg": f"Unsupported format: {fmt} for file {filename}"}]
-            }
+            from parseresult import ParseResult
+            from errors import FileLevelError
+            result = ParseResult()
+            result.add_error(FileLevelError(f"Unsupported format: {fmt}", 
+                                          context={'filename': filename}))
+            return result.to_dict()
 
-        events, states, parser_errors = handler.parse(file_content, filename, grouped_schemas)
+        # Parse using the handler (which now returns ParseResult)
+        result = handler.parse(file_content, filename, grouped_schemas)
         
-        return {
-            "events": events,
-            "states": states,
-            "fatal": False,
-            "errors": parser_errors
-        }
+        return result.to_dict()
 
     except Exception as fatal_e:
         import traceback
-        return {
-            "events": [],
-            "states": [],
-            "fatal": True,
-            "errors": [{"msg": f"FATAL ERROR in pyodide parse: {str(fatal_e)}", "traceback": traceback.format_exc()}]
-        }
+        from parseresult import ParseResult
+        from errors import FileLevelError
+        
+        result = ParseResult()
+        result.add_error(FileLevelError(f"FATAL ERROR in parsing: {str(fatal_e)}", 
+                                       context={'filename': filename, 'error_type': type(fatal_e).__name__}))
+        # Include traceback in stats for debugging
+        result.stats['traceback'] = traceback.format_exc()
+        
+        return result.to_dict()

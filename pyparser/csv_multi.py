@@ -1,4 +1,6 @@
 from base import BaseParser
+from parseresult import ParseResult
+from errors import FileLevelError
 import re
 
 
@@ -14,6 +16,16 @@ contains multiple sections separated by titles and newlines.
 class CSVMultiParser(BaseParser):
 
     @classmethod
+    def parse(cls, s: str, filename: str, cfg, default="", **kwargs):
+        """Placeholder: CSV multi-section parser not yet implemented"""
+        result = ParseResult()
+        result.add_error(FileLevelError(
+            "CSV multi-section parser not yet implemented", 
+            context={'filename': filename}
+        ))
+        return result
+
+    @classmethod
     def _is_concatenated(cls, s: str, path: str):
         
         pattern = re.compile(r'^[^\n",]*(\n\s*){2,}[^\n",]*', re.MULTILINE)
@@ -26,4 +38,4 @@ class CSVMultiParser(BaseParser):
         return False
 
         
-""" NOT FINISHED TODO """
+""" TODO: Implement multi-section CSV parsing """
