@@ -3,16 +3,16 @@ import hjson
 import json5
 import demjson3
 import uuid
-from .base import BaseParser
-from .time_utils import parse_date, unix_ms
+from base import BaseParser
+from time_utils import parse_date, unix_ms
 from typing import Callable, Any, List
 
 class JSONParser(BaseParser):
 
     @classmethod
-    def get(row: Any, path: str, default: Any = "NULL") -> Any:
+    def get(cls, row: Any, path: str, default: Any = "NULL") -> Any:
         if not path or row is None: return default
-        if path in row: return row[path] if row[path] is not None else default
+        if isinstance(row, dict) and path in row: return row[path] if row[path] is not None else default
         curr = row
         for part in path.split('.'):
             p = part[1:-1] if len(part) > 1 and part.startswith("'") and part.endswith("'") else part
@@ -37,20 +37,18 @@ class JSONParser(BaseParser):
         return curr if curr is not None else default
 
     @classmethod
-    def parse(cls, s: str, filename: str, cfg: list[dict], default="", **kwargs):
+    def parse(cls, s: str, filename: str, cfg: List[dict], default="", **kwargs):
         """
         example cfg: [
             { "temporal": "", "category": "",  "parser": { ... }, "fields": [ ... ] }, 
             ...
         ]
         """
-        errors = []
-        events = []
-        states = []
+        events, states, errors = [], [], []
 
         raw_json = cls.str_to_json(s)
         json_lst = cls._resolve_root(raw_json, cfg[0].get("parser", {}))  # assume all cfg share the same root
-        filters = cls.make_filter(cfg, cls.get)
+        filters = cls.make_filter(cfg)
 
         for e in json_lst:
             in_category_i = [f(e) for f in filters] # list of bools eq in length to cfg
@@ -67,7 +65,7 @@ class JSONParser(BaseParser):
                     'timeline_id': kwargs.get('timeline_id', default),
                     'source_file': filename,
                     'category': parser_cfg.get("category", "default"),
-                    'raw_str': str(e),
+                    'original_record': str(e),
                     'created_at': kwargs.get('created_at', default),
                 })
 
@@ -84,7 +82,7 @@ class JSONParser(BaseParser):
         if not json_root or json_root == "[]":
             return raw_json if isinstance(raw_json, list) else [raw_json]
         root = json_root[:-2] if json_root.endswith("[]") else json_root
-        return cls.json_get(raw_json, root, default=[])
+        return cls.get(raw_json, root, default=[])
 
     @classmethod
     def str_to_json(cls, s: str) -> str:
@@ -115,28 +113,40 @@ class JSONParser(BaseParser):
 
 
     @classmethod
-    def make_filter(cls, parser_info: list[dict], get_fn: Callable) -> List[Callable]:
+    def make_filter(cls, parser_info: list[dict]) -> List[Callable]:
         filters = []
-
         for pinfo in parser_info:
             fcfg = pinfo.get("parser", {}).get("filter", None)
+            """
+            fcfg = EITHER 
+                {field: "event", op: "==", value: "Email Added"} 
+            OR
+                {
+                    logic: "all" or"any", 
+                    conditions: [ {field: "event", op: "==", value: "Email Added"} , ...]
+                }
+            """
             if fcfg is None:
                 filters.append(lambda row: True)
                 continue
             logic = fcfg.get("logic")
-            if logic is not None:
-                child_conditions = [cls._filter_leaf(get_fn, cond) for cond in fcfg.get("conditions", [])]
+            
+            if logic is not None: # if fcfg is {logic: ..., conditions: [...]}
+                child_conditions = [cls.filter_leaf(cond) for cond in fcfg.get("conditions", [])]
                 if logic.lower() == "any":
                     filters.append(lambda row, c=child_conditions: any(cond(row) for cond in c))
                 elif logic.lower() == "all":
                     filters.append(lambda row, c=child_conditions: all(cond(row) for cond in c))
-            else:
-                filters.append(cls._filter_leaf(get_fn, fcfg))
+            
+            else: # fcfg is a single condition
+                filters.append(cls.filter_leaf(fcfg))
+        
         return filters      
 
 
     @classmethod 
-    def _filter_leaf(cls, get_fn: Callable, cfg: dict) -> Callable:
+    def filter_leaf(cls, cfg: dict) -> Callable:
+        if not isinstance(cfg, dict): return lambda row: False
         field = cfg.get("field")
         op = cfg.get("op")
         value = cfg.get("value")
@@ -144,15 +154,15 @@ class JSONParser(BaseParser):
             return lambda row: False
         value = str(value)
         if op in cls.op_mapping["eq"]:
-            return lambda row: str(get_fn(row, field)) == value
+            return lambda row: str(cls.get(row, field)) == value
         if op in cls.op_mapping["ne"]:
-            return lambda row: str(get_fn(row, field)) != value
+            return lambda row: str(cls.get(row, field)) != value
         if op in cls.op_mapping["contains"]:
-            return lambda row: value in str(get_fn(row, field))
+            return lambda row: value in str(cls.get(row, field))
         if op in cls.op_mapping["startswith"]:
-            return lambda row: str(get_fn(row, field)).startswith(value)
+            return lambda row: str(cls.get(row, field)).startswith(value)
         if op in cls.op_mapping["endswith"]:
-            return lambda row: str(get_fn(row, field)).endswith(value)
+            return lambda row: str(cls.get(row, field)).endswith(value)
         return lambda row: False
 
 
@@ -163,7 +173,7 @@ class JSONParser(BaseParser):
         for f in fields:
             # f['name'] is the clean/standardized key (see all_fields.yaml)
             # f['source'] is the JSON path
-            name, source, type = f.get("name"), f.get("source"), f.get("type", "string")       
+            name, source, ftype = f.get("name"), f.get("source"), f.get("type", "string")       
             
             # Handle coalesce (if source is a list)
             if isinstance(source, list):
@@ -174,7 +184,7 @@ class JSONParser(BaseParser):
             else:
                 val = cls.get(row, source, default)
 
-            if type in ["datetime", "timestamp", "date"]:
+            if ftype in ["datetime", "timestamp", "date"]:
                 val = unix_ms(parse_date(str(val)))
 
             res[name] = val

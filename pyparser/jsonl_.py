@@ -1,4 +1,4 @@
-from .json_ import JSONParser
+from json_ import JSONParser
 
 class JSONLParser(JSONParser):
         

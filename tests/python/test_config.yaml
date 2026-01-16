@@ -1,0 +1,71 @@
+platforms:
+  facebook: 
+    schema_path: "schemas/facebook.yaml"
+    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/facebook"
+  
+  apple: 
+    schema_path: "schemas/apple.yaml"
+    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/apple"
+  
+  instagram: 
+    schema_path: "schemas/instagram.yaml"
+    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/instagram"
+
+  discord:
+    schema_path: "schemas/discord.yaml"
+    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/discord"
+
+
+test_files:
+  json:
+    - path: "facebook/security_and_login_information/account_activity.json"
+      platform: "facebook"
+      expected:
+        num_events: 33
+        keys: ['primary_timestamp', 'ip', 'user_agent', 'cookie_redacted', 'id', 'sketch_id', 'timeline_id', 'source_file', 'category', 'original_record', 'created_at']
+        categories: ['auth.pwd.change', 'auth.primary_email.addition', 'auth.login', 'auth.pwd.reset_request']
+        timestamp: 1740088943
+        original_record: "{'action': 'Password Change', 'timestamp': 1740088943, 'ip_address': '0.0.0.23', 'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/19H12 [FBAN/FBIOS;FBAV/489.0.0.49.112;FBBV/660378041;FBDV/iPhone9,3;FBMD/iPhone;FBSN/iOS;FBSV/15.7;FBSS/2;FBID/phone;FBLC/en_US;FBOP/5;FBRV/662862893]', 'datr_cookie': 'LF9k********************', 'city': 'Madison', 'region': 'Wisconsin', 'country': 'US', 'site_name': 'www.facebook.com', 'port': 58906}"
+
+    - path: "facebook/security_and_login_information/logins_and_logouts.json"
+      platform: "facebook"
+      expected:
+        num_events: 26
+        num_states: 0
+
+    - path: "apple/Devices Registered with Apple Messaging.json"
+      platform: "apple"
+      expected:
+        num_events: 0
+        num_states: 1
+        keys: ["given_name", "os_ver", "model_ver_code"]
+        original_record: "device-name"
+  
+  json_label_values:
+    - path: "facebook/personal_information/profile_information/your_devices.json"
+      platform: "facebook"
+      expected:
+        num_events: 0
+        num_states: 2
+        keys: ["first_timestamp", "last_timestamp", "internal_device_id", "os", "user_agent"]
+        original_record: "Device ID"
+
+  jsonl:
+    - path: "discord/activity/analytics/events-2025-00000-of-00001.json"
+      platform: "discord"
+      expected:
+        num_events: 82
+        keys: ["primary_timestamp", "ip", "user_agent", "os", "os_ver"]
+        original_record: "event_type"
+
+  csv:
+    - path: "apple/Apple ID account and device information/Apple ID SignOn Information.csv"
+      platform: "apple"
+      expected:
+        num_events: 79
+        num_states: 0
+        timestamp: 1741106336000
+        keys: ["primary_timestamp", "ip", "internal_device_id", "app_info", "id"]
+        original_record: "{\"Application\": \"iTunes Music Store\", \"Apple ID Number\": \"22133678235\", \"Device Identifier\": \"00008020-000944691A2A002E\", \"IP Address\": \"0.0.0.21\", \"Logged In Date\": \"2025-03-04T16:38:56.000Z\", \"Signon Status\": \"0\", \"StoreFront Name\": \"United States\"}"
+       
+

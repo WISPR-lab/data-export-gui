@@ -15,10 +15,10 @@ def test_environment():
     expected_paths = [
         "base.py",
         "json_.py",
-        "json_labelvalues.py",
-        "jsonl.py",
+        "json_label_values.py",
+        "jsonl_.py",
         "csv_multi.py",
-        "csv.py",
+        "csv_.py",
         "schema_utils.py",
         "time_utils.py"
     ]
@@ -26,7 +26,7 @@ def test_environment():
     for path in expected_paths:
         health[path] = os.path.exists(path)
     try:
-        from jsonl import JSONLParser
+        from jsonl_ import JSONLParser
         health["import_test"] = True
     except Exception as e:
         health["import_test"] = False
@@ -57,13 +57,12 @@ def parse(schema_str: str, file_content: str, filename: str):
         if schema_str != _CACHED_SCHEMA_STR:
             group_schema_by_path(schema_str)
 
-        path_schemas = _CACHED_SCHEMA_GROUPED.get(filename, [])
-        if not path_schemas:
-            # Try matching with filename without leading paths in case the zip structure differs
+        grouped_schemas = _CACHED_SCHEMA_GROUPED.get(filename, [])
+        if not grouped_schemas:
             base_filename = filename.split('/')[-1]
-            path_schemas = _CACHED_SCHEMA_GROUPED.get(base_filename, [])
+            grouped_schemas = _CACHED_SCHEMA_GROUPED.get(base_filename, [])
             
-        if not path_schemas:
+        if not grouped_schemas:
             return {
                 "events": [],
                 "states": [],
@@ -72,20 +71,20 @@ def parse(schema_str: str, file_content: str, filename: str):
             }
 
         # determine the parser type from the first dtype (they should match for same file)
-        fmt = path_schemas[0].get('parser', {}).get('format', 'json').upper()
+        fmt = grouped_schemas[0].get('parser', {}).get('format', 'json').upper()
         
         handler = None
         if fmt == "JSON":
             from json_ import JSONParser
             handler = JSONParser
         elif fmt == "JSONL":
-            from jsonl import JSONLParser
+            from jsonl_ import JSONLParser
             handler = JSONLParser
         elif fmt == "CSV":
-            from csv import CSVParser
+            from csv_ import CSVParser
             handler = CSVParser
         elif fmt == "JSON_LABEL_VALUES":
-            from json_labelvalues import JSONLabelValuesParser
+            from json_label_values import JSONLabelValuesParser
             handler = JSONLabelValuesParser
         elif fmt == "CSV_MULTI":
             from csv_multi import CSVMultiParser
@@ -98,11 +97,12 @@ def parse(schema_str: str, file_content: str, filename: str):
                 "errors": [{"msg": f"Unsupported format: {fmt} for file {filename}"}]
             }
 
-        events, states, parser_errors = handler.parse(file_content, filename, path_schemas)
+        events, states, parser_errors = handler.parse(file_content, filename, grouped_schemas)
         
         return {
             "events": events,
             "states": states,
+            "fatal": False,
             "errors": parser_errors
         }
 

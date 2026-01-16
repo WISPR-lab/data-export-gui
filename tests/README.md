@@ -17,7 +17,10 @@ yarn vitest
 
 ## Structure
 - `js/`: Frontend logic tests (Vitest).
-- `python/`: Backend/Parser tests.
+- `python/`: Backend/Parser tests (Pytest).
+  - Uses `test_config.yaml` to map local raw data for integration testing.
+  - Supports lazy loading for memory efficiency with large files.
+  - Add `expected: {num_events: X}` to the YAML to validate parser output.
 - `zip_data/`: Git-ignored directory for real ZIP archive testing.
 - `tmp_outputs/`: Directory for debug logs and JSON output dumps.
 

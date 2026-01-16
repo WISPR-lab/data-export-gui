@@ -76,8 +76,8 @@ async function initDB() {
   });
 
   db.version(2).stores({
-    events: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category ${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
-    states: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, raw_str, category ${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
+    events: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, original_record, category ${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
+    states: `++id, sketch_id, timeline_id, source_file, source_line, tags, labels, attributes, created_at, updated_at, original_record, category ${identifierFieldsStr ? ', ' + identifierFieldsStr : ''}`,
     document_metadata: '++id, sketch_id, timeline_id, platform_name, labels, path, document_created_at, document_updated_at, size_bytes, mime_type, source_type, source_config, hash_sha256, created_at, updated_at',
 
     timelines: '++id, sketch_id, name, platform_name, description, status, color, label_string, datasources, deleted, created_at, updated_at',

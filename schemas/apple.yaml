@@ -40,7 +40,7 @@ data_types:
   - path: "Apple ID account and device information/Apple ID Account Recovery Contacts Information.csv"
     parser: 
       format: "csv"
-      drop_duplicates: { subset: ["Recovery ID"], keep: "most_complete"}
+      drop_duplicates: { subset: ["Recovery ID"], keep: "row_completeness"}
     fields:
     - {name: "primary_timestamp", source: "Recovery Create Date", type: "datetime"}
     - {name: "ip", source: "Recovery IP Address", type: "string"}
@@ -49,7 +49,7 @@ data_types:
   - path: "Apple ID account and device information/Apple ID Account Legacy Contacts Information.csv"
     parser: 
       format: "csv"
-      drop_duplicates: { subset: ["Beneficiary ID"], keep: "most_complete"}
+      drop_duplicates: { subset: ["Beneficiary ID"], keep: "row_completeness"}
     fields:
     - {name: "primary_timestamp", source: "Beneficiary Create Date", type: "datetime"}
     - {name: "ip", source: "Beneficiary IP Address", type: "string"}

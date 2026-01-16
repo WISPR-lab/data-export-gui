@@ -22,6 +22,8 @@ pyvenv.cfg
 *~
 *.swp
 
+*/__pycache__/
+
 # Generic auto-generated build files
 *.pyc
 *.pyo

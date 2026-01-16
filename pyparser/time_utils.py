@@ -64,6 +64,9 @@ def parse_date(date_str: str,
                user_tz='UTC',
                default_origin_tz='UTC', 
                fail_action='ignore') -> datetime:
+    if pd.isna(date_str) or str(date_str).strip().lower() in ['nan', 'none', '']:
+        return None
+    
     date_str = str(date_str).strip()
     try:
         # Check if the date_str is a Unix timestamp
@@ -73,7 +76,7 @@ def parse_date(date_str: str,
                 return datetime.fromtimestamp(int(date_str), tz=pytz.UTC)
             raise ValueError("Not a valid Unix timestamp")
         else:
-            default_datetime = datetime.now().replace(day=1, month=1, year=2000, hour=0, minute=0, second=0, microsecond=0, tzinfo=pytz.timezone(default_timezone))
+            default_datetime = datetime.now().replace(day=1, month=1, year=2000, hour=0, minute=0, second=0, microsecond=0, tzinfo=pytz.timezone(default_origin_tz))
             date = parser.parse(date_str, fuzzy=fuzzy, default=default_datetime)
             #logging.debug(f"date: {date}")
             if date.tzinfo is None:

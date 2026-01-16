@@ -1,4 +1,4 @@
-from .base import BaseParser
+from base import BaseParser
 import re
 
 
@@ -26,3 +26,4 @@ class CSVMultiParser(BaseParser):
         return False
 
         
+""" NOT FINISHED TODO """

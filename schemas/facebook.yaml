@@ -76,7 +76,7 @@ data_types:
     parser:
       format: "json"
       json_root: "account_activity_v2[]"
-      filter: "action == 'Log out'"
+      filter: {field: "action", op: "==", value: "Log out"}
     fields:
     - {name: "primary_timestamp", source: "timestamp", type: "datetime"}
     - {name: "ip", source: "ip_address", type: "string"}
@@ -88,7 +88,7 @@ data_types:
     parser: 
       format: "json"
       json_root: "account_accesses_v2[]"
-      filter: "action == 'Log out'"
+      filter: {field: "action", op: "==", value: "Log out"}
     fields:
     - {name: "primary_timestamp", source: "timestamp", type: "datetime"}
     - {name: "ip", source: "ip_address", type: "string"}
@@ -105,7 +105,7 @@ data_types:
     parser:
       format: "json"
       json_root: "account_activity_v2[]"
-      filter: "action == 'Password Change'"
+      filter: {field: "action", op: "==", value: "Password Change"}
     fields:
     - {name: "primary_timestamp", source: "timestamp", type: "datetime"}
     - {name: "ip", source: "ip_address", type: "string"}
@@ -116,7 +116,7 @@ data_types:
     parser:
       format: "json"
       json_root: "admin_records_v2[]"
-      filter: "event == 'Password Change'"
+      filter: {field: "event", op: "==", value: "Password Change"}
     fields:
     - {name: "primary_timestamp", source: "session.created_timestamp", type: "datetime"}
     - {name: "ip", source: "session.ip_address", type: "string"}
@@ -131,7 +131,7 @@ data_types:
     parser:
       format: "json"
       json_root: "account_activity_v2[]"
-      filter: "action == 'Requested Password Reset'"
+      filter: {field: "action", op: "==", value: "Requested Password Reset"}
     fields:
     - {name: "primary_timestamp", source: "timestamp", type: "datetime"}
     - {name: "ip", source: "ip_address", type: "string"}
@@ -147,7 +147,7 @@ data_types:
       parser:
         format: "json"
         json_root: "account_activity_v2[]"
-        filter: "action == 'Email Added'"
+        filter: {field: "action", op: "==", value: "Email Added"}
       fields:
       - {name: "primary_timestamp", source: "timestamp", type: "datetime"}
       - {name: "ip", source: "ip_address", type: "string"}
@@ -159,7 +159,7 @@ data_types:
       parser:
         format: "json"
         json_root: "admin_records_v2[]"
-        filter: "event == 'Email Added'"
+        filter: {field: "event", op: "==", value: "Email Added"}
       fields:
       - {name: "primary_timestamp", source: "session.created_timestamp", type: "datetime"}
       - {name: "ip", source: "session.ip_address", type: "string"}
