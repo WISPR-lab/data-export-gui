@@ -63,7 +63,7 @@ export default {
       return this.$store.state.dataTypes.length > 0
     },
     showSavedSearches() {
-      return this.$store.state.meta.views.length > 0
+      return (this.$store.state.meta.views || []).length > 0
     },
   },
 }

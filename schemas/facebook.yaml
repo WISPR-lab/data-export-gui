@@ -59,7 +59,7 @@ data_types:
     parser: 
       format: "json" 
       json_root: "admin_records_v2[]"
-      filter: "event == 'Checkpoint passed'"
+      filter: {field: "event", op: "==", value: "Checkpoint Passed"}
     fields: 
     - {name: "primary_timestamp", source: "session.created_timestamp", type: "datetime"}
     - {name: "ip", source: "session.ip_address", type: "string"}

@@ -722,10 +722,27 @@ export default {
       this.$store.dispatch('updateEnabledTimelines', [])
     },
   },
-  mounted() {
+  async mounted() {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
     EventBus.$on('setActiveView', this.searchView)
+    
+    // Load event counts for timelines from database
+    try {
+      const response = await BrowserDB.search(this.sketch.id)
+      const eventsByTimeline = {}
+      if (response.data.objects) {
+        response.data.objects.forEach(event => {
+          const timelineId = event._source.timeline_id
+          if (timelineId) {
+            eventsByTimeline[timelineId] = (eventsByTimeline[timelineId] || 0) + 1
+          }
+        })
+      }
+      this.countPerTimeline = eventsByTimeline
+    } catch (error) {
+      console.error('[Explore] Error loading event counts:', error)
+    }
   },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')

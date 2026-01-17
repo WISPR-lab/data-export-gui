@@ -135,6 +135,9 @@ export default {
       return []
     },
     allSavedSearches() {
+      if (!this.$store.state.meta || !this.$store.state.meta.views) {
+        return {}
+      }
       let savedSearches = this.$store.state.meta.views.map(
         (view) => {
           return {

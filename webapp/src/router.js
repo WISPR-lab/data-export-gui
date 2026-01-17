@@ -35,63 +35,58 @@ const routes = [
     component: HowToRequest,
   },
   {
-    // Sketch
-    path: '/sketch/:sketchId',
+    // App layout (wrapper for all sketch views)
+    path: '/',
     component: Sketch,
-    props: true,
+    props: { sketchId: 1 },
     children: [
-      {
-        path: '',
-        name: 'Overview',
-        redirect: { name: 'Explore' },
-      },
       {
         path: 'explore',
         name: 'Explore',
         component: Canvas,
-        props: true,
+        props: { sketchId: 1 },
       },
       {
         path: 'intelligence',
         name: 'Intelligence',
         component: Canvas,
-        props: true,
+        props: { sketchId: 1 },
       },
       {
         path: 'sigma',
         component: Canvas,
-        props: true,
+        props: { sketchId: 1 },
         children: [
           {
             path: 'new',
             name: 'SigmaNewRule',
             component: Canvas,
-            props: true,
+            props: { sketchId: 1 },
           },
           {
             path: 'edit/:ruleId',
             name: 'SigmaEditRule',
             component: Canvas,
-            props: true,
+            props: { sketchId: 1, ruleId: true },
           },
         ]
       },
       {
         path: 'visualization',
         component: Canvas,
-        props: true,
+        props: { sketchId: 1 },
         children: [
           {
             path: 'new',
             name: 'VisualizationNew',
             component: Canvas,
-            props: true,
+            props: { sketchId: 1 },
           },
           {
             path: 'view/:aggregationId',
             name: 'VisualizationView',
             component: Canvas,
-            props: true,
+            props: { sketchId: 1, aggregationId: true },
           },
         ]
       },
@@ -99,19 +94,19 @@ const routes = [
         path: 'graph',
         name: 'Graph',
         component: Canvas,
-        props: true,
+        props: { sketchId: 1 },
       },
       {
         path: 'story/:storyId',
         name: 'Story',
         component: Canvas,
-        props: true,
+        props: { sketchId: 1, storyId: true },
       },
       {
         path: 'analyzers',
         name: 'Analyze',
         component: Canvas,
-        props: true,
+        props: { sketchId: 1 },
       },
     ],
   },

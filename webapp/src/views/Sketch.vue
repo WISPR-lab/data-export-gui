@@ -262,7 +262,7 @@ limitations under the License.
         <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
         <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
         <ts-saved-searches
-          v-if="meta.views"
+          v-if="meta && meta.views"
           :icon-only="isMiniDrawer"
           @toggleDrawer="toggleDrawer()"
         ></ts-saved-searches>
@@ -455,68 +455,33 @@ export default {
     }
   },
   mounted() {
-    const sketchID = Number(this.sketchId)
-    
-    // Enforce single-sketch per user - only sketch/1 allowed
-    if (sketchID !== 1) {
-      console.warn(`Invalid sketch ID ${sketchID}. Redirecting to sketch/1/explore.`)
-      this.$router.push({ name: 'Explore', params: { sketchId: 1 } })
-      return
-    }
-    
+    const sketchID = this.sketchId
     this.loadingSketch = true
-    
-    // Load sketch and related data directly from BrowserDB
-    BrowserDB.getSketch(sketchID).then(response => {
-      let sketch = response.data.objects[0]
+    console.log('[Sketch] mounted(), loadingSketch=true')
 
-      // Handle missing sketch - auto-create it
-      if (!sketch) {
-        console.log(`Sketch ${sketchID} not found. Creating default sketch...`)
-        return BrowserDB.createSketch({
-          name: 'My Data',
-          description: 'Personal forensic timeline',
-          user_id: 'local-user',
-          label_string: 'default',
-          status: 'active',
-        }).then(createResponse => {
-          sketch = createResponse.data.objects[0]
-          
-          // Load timelines for the newly created sketch
-          return BrowserDB.getTimelines(sketchID).then(timelinesResponse => {
-            sketch.timelines = timelinesResponse.data.objects || []
-            sketch.active_timelines = sketch.timelines
-            this.$store.commit('SET_SKETCH', { objects: [sketch], meta: createResponse.data.meta || {} })
-            this.loadingSketch = false
-          })
-        }).catch(createError => {
-          console.error('Error creating default sketch:', createError)
-          this.$store.dispatch('setSnackBar', {
-            message: 'Error creating sketch: ' + createError.message,
-            color: 'error',
-            timeout: 5000,
-          })
-          this.loadingSketch = false
-        })
-      }
-
-      // Load timelines for this sketch
-      return BrowserDB.getTimelines(sketchID).then(timelinesResponse => {
-        sketch.timelines = timelinesResponse.data.objects || []
-        sketch.active_timelines = sketch.timelines // Default to all timelines active
-        this.$store.commit('SET_SKETCH', { objects: [sketch], meta: response.data.meta || {} })
+    BrowserDB.ensureSketchInitialized(sketchID)
+      .then(() => {
+        console.log('[Sketch] ensureSketchInitialized done')
+        return this.$store.dispatch('updateSketch', sketchID)
+      })
+      .then(() => {
+        console.log('[Sketch] updateSketch done')
+        return BrowserDB.getTimelines(sketchID)
+      })
+      .then(response => {
+        const count = response.data.objects ? response.data.objects.length : 0
+        console.log('[Sketch] getTimelines done, got', count, 'timelines')
+        const sketch = this.$store.state.sketch
+        this.$set(sketch, 'timelines', response.data.objects || [])
+        this.$set(sketch, 'active_timelines', sketch.timelines)
+        this.loadingSketch = false
+        console.log('[Sketch] loadingSketch=false')
+      })
+      .catch(error => {
+        console.error('[Sketch] Error:', error)
         this.loadingSketch = false
       })
-    }).catch(error => {
-      console.error('Error loading sketch:', error)
-      this.$store.dispatch('setSnackBar', {
-        message: 'Error loading sketch: ' + error.message,
-        color: 'error',
-        timeout: 5000,
-      })
-      this.loadingSketch = false
-    })
-    
+
     EventBus.$on('showContextWindow', this.showContextWindow)
   },
   beforeDestroy() {

@@ -187,7 +187,7 @@ export default {
   },
   methods: {
     goToSketch() {
-      this.$router.push({ name: 'Explore', params: { sketchId: 1 } })
+      this.$router.push({ name: 'Explore' })
     },
   },
 }

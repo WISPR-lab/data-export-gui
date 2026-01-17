@@ -9,19 +9,43 @@ let pyodide;
 let pyodideReadyPromise;
 let initError = null; // Track init failures for error reporting
 
-/**
- * Initializes Pyodide, installs dependencies, and mounts Python source files.
- */
 async function initPyodide() {
   pyodide = await loadPyodide();
+  console.log('[Pyodide] Loaded Pyodide core');
   
-  // Load specialized Python libraries
-  await pyodide.loadPackage(['pyyaml', 'pytz']);
+  console.log('[Pyodide] Loading built-in packages: pyyaml, pytz, pandas');
+  await pyodide.loadPackage(['pyyaml', 'pytz', 'pandas']);
+  console.log('[Pyodide] Built-in packages loaded');
+
+  console.log('[Pyodide] Loading micropip for installing hjson, json5');
+  await pyodide.loadPackage('micropip');
+  console.log('[Pyodide] Micropip loaded, importing micropip module...');
+  const micropip = pyodide.pyimport('micropip');
+  console.log('[Pyodide] Micropip module imported, starting installation...');
+  
+  try {
+    console.log('[Pyodide] Installing hjson...');
+    await micropip.install('hjson');
+    console.log('[Pyodide] hjson installed');
+    
+    console.log('[Pyodide] Installing json5...');
+    await micropip.install('json5');
+    console.log('[Pyodide] json5 installed');
+  
+    
+    console.log('[Pyodide] All JSON packages installed successfully');
+  } catch (error) {
+    console.error('[Pyodide] JSON package installation error:', error);
+    console.error('[Pyodide] Error details:', error.message || String(error));
+    console.warn('[Pyodide] Parsing will continue with available parsers');
+  }
 
   // Fetch and mount our custom Python parser logic
   const pythonFiles = [
     'pyodide.py',
     'base.py',
+    'errors.py',
+    'parseresult.py',
     'json_.py',
     'jsonl_.py',
     'csv_.py',
@@ -34,12 +58,14 @@ async function initPyodide() {
   for (const file of pythonFiles) {
     const response = await fetch(`/pyparser/${file}`);
     if (!response.ok) {
-      console.error(`Failed to fetch ${file}: ${response.statusText}`);
+      console.error(`[Pyodide] Failed to fetch ${file}: ${response.statusText}`);
       continue;
     }
     const content = await response.text();
     pyodide.FS.writeFile(file, content);
+    console.log(`[Pyodide] Mounted parser module: ${file}`);
   }
+  console.log('[Pyodide] All parser modules mounted');
 
   // The files are written to the root of Pyodide's filesystem
   // Execute the bridge module directly to load all functions into the global namespace

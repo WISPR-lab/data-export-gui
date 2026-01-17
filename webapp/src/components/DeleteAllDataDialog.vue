@@ -49,6 +49,10 @@ export default {
       try {
         this.isDeleting = true
         await BrowserDB.wipeAllData()
+        
+        // Reset Vuex store to clear stale sketch/timeline data
+        this.$store.commit('RESET_STATE')
+        
         this.isOpen = false
         
         // Show success message
@@ -58,9 +62,9 @@ export default {
           timeout: 5000,
         })
         
-        // Redirect to home after delay
+        // Force page reload after delay
         setTimeout(() => {
-          this.$router.push({ name: 'Home' })
+          location.reload()
         }, 1000)
         
         this.$emit('deleted')

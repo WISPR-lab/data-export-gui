@@ -93,7 +93,7 @@ It replaces the generic UploadForm for the new workflow.
               :placeholder="`e.g., '${platformName} Data Export'`"
               :rules="nameRules"
               counter="255"
-              hint="Choose a descriptive name for this data export file"
+              hint="Choose a descriptive name for this analysis"
               persistent-hint
             ></v-text-field>
           </div>
@@ -133,9 +133,9 @@ It replaces the generic UploadForm for the new workflow.
 </template>
 
 <script>
-import BrowserDB from '../../database.js';
-import { processUpload } from '../../upload.js';
-import UploadProgressDialog from './ProgressDialog.vue';
+import BrowserDB from '../database.js';
+import { processUpload } from '../upload.js';
+import UploadProgressDialog from './UploadProgressDialog.vue';
 import UploadErrorDisplay from './UploadErrorDisplay.vue';
 import {
   getPlatformName,
@@ -143,7 +143,7 @@ import {
   validateFile,
   formatFileSize,
   stripZipExtension,
-} from '../../utils/uploadFormUtils.js';
+} from './uploadFormUtils.js';
 
 export default {
   name: 'PlatformUploadForm',

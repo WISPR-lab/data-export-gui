@@ -1,13 +1,20 @@
 import json as jsonlib
 import hjson
 import json5
-import demjson3
 import uuid
 from base import BaseParser
 from parseresult import ParseResult
 from errors import FileLevelError, RecordLevelError, FieldLevelError
 from time_utils import parse_date, unix_ms
 from typing import Callable, Any, List
+
+# Try to import demjson3 for extra-lenient parsing, but make it optional
+try:
+    import demjson3
+    HAS_DEMJSON3 = True
+except ImportError:
+    HAS_DEMJSON3 = False
+    demjson3 = None
 
 class JSONParser(BaseParser):
 
@@ -139,22 +146,29 @@ class JSONParser(BaseParser):
     def basic_str_to_json(cls, s: str):
         # static, inherited
         robust_parsing_methods = [
-            lambda st: jsonlib.loads(st),  # Standard JSON
-            lambda st: jsonlib.loads(st.replace("'", '"')),  # Convert single quotes
-            lambda st: demjson3.decode(st, strict=False, allow_trailing_comma=True),  # Lenient parsing
-            lambda st: json5.loads(st),  # ES5-style parsing
-            lambda st: hjson.loads(st, use_decimal=True, object_pairs_hook=dict)
+            ('Standard JSON', lambda st: jsonlib.loads(st)),
+            ('Single-quote conversion', lambda st: jsonlib.loads(st.replace("'", '"'))),
         ]
+        
+        # Add demjson3 if available (lenient parsing for malformed data)
+        if HAS_DEMJSON3:
+            robust_parsing_methods.append(('demjson3 lenient', lambda st: demjson3.decode(st, strict=False, allow_trailing_comma=True)))
+        
+        # Add other robust parsers
+        robust_parsing_methods.extend([
+            ('json5 ES5-style', lambda st: json5.loads(st)),
+            ('hjson', lambda st: hjson.loads(st, use_decimal=True, object_pairs_hook=dict))
+        ])
 
         errors_encountered = []
         jsonobj = None
         
-        for method_idx, method in enumerate(robust_parsing_methods):
+        for name, method in robust_parsing_methods:
             try:
                 jsonobj = method(s)
                 break
             except Exception as e:
-                errors_encountered.append(f"Method {method_idx}: {type(e).__name__}: {str(e)}")
+                errors_encountered.append(f"{name}: {type(e).__name__}: {str(e)}")
                 continue
         
         if jsonobj is None:

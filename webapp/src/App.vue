@@ -25,6 +25,9 @@ limitations under the License.
 
     <!-- Main router view -->
     <router-view></router-view>
+
+    <!-- Safe Exit Button (global, on every page) -->
+    <safe-exit-button></safe-exit-button>
   </v-app>
 </template>
 

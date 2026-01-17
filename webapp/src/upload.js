@@ -3,8 +3,21 @@ import JSZip from 'jszip';
 import { classifyError, ERROR_TYPES } from './errorTypes';
 import { TIMELINE_STATUS } from './database';
 
+// For computing file hashes
+import crypto from 'crypto-js';
+
 const DEBUG_LOGGING = true;
-const pyodideWorker = new Worker('/pyodideWorker.js');
+
+// Singleton: Create worker only once, reuse across all imports
+let pyodideWorker = null;
+function getPyodideWorker() {
+  if (!pyodideWorker) {
+    pyodideWorker = new Worker('/pyodideWorker.js');
+    console.log('[UploadService] Created Pyodide worker (singleton)');
+  }
+  return pyodideWorker;
+}
+
 let workerMessageId = 0;
 
 
@@ -19,6 +32,16 @@ function log(...args) {
 
 function logError(...args) { console.error('[UploadService]', ...args); }
 
+// Compute SHA-256 hash of file content
+async function computeFileHash(content) {
+  try {
+    return crypto.SHA256(content).toString();
+  } catch (error) {
+    logError('Error computing hash:', error);
+    return null;
+  }
+}
+
 /**
  * sends a command to the Pyodide Worker
  * 
@@ -26,10 +49,11 @@ function logError(...args) { console.error('[UploadService]', ...args); }
  */
 function callWorker(command, args) {
   return new Promise((resolve, reject) => {
+    const worker = getPyodideWorker(); // Get singleton worker
     const id = workerMessageId++;
     const handler = (event) => {
       if (event.data.id === id) {
-        pyodideWorker.removeEventListener('message', handler);
+        worker.removeEventListener('message', handler);
         if (event.data.success) {
           resolve(event.data.result);
         } else {
@@ -40,8 +64,8 @@ function callWorker(command, args) {
         }
       }
     };
-    pyodideWorker.addEventListener('message', handler);
-    pyodideWorker.postMessage({ id, command, args });
+    worker.addEventListener('message', handler);
+    worker.postMessage({ id, command, args });
   });
 }
 
@@ -196,9 +220,10 @@ export async function processUpload(file, platform, sketchId, store) {
     log('Step 4: Creating new timeline...');
     let timelineId;
     try {
+      const timelineName = await BrowserDB.generateTimelineName(sketchId, platform);
       const timelineResponse = await BrowserDB.createTimeline({
         sketch_id: sketchId,
-        name: `${platform} - ${new Date().toLocaleString()}`,
+        name: timelineName,
         platform_name: platform,
         status: TIMELINE_STATUS.PROCESSING
       });
@@ -214,6 +239,7 @@ export async function processUpload(file, platform, sketchId, store) {
     log('Step 5: Extracting and processing files...');
     const allEvents = [];
     const allStates = [];
+    const fileMetadata = []; // Track metadata for each file
     
     const zipEntries = Object.keys(zip.files);
     let processedCount = 0;
@@ -239,6 +265,25 @@ export async function processUpload(file, platform, sketchId, store) {
         log(`Processing file: ${zipFilename}`);
         let fileContent = await zipFile.async('text');
         
+        // Compute file hash for duplicate detection
+        const fileHash = await computeFileHash(fileContent);
+        log(`File hash: ${fileHash}`);
+        
+        // Check for duplicates
+        let isDuplicate = false;
+        let duplicateMetadata = null;
+        if (fileHash) {
+          const existingResponse = await BrowserDB.getDocumentMetadataByHash(sketchId, fileHash);
+          if (existingResponse.data.objects && existingResponse.data.objects.length > 0) {
+            duplicateMetadata = existingResponse.data.objects[0];
+            isDuplicate = true;
+            const msg = `Duplicate detected: ${targetPath} matches previously uploaded ${duplicateMetadata.path}`;
+            log(`WARNING: ${msg}`);
+            summary.warnings.push(msg);
+            // For now, continue processing. In future, could prompt user for choice.
+          }
+        }
+        
         // Chunk large JSONL files (> 1MB)
         let parseResult;
         if (fileContent.length > 1024 * 1024 && zipFilename.toLowerCase().endsWith('.jsonl')) {
@@ -257,6 +302,18 @@ export async function processUpload(file, platform, sketchId, store) {
           allEvents.push(...events);
           allStates.push(...states);
         }
+        
+        // Track metadata for this file
+        fileMetadata.push({
+          path: targetPath,
+          file_name: zipFilename.split('/').pop(),
+          size_bytes: fileContent.length,
+          mime_type: zipFilename.endsWith('.json') || zipFilename.endsWith('.jsonl') ? 'application/json' : 'text/plain',
+          hash_sha256: fileHash,
+          rows_parsed: ((parseResult.data && parseResult.data.events) ? parseResult.data.events.length : 0) + ((parseResult.data && parseResult.data.states) ? parseResult.data.states.length : 0),
+          parse_error_message: parseResult.errors && parseResult.errors.length > 0 ? parseResult.errors[0] : null,
+          labels: isDuplicate ? ['duplicate'] : [],
+        });
         
         fileContent = null; 
       } catch (error) {
@@ -280,6 +337,25 @@ export async function processUpload(file, platform, sketchId, store) {
         await BrowserDB.bulkInsert(sketchId, timelineId, allEvents, allStates);
       }
       
+      // Step 7: Create document metadata for each processed file
+      log(`Step 7: Creating document metadata for ${fileMetadata.length} files...`);
+      for (const metadata of fileMetadata) {
+        try {
+          await BrowserDB.createDocumentMetadata({
+            sketch_id: sketchId,
+            timeline_id: timelineId,
+            platform_name: platform,
+            ...metadata,
+            source_config: {
+              uploadedAt: new Date().toISOString(),
+              parse_status: metadata.parse_error_message ? 'error' : 'success',
+            }
+          });
+        } catch (metadataError) {
+          logError(`Failed to create metadata for ${metadata.path}:`, metadataError);
+        }
+      }
+      
       summary.totalEventsAdded = allEvents.length;
       summary.totalStatesAdded = allStates.length;
       summary.success = true;
@@ -289,9 +365,12 @@ export async function processUpload(file, platform, sketchId, store) {
       
       if (store) {
         store.commit('COMPLETE_UPLOAD', summary);
-        // Refresh timelines in store
-        const timelines = await BrowserDB.getTimelines(sketchId);
-        store.commit('SET_TIMELINES', timelines.data);
+        // Reload full sketch to update sketch.timelines (triggers UI re-render)
+        const sketchResponse = await BrowserDB.getSketch(sketchId);
+        const sketch = sketchResponse.data.objects[0];
+        const timelinesResponse = await BrowserDB.getTimelines(sketchId);
+        sketch.timelines = timelinesResponse.data.objects || [];
+        store.commit('SET_SKETCH', { objects: [sketch], meta: sketchResponse.data.meta || {} });
       }
       
       log('Database insertion complete');

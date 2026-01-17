@@ -14,7 +14,7 @@
       <v-list-item router-link to="/" :active="$route.path === '/'">
         <v-list-item-title>Home</v-list-item-title>
       </v-list-item>
-      <v-list-item router-link to="/sketch/1/explore" :active="$route.path.includes('sketch')">
+      <v-list-item router-link to="/explore" :active="$route.path.includes('sketch')">
         <v-list-item-title>Explore My Data</v-list-item-title>
       </v-list-item>
       <v-list-item router-link to="/how-to-request" :active="$route.path === '/how-to-request'">

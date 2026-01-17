@@ -134,13 +134,49 @@ const BrowserDB = {
   },
   async getSketch(sketchId) {
     const sketch = await db.sketches.get(sketchId);
+    if (sketch) {
+      const timelinesResponse = await this.getTimelines(sketchId);
+      sketch.timelines = timelinesResponse.data.objects || [];
+    }
     return createResponse([sketch]);
+  },
+  async ensureSketchInitialized(sketchId = 1) {
+    /**
+     * Ensure database is initialized and sketch exists.
+     * On first visit, creates sketch/1 if it doesn't exist.
+     * Subsequent visits just return existing sketch.
+     * 
+     * @returns sketch object or newly created sketch
+     */
+    try {
+      const sketch = await db.sketches.get(sketchId);
+      if (sketch) return sketch;
+      
+      // Sketch doesn't exist - create it
+      console.log(`[BrowserDB] Sketch ${sketchId} not found. Creating default sketch...`);
+      const now = new Date().toISOString();
+      const newSketch = {
+        id: sketchId,
+        name: 'My Data',
+        description: 'Personal forensic timeline',
+        user_id: 'local-user',
+        label_string: 'default',
+        status: 'active',
+        created_at: now,
+        updated_at: now,
+      };
+      await db.sketches.add(newSketch);
+      return await db.sketches.get(sketchId);
+    } catch (error) {
+      console.error('[BrowserDB] Error ensuring sketch initialized:', error);
+      throw error;
+    }
   },
   async getTimelines(sketchId) {
     const timelines = await db.timelines.where('sketch_id').equals(sketchId).toArray();
     return createResponse(timelines);
   },
-  async getNextTimelineNameForPlatform(sketchId, platformName) {
+  async generateTimelineName(sketchId, platformName) {
     try {
       const timelines = await db.timelines
         .where('sketch_id').equals(sketchId)
@@ -726,6 +762,79 @@ const BrowserDB = {
 
 
   // ----------------------------------------------------------
+  // Document Metadata
+  async createDocumentMetadata({
+    sketch_id,
+    timeline_id,
+    platform_name,
+    path = '',
+    file_name = '',
+    size_bytes = 0,
+    mime_type = '',
+    source_type = 'zip_upload',
+    source_config = {},
+    hash_sha256 = '',
+    labels = [],
+    parse_status = 'pending',
+    parse_error_message = null,
+    rows_parsed = 0,
+  }) {
+    const now = new Date().toISOString();
+    const metadata = {
+      sketch_id,
+      timeline_id,
+      platform_name,
+      path,
+      file_name,
+      size_bytes,
+      mime_type,
+      source_type,
+      source_config: source_config || {},
+      hash_sha256,
+      labels: labels || [],
+      document_created_at: now,
+      document_updated_at: now,
+      created_at: now,
+      updated_at: now,
+    };
+    
+    // Store parse status in source_config for easier querying
+    if (parse_status || parse_error_message || rows_parsed > 0) {
+      metadata.source_config = {
+        ...metadata.source_config,
+        parse_status,
+        parse_error_message,
+        rows_parsed,
+      };
+    }
+    
+    const id = await db.document_metadata.add(metadata);
+    const newMetadata = await db.document_metadata.get(id);
+    return createResponse([newMetadata]);
+  },
+
+  async getDocumentMetadataByTimeline(timelineId) {
+    const metadata = await db.document_metadata.where('timeline_id').equals(timelineId).toArray();
+    return createResponse(metadata);
+  },
+
+  async getDocumentMetadataByHash(sketchId, hash) {
+    const metadata = await db.document_metadata
+      .where('sketch_id').equals(sketchId)
+      .filter(m => m.hash_sha256 === hash)
+      .toArray();
+    return createResponse(metadata);
+  },
+
+  async updateDocumentMetadata(metadataId, updates) {
+    const now = new Date().toISOString();
+    const updateObj = { ...updates, updated_at: now };
+    await db.document_metadata.update(metadataId, updateObj);
+    const updated = await db.document_metadata.get(metadataId);
+    return createResponse([updated]);
+  },
+
+  // ----------------------------------------------------------
   // Timeline Custom 
   async createTimeline({
     id = undefined,
@@ -767,9 +876,12 @@ const BrowserDB = {
     /**
      * Nuclear wipe: Delete the entire IndexedDB database.
      * No trace remains that this tool was ever accessed.
-     * Schema will be recreated automatically on next app load.
+     * Database will be reinitialized on next access.
      */
     try {
+      // Close all connections to the database
+      await db.close();
+      // Delete the entire database
       await db.delete();
       console.log('[BrowserDB] Entire IndexedDB database deleted - no trace remains');
       return { success: true, message: 'All data permanently deleted' };

@@ -19,8 +19,8 @@ limitations under the License.
   can be represented as a chip or a table row.
 -->
 <template>
-  <span>
-    <v-dialog v-if="!timelineAvailable" v-model="dialogStatus" width="600">
+  <span v-if="timeline && timeline.id">
+    <!--<v-dialog v-if="!timelineAvailable" v-model="dialogStatus" width="600">
       <template v-slot:activator="{ on, attrs }">
         <slot
           name="processing"
@@ -105,10 +105,9 @@ limitations under the License.
           <v-btn color="primary" text @click="dialogStatus = false"> Close </v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
 
     <v-menu
-      v-else
       offset-y
       max-width="385"
       :close-on-content-click="false"
@@ -120,7 +119,7 @@ limitations under the License.
           name="processed"
           :timelineFailed="timelineFailed"
           :timelineChipColor="timelineChipColor"
-          :timelineStatus="timelineStatus"
+          :timelineStatus="timeline.status"
           :events="{
             toggleTimeline,
             openDialog,
@@ -176,50 +175,45 @@ limitations under the License.
                 <v-list-item-action>
                   <v-icon :color="iconStatus === 'mdi-alert-circle-outline' ? 'red' : ''">{{ iconStatus }}</v-icon>
                 </v-list-item-action>
-                <v-list-item-subtitle>Data sources ({{ datasources.length }})</v-list-item-subtitle>
+                <v-list-item-subtitle>Uploaded files ({{ documentMetadata.length }})</v-list-item-subtitle>
               </v-list-item>
             </template>
             <v-card>
               <div class="pa-4">
                 <ul style="list-style-type: none">
                   <li><strong>Timeline name: </strong>{{ timeline.name }}</li>
-                  <li v-if="timelineStatus === 'processing' || timelineStatus === 'ready'">
+                  <li v-if="timeline.status === 'processing' || timeline.status === 'ready'">
                     <strong>Number of events: </strong>
                     {{ allIndexedEvents | compactNumber }}
                   </li>
-                  <li><strong>Created by: </strong>{{ timeline.user.username }}</li>
+                  <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
                   <li>
                     <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
                     <small>({{ timeline.created_at | timeSince }})</small>
                   </li>
-                  <li><strong>Number of datasources: </strong>{{ datasources.length }}</li>
+                  <li><strong>Number of files uploaded: </strong>{{ documentMetadata.length }}</li>
                 </ul>
 
                 <v-alert
-                  v-for="datasource in datasources"
-                  :key="datasource.id"
+                  v-for="doc in documentMetadata"
+                  :key="doc.id"
                   outlined
                   text
-                  :color="datasourceStatusColors(datasource)"
+                  :color="doc.source_config && doc.source_config.parse_error_message ? 'error' : 'success'"
                   class="ma-5"
                 >
                   <ul style="list-style-type: none">
-                    <li><strong>Original filename:</strong> {{ datasource.original_filename }}</li>
-                    <li><strong>File on disk:</strong> {{ datasource.file_on_disk }}</li>
-                    <li><strong>File size:</strong> {{ datasource.file_size | compactBytes }}</li>
-                    <li><strong>Uploaded by:</strong> {{ datasource.user.username }}</li>
-                    <li><strong>Provider:</strong> {{ datasource.provider }}</li>
-                    <li><strong>Context:</strong> {{ datasource.context }}</li>
-                    <li v-if="datasource.data_label"><strong>Data label:</strong> {{ datasource.data_label }}</li>
-                    <li><strong>Status:</strong> {{ dataSourceStatus(datasource) }}</li>
-                    <li>
-                      <strong>Total File Events: </strong
-                      >{{ totalEventsDatasource(datasource.file_on_disk) | compactNumber }}
+                    <li><strong>File name:</strong> {{ doc.file_name }}</li>
+                    <li><strong>Path in ZIP:</strong> {{ doc.path }}</li>
+                    <li><strong>File size:</strong> {{ doc.size_bytes | compactBytes }}</li>
+                    <li><strong>MIME type:</strong> {{ doc.mime_type }}</li>
+                    <li><strong>Rows parsed:</strong> {{ (doc.source_config && doc.source_config.rows_parsed) || 0 | compactNumber }}</li>
+                    <li v-if="doc.labels && doc.labels.length"><strong>Labels:</strong> {{ doc.labels.join(', ') }}</li>
+                    <li v-if="doc.source_config && doc.source_config.parse_error_message">
+                      <strong>Parse error:</strong>
+                      <code> {{ doc.source_config.parse_error_message }}</code>
                     </li>
-                    <li v-if="datasource.error_message">
-                      <strong>Error message:</strong>
-                      <code> {{ datasource.error_message }}</code>
-                    </li>
+                    <li v-else class="text-success">✓ Parsed successfully</li>
                   </ul>
                 </v-alert>
               </div>
@@ -232,10 +226,9 @@ limitations under the License.
           </v-dialog>
 
           <v-list-item
-            v-if="timelineStatus === 'ready'"
-            :to="{ name: 'Analyze', params: { sketchId: sketch.id, analyzerTimelineId: timeline.id } }"
+            v-if="timeline.status === 'ready'"
             style="cursor: pointer"
-            @click="$refs.timelineChipMenuRef.isActive = false"
+            @click="goToAnalyzers()"
           >
             <v-list-item-action>
               <v-icon>mdi-auto-fix</v-icon>
@@ -257,8 +250,8 @@ limitations under the License.
               <v-card-text>
                 <ul style="list-style-type: none">
                   <li><strong>Name: </strong>{{ timeline.name }}</li>
-                  <li><strong>Status: </strong>{{ timelineStatus }}</li>
-                  <li v-if="timelineStatus === 'processing' || timelineStatus === 'ready'">
+                  <li><strong>Status: </strong>{{ timeline.status }}</li>
+                  <li v-if="timeline.status === 'processing' || timeline.status === 'ready'">
                     <strong>Number of events: </strong>
                     {{ allIndexedEvents | compactNumber }}
                   </li>
@@ -266,7 +259,7 @@ limitations under the License.
                   {{
                     allIndexedEvents | compactNumber
                   }}
-                  <li><strong>Created by: </strong>{{ timeline.user.username }}</li>
+                  <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
                   <li>
                     <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
                     <small>({{ timeline.created_at | timeSince }})</small>
@@ -323,13 +316,13 @@ export default {
   props: ['timeline', 'eventsCount', 'isSelected', 'isEmptyState'],
   data() {
     return {
-      autoRefresh: false,
+      // autoRefresh: false, // COMMENTED OUT: No polling in browser model
       allIndexedEvents: 0, // all indexed events from ready and processed datasources
       totalEvents: null,
       dialogStatus: false,
       dialogRename: false,
-      datasources: [],
-      timelineStatus: null,
+      // datasources: [],
+      documentMetadata: [], // Browser model: uploaded files from document_metadata table
       eventsPerSecond: [],
       newTimelineName: [...this.timeline.name],
       sparkline: {
@@ -364,46 +357,48 @@ export default {
     meta() {
       return this.$store.state.meta
     },
-    datasourceErrors() {
-      return this.timeline.datasources.filter((datasource) => datasource.error_message)
-    },
-    datasourcesProcessing() {
-      return this.datasources.filter(
-        (datasource) =>
-          this.dataSourceStatus(datasource) === 'processing' || this.dataSourceStatus(datasource) === 'queueing'
-      )
-    },
+    // datasourceErrors() {
+    //   const datasources = this.timeline && this.timeline.datasources ? this.timeline.datasources : []
+    //   return datasources.filter((datasource) => datasource.error_message)
+    // },
+    // datasourcesProcessing() {
+    //   return this.datasources.filter(
+    //     (datasource) =>
+    //       this.dataSourceStatus(datasource) === 'processing' || this.dataSourceStatus(datasource) === 'queueing'
+    //   )
+    // },
     sketch() {
       return this.$store.state.sketch
     },
-    totalEventsToIndex() {
-      return this.datasources
-        .filter((x) => this.dataSourceStatus(x) === 'processing')
-        .map((x) => x.total_file_events)
-        .reduce((a, b) => a + b, 0)
-    },
-    secondsToComplete() {
-      return this.totalEventsToIndex / this.avarageEventsPerSecond()
-    },
-    percentComplete() {
-      return Math.floor((this.secondsSinceStart() / this.secondsToComplete) * 100) || 0
-    },
+    // totalEventsToIndex() {
+    //   return this.datasources
+    //     .filter((x) => this.dataSourceStatus(x) === 'processing')
+    //     .map((x) => x.total_file_events)
+    //     .reduce((a, b) => a + b, 0)
+    // },
+    // secondsToComplete() {
+    //   return this.totalEventsToIndex / this.avarageEventsPerSecond()
+    // },
+    // percentComplete() {
+    //   return Math.floor((this.secondsSinceStart() / this.secondsToComplete) * 100) || 0
+    // },
     iconStatus() {
-      if (this.timelineStatus === 'ready') return 'mdi-information-outline'
-      if (this.timelineStatus === 'processing') return 'mdi-circle-slice-7'
+      if (this.timeline.status === 'ready') return 'mdi-information-outline'
+      if (this.timeline.status === 'processing') return 'mdi-circle-slice-7'
       return 'mdi-alert-circle-outline'
     },
     timelineFailed() {
-      return this.timelineStatus === 'fail'
+      return this.timeline.status === 'fail'
     },
     timelineAvailable() {
       return (
-        this.timelineStatus === 'ready' ||
-        this.timelineStatus === 'fail' ||
-        (this.settings.showProcessingTimelineEvents && this.timelineStatus === 'processing')
+        this.timeline.status === 'ready' ||
+        this.timeline.status === 'fail' ||
+        (this.settings.showProcessingTimelineEvents && this.timeline.status === 'processing')
       )
     },
     timelineChipColor() {
+      if (!this.timeline || !this.timeline.color) return '#5E75C2'
       if (!this.timeline.color.startsWith('#')) {
         return '#' + this.timeline.color
       }
@@ -426,25 +421,25 @@ export default {
       this.deleteConfirmation = false
       this.successSnackBar('Timeline deleted')
     },
-    secondsSinceStart() {
-      if (!this.datasourcesProcessing.length) {
-        return 0
-      }
-      let start = dayjs.utc(this.datasourcesProcessing[0].updated_at)
-      let end = dayjs.utc()
-      let diffSeconds = end.diff(start, 'second')
-      return diffSeconds
-    },
-    avarageEventsPerSecond() {
-      const sum = this.eventsPerSecond.reduce((a, b) => a + b, 0)
-      const avg = sum / this.eventsPerSecond.length || 0
-      return Math.floor(avg)
-    },
-    processingETA() {
-      let secondsLeft = this.secondsToComplete - this.secondsSinceStart()
-      let eta = dayjs().add(secondsLeft, 'second').fromNow()
-      return eta
-    },
+    // secondsSinceStart() {
+    //   if (!this.datasourcesProcessing.length) {
+    //     return 0
+    //   }
+    //   let start = dayjs.utc(this.datasourcesProcessing[0].updated_at)
+    //   let end = dayjs.utc()
+    //   let diffSeconds = end.diff(start, 'second')
+    //   return diffSeconds
+    // },
+    // avarageEventsPerSecond() {
+    //   const sum = this.eventsPerSecond.reduce((a, b) => a + b, 0)
+    //   const avg = sum / this.eventsPerSecond.length || 0
+    //   return Math.floor(avg)
+    // },
+    // processingETA() {
+    //   let secondsLeft = this.secondsToComplete - this.secondsSinceStart()
+    //   let eta = dayjs().add(secondsLeft, 'second').fromNow()
+    //   return eta
+    // },
     toggleTimeline() {
       if (!this.timelineFailed) {
         this.$emit('toggle', this.timeline)
@@ -455,117 +450,135 @@ export default {
       Vue.set(this.timeline, 'color', color.hex.substring(1))
       this.$emit('save', this.timeline)
     }, 300),
-    fetchData() {
-      BrowserDB.getSketchTimeline(this.sketch.id, this.timeline.id)
-        .then((response) => {
-          this.timelineStatus = response.data.objects[0].status[0].status
-          this.datasources = response.data.objects[0].datasources
-          // This is a naive approach and is misleading if there are multiple
-          // datasources importing at the same time, or multiple timelines importing to
-          // the same index.
-          //
-          // TODO: Add datasource ID to all events at import time like we do with
-          // timeline ID. This will give us the ability to calculate index progress per
-          // datasource, and also enable deletion of datasources from opensearch
-          // indices.
-          //
-          // Tracking in: https://github.com/google/timesketch/issues/2361
-          let tmpAllIndexedEvents = this.allIndexedEvents
-          this.allIndexedEvents = response.data.meta.lines_indexed
-          let deltaEvents = this.allIndexedEvents - tmpAllIndexedEvents
-
-          if (deltaEvents < 10000 && deltaEvents > 0) {
-            this.eventsPerSecond.push(Math.floor(deltaEvents / 5))
-          }
-
-          if (this.timelineStatus !== 'ready' && this.timelineStatus !== 'fail') {
-            this.autoRefresh = true
-          } else {
-            this.autoRefresh = false
-            this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-              if (this.timelineStatus === 'ready'
-                && !this.$store.state.enabledTimelines.includes(this.timeline.id)
-                && !this.settings.showProcessingTimelineEvents
-              ) {
-                this.$emit('toggle', response.data.objects[0])
-              }
-            })
-          }
-        })
-        .catch((e) => {
-          console.log(e)
-        })
-    },
-    dataSourceStatus(datasource) {
-      // Support legacy datasources that don't have a status set.
-      if (!datasource.status[0]) {
-        return 'ready'
+    async loadDocumentMetadata() {
+      // Fetch document_metadata records for this timeline from browser DB
+      try {
+        const response = await BrowserDB.getDocumentMetadataByTimeline(this.timeline.id)
+        this.documentMetadata = response.data.objects || []
+      } catch (error) {
+        console.error('Error loading document metadata:', error)
       }
+    },
 
-      return datasource.status[0].status
+    // fetchData() {
+    //   BrowserDB.getSketchTimeline(this.sketch.id, this.timeline.id)
+    //     .then((response) => {
+    //       this.timelineStatus = response.data.objects[0].status[0].status
+    //       this.datasources = response.data.objects[0].datasources
+    //       // This is a naive approach and is misleading if there are multiple
+    //       // datasources importing at the same time, or multiple timelines importing to
+    //       // the same index.
+    //       //
+    //       // TODO: Add datasource ID to all events at import time like we do with
+    //       // timeline ID. This will give us the ability to calculate index progress per
+    //       // datasource, and also enable deletion of datasources from opensearch
+    //       // indices.
+    //       //
+    //       // Tracking in: https://github.com/google/timesketch/issues/2361
+    //       let tmpAllIndexedEvents = this.allIndexedEvents
+    //       this.allIndexedEvents = response.data.meta.lines_indexed
+    //       let deltaEvents = this.allIndexedEvents - tmpAllIndexedEvents
+
+    //       if (deltaEvents < 10000 && deltaEvents > 0) {
+    //         this.eventsPerSecond.push(Math.floor(deltaEvents / 5))
+    //       }
+
+    //       if (this.timelineStatus !== 'ready' && this.timelineStatus !== 'fail') {
+    //         this.autoRefresh = true
+    //       } else {
+    //         this.autoRefresh = false
+    //         this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
+    //           if (this.timelineStatus === 'ready'
+    //             && !this.$store.state.enabledTimelines.includes(this.timeline.id)
+    //             && !this.settings.showProcessingTimelineEvents
+    //           ) {
+    //             this.$emit('toggle', response.data.objects[0])
+    //           }
+    //         })
+    //       }
+    //     })
+    //     .catch((e) => {
+    //       console.log(e)
+    //     })
+    // },
+    dataSourceStatus(datasource) {
+      // COMMENTED OUT: Server-only method - not applicable to browser model
+      // Support legacy datasources that don't have a status set.
+      // if (!datasource.status[0]) {
+      //   return 'ready'
+      // }
+      // return datasource.status[0].status
     },
 
     datasourceStatusColors(datasource) {
+      // COMMENTED OUT: Server-only method - not applicable to browser model
       // Support legacy datasources that don't have a status set.
-      if (!datasource.status[0]) {
-        return 'ready'
-      }
-
-      if (datasource.status[0].status === 'ready' || datasource.status === []) {
-        return 'success'
-      } else if (datasource.status[0].status === 'processing') {
-        return 'info'
-      } else if (datasource.status[0].status === 'queueing') {
-        return 'warning'
-      }
+      // if (!datasource.status[0]) {
+      //   return 'ready'
+      // }
+      // if (datasource.status[0].status === 'ready' || datasource.status == []) {
+      //   return 'success'
+      // } else if (datasource.status[0].status === 'processing') {
+      //   return 'info'
+      // } else if (datasource.status[0].status === 'queueing') {
+      //   return 'warning'
+      // }
       // status = fail
-      return 'error'
+      // return 'error'
     },
     totalEventsDatasource(fileOnDisk) {
-      return this.datasources.find((x) => x.file_on_disk === fileOnDisk).total_file_events
+      // COMMENTED OUT: Server-only method - not applicable to browser model
+      // return this.datasources.find((x) => x.file_on_disk === fileOnDisk).total_file_events
     },
   },
   created() {
     // TODO: Move to computed
-    this.timelineStatus = this.timeline.status[0].status
-
-    this.datasources = this.timeline.datasources
-    let timelineStat = this.meta.stats_per_timeline[this.timeline.id]
-
-    if (this.timelineStatus === 'processing') {
-      this.autoRefresh = true
-    } else {
-      this.autoRefresh = false
-      if (timelineStat) {
-        this.allIndexedEvents = timelineStat['count']
-      }
+    // Defensive checks: timeline may not have status yet if sketch hasn't fully loaded
+    // Browser model: status is a string, not an array
+    if (!this.timeline || !this.timeline.status) {
+      return
     }
+    
+    // this.datasources = this.timeline.datasources || [] // COMMENTED OUT: Server-only, use documentMetadata instead
+    let timelineStat = (this.meta && this.meta.stats_per_timeline) ? this.meta.stats_per_timeline[this.timeline.id] : null
+
+    // COMMENTED OUT: No polling in browser model
+    // if (this.timelineStatus === 'processing') {
+    //   this.autoRefresh = true
+    // } else {
+    //   this.autoRefresh = false
+    //   if (timelineStat) {
+    //     this.allIndexedEvents = timelineStat['count']
+    //   }
+    // }
     this.newTimelineName = this.timeline.name
+    this.loadDocumentMetadata()
   },
   beforeDestroy() {
     clearInterval(this.t)
     this.t = false
   },
-  watch: {
-    autoRefresh(val) {
-      if (val && !this.t) {
-        this.t = setInterval(
-          function () {
-            this.fetchData()
-          }.bind(this),
-          5000
-        )
-      } else {
-        clearInterval(this.t)
-        this.t = false
-      }
-    },
-    timeline() {
-      if (this.timeline.datasources.length > this.datasources.length) {
-        this.fetchData()
-      }
-    },
-  },
+  // COMMENTED OUT: No polling in browser model
+  // watch: {
+  //   autoRefresh(val) {
+  //     if (val && !this.t) {
+  //       this.t = setInterval(
+  //         function () {
+  //           this.fetchData()
+  //         }.bind(this),
+  //         5000
+  //       )
+  //     } else {
+  //       clearInterval(this.t)
+  //       this.t = false
+  //     }
+  //   },
+  //   timeline() {
+  //     if (this.timeline.datasources.length > this.datasources.length) {
+  //       this.fetchData()
+  //     }
+  //   },
+  // },
 }
 </script>
 

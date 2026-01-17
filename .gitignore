@@ -4,6 +4,7 @@
 takeout-tool.code-workspace
 */reference_docs/
 
+webapp/dist/
 webapp/public/pyparser/
 webapp/public/schemas/
 webapp/public/pyodideWorker.js
@@ -73,3 +74,4 @@ vagrant/*.log
 
 # Exclude JetBrains IDE files
 .idea/
+CODEBASE_AUDIT_REPORT.md
