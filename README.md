@@ -36,7 +36,7 @@ The frontend usually runs on `http://localhost:5001`
 
 5. UI (JavaScript): UI elements are rendered from the local DB.
 
-The way I like to think about it, the Python/Pyodide engine pretends to be the "server" in the classic client-server model, even though the data doesn't leave the browser.
+The way I like to think about it, the Python/Pyodide engine pretends to be the "server" in the classic client-server model, even though the data doesn't leave the local machine.
 
 
 ## Understanding and writing new schema
