@@ -87,7 +87,7 @@ function createMockWorkerInterface() {
               path_schemas: {
                 'security_and_login_information/account_activity.json': [
                   {
-                    category: 'auth.login',
+                    category: 'auth.login.success',
                     temporal: 'event',
                     parser: { format: 'json', json_root: 'account_activity_v2[]' },
                     fields: [],
@@ -168,7 +168,7 @@ describe('PyodideWorker', () => {
       const mockSchema = `
 data_types:
   - temporal: event
-    category: auth.login
+    category: 'auth.login.success'
     files:
       - path: security_and_login_information/account_activity.json
 `;

@@ -60,7 +60,7 @@ export default {
       return [...this.$store.state.tags, ...filteredLabels].length > 0
     },
     showDataTypes() {
-      return this.$store.state.dataTypes.length > 0
+      return this.$store.state.allCategories.length > 0
     },
     showSavedSearches() {
       return (this.$store.state.meta.views || []).length > 0

@@ -82,7 +82,7 @@ export default {
       return this.$store.state.tags
     },
     labels() {
-      return this.meta.filter_labels
+      return this.meta.filter_labels || []
     },
     customTags() {
       return this.tags.filter((tag) => !this.getQuickTag(tag.tag))
@@ -92,7 +92,8 @@ export default {
     },
     allTagsAndLabels() {
       const labelOrder = ['__ts_star', '__ts_comment', 'bad', 'suspicious', 'good']
-      return [...this.labels, ...this.assignedQuickTags, ...this.customTags]
+      const safeLabels = Array.isArray(this.labels) ? this.labels : []
+      return [...safeLabels, ...this.assignedQuickTags, ...this.customTags]
         .filter(item => item.tag || item.label)
         .filter(item => !(item.label && item.label.startsWith('__ts_fact')))
         .sort((a, b) => {

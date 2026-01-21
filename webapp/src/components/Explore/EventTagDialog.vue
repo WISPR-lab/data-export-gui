@@ -120,8 +120,8 @@ export default {
     assignedTags() {
       let tags = new Set();
       for (const event of this.events) {
-        if (event._source.tag) {
-          event._source.tag.forEach(e => tags.add(e))
+        if (event._source.tags && Array.isArray(event._source.tags)) {
+          event._source.tags.forEach(e => tags.add(e))
         }
       }
       return [...tags];
@@ -129,8 +129,8 @@ export default {
     tagsAssignedToAll() {
       return this.quickTags.filter((el) =>
         this.events.every(ev => {
-          const tag = ev._source.tag || []
-          return tag.includes(el.tag)
+          const tags = ev._source.tags || []
+          return tags.includes(el.tag)
         })
       ).map(t => t.tag);
     },
@@ -148,40 +148,58 @@ export default {
       return this.quickTags.find((el) => el.tag === tag)
     },
     removeTags(tag) {
-      BrowserDB.untagEvents(this.sketch.id, this.events, [tag])
+      // Extract event IDs from the _id field in event objects
+      const eventIds = this.events.map(ev => ev._id);
+      
+      BrowserDB.untagEvent(eventIds, [tag])
         .then((response) => {
+          // Update in-memory event objects to reflect DB change
           for (let event of this.events) {
-            const index = event._source.tag.indexOf(tag);
-            if (index !== -1) {
-              event._source.tag.splice(index, 1)
+            if (event._source.tags) {
+              const index = event._source.tags.indexOf(tag);
+              if (index !== -1) {
+                event._source.tags.splice(index, 1);
+              }
             }
           }
           this.$store.dispatch('updateTimelineTags', { sketchId: this.sketch.id, tag: tag, num: -1 })
         })
         .catch((e) => {
-          console.error(e)
+          console.error('Error removing tag:', e)
         })
     },
     addTags: function (tagToAdd) {
+      // Ensure all events have tags array
       for (let event of this.events) {
-        if (!event._source.hasOwnProperty('tag')) {
-          this.$set(event._source, 'tag', [])
+        if (!event._source.hasOwnProperty('tags')) {
+          this.$set(event._source, 'tags', [])
         }
       }
+      
+      // Only tag events that don't already have this tag
       const eventsWithoutTag = this.events.filter((ev) =>
-       !ev._source.tag.includes(tagToAdd)
+        !(ev._source.tags && ev._source.tags.includes(tagToAdd))
       );
+      
+      if (eventsWithoutTag.length === 0) return; // Nothing to do
 
-      BrowserDB.tagEvents(this.sketch.id, eventsWithoutTag, [tagToAdd])
+      // Extract event IDs
+      const eventIds = eventsWithoutTag.map(ev => ev._id);
+
+      BrowserDB.tagEvent(eventIds, [tagToAdd])
         .then((response) => {
+          // Update in-memory event objects to reflect DB change
           for (let event of eventsWithoutTag) {
-            this.$set(event._source.tag, event._source.tag.length, tagToAdd)
+            if (!event._source.tags.includes(tagToAdd)) {
+              event._source.tags.push(tagToAdd);
+            }
           }
           this.$store.dispatch('updateTimelineTags', { sketchId: this.sketch.id, tag: tagToAdd, num: 1 })
         })
         .catch((e) => {
-          console.error('Cannot tag event! Error:' + e)
+          console.error('Cannot tag event! Error:', e)
         })
+      
       this.$nextTick(() => {
         this.selectedTags = null
         this.search = null

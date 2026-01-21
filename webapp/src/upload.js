@@ -2,6 +2,7 @@ import BrowserDB from './database';
 import JSZip from 'jszip';
 import { classifyError, ERROR_TYPES } from './errorTypes';
 import { TIMELINE_STATUS } from './database';
+import { computeMeta } from './utils/computeMeta.js';
 
 // For computing file hashes
 import crypto from 'crypto-js';
@@ -370,7 +371,11 @@ export async function processUpload(file, platform, sketchId, store) {
         const sketch = sketchResponse.data.objects[0];
         const timelinesResponse = await BrowserDB.getTimelines(sketchId);
         sketch.timelines = timelinesResponse.data.objects || [];
-        store.commit('SET_SKETCH', { objects: [sketch], meta: sketchResponse.data.meta || {} });
+        
+        // Compute and attach metadata
+        const meta = await computeMeta(sketchId);
+        
+        store.commit('SET_SKETCH', { objects: [sketch], meta });
       }
       
       log('Database insertion complete');

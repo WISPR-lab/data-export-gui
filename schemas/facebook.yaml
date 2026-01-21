@@ -8,7 +8,7 @@ data_types:
 
 # LOGIN EVENTS
 - temporal: "event" 
-  category: "auth.login"
+  category: "auth.login.success"
   files:
   - path: "security_and_login_information/account_activity.json"
     parser: 
@@ -170,7 +170,7 @@ data_types:
 
 # DATA TAKEOUT EVENTS
 - temporal: "event"
-  category: "auth.data_takeout.request"
+  category: "data_takeout.request"
   files:
   - path: "your_facebook_activity/other_activity/your_information_download_requests.json"
     parser:

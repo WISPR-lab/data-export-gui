@@ -7,7 +7,7 @@ data_types:
 
 # LOGIN EVENTS
 - temporal: "event" 
-  category: "auth.login"
+  category: "auth.login.success"
   files:
   - path: "Apple ID account and device information/Apple ID SignOn Information.csv"
     parser: #todo

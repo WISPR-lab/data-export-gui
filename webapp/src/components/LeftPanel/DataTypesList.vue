@@ -16,12 +16,12 @@ limitations under the License.
 <template>
   <div>
     <v-data-iterator
-      :items="dataTypes"
+      :items="allCategories"
       :items-per-page.sync="itemsPerPage"
       :search="search"
-      :hide-default-footer="dataTypes.length <= itemsPerPage"
+      :hide-default-footer="allCategories.length <= itemsPerPage"
     >
-      <template v-slot:header v-if="dataTypes.length > itemsPerPage">
+      <template v-slot:header v-if="allCategories.length > itemsPerPage">
         <v-toolbar flat>
           <v-text-field
             v-model="search"
@@ -30,22 +30,28 @@ limitations under the License.
             outlined
             dense
             prepend-inner-icon="mdi-magnify"
-            label="Search for a data type.."
+            label="Search for a category.."
           ></v-text-field>
         </v-toolbar>
       </template>
 
       <template v-slot:default="props">
-        <div
+        <!-- <div
           v-for="dataType in props.items"
           :key="dataType.data_type"
           @click="setQueryAndFilter(dataType.data_type)"
           style="cursor: pointer; font-size: 0.9em"
+        > -->
+        <div
+          v-for="cat in props.items"
+          :key="cat.category"
+          @click="setQueryAndFilter(cat.category)"
+          style="cursor: pointer; font-size: 0.9em"
         >
           <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
             <span
-              >{{ dataType.data_type }} (<small
-                ><strong>{{ dataType.count | compactNumber }}</strong></small
+              >{{ $options.filters.categoryName(cat.category) }} (<small
+                ><strong>{{ cat.count | compactNumber }}</strong></small
               >)</span
             >
           </v-row>
@@ -67,16 +73,19 @@ export default {
     }
   },
   computed: {
-    dataTypes() {
+    allCategories() {
       // Sort the data types alphabetically
-      return [...this.$store.state.dataTypes].sort((a, b) => a.data_type.localeCompare(b.data_type))
+      // return [...this.$store.state.allCategories].sort((a, b) => a.data_type.localeCompare(b.data_type))
+      return [...this.$store.state.allCategories].sort((a, b) => a.category.localeCompare(b.category))
     },
   },
   methods: {
-    setQueryAndFilter(dataType) {
+    // setQueryAndFilter(dataType) {
+    setQueryAndFilter(category) {
       let eventData = {}
       eventData.doSearch = true
-      eventData.queryString = 'data_type:' + '"' + dataType + '"'
+      eventData.queryString = 'category:' + '"' + category + '"'
+      // eventData.queryString = 'data_type:' + '"' + dataType + '"'
       EventBus.$emit('setQueryAndFilter', eventData)
     },
   },

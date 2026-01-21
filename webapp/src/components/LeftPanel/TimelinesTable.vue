@@ -35,8 +35,8 @@ limitations under the License.
       @click="expanded = !expanded"
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
-      <span> <v-icon left>mdi-clock-outline</v-icon> Timelines </span>
-      <ts-upload-timeline-form v-if="expanded">
+      <span> <v-icon left>mdi-folder-zip-outline</v-icon> Data Exports </span>
+      <!-- <ts-upload-timeline-form v-if="expanded">
         <template v-slot="slotProps">
           <v-btn
             v-if="expanded || allTimelines.length === 0"
@@ -52,6 +52,11 @@ limitations under the License.
         </template>
       </ts-upload-timeline-form>
       <span v-else class="float-right" style="margin-right: 10px">
+        <small class="ml-3"
+          ><strong>{{ allTimelines.length }}</strong></small
+        >
+      </span> -->
+      <span class="float-right" style="margin-right: 10px">
         <small class="ml-3"
           ><strong>{{ allTimelines.length }}</strong></small
         >
@@ -196,7 +201,7 @@ export default {
     },
     activeTimelines() {
       // Sort alphabetically based on timeline name.
-      let timelineList = this.sketch.active_timelines || []
+      let timelineList = this.sketch.timelines || []
       let timelines = [...timelineList]
       return timelines.sort(function (a, b) {
         return a.name.localeCompare(b.name)

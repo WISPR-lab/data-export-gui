@@ -28,21 +28,22 @@ limitations under the License.
   </div>
   <div v-else>
     <div
-      :style="dataTypes && dataTypes.length ? 'cursor: pointer' : ''"
+      :style="allCategories && allCategories.length ? 'cursor: pointer' : ''"
       class="pa-4"
       @click="expanded = !expanded"
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
-      <span> <v-icon left>mdi-database-outline</v-icon> Data Types </span>
+      <!-- <span> <v-icon left>mdi-database-outline</v-icon> Data Types </span> -->
+       <span> <v-icon left>mdi-filter-multiple-outline</v-icon> Categories </span>
       <span class="float-right" style="margin-right: 10px">
-        <small v-if="dataTypes"
-          ><strong>{{ dataTypes.length }}</strong></small
+        <small v-if="allCategories"
+          ><strong>{{ allCategories.length }}</strong></small
         >
       </span>
     </div>
 
     <v-expand-transition>
-      <div v-show="expanded && dataTypes.length">
+      <div v-show="expanded && allCategories.length">
         <ts-data-types-list></ts-data-types-list>
       </div>
     </v-expand-transition>
@@ -69,8 +70,8 @@ export default {
     sketch() {
       return this.$store.state.sketch
     },
-    dataTypes() {
-      return this.$store.state.dataTypes
+    allCategories() {
+      return this.$store.state.allCategories
     },
   },
   methods: {},

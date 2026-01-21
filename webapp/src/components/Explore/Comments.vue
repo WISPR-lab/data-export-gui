@@ -53,7 +53,7 @@ limitations under the License.
         </v-list-item-content>
 
         <v-list-item-action
-          v-if="comment === selectedComment && meta.permissions.write && currentUser == comment.user.username"
+          v-if="comment === selectedComment && currentUser == comment.user.username"
           style="position: absolute; right: 0"
         >
           <v-chip outlined style="margin-right: 10px">
@@ -68,7 +68,7 @@ limitations under the License.
       </v-list-item>
     </v-list>
 
-    <v-card-actions v-if="meta.permissions.write">
+    <v-card-actions>
       <v-textarea
         v-model="comment"
         hide-details
@@ -111,28 +111,37 @@ export default {
   methods: {
     postComment: function () {
       EventBus.$emit('eventAnnotated', { type: '__ts_comment', event: this.event, searchNode: this.currentSearchNode })
-      BrowserDB.saveEventAnnotation(this.sketch.id, 'comment', this.comment, [this.event], this.currentSearchNode)
+      BrowserDB.saveAnnotation('event', [this.event._id], 'comment', this.comment)
         .then((response) => {
-          this.comments.push(response.data.objects[0][0])
-          this.event._source.comment.push(this.comment)
+          // Create comment object with user/timestamp for display
+          const newComment = {
+            id: Math.random().toString(36).slice(2),
+            user: { username: this.currentUser },
+            comment: this.comment,
+            created_at: new Date().toISOString(),
+            editable: false
+          }
+          this.comments.push(newComment)
           this.comment = ''
-          this.$store.dispatch('updateEventLabels', { label: "__ts_comment", num: 1 })
-        })
-        .catch((e) => {})
-    },
-    updateComment: function (comment, commentIndex) {
-      BrowserDB.updateEventAnnotation(this.sketch.id, 'comment', comment, [this.event], this.currentSearchNode)
-        .then((response) => {
-          this.comments.splice(commentIndex, 1, comment)
-          comment.editable = false
         })
         .catch((e) => {
-          console.error(e)
+          console.error('Error posting comment:', e)
+        })
+    },
+    updateComment: function (comment, commentIndex) {
+      BrowserDB.updateAnnotation('comment', comment.comment, [comment.id])
+        .then((response) => {
+          comment.editable = false
+          comment.updated_at = new Date().toISOString()
+          this.comments.splice(commentIndex, 1, comment)
+        })
+        .catch((e) => {
+          console.error('Error updating comment:', e)
         })
     },
     deleteComment: function (commentId, commentIndex) {
       if (confirm('Are you sure?')) {
-        BrowserDB.deleteEventAnnotation(this.sketch.id, 'comment', commentId, this.event, this.currentSearchNode)
+        BrowserDB.deleteCommentEvent(commentId)
           .then((response) => {
             this.comments.splice(commentIndex, 1)
             this.event._source.comment.splice(commentIndex, 1)

@@ -79,7 +79,7 @@ function initDB() {
     sketches: '++id, name, description, user_id, label_string, status, created_at, updated_at',
     timelines: '++id, sketch_id, name, user_id, description, status, color, label_string, datasources, deleted, created_at, updated_at',
     events: '++id, sketch_id, timeline_id, document_id, timestamp, message, data_type, tags, labels, attributes, created_at, updated_at',
-    annotations: '++id, event_id, type, content, user_id, created_at, updated_at',
+    event_comments: '++id, event_id, created_at, updated_at',
     stories: '++id, sketch_id, title, content, user_id, labels, created_at, updated_at',
     views: '++id, sketch_id, name, query, filter, dsl, user_id, created_at, updated_at',
     
@@ -98,7 +98,7 @@ function initDB() {
     timelines: '++id, sketch_id, name, platform_name, description, status, color, label_string, datasources, deleted, created_at, updated_at',
     sketches: '++id, name, description, user_id, label_string, status, created_at, updated_at',
     
-    annotations: '++id, object_type, object_id, type, content, created_at, updated_at',
+    event_comments: '++id, event_id, created_at, updated_at',
     stories: '++id, sketch_id, title, content, user_id, labels, created_at, updated_at',
     views: '++id, sketch_id, name, query, filter, dsl, user_id, created_at, updated_at',
   });
@@ -276,9 +276,10 @@ const BrowserDB = {
     return createResponse([updated_sketch]);
   },
   async deleteSketchTimeline(sketchId, timelineId) {
-    // Cascade delete events and their annotations for this timeline
+    // Cascade delete events and their comments for this timeline
     const events = await db.events.where('timeline_id').equals(timelineId).toArray();
     for (const event of events) {
+      await db.event_comments.where('event_id').equals(event.id).delete();
       await this._deleteEvent(sketchId, timelineId, event.id);
     }
     await db.timelines.delete(timelineId);
@@ -328,24 +329,55 @@ const BrowserDB = {
     return createResponse([newState]);
   },
 
-  async getEvent(sketchId, eventId, includeProcessingTimelines) {
-    // Find event by document_id and searchindex_name
-    const event = await db.events.where({
-      sketch_id: sketchId,
-      document_id: eventId
-    }).first();
+  async getEvent(sketchId, searchindexId, eventId, includeProcessingTimelines) {
+    // Find event by ID and fetch associated comments
+    const event = await db.events.get(eventId);
     if (!event) return createResponse([]);
-    return createResponse([event]);
+    
+    // Fetch comments for this event
+    const comments = await db.event_comments.where('event_id').equals(eventId).toArray();
+    
+    // Prepare comment objects with user info for display
+    const preparedComments = comments.map(c => ({
+      id: c.id,
+      user: { username: 'local-user' },  // Browser version has single user
+      comment: c.content,
+      created_at: c.created_at,
+      updated_at: c.updated_at,
+      editable: false
+    }));
+    
+    return createResponse([event], { comments: preparedComments });
   },
 
   async countSketchEvents(sketchId) {
-    const count = await db.events.where('sketch_id').equals(sketchId).count();
+    // Just call countEvents with no timelineId to count all
+    const count = await this.countEvents(sketchId);
     return createResponse([], { count });
   },
 
   async countSketchStates(sketchId) {
-    const count = await db.states.where('sketch_id').equals(sketchId).count();
+    // Just call countStates with no timelineId to count all
+    const count = await this.countStates(sketchId);
     return createResponse([], { count });
+  },
+
+  async countEvents(sketchId, timelineId = null) {
+    let query = db.events.where('sketch_id').equals(sketchId);
+    if (timelineId) {
+      query = query.filter(ev => ev.timeline_id === timelineId);
+    }
+    const count = await query.count();
+    return count;
+  },
+
+  async countStates(sketchId, timelineId = null) {
+    let query = db.states.where('sketch_id').equals(sketchId);
+    if (timelineId) {
+      query = query.filter(st => st.timeline_id === timelineId);
+    }
+    const count = await query.count();
+    return count;
   },
 
   async bulkInsert(sketchId, timelineId, events = [], states = []) {
@@ -402,64 +434,125 @@ const BrowserDB = {
   },
 
 
-  async saveAnnotation(
-    objectType, /* e.g., 'event', 'state', 'document' */
-    objectIds,  /* arr of event_id, state_id, document_id */
-    annotationType, /* 'comment', 'label', 'tag' */
-    content) {
+  async addCommentEvent(eventId, content) {
+    // Add a comment to an event
     const now = new Date().toISOString();
-    const annotation = {
-      object_type: objectType,
-      object_ids: objectIds,
-      type: annotationType,
+    await db.event_comments.add({
+      event_id: eventId,
       content,
       created_at: now,
       updated_at: now
-    };
-    for (const objectId of objectIds) {
-      const annCopy = { ...annotation, object_id: objectId };
-      await db.annotations.add(annCopy);
+    });
+    return createResponse([]);
+  },
+
+  // Legacy method for backward compatibility
+  async saveComment(eventId, content) {
+    return this.addCommentEvent(eventId, content);
+  },
+
+  // Legacy method for backward compatibility
+  async saveAnnotation(
+    objectType, /* e.g., 'event' - for comments */
+    objectIds,  /* arr of event_ids */
+    annotationType, /* 'comment' - currently only type supported */
+    content) {
+    if (objectType !== 'event' || annotationType !== 'comment') {
+      throw new Error('Only event comments are supported');
+    }
+    for (const eventId of objectIds) {
+      await this.addCommentEvent(eventId, content);
     }
     return createResponse([]);
   },
 
-  async tagObjects(objectType, objectIds, tagsToAdd /* array of strings */) {
+  async tagEvent(eventIds, tagsToAdd /* array of strings */) {
     const now = new Date().toISOString();
-    let table = null;
-    if (objectType === 'event') {
-      table = db.events;
-    } else if (objectType === 'state') {
-      table = db.states;
-    }
-    if (!table) return createResponse([]);
-    for (const objectId of objectIds) {
-      const obj = await table.get(objectId);
-      if (obj) {
-        const updatedTags = Array.from(new Set([...(obj.tags || []), ...tagsToAdd]));
-        await table.update(objectId, {
+    for (const eventId of eventIds) {
+      const event = await db.events.get(eventId);
+      if (event) {
+        const updatedTags = Array.from(new Set([...(event.tags || []), ...tagsToAdd]));
+        await db.events.update(eventId, {
           tags: updatedTags,
           updated_at: now
         });
       }
+    }
+    return createResponse([]);
+  },
+
+  async untagEvent(eventIds, tagsToRemove /* array of strings */) {
+    const now = new Date().toISOString();
+    for (const eventId of eventIds) {
+      const event = await db.events.get(eventId);
+      if (event) {
+        const updatedTags = (event.tags || []).filter(tag => !tagsToRemove.includes(tag));
+        await db.events.update(eventId, {
+          tags: updatedTags,
+          updated_at: now
+        });
+      }
+    }
+    return createResponse([]);
+  },
+
+  async tagState(stateIds, tagsToAdd /* array of strings */) {
+    const now = new Date().toISOString();
+    for (const stateId of stateIds) {
+      const state = await db.states.get(stateId);
+      if (state) {
+        const updatedTags = Array.from(new Set([...(state.tags || []), ...tagsToAdd]));
+        await db.states.update(stateId, {
+          tags: updatedTags,
+          updated_at: now
+        });
+      }
+    }
+    return createResponse([]);
+  },
+
+  async untagState(stateIds, tagsToRemove /* array of strings */) {
+    const now = new Date().toISOString();
+    for (const stateId of stateIds) {
+      const state = await db.states.get(stateId);
+      if (state) {
+        const updatedTags = (state.tags || []).filter(tag => !tagsToRemove.includes(tag));
+        await db.states.update(stateId, {
+          tags: updatedTags,
+          updated_at: now
+        });
+      }
+    }
+    return createResponse([]);
+  },
+
+  // Legacy generic methods - use event/state-specific versions instead
+  async tagObjects(objectType, objectIds, tagsToAdd /* array of strings */) {
+    if (objectType === 'event') {
+      return this.tagEvent(objectIds, tagsToAdd);
+    } else if (objectType === 'state') {
+      return this.tagState(objectIds, tagsToAdd);
     }
     return createResponse([]);
   },
 
   async untagObjects(objectType, objectIds, tagsToRemove /* array of strings */) {
-    const now = new Date().toISOString();
-    let table = null;
     if (objectType === 'event') {
-      table = db.events;
+      return this.untagEvent(objectIds, tagsToRemove);
     } else if (objectType === 'state') {
-      table = db.states;
+      return this.untagState(objectIds, tagsToRemove);
     }
-    if (!table) return createResponse([]);
-    for (const objectId of objectIds) {
-      const obj = await table.get(objectId);
-      if (obj) {
-        const updatedTags = (obj.tags || []).filter(tag => !tagsToRemove.includes(tag));
-        await table.update(objectId, {
-          tags: updatedTags,
+    return createResponse([]);
+  },
+
+  async addLabelEvent(eventIds, labelsToAdd /* array of strings */) {
+    const now = new Date().toISOString();
+    for (const eventId of eventIds) {
+      const event = await db.events.get(eventId);
+      if (event) {
+        const updatedLabels = Array.from(new Set([...(event.labels || []), ...labelsToAdd]));
+        await db.events.update(eventId, {
+          labels: updatedLabels,
           updated_at: now
         });
       }
@@ -467,29 +560,119 @@ const BrowserDB = {
     return createResponse([]);
   },
 
-  async updateAnnotation(annotationType, content, annotationIds) {
+  async removeLabelEvent(eventIds, labelsToRemove /* array of strings */) {
     const now = new Date().toISOString();
+    for (const eventId of eventIds) {
+      const event = await db.events.get(eventId);
+      if (event) {
+        const updatedLabels = (event.labels || []).filter(label => !labelsToRemove.includes(label));
+        await db.events.update(eventId, {
+          labels: updatedLabels,
+          updated_at: now
+        });
+      }
+    }
+    return createResponse([]);
+  },
+
+  async addLabelState(stateIds, labelsToAdd /* array of strings */) {
+    const now = new Date().toISOString();
+    for (const stateId of stateIds) {
+      const state = await db.states.get(stateId);
+      if (state) {
+        const updatedLabels = Array.from(new Set([...(state.labels || []), ...labelsToAdd]));
+        await db.states.update(stateId, {
+          labels: updatedLabels,
+          updated_at: now
+        });
+      }
+    }
+    return createResponse([]);
+  },
+
+  async removeLabelState(stateIds, labelsToRemove /* array of strings */) {
+    const now = new Date().toISOString();
+    for (const stateId of stateIds) {
+      const state = await db.states.get(stateId);
+      if (state) {
+        const updatedLabels = (state.labels || []).filter(label => !labelsToRemove.includes(label));
+        await db.states.update(stateId, {
+          labels: updatedLabels,
+          updated_at: now
+        });
+      }
+    }
+    return createResponse([]);
+  },
+
+  // Legacy generic methods - use event/state-specific versions instead
+  async addLabels(objectType, objectIds, labelsToAdd /* array of strings */) {
+    if (objectType === 'event') {
+      return this.addLabelEvent(objectIds, labelsToAdd);
+    } else if (objectType === 'state') {
+      return this.addLabelState(objectIds, labelsToAdd);
+    }
+    return createResponse([]);
+  },
+
+  async removeLabels(objectType, objectIds, labelsToRemove /* array of strings */) {
+    if (objectType === 'event') {
+      return this.removeLabelEvent(objectIds, labelsToRemove);
+    } else if (objectType === 'state') {
+      return this.removeLabelState(objectIds, labelsToRemove);
+    }
+    return createResponse([]);
+  },
+
+  async updateCommentEvent(commentId, content) {
+    // Update comment content
+    const now = new Date().toISOString();
+    await db.event_comments.update(commentId, { content, updated_at: now });
+    const updated = await db.event_comments.get(commentId);
+    return createResponse([updated]);
+  },
+
+  // Legacy method for backward compatibility
+  async updateComment(commentId, content) {
+    return this.updateCommentEvent(commentId, content);
+  },
+
+  // Legacy method for backward compatibility
+  async updateAnnotation(annotationType, content, annotationIds) {
+    if (annotationType !== 'comment') {
+      throw new Error('Only event comments are supported');
+    }
     const results = [];
-    for (const annotationId of annotationIds) {
-      await db.annotations.update(annotationId, { content, updated_at: now });
-      const updated = await db.annotations.get(annotationId);
-      if (updated) results.push(updated);
+    for (const commentId of annotationIds) {
+      const response = await this.updateCommentEvent(commentId, content);
+      if (response.data.objects[0]) results.push(response.data.objects[0]);
     }
     return createResponse(results);
   },
 
-  async deleteEventAnnotation(annotationId) {
-    await db.annotations.delete(annotationId);
+  async deleteCommentEvent(commentId) {
+    // Delete a comment
+    await db.event_comments.delete(commentId);
     return createResponse([]);
+  },
+
+  // Legacy method for backward compatibility
+  async deleteComment(commentId) {
+    return this.deleteCommentEvent(commentId);
+  },
+
+  // Legacy method for backward compatibility
+  async deleteEventAnnotation(annotationId) {
+    return this.deleteCommentEvent(annotationId);
   },
   
   async _deleteEvent(eventId) {
-    await db.annotations.where('object_id').equals(eventId).and(ann => ann.object_type === 'event').delete();
+    await db.event_comments.where('event_id').equals(eventId).delete();
     await db.events.delete(eventId);
   },
 
   async _deleteState(stateId) {
-    await db.annotations.where('object_id').equals(stateId).and(ann => ann.object_type === 'state').delete();
+    // States don't have comments in this implementation
     await db.states.delete(stateId);
   },
   
@@ -580,49 +763,153 @@ const BrowserDB = {
   
   // ----------------------------------------------------------
   // Search
-  async search(sketchId, formData) {
+  /**
+   * Get events from database with optional filtering
+   * @param {number} sketchId - Sketch ID
+   * @param {object} options - Query options
+   * @param {array} options.timelineIds - Filter by timeline IDs (null/undefined = all)
+   * @param {string} options.query - Search query string (null = all)
+   * @param {string} options.order - 'asc' or 'desc' (default: 'desc')
+   * @param {number} options.limit - Max results to return
+   * @param {number} options.offset - Offset for pagination
+   * @returns {Promise<array>} Array of events
+   */
+  async getEvents(sketchId, options = {}) {
+    const { timelineIds, query, order = 'desc', limit, offset = 0 } = options;
+    
+    // Start with sketch filter
     let eventsQuery = db.events.where('sketch_id').equals(sketchId);
-    let indices = undefined;
-    if (formData && formData.filter && formData.filter.indices !== undefined) {
-      indices = formData.filter.indices;
+    
+    // Filter by timelines if specified
+    if (timelineIds && Array.isArray(timelineIds) && timelineIds.length > 0) {
+      eventsQuery = eventsQuery.filter(ev => timelineIds.includes(ev.timeline_id));
     }
-    let filterAll = false;
-    if (
-      indices === undefined ||
-      indices === null ||
-      (Array.isArray(indices) && (indices.length === 0 || indices.includes('_all')))
-      || indices === '_all'
-    ) {
-      filterAll = true;
+    
+    // Filter by query string if provided
+    if (query) {
+      const queryLower = query.toLowerCase();
+      eventsQuery = eventsQuery.filter(ev => 
+        ev.message && ev.message.toLowerCase().includes(queryLower)
+      );
     }
-    if (!filterAll && Array.isArray(indices)) {
-      eventsQuery = eventsQuery.filter(ev => indices.includes(ev.timeline_id));
+    
+    // Get results
+    let results = await eventsQuery.toArray();
+    
+    // Sort by primary_timestamp (descending = most recent first by default)
+    results.sort((a, b) => {
+      const aTime = a.primary_timestamp || a.timestamp || 0;
+      const bTime = b.primary_timestamp || b.timestamp || 0;
+      return order === 'desc' ? bTime - aTime : aTime - bTime;
+    });
+    
+    // Apply limit and offset
+    if (limit !== undefined) {
+      results = results.slice(offset, offset + limit);
     }
-    // Basic pagination
-    let from = 0;
-    let size = 40;
-    if (formData && formData.filter) {
-      from = formData.filter.from || 0;
-      size = formData.filter.size || 40;
+    
+    return results;
+  },
+
+  /**
+   * Legacy search method for backward compatibility
+   * Returns Timesketch-style response format
+   */
+  async search(sketchId, formData) {
+    // Extract parameters from formData
+    const query = (formData && formData.query) || null;
+    const order = (formData && formData.filter && formData.filter.order) || 'desc';
+    const size = (formData && formData.filter && formData.filter.size) || 40;
+    const from = (formData && formData.filter && formData.filter.from) || 0;
+    
+    // Handle timeline filtering
+    let timelineIds = formData && formData.filter && formData.filter.indices;
+    if (!timelineIds || timelineIds === '_all' || 
+        (Array.isArray(timelineIds) && (timelineIds.length === 0 || timelineIds.includes('_all')))) {
+      timelineIds = null; // All timelines
     }
-    let allEvents = await eventsQuery.toArray();
-    // Sort by timestamp desc by default
-    allEvents.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    // Paginate
-    const pagedEvents = allEvents.slice(from, from + size);
-    // Wrap in Timesketch-style _source
-    const objects = pagedEvents.map(ev => ({ _id: ev.document_id, _source: ev }));
-    // Meta info
+    
+    // Build count_per_timeline by fetching ALL matching results to get accurate counts
+    // This ensures counts are accurate when filtering by query
+    const allMatching = await this.getEvents(sketchId, {
+      timelineIds,
+      query,
+      order
+    });
+    
+    // Count by timeline from all matching results
+    const countPerTimeline = {};
+    allMatching.forEach(ev => {
+      const tlId = ev.timeline_id;
+      countPerTimeline[tlId] = (countPerTimeline[tlId] || 0) + 1;
+    });
+    
+    const totalCount = allMatching.length;
+    
+    // Get the specific page of results
+    const results = await this.getEvents(sketchId, {
+      timelineIds,
+      query,
+      order,
+      limit: size + 1, // +1 to check hasNextPage
+      offset: from
+    });
+    
+    // Check if there's a next page
+    const hasNextPage = results.length > size;
+    const pagedEvents = results.slice(0, size);
+    
+    // Wrap in Timesketch-style format
+    const objects = pagedEvents.map(ev => ({ _id: ev.id, _source: ev }));
+    
     const meta = {
-      es_total_count: allEvents.length,
-      es_total_count_complete: allEvents.length,
-      es_time: 0,
-      count_per_timeline: {},
-      count_per_index: {},
+      num_events: pagedEvents.length,
+      num_states: 0,
+      has_next_page: hasNextPage,
+      query_time_ms: 0,
+      count_per_timeline: countPerTimeline,
+      total_count: totalCount,
       summary: '',
     };
+    
     return createResponse(objects, meta);
   },
+  /**
+   * Get states from database with optional filtering
+   * @param {number} sketchId - Sketch ID
+   * @param {object} options - Query options (same as getEvents)
+   * @returns {Promise<array>} Array of states
+   */
+  async getStates(sketchId, options = {}) {
+    const { timelineIds, query, order = 'desc', limit, offset = 0 } = options;
+    
+    let statesQuery = db.states.where('sketch_id').equals(sketchId);
+    
+    if (timelineIds && Array.isArray(timelineIds) && timelineIds.length > 0) {
+      statesQuery = statesQuery.filter(st => timelineIds.includes(st.timeline_id));
+    }
+    
+    if (query) {
+      const queryLower = query.toLowerCase();
+      statesQuery = statesQuery.filter(st => 
+        st.message && st.message.toLowerCase().includes(queryLower)
+      );
+    }
+    
+    let results = await statesQuery.toArray();
+    
+    results.sort((a, b) => {
+      const diff = (a.timestamp || 0) - (b.timestamp || 0);
+      return order === 'asc' ? diff : -diff;
+    });
+    
+    if (limit !== undefined) {
+      results = results.slice(offset, offset + limit);
+    }
+    
+    return results;
+  },
+
   async exportSearchResult(sketchId, formData) {},
   async getSearchHistory(sketchId, limit = null, question = null) {},
   async getSearchHistoryTree(sketchId) {},

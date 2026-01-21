@@ -48,8 +48,8 @@ export default {
   },
   computed: {
     assignedTags() {
-      if (!this.event._source.tag) return []
-      return this.event._source.tag
+      if (!this.event._source.tags) return []
+      return this.event._source.tags
     },
   },
 }

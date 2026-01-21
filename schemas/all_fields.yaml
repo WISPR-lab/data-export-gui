@@ -1,30 +1,42 @@
 valid_categories:
-  auth:
-    login:
-    - attempt
-    - success
-    - failure
-    logout: 
-    checkpoint:
-    - initiate
-    - pass
-    sessions:
-    pwd:
-    - change
-    - reset_request
-    primary_email:
-    - change
-    - change_attempt
-    primary_phone:
-    - change
-    - change_attempt
-    recovery_email:
-    - addition
-    - removal
-  data_export:
-  - request
-  - completion
-
+- code: "auth.login.attempt"
+  name: "Login attempt"
+- code: "auth.login.success"
+  name: "Successful login"
+- code: "auth.login"
+  name: "Successful login"
+- code: "auth.login.failure"
+  name: "Failed login"
+- code: "auth.logout"
+  name: "Logout"
+- code: "auth.checkpoint.initiate"
+  name: "Account verification request"
+- code: "auth.checkpoint.pass"
+  name: "Account verification passed"
+- code: "auth.pwd.change"
+  name: "Password changed"
+- code: "auth.pwd.reset_request"
+  name: "Password reset requested"
+- code: "auth.primary_email.change"
+  name: "Primary email changed"
+- code: "auth.primary_email.addition"
+  name: "Primary email changed"
+- code: "auth.primary_email.change_attempt"
+  name: "Attempted to change primary email"
+- code: "auth.primary_phone.change"
+  name: "Primary phone changed"
+- code: "auth.primary_phone.change_attempt"
+  name: "Attempted to change primary phone"
+- code: "auth.recovery_email.addition"
+  name: "Recovery contact added"
+- code: "auth.recovery_email.removal"
+  name: "Recovery contact removed"
+- code: "data_export.request"
+  name: "Data export requested by user"
+- code: "data_takeout.request"
+  name: "Data export requested by user"
+- code: "data_export.completion"
+  name: "Data export request fulfilled"
 
 time_fields:
 - primary_timestamp

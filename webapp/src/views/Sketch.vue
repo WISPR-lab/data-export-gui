@@ -259,7 +259,7 @@ limitations under the License.
           @toggleDrawer="toggleDrawer()"
         >
         </ts-investigation>
-        <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
+        <!-- <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search> -->
         <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
         <ts-saved-searches
           v-if="meta && meta.views"
@@ -268,13 +268,13 @@ limitations under the License.
         ></ts-saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
-        <ts-graphs :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-graphs>
-        <ts-stories :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-stories>
+        <!-- <ts-graphs :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-graphs> -->
+        <!-- <ts-stories :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-stories> -->
         <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates>
-        <ts-sigma-rules :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-sigma-rules>
-        <ts-intelligence :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-intelligence>
-        <ts-analyzer-results :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-analyzer-results>
-        <ts-visualizations :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-visualizations>
+        <!-- <ts-sigma-rules :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-sigma-rules> -->
+        <!-- <ts-intelligence :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-intelligence> -->
+        <!-- <ts-analyzer-results :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-analyzer-results> -->
+        <!-- <ts-visualizations :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-visualizations> -->
       </v-navigation-drawer>
 
       <!-- Right panel -->
@@ -366,6 +366,7 @@ limitations under the License.
 import BrowserDB from '../database.js'
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
+import { computeMeta } from '../utils/computeMeta.js'
 import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.vue'
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
@@ -464,8 +465,14 @@ export default {
         console.log('[Sketch] ensureSketchInitialized done')
         return this.$store.dispatch('updateSketch', sketchID)
       })
-      .then(() => {
+      .then(async () => {
         console.log('[Sketch] updateSketch done')
+        // Compute and store metadata
+        const meta = await computeMeta(sketchID)
+        this.$store.commit('SET_SKETCH', {
+          objects: [this.$store.state.sketch],
+          meta
+        })
         return BrowserDB.getTimelines(sketchID)
       })
       .then(response => {
@@ -473,7 +480,6 @@ export default {
         console.log('[Sketch] getTimelines done, got', count, 'timelines')
         const sketch = this.$store.state.sketch
         this.$set(sketch, 'timelines', response.data.objects || [])
-        this.$set(sketch, 'active_timelines', sketch.timelines)
         this.loadingSketch = false
         console.log('[Sketch] loadingSketch=false')
       })
@@ -555,7 +561,7 @@ export default {
       }
     },
     generateContextQuery(event) {
-      let timestampMillis = this.$options.filters.formatTimestamp(event._source.timestamp)
+      let timestampMillis = this.$options.filters.formatTimestamp(event._source.primary_timestamp)
       this.contextStartTime = dayjs.utc(timestampMillis).subtract(this.contextTimeWindowSeconds, 'second')
       this.contextEndTime = dayjs.utc(timestampMillis).add(this.contextTimeWindowSeconds, 'second')
       let startChip = {
@@ -622,6 +628,7 @@ export default {
       window.location.href = window.location.href.replace('/sketch/', '/legacy/sketch/')
     },
     toggleDrawer: function () {
+      this.showLeftPanel = !this.showLeftPanel
       if (this.navigationDrawer.width > 56) {
         this.navigationDrawer.width = 56
         this.isMiniDrawer = true

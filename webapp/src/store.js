@@ -20,9 +20,23 @@ import BrowserDB from './database'
 Vue.use(Vuex)
 
 const defaultState = (currentUser) => {
+
+  const getLocalTimezoneAbbr = () => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZoneName: 'short'
+    }).formatToParts(new Date())
+    const tzPart = parts.find(part => part.type === 'timeZoneName')
+    return tzPart ? tzPart.value : 'UTC'
+  }
+
   return {
     sketch: {},
-    meta: {},
+    meta: {
+      attributes: {},
+      filter_labels: [],
+      mappings: {},
+    },
+    localTimezoneAbbr: getLocalTimezoneAbbr(),
     searchHistory: {},
     timeFilters: {},
     scenarios: [],
@@ -31,7 +45,8 @@ const defaultState = (currentUser) => {
     graphPlugins: [],
     savedGraphs: [],
     tags: [],
-    dataTypes: [],
+    allCategories: [],
+    // allCategories: [{data_type: "login_event", count: 42 }, { data_type: "message_sent", count: 15 }],
     count: 0,
     currentSearchNode: null,
     currentUser: currentUser,
@@ -102,7 +117,10 @@ export default new Vuex.Store({
     },
     SET_DATA_TYPES(state, payload) {
       let buckets = payload.objects[0]['field_bucket']['buckets']
-      Vue.set(state, 'dataTypes', buckets)
+      Vue.set(state, 'allCategories', buckets)
+    },
+    SET_CATEGORIES(state, categories) {
+      Vue.set(state, 'allCategories', categories)
     },
     SET_COUNT(state, payload) {
       Vue.set(state, 'count', payload)
@@ -271,6 +289,7 @@ export default new Vuex.Store({
           context.commit('SET_ACTIVE_USER', response.data)
           context.dispatch('updateTimelineTags', { sketchId: sketchId })
           context.dispatch('updateDataTypes', sketchId)
+          context.dispatch('updateCategories', sketchId)
         })
         .catch((e) => {
           console.error(e)
@@ -329,6 +348,30 @@ export default new Vuex.Store({
       // Browser version: data type aggregation not implemented yet
       // TODO: Compute from BrowserDB.search() results
       return Promise.resolve()
+    },
+    updateCategories(context, sketchId) {
+      return BrowserDB.getEvents(sketchId)
+        .then((events) => {
+          if (!events || events.length === 0) {
+            context.commit('SET_CATEGORIES', [])
+            return
+          }
+          const categoryMap = {}
+          events.forEach((event) => {
+            const category = event.category || 'uncategorized'
+            if (categoryMap[category]) {
+              categoryMap[category].count += 1
+            } else {
+              categoryMap[category] = { category, count: 1 }
+            }
+          })
+          const categories = Object.values(categoryMap).sort((a, b) => b.count - a.count)
+          context.commit('SET_CATEGORIES', categories)
+        })
+        .catch((e) => {
+          console.error('Error computing categories:', e)
+          context.commit('SET_CATEGORIES', [])
+        })
     },
     updateSigmaList(context) {
       console.warn('store.js::updateSigmaList: this is just a stub')

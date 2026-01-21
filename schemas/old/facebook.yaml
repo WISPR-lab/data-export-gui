@@ -22,7 +22,7 @@ data_types:
 
 # LOGIN EVENTS
 - temporal: "event" 
-  category: "auth.login"
+  category: "auth.login.success"
   files:
   # account_activity
   - path: "security_and_login_information/account_activity.json"

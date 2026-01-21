@@ -7,7 +7,7 @@ data_types:
 
 # LOGIN EVENTS
 - temporal: "event" 
-  category: "auth.login"
+  category: "auth.login.success"
   files:
   - path: "security_and_login_information/login_and_profile_creation/login_activity.json"
     parser: #todo

@@ -24,6 +24,9 @@ import '@/mixins/snackBar'
 import vuetify from '@/plugins/vuetify' // path to vuetify export
 import SafeExitButton from '@/components/SafeExitButton.vue'
 
+// Import and initialize category map
+import { initCategoryMap } from '@/filters/CategoryName.js'
+
 require('./assets/main.scss')
 require('./assets/markdown.scss')
 require('./utils/RegisterAppComponents')
@@ -38,9 +41,13 @@ Vue.use(require('vue-moment'))
 // Disable warning during development
 Vue.config.productionTip = false
 
-new Vue({
-  router,
-  store,
-  vuetify,
-  render: (h) => h(App),
-}).$mount('#app')
+// Initialize category map before mounting
+initCategoryMap().then(() => {
+  new Vue({
+    router,
+    store,
+    vuetify,
+    render: (h) => h(App),
+  }).$mount('#app')
+})
+

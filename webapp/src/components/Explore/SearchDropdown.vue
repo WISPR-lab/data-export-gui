@@ -57,7 +57,7 @@ limitations under the License.
         <h5 class="mt-3 ml-4">Data types</h5>
         <v-list dense style="height: 500px" class="overflow-y-auto" :class="scrollbarTheme">
           <v-list-item
-            v-for="dataType in matches.dataTypes"
+            v-for="dataType in matches.allCategories"
             :key="dataType.data_type"
             v-on:click="searchForDataType(dataType.data_type)"
             style="font-size: 0.9em"
@@ -104,8 +104,8 @@ export default {
     tags() {
       return this.$store.state.tags
     },
-    dataTypes() {
-      return this.$store.state.dataTypes
+    allCategories() {
+      return this.$store.state.allCategories
     },
     filteredMetaLabels() {
       return this.meta.filter_labels.filter(
@@ -117,7 +117,7 @@ export default {
         fields: this.meta.mappings,
         tags: this.tags,
         labels: this.filteredMetaLabels,
-        dataTypes: this.dataTypes,
+        allCategories: this.allCategories,
         savedSearches: this.meta.views,
         timeFilters: this.timeFilters
       }
@@ -142,7 +142,7 @@ export default {
       matches.labels = this.filteredMetaLabels.filter((label) =>
         label.label.toLowerCase().includes(this.queryString.toLowerCase())
       )
-      matches.dataTypes = this.dataTypes.filter((dataType) =>
+      matches.allCategories = this.allCategories.filter((dataType) =>
         dataType.data_type.toLowerCase().includes(this.queryString.toLowerCase())
       )
       matches.savedSearches = this.meta.views.filter((savedSearch) =>

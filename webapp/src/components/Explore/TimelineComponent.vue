@@ -38,44 +38,12 @@ limitations under the License.
               <strong>Number of events: </strong>
               {{ allIndexedEvents | compactNumber }}
             </li>
-            <li><strong>Created by: </strong>{{ timeline.user.username }}</li>
             <li>
               <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
               <small>({{ timeline.created_at | timeSince }})</small>
             </li>
           </ul>
           <br />
-
-          <div class="mb-3">{{ datasourcesProcessing.length }} datasource(s) in progress..</div>
-          <v-alert
-            v-for="datasource in datasourcesProcessing"
-            :key="datasource.id"
-            colored-border
-            border="left"
-            elevation="1"
-            :color="datasourceStatusColors(datasource)"
-          >
-            <ul>
-              <li><strong>Original filename:</strong> {{ datasource.original_filename }}</li>
-              <li><strong>File on disk:</strong> {{ datasource.file_on_disk }}</li>
-              <li><strong>File size:</strong> {{ datasource.file_size | compactBytes }}</li>
-              <li><strong>Uploaded by:</strong> {{ datasource.user.username }}</li>
-              <li><strong>Provider:</strong> {{ datasource.provider }}</li>
-              <li><strong>Context:</strong> {{ datasource.context }}</li>
-              <li v-if="datasource.data_label"><strong>Data label:</strong> {{ datasource.data_label }}</li>
-              <li><strong>Status:</strong> {{ dataSourceStatus(datasource) }}</li>
-              <li>
-                <strong>Total File Events:</strong>{{ totalEventsDatasource(datasource.file_on_disk) | compactNumber }}
-              </li>
-              <li v-if="datasource.error_message">
-                <strong>Error message:</strong>
-                <code> {{ datasource.error_message }}</code>
-              </li>
-            </ul>
-            <br />
-          </v-alert>
-
-          <v-card outlined v-if="percentComplete > 0.1">
             <v-card-title>{{ eventsPerSecond.slice(-1)[0] }} events/s</v-card-title>
             <v-sparkline
               :value="eventsPerSecond"
@@ -225,7 +193,7 @@ limitations under the License.
             </v-card>
           </v-dialog>
 
-          <v-list-item
+          <!-- <v-list-item
             v-if="timeline.status === 'ready'"
             style="cursor: pointer"
             @click="goToAnalyzers()"
@@ -234,7 +202,7 @@ limitations under the License.
               <v-icon>mdi-auto-fix</v-icon>
             </v-list-item-action>
             <v-list-item-subtitle>Run Analyzers</v-list-item-subtitle>
-          </v-list-item>
+          </v-list-item> -->
 
           <v-list-item v-if="timelineAvailable" style="cursor: pointer" @click="deleteConfirmation = true">
             <v-list-item-action>

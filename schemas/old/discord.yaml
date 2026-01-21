@@ -19,7 +19,7 @@ data_types:
 
   # LOGIN EVENTS
 - temporal: "event" 
-  category: "auth.login"
+  category: "auth.login.success"
   files:
   - path: "activity/tns/events-2025-00001-of-00001.json"
     

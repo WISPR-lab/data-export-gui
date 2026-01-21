@@ -395,7 +395,7 @@ export default {
     },
     activeTimelines() {
       // Sort alphabetically based on timeline name.
-      let timelines = [...this.sketch.active_timelines]
+      let timelines = [...this.sketch.timelines]
       return timelines.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
@@ -537,11 +537,10 @@ export default {
 
       this.currentQueryFilter.chips = [startChip, endChip]
 
-      let isLegacy = this.meta.indices_metadata[this.contextEvent._index].is_legacy
-      if (isLegacy) {
-        this.currentQueryFilter.indices = [this.contextEvent._index]
-      } else {
-        this.currentQueryFilter.indices = [this.contextEvent._source.__ts_timeline_id]
+      // Use timeline_id from event source (browser model doesn't have indices_metadata)
+      const timelineId = this.contextEvent._source.timeline_id || this.contextEvent._source.__ts_timeline_id
+      if (timelineId) {
+        this.currentQueryFilter.indices = [timelineId]
       }
       this.currentQueryFilter.size = numContextEvents
       this.search()
@@ -674,7 +673,7 @@ export default {
       this.selectedFields = this.currentQueryFilter.fields
       if (this.currentQueryFilter.indices[0] === '_all' || this.currentQueryFilter.indices === '_all') {
         // Dexie-native: just use timeline IDs
-        let allIds = this.sketch.active_timelines.map(timeline => timeline.id)
+        let allIds = this.sketch.timelines.map(timeline => timeline.id)
         this.currentQueryFilter.indices = allIds
       }
       let chips = this.currentQueryFilter.chips
@@ -729,16 +728,16 @@ export default {
     
     // Load event counts for timelines from database
     try {
-      const response = await BrowserDB.search(this.sketch.id)
+      const timelinesResponse = await BrowserDB.getTimelines(this.sketch.id)
+      const timelines = timelinesResponse.data.objects || []
       const eventsByTimeline = {}
-      if (response.data.objects) {
-        response.data.objects.forEach(event => {
-          const timelineId = event._source.timeline_id
-          if (timelineId) {
-            eventsByTimeline[timelineId] = (eventsByTimeline[timelineId] || 0) + 1
-          }
-        })
+      
+      // Count events for each timeline
+      for (const timeline of timelines) {
+        const count = await BrowserDB.countEvents(this.sketch.id, timeline.id)
+        eventsByTimeline[timeline.id] = count
       }
+      
       this.countPerTimeline = eventsByTimeline
     } catch (error) {
       console.error('[Explore] Error loading event counts:', error)
@@ -773,7 +772,7 @@ export default {
         this.currentQueryString = '*'
       }
 
-      let timeline = this.sketch.active_timelines.find((timeline) => {
+      let timeline = this.sketch.timelines.find((timeline) => {
         return timeline.id === parseInt(this.params.indexName, 10)
       })
       if (timeline) {

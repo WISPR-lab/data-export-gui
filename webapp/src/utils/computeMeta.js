@@ -1,7 +1,7 @@
 /**
- * Field mapping utility
- * Loads field definitions from all_fields.yaml and actual database columns
- * Returns standardized field mappings for meta.mappings
+ * Compute full meta object for Sketch
+ * Generates mappings, attributes, filter_labels, and other metadata
+ * Based on schema and actual database contents
  */
 
 import yaml from 'js-yaml'
@@ -32,10 +32,9 @@ async function loadFieldDefinitions() {
 }
 
 /**
- * Get actual column names from events and states tables (optional)
- * Only fetches if data exists; gracefully degrades if no data
+ * Get actual column names from events table
  * @param {number} sketchId - sketch ID to query
- * @returns {Promise<Set>} set of unique column names from both tables
+ * @returns {Promise<Set>} set of unique column names
  */
 async function getActualDatabaseColumns(sketchId) {
   const columns = new Set()
@@ -95,12 +94,12 @@ function getFieldType(fieldName, timeFields, deviceIdFields, miscFields) {
 }
 
 /**
- * Build complete field mappings from YAML schema and actual database columns
+ * Build field mappings from YAML schema and actual database columns
  * 
  * @param {number} sketchId - sketch ID
  * @returns {Promise<Array>} array of {field: string, type: string} objects
  */
-export async function generateFieldMappings(sketchId) {
+async function generateFieldMappings(sketchId) {
   const definitions = await loadFieldDefinitions()
   const dbColumns = await getActualDatabaseColumns(sketchId)
   
@@ -128,6 +127,55 @@ export async function generateFieldMappings(sketchId) {
   return mappings
 }
 
+/**
+ * Generate complete meta object for sketch
+ * Called when sketch is loaded or created
+ * 
+ * @param {number} sketchId - sketch ID
+ * @returns {Promise<Object>} complete meta object with all required fields
+ */
+export async function computeMeta(sketchId) {
+  try {
+    const mappings = await generateFieldMappings(sketchId)
+    
+    return {
+      // Field schema for column picker and search
+      mappings: mappings,
+      
+      // Placeholder: attributes will be indexed/searchable fields
+      attributes: {},
+      
+      // Placeholder: filter_labels for label/tag filtering
+      filter_labels: null,
+      
+      // Placeholder: count per index (Elasticsearch compat)
+      count_per_index: {},
+      
+      // Placeholder: emoji config (if any)
+      emojis: {},
+      
+      // Placeholder: search node tree (server-specific, unused in browser)
+      search_node: null,
+      
+      // Metadata about the sketch
+      total_items: 0,
+    }
+  } catch (error) {
+    console.error('Error computing meta:', error)
+    // Return minimal valid meta if computation fails
+    return {
+      mappings: [],
+      attributes: {},
+      filter_labels: [],
+      count_per_index: {},
+      emojis: {},
+      search_node: null,
+      total_items: 0,
+    }
+  }
+}
+
 export default {
+  computeMeta,
   generateFieldMappings
 }

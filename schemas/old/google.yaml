@@ -7,7 +7,7 @@ data_types:
 
   # LOGIN EVENTS
 - temporal: "event" 
-  category: "auth.login"
+  category: "auth.login.success"
   files:
   - path: "Google Account/*.SubscriberInfo.html"
     parser: #todo

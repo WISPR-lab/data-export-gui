@@ -252,20 +252,22 @@ export default {
   },
   methods: {
     getEvent: function () {
-      let searchindexId = this.event._index
+      let timelineId = this.event._source.timeline_id || this.event._source.__ts_timeline_id
       let eventId = this.event._id
       let includeProcessingTimelines = !!this.settings.showProcessingTimelineEvents
-      BrowserDB.getEvent(this.sketch.id, searchindexId, eventId, includeProcessingTimelines)
+      BrowserDB.getEvent(this.sketch.id, timelineId, eventId, includeProcessingTimelines)
         .then((response) => {
-          this.fullEvent = response.data.objects
-          this.comments = response.data.meta.comments
-          this.eventTimestamp = response.data.objects.timestamp
-          this.eventTimestampDesc = response.data.objects.timestamp_desc
+          this.fullEvent = response.data.objects[0] || {}
+          this.comments = (response.data.meta && response.data.meta.comments) || []
+          this.eventTimestamp = this.fullEvent.timestamp
+          this.eventTimestampDesc = this.fullEvent.timestamp_desc
           if (this.comments.length > 0) {
             this.event.showComments = true
           }
         })
-        .catch((e) => {})
+        .catch((e) => {
+          console.error('Error fetching event:', e);
+        });
     },
     getContextLinkItems(key) {
       let fieldConfList = this.contextLinkConf[key.toLowerCase()] ? this.contextLinkConf[key.toLowerCase()] : []

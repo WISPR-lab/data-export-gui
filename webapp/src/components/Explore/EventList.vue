@@ -80,7 +80,10 @@ limitations under the License.
       <v-sheet class="d-flex flex-wrap mt-1 mb-5">
         <v-sheet class="flex-1-0">
           <span style="width: 200px" v-bind:style="getTimelineColor(highlightEvent)" class="datetime-table-cell pa-2">
-            {{ highlightEvent._source.timestamp | formatTimestamp | toISO8601 }}
+            <span v-if="(highlightEvent._source.primary_timestamp !== null && highlightEvent._source.primary_timestamp !== '') || (highlightEvent._source.timestamp !== null && highlightEvent._source.timestamp !== '')">
+              {{ highlightEvent._source.primary_timestamp | formatTimestamp | toISO8601 }}
+            </span>
+            <span v-else style="font-style: italic">undated</span>
           </span>
         </v-sheet>
 
@@ -383,7 +386,7 @@ limitations under the License.
           <!-- Actions field -->
           <template v-slot:item.actions="{ item }">
             <v-btn small icon @click="toggleStar(item)">
-              <v-icon title="Toggle star status" v-if="item._source.label.includes('__ts_star')" color="amber"
+              <v-icon title="Toggle star status" v-if="item._source.labels && item._source.labels.includes('__ts_star')" color="amber"
                 >mdi-star</v-icon
               >
               <v-icon title="Toggle star status" v-else>mdi-star-outline</v-icon>
@@ -397,9 +400,14 @@ limitations under the License.
           </template>
 
           <!-- Datetime field with action buttons -->
-          <template v-slot:item._source.timestamp="{ item }">
+          <template v-slot:item._source.primary_timestamp="{ item }">
             <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell">
-              {{ item._source.timestamp | formatTimestamp | toISO8601 }}
+              <span v-if="(item._source.primary_timestamp !== null && item._source.primary_timestamp !== '')">
+                <!-- {{ item._source.primary_timestamp }} -->
+                <!-- {{ (item._source.primary_timestamp | formatTimestamp | shortDateTime ) }} -->
+                  {{ $options.filters.shortDateTimeLocal(item._source.primary_timestamp) }}
+              </span>
+              <span v-else style="font-style: italic">undated</span>
             </div>
           </template>
 
@@ -413,7 +421,7 @@ limitations under the License.
             >
               <span
                 :class="{
-                  'ts-event-field-ellipsis': field.text === 'message',
+                  // 'ts-event-field-ellipsis': field.text === 'message',
                   'ts-event-field-highlight': item._id === highlightEventId,
                 }"
               >
@@ -422,23 +430,25 @@ limitations under the License.
                   v-if="
                     displayOptions.showTags &&
                     index === 3 &&
-                    ('tag' in item._source ? item._source.tag.length > 0 : false)
+                    (item._source.tags && item._source.tags.length > 0)
                   "
                 >
                   <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
                 <!-- Emojis -->
-                <span v-if="displayOptions.showEmojis && index === 3">
+                <span v-if="displayOptions.showEmojis && index === 3 && item._source.__ts_emojis">
                   <span
                     class="mr-2"
                     v-for="emoji in item._source.__ts_emojis"
                     :key="emoji"
                     v-html="emoji + ';'"
-                    :title="meta.emojis[emoji]"
+                    :title="meta.emojis && meta.emojis[emoji]"
                   >
                   </span>
                 </span>
-                <span>{{ item._source[field.text] }}</span>
+                <!-- <span>{{ item._source[field.text] }} hihihih {{ field.text }} </span> -->
+                <span>{{ field.text === 'category' ? $options.filters.categoryName(item._source[field.text]) : item._source[field.text] }}</span>
+                <!-- <span>{{ field.text === 'category' ? $options.filters.categoryName(item._source[field.text]) : item._source[field.text] }}</span> -->
               </span>
             </div>
           </template>
@@ -454,7 +464,7 @@ limitations under the License.
           <!-- Comment field -->
           <template v-slot:item._source.comment="{ item }">
             <div class="d-inline-block">
-              <v-btn icon small @click="toggleDetailedEvent(item)" v-if="item._source.comment.length">
+              <v-btn icon small @click="toggleDetailedEvent(item)" v-if="item._source.comment && item._source.comment.length">
                 <v-badge :offset-y="10" :offset-x="10" bordered :content="item._source.comment.length">
                   <v-icon :title="item['showDetails'] ? 'Close event &amp; comments' : 'Open event &amp; comments'" small>
                     mdi-comment-text-multiple-outline
@@ -463,13 +473,13 @@ limitations under the License.
               </v-btn>
             </div>
 
-            <div v-if="item['showDetails'] && !item._source.comment.length && !item.showComments" class="d-inline-block">
+            <div v-if="item['showDetails'] && (!item._source.comment || !item._source.comment.length) && !item.showComments" class="d-inline-block">
               <v-btn icon small @click="newComment(item)">
                 <v-icon title="Add a comment"> mdi-comment-plus-outline </v-icon>
               </v-btn>
             </div>
 
-            <div v-if="item['showDetails'] && !item._source.comment.length && item.showComments" class="d-inline-block">
+            <div v-if="item['showDetails'] && (!item._source.comment || !item._source.comment.length) && item.showComments" class="d-inline-block">
               <v-btn icon small @click="item.showComments = false">
                 <v-icon title="Close comments"> mdi-comment-remove-outline </v-icon>
               </v-btn>
@@ -499,7 +509,7 @@ const defaultQueryFilter = () => {
     terminate_after: 40,
     size: 40,
     indices: ['_all'],
-    order: 'asc',
+    order: 'desc',
     chips: [],
   }
 }
@@ -507,8 +517,10 @@ const defaultQueryFilter = () => {
 const emptyEventList = () => {
   return {
     meta: {
-      count_per_index: {},
       count_per_timeline: {},
+      num_events: 0,
+      num_states: 0,
+      has_next_page: false,
     },
     objects: [],
   }
@@ -540,7 +552,7 @@ export default {
     },
     disableHistogram: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     disableColumns: {
       type: Boolean,
@@ -574,7 +586,7 @@ export default {
       isSummaryLoading: false,
       currentItemsPerPage: this.itemsPerPage,
       expandedRows: [],
-      selectedFields: [{ field: 'message', type: 'text' }],
+      selectedFields: [{ field: 'category', type: 'text' }],
       searchColumns: '',
       columnDialog: false,
       saveSearchMenu: false,
@@ -605,7 +617,7 @@ export default {
       },
       showHistogram: false,
       branchParent: null,
-      sortOrderAsc: true,
+      sortOrderAsc: false,
       summaryCollapsed: false,
       showBanner: false,
     }
@@ -629,17 +641,16 @@ export default {
       return null
     },
     totalHits() {
-      if (this.eventList.meta.es_total_count > 0 && this.eventList.meta.es_total_count_complete === 0) {
-        return this.eventList.meta.es_total_count
-      }
-      return this.eventList.meta.es_total_count_complete || 0
+      // Use total_count from metadata (represents ALL matching events, not just current page)
+      return this.eventList.meta.total_count || 0;
     },
     totalHitsForPagination() {
-      // Opensearch has a limit of 10k events when paginating
-      return this.eventList.meta.es_total_count || 0
+      // Return actual total hits from the database
+      // Vuetify uses this for the "1-100 of X" display
+      return this.totalHits;
     },
     totalTime() {
-      return this.eventList.meta.es_time / 1000 || 0
+      return this.eventList.meta.query_time_ms / 1000 || 0
     },
     fromEvent() {
       return this.currentQueryFilter.from || 1
@@ -672,9 +683,9 @@ export default {
           sortable: false,
         },
         {
-          text: 'Datetime (UTC) ',
+          text: `Datetime (${this.$store.state.localTimezoneAbbr}) `,
           align: 'start',
-          value: '_source.timestamp',
+          value: '_source.primary_timestamp',
           width: '200',
           sortable: true,
         },
@@ -711,6 +722,7 @@ export default {
           sortable: false,
         })
       }
+      // console.log('[EventList.headers] Generated headers:', baseHeaders)
       return baseHeaders
     },
     activeContext() {
@@ -777,8 +789,8 @@ export default {
           return
         }
         let prevEvent = this.eventList.objects[index - 1]
-        let timestampMillis = this.$options.filters.formatTimestamp(event._source.timestamp)
-        let prevTimestampMillis = this.$options.filters.formatTimestamp(prevEvent._source.timestamp)
+        let timestampMillis = this.$options.filters.formatTimestamp(event._source.primary_timestamp)
+        let prevTimestampMillis = this.$options.filters.formatTimestamp(prevEvent._source.primary_timestamp)
         let timestamp = Math.floor(timestampMillis / 1000)
         let prevTimestamp = Math.floor(prevTimestampMillis / 1000)
         let delta = Math.floor(timestamp - prevTimestamp)
@@ -793,12 +805,12 @@ export default {
       })
     },
     getTimeline: function (event) {
-      let isLegacy = this.meta.indices_metadata[event._index].is_legacy
-      let timeline
-      if (isLegacy) {
-        timeline = this.sketch.active_timelines.find((timeline) => timeline.searchindex.index_name === event._index)
-      } else {
-        timeline = this.sketch.active_timelines.find((timeline) => timeline.id === event._source.__ts_timeline_id)
+      // Browser model: events have timeline_id directly
+      const timelineId = event._source.timeline_id
+      const timeline = this.sketch.timelines.find((tl) => tl.id === timelineId)
+      if (!timeline) {
+        console.warn('[EventList.getTimeline] Timeline not found for id:', timelineId)
+        return { name: 'Unknown Timeline', id: timelineId, color: '#999' }
       }
       return timeline
     },
@@ -829,37 +841,35 @@ export default {
       }
     },
     getAllIndices: function () {
-      let allIndices = []
-      this.sketch.active_timelines.forEach((timeline) => {
-        let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
-        if (isLegacy) {
-          allIndices.push(timeline.searchindex.index_name)
-        } else {
-          allIndices.push(timeline.id)
-        }
-      })
-      return allIndices
+      // Browser model: return timeline IDs directly
+      return this.sketch.timelines.map((tl) => tl.id)
     },
-    search: function (resetPagination = true, incognito = false, parent = false) {
-      this.isSummaryLoading = true
-
-      // Exit early if there are no indices selected.
+    search: async function (resetPagination = true, incognito = false, parent = false) {
+      console.log('[EventList.search] Called with queryString:', this.currentQueryString, 'indices:', this.currentQueryFilter.indices)
+      
+      // Exit early if there are no indices selected
       if (this.currentQueryFilter.indices && !this.currentQueryFilter.indices.length) {
+        console.log('[EventList.search] No indices selected, exiting')
         this.eventList = emptyEventList()
-        this.isSummaryLoading = false
         return
       }
 
-      // If all timelines are selected, make sure that the timeline filter is updated so that
-      // filters are applied properly.
-      if (this.currentQueryFilter.indices[0] === '_all' || this.currentQueryFilter.indices === '_all') {
-        this.currentQueryFilter.indices = this.getAllIndices()
+      // Expand '_all' to all timeline IDs (handle both array ['_all'] and string '_all')
+      const indices = this.currentQueryFilter.indices;
+      if (
+        indices === '_all' || 
+        (Array.isArray(indices) && (indices.length === 0 || indices[0] === '_all'))
+      ) {
+        const allIndices = this.getAllIndices();
+        this.currentQueryFilter.indices = allIndices;
+        console.log('[EventList.search] Expanded _all to timelines:', this.currentQueryFilter.indices);
       }
 
-      // Exit early if there is no query string or DSL provided.
-      if (!this.currentQueryString && !this.currentQueryDsl) {
-        return
-      }
+      // Allow searches with empty query string (shows all events from selected timelines)
+      // if (!this.currentQueryString) {
+      //   console.log('[EventList.search] No query string, exiting')
+      //   return
+      // }
 
       this.searchInProgress = true
       this.selectedEvents = []
@@ -873,123 +883,68 @@ export default {
         this.currentQueryFilter.from = 0
       }
 
-      // Update with selected fields
-      this.currentQueryFilter.fields = this.selectedFields
+      const startTime = Date.now()
+      
+      try {
+        // Use BrowserDB.search() with our query string and filter
+        const formData = {
+          query: this.currentQueryString,
+          filter: this.currentQueryFilter,
+        }
+        
+        console.log('[EventList.search] Calling BrowserDB.search with formData:', formData)
+        const response = await BrowserDB.search(this.sketch.id, formData)
+        // console.log('[EventList.search] Got response:', response)
+        console.log('[EventList.search] response.data.objects:', response.data.objects)
 
-      let formData = {}
-      if (this.currentQueryDsl) {
-        formData.dsl = this.currentQueryDsl
-        formData.filter = this.currentQueryFilter
+        // Response should have:
+        // - data.objects: array of {_id, _source} wrapped events
+        // - data.meta: metadata including count_per_timeline, has_next_page, etc.
+        this.eventList.objects = response.data.objects || []
+        this.eventList.meta = response.data.meta || {
+          count_per_timeline: {},
+          num_events: 0,
+          num_states: 0,
+          has_next_page: false,
+          query_time_ms: Date.now() - startTime
+        }
+
+        console.log('[EventList.search] Updated eventList.objects length:', this.eventList.objects.length)
+        this.updateShowBanner()
+        this.$emit('countPerTimeline', this.eventList.meta.count_per_timeline)
+        EventBus.$emit('updateCountPerTimeline', this.eventList.meta.count_per_timeline)
+        
+        this.addTimeBubbles()
+        // console.log('[EventList.search] addTimeBubbles complete')
+      } catch (error) {
+        console.error('[EventList.search] Error searching events:', error)
+        this.errorSnackBar('Error fetching search results: ' + error.message)
+      } finally {
+        this.searchInProgress = false
+        console.log('[EventList.search] searchInProgress is now:', this.searchInProgress)
       }
-
-      if (this.currentQueryString) {
-        formData.query = this.currentQueryString
-        formData.filter = this.currentQueryFilter
-      }
-
-      // Search history
-      if (incognito) {
-        formData['incognito'] = true
-      }
-
-      if (parent) {
-        formData['parent'] = parent
-      }
-
-      if (parent && incognito) {
-        this.branchParent = parent
-      }
-
-      if (this.branchParent) {
-        formData['parent'] = this.branchParent
-      }
-
-      // Get DFIQ context
-      formData['scenario'] = this.activeContext.scenarioId
-      formData['facet'] = this.activeContext.facetId
-      formData['question'] = this.activeContext.questionId
-
-      formData['include_processing_timelines'] = this.settings.showProcessingTimelineEvents
-
-      BrowserDB.search(this.sketch.id, formData)
-        .then((response) => {
-          this.eventList.objects = response.data.objects
-          this.eventList.meta = response.data.meta
-          this.updateShowBanner()
-          this.searchInProgress = false
-          EventBus.$emit('updateCountPerTimeline', response.data.meta.count_per_timeline)
-          this.$emit('countPerTimeline', response.data.meta.count_per_timeline)
-          this.$emit('countPerIndex', response.data.meta.count_per_index)
-
-          this.addTimeBubbles()
-
-          if (!incognito) {
-            EventBus.$emit('createBranch', this.eventList.meta.search_node)
-            this.$store.dispatch('updateSearchHistory')
-            this.$store.dispatch('updateTimeFilters')
-            this.branchParent = this.eventList.meta.search_node.id
-          }
-          if (this.userSettings.eventSummarization  && this.eventList.objects.length > 0) {
-            this.fetchEventSummary()
-          }
-        })
-        .catch((e) => {
-          let msg = 'Sorry, there was a problem fetching your search results. Error: "' + e.response.data.message + '"'
-          if (
-            e.response.data.message.includes('too_many_nested_clauses') ||
-            e.response.data.message.includes('query_shard_exception')
-          ) {
-            msg =
-              'Sorry, your query is too complex. Use field-specific search (like "message:(<query terms>)") and try again.'
-            this.warningSnackBar(msg)
-          } else {
-            this.errorSnackBar(msg)
-          }
-          console.error('Error message: ' + msg)
-          console.error(e)
-        })
     },
-    fetchEventSummary: function() {
-      const formData = {
-        query: this.currentQueryString,
-        filter: this.currentQueryFilter,
-      }
-      BrowserDB.llmRequest(this.sketch.id, 'llm_summarize', formData)
-        .then((response) => {
-          this.$set(this.eventList.meta, 'summary', response.data.response)
-          this.$set(this.eventList.meta, 'summary_event_count', response.data.summary_event_count)
-          this.$set(this.eventList.meta, 'summary_unique_event_count', response.data.summary_unique_event_count)
-          this.isSummaryLoading = false
-        })
-        .catch((error) => {
-          console.error("Error fetching event summary:", error)
-          this.$set(this.eventList.meta, 'summaryError', true)
-          this.isSummaryLoading = false
-        })
-    },
+    // fetchEventSummary: function() {
+    //   const formData = {
+    //     query: this.currentQueryString,
+    //     filter: this.currentQueryFilter,
+    //   }
+    //   BrowserDB.llmRequest(this.sketch.id, 'llm_summarize', formData)
+    //     .then((response) => {
+    //       this.$set(this.eventList.meta, 'summary', response.data.response)
+    //       this.$set(this.eventList.meta, 'summary_event_count', response.data.summary_event_count)
+    //       this.$set(this.eventList.meta, 'summary_unique_event_count', response.data.summary_unique_event_count)
+    //       this.isSummaryLoading = false
+    //     })
+    //     .catch((error) => {
+    //       console.error("Error fetching event summary:", error)
+    //       this.$set(this.eventList.meta, 'summaryError', true)
+    //       this.isSummaryLoading = false
+    //     })
+    // },
     exportSearchResult: function () {
-      this.exportDialog = true
-      const now = new Date()
-      const exportFileName = 'timesketch_export_' + now.toISOString() + '.zip'
-      let formData = {
-        query: this.currentQueryString,
-        filter: this.currentQueryFilter,
-        file_name: exportFileName,
-      }
-      BrowserDB.exportSearchResult(this.sketch.id, formData)
-        .then((response) => {
-          let fileURL = window.URL.createObjectURL(new Blob([response.data]))
-          let fileLink = document.createElement('a')
-          fileLink.href = fileURL
-          fileLink.setAttribute('download', exportFileName)
-          document.body.appendChild(fileLink)
-          fileLink.click()
-          this.exportDialog = false
-        })
-        .catch((e) => {
-          console.error(e)
-          this.exportDialog = false
-        })
+      // TODO: Implement CSV export for browser model
+      this.exportDialog = false
     },
     addChip: function (chip) {
       if (!this.currentQueryFilter.chips) {
@@ -1060,39 +1015,59 @@ export default {
       this.selectedFields.splice(index, 1)
     },
     toggleStar(event) {
-      let count = 0
-      if (event._source.label.includes('__ts_star')) {
-        event._source.label.splice(event._source.label.indexOf('__ts_star'), 1)
-        count = -1
-      } else {
-        event._source.label.push('__ts_star')
-        count = 1
+      // Ensure labels array exists
+      if (!event._source.labels) {
+        event._source.labels = []
       }
-      BrowserDB.saveEventAnnotation(this.sketch.id, 'label', '__ts_star', event, this.currentSearchNode)
-        .then((response) => {
-          this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: count })
+      
+      // Determine if we're adding or removing the star
+      const isStarred = event._source.labels.includes('__ts_star');
+      
+      if (isStarred) {
+        event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
+        BrowserDB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
+          console.error('Error updating star in database:', e)
         })
-        .catch((e) => {
-          console.error(e)
+      } else {
+        event._source.labels.push('__ts_star')
+        BrowserDB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
+          console.error('Error updating star in database:', e)
         })
+      }
     },
     toggleMultipleStars: function () {
       let netStarCountChange = 0
+      const eventsToStar = []
+      const eventsToUnstar = []
+      
       this.selectedEvents.forEach((event) => {
-        if (event._source.label.includes('__ts_star')) {
-          event._source.label.splice(event._source.label.indexOf('__ts_star'), 1)
+        // Ensure labels array exists
+        if (!event._source.labels) {
+          event._source.labels = []
+        }
+        if (event._source.labels.includes('__ts_star')) {
+          event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
+          eventsToUnstar.push(event._id)
           netStarCountChange--
         } else {
-          event._source.label.push('__ts_star')
+          event._source.labels.push('__ts_star')
+          eventsToStar.push(event._id)
           netStarCountChange++
         }
       })
-      BrowserDB.saveEventAnnotation(this.sketch.id, 'label', '__ts_star', this.selectedEvents, this.currentSearchNode)
-        .then((response) => {
-          this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: netStarCountChange })
-          this.selectedEvents = []
+      
+      // Persist changes to database
+      if (eventsToStar.length > 0) {
+        BrowserDB.addLabelEvent(eventsToStar, ['__ts_star']).catch(e => {
+          console.error('Error starring events:', e)
         })
-        .catch((e) => {})
+      }
+      if (eventsToUnstar.length > 0) {
+        BrowserDB.removeLabelEvent(eventsToUnstar, ['__ts_star']).catch(e => {
+          console.error('Error unstarring events:', e)
+        })
+      }
+      this.selectedEvents = []
     },
     saveSearch: function () {
       BrowserDB.createView(this.sketch.id, this.saveSearchFormName, this.currentQueryString, this.currentQueryFilter)
@@ -1106,13 +1081,31 @@ export default {
     },
     updateShowBanner: function() {
       // Show banner only when processing timelines are enabled and at
-      // least one enabled timeline is the "processing" state.
+      // least one enabled timeline is in "processing" state.
+      // Browser model: status is a string, not an array
       this.showBanner =
         !!this.settings.showProcessingTimelineEvents &&
-        this.sketch.active_timelines
+        this.sketch.timelines
           .filter(tl => this.$store.state.enabledTimelines.includes(tl.id))
-          .some(tl => tl.status && tl.status[0].status === 'processing')
+          .some(tl => tl.status === 'processing')
     },
+    // debugEventList: function() {
+    //   // Helper method to inspect eventList in browser console
+    //   // Usage in console: vm.$children[X].$children[X].debugEventList()
+    //   console.log('=== EventList Debug State ===')
+    //   console.log('searchInProgress:', this.searchInProgress)
+    //   console.log('eventList.objects.length:', this.eventList.objects.length)
+    //   console.log('eventList.meta:', this.eventList.meta)
+    //   console.log('currentQueryString:', this.currentQueryString)
+    //   console.log('currentQueryFilter:', this.currentQueryFilter)
+    //   console.log('eventList.objects sample:', this.eventList.objects.slice(0, 3))
+    //   return {
+    //     searchInProgress: this.searchInProgress,
+    //     objectsCount: this.eventList.objects.length,
+    //     meta: this.eventList.meta,
+    //     objects: this.eventList.objects
+    //   }
+    // },
   },
   watch: {
     tableOptions: {
@@ -1159,7 +1152,11 @@ export default {
     },
   },
   created() {
-    if (Object.keys(this.queryRequest).length) {
+    console.log('[EventList.created] queryRequest:', this.queryRequest)
+    console.log('[EventList.created] queryRequest.queryString:', this.queryRequest && this.queryRequest.queryString)
+    
+    // Check if queryRequest has actual content (not just empty observer)
+    if (this.queryRequest && this.queryRequest.queryString) {
       this.currentQueryString = this.queryRequest.queryString
       this.currentQueryFilter = { ...this.queryRequest.queryFilter } || defaultQueryFilter()
       this.currentQueryDsl = { ...this.queryRequest.queryDsl }
@@ -1167,6 +1164,15 @@ export default {
       if (this.currentQueryFilter.fields) {
         this.selectedFields = this.currentQueryFilter.fields
       }
+      const storedState = localStorage.getItem('aiSummaryCollapsed');
+      if (storedState === 'true') {
+        this.summaryCollapsed = true;
+      }
+      console.log('[EventList.created] Calling search() with queryString:', this.currentQueryString)
+      this.search()
+    } else {
+      // No queryString provided - perform initial load with all events
+      console.log('[EventList.created] No queryString in queryRequest, loading all events')
       const storedState = localStorage.getItem('aiSummaryCollapsed');
       if (storedState === 'true') {
         this.summaryCollapsed = true;
