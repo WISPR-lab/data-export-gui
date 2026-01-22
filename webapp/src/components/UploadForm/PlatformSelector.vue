@@ -1,9 +1,9 @@
 <!--
-Platform Selector Dialog for Data Upload
+Platform Selector Dialog
 
-This component presents users with a choice of data export platforms,
+Presents users with a choice of data export platforms,
 explains the purpose of the tool, links to instructions, and then
-proceeds to the file upload dialog.
+proceeds to the file upload dialog
 -->
 <template>
   <v-dialog

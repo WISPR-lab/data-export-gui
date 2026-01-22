@@ -1,3 +1,5 @@
+<!-- SAFE EXIT BUTTON -->
+
 <template>
   <div class="safe-exit-button">
     <v-tooltip left>
@@ -11,7 +13,7 @@
           dark
           v-bind="attrs"
           v-on="on"
-          @click="safExit"
+          @click="safeExit"
           class="mr-4 mb-4"
         >
           Safe Exit
@@ -28,7 +30,7 @@ import BrowserDB from '../database.js'
 export default {
   name: 'SafeExitButton',
   methods: {
-    async safExit() {
+    async safeExit() {
       try {
         console.log('[SafeExit] Initiating safe exit...')
         

@@ -4,13 +4,13 @@ Triggers the delete data confirmation dialog
 -->
 <template>
   <v-btn 
-    rounded 
-    depressed 
-    color="#d32f2f" 
+    small
+    text
+    color="error"
     @click="handleClick"
-    style="color: white !important; margin-right: 24px;"
+    class="delete-btn"
   >
-    <v-icon left>mdi-trash-can-outline</v-icon>
+    <v-icon left small>mdi-trash-can-outline</v-icon>
     Delete All Data
   </v-btn>
 </template>
@@ -25,3 +25,10 @@ export default {
   },
 }
 </script>
+
+<style scoped>
+.delete-btn {
+  background-color: rgba(211, 47, 47, 0.08) !important;
+  border-radius: 2px !important;
+}
+</style>

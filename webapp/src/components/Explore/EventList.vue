@@ -75,6 +75,7 @@ limitations under the License.
       ></ts-search-not-found-card>
     </div>
 
+    <!-- DISABLED: Row highlighting feature
     <div v-if="highlightEvent" class="mt-4">
       <strong>Showing context for event:</strong>
       <v-sheet class="d-flex flex-wrap mt-1 mb-5">
@@ -94,6 +95,7 @@ limitations under the License.
         </v-sheet>
       </v-sheet>
     </div>
+    -->
 
     <div class="ts-event-list-container">
       <v-card
@@ -401,7 +403,8 @@ limitations under the License.
 
           <!-- Datetime field with action buttons -->
           <template v-slot:item._source.primary_timestamp="{ item }">
-            <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell">
+            <!-- <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell"> -->
+            <div class="datetime-table-cell">
               <span v-if="(item._source.primary_timestamp !== null && item._source.primary_timestamp !== '')">
                 <!-- {{ item._source.primary_timestamp }} -->
                 <!-- {{ (item._source.primary_timestamp | formatTimestamp | shortDateTime ) }} -->
@@ -421,22 +424,24 @@ limitations under the License.
             >
               <span
                 :class="{
-                  // 'ts-event-field-ellipsis': field.text === 'message',
-                  'ts-event-field-highlight': item._id === highlightEventId,
+                  // 'ts-event-field-ellipsis': field.text === 'category',
+                  'ts-event-field-highlight': item._id === highlightEventId, 
                 }"
               >
                 <!-- Tags -->
                 <span
                   v-if="
                     displayOptions.showTags &&
-                    index === 3 &&
+                    // index === 3 &&
+                    (field.text === 'category' || (index === 4 && headers[3].value === '_source.comment')) &&
                     (item._source.tags && item._source.tags.length > 0)
                   "
                 >
                   <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
                 <!-- Emojis -->
-                <span v-if="displayOptions.showEmojis && index === 3 && item._source.__ts_emojis">
+                <span v-if="displayOptions.showEmojis && (field.text === 'category' || (index === 4 && headers[3].value === '_source.comment')) && item._source.__ts_emojis">
+                <!-- <span v-if="displayOptions.showEmojis && index === 3 && item._source.__ts_emojis"> -->
                   <span
                     class="mr-2"
                     v-for="emoji in item._source.__ts_emojis"
@@ -455,7 +460,8 @@ limitations under the License.
 
           <!-- Timeline name field -->
           <template v-slot:item.timeline_name="{ item }">
-            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em">
+            <!-- <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em"> -->
+            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getTimelineColor(item)">
               <span class="timeline-name-ellipsis" style="width: 130px; text-align: center">{{
                 getTimeline(item).name
               }}</span></v-chip>
@@ -617,7 +623,7 @@ export default {
       },
       showHistogram: false,
       branchParent: null,
-      sortOrderAsc: false,
+      sortOrderAsc: true,
       summaryCollapsed: false,
       showBanner: false,
     }
@@ -740,11 +746,12 @@ export default {
           this.summaryCollapsed = !this.summaryCollapsed;
           localStorage.setItem('aiSummaryCollapsed', String(this.summaryCollapsed));
     },
-    sortEvents(sortAsc) {
-      if (sortAsc) {
-        this.currentQueryFilter.order = 'asc'
-      } else {
+    sortEvents(sortDesc) {
+      // sortDesc is the value of Vuetify's sort-desc (true = descending, false = ascending)
+      if (sortDesc) {
         this.currentQueryFilter.order = 'desc'
+      } else {
+        this.currentQueryFilter.order = 'asc'
       }
       this.search(true, true, false)
     },
@@ -794,7 +801,8 @@ export default {
         let timestamp = Math.floor(timestampMillis / 1000)
         let prevTimestamp = Math.floor(prevTimestampMillis / 1000)
         let delta = Math.floor(timestamp - prevTimestamp)
-        if (this.order === 'desc') {
+        // In descending order (most recent first), prevEvent has later timestamp, so flip the delta
+        if (this.currentQueryFilter.order === 'desc') {
           delta = Math.floor(prevTimestamp - timestamp)
         }
         let deltaDays = Math.floor(delta / 60 / 60 / 24)

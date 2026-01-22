@@ -23,7 +23,7 @@ limitations under the License.
         {{ tag }}
       </v-chip>
     </span>
-    <span v-for="label in item._source.label" :key="label">
+    <span v-for="label in item._source.labels" :key="label">
       <v-chip v-if="!label.startsWith('__ts')" small outlined class="mr-2">
         {{ label }}
       </v-chip>
@@ -39,9 +39,9 @@ export default {
       return this.$store.state.sketch
     },
     sortedTags() {
-      if (!this.item._source.tag) return []
+      if (!this.item._source.tags) return []
       // place quickTags first in the array, sort the rest alphabetically
-      let tags = this.item._source.tag
+      let tags = this.item._source.tags
       tags.sort((a, b) => {
         // TODO: refactor when quickTags become configurable.
         if (a === 'bad') {

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui
+
 module.exports = {
   lintOnSave: false,
   // publicPath: process.env.NODE_ENV === 'development' ? '/' : '/dist/',

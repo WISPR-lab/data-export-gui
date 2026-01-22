@@ -13,6 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+
+// NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui
+
+
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 
@@ -20,6 +25,7 @@ import Home from './views/Home.vue'
 import Canvas from './views/Canvas.vue'
 import Sketch from './views/Sketch.vue'
 import HowToRequest from './views/HowToRequest.vue'
+import Devices from './views/Devices.vue'
 
 Vue.use(VueRouter)
 
@@ -44,6 +50,12 @@ const routes = [
         path: 'explore',
         name: 'Explore',
         component: Canvas,
+        props: { sketchId: 1 },
+      },
+      {
+        path: 'explore/devices',
+        name: 'Devices',
+        component: Devices,
         props: { sketchId: 1 },
       },
       {

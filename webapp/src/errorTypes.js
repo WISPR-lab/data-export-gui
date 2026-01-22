@@ -1,14 +1,3 @@
-/**
- * errorTypes.js
- * 
- * Defines error classifications for distinguishing user-fixable errors
- * from system/infrastructure errors.
- * 
- * This enables the UI to display different messages:
- * - USER errors: "Please check your file format..."
- * - SYSTEM errors: "Something went wrong on our end..."
- */
-
 export const ERROR_TYPES = {
   // User-fixable errors (bad files, missing data, etc.)
   INVALID_ZIP: 'INVALID_ZIP',                   // ZIP is corrupted
