@@ -136,7 +136,7 @@ limitations under the License.
       <v-data-table
         v-model="selectedEvents"
         :headers="headers"
-        :items="eventList.objects"
+        :items="DEBUG_filteredEventList"
         :footer-props="{ 'items-per-page-options': [10, 40, 80, 100, 200, 500], 'show-current-page': true }"
         :loading="searchInProgress"
         :options.sync="tableOptions"
@@ -323,6 +323,18 @@ limitations under the License.
                   <ts-event-tag-dialog :events="selectedEvents" @close="showEventTagMenu = false"></ts-event-tag-dialog>
 
                 </v-menu>
+
+                <!-- DEBUG: Hide selected events (temporary UI-only) -->
+                <v-btn x-small outlined @click="DEBUG_hideSelectedEvents()" color="orange">
+                  <v-icon left>mdi-eye-off</v-icon>
+                  [DEBUG] Hide Selected
+                </v-btn>
+
+                <!-- DEBUG: Show hidden count and reset button -->
+                <v-btn v-if="DEBUG_hiddenEventIds.size > 0" x-small outlined @click="DEBUG_resetHiddenEvents()" color="warning">
+                  <v-icon left>mdi-refresh</v-icon>
+                  [DEBUG] Unhide All ({{ DEBUG_hiddenEventIds.size }} hidden)
+                </v-btn>
               </div>
 
               <v-spacer></v-spacer>
@@ -626,6 +638,8 @@ export default {
       sortOrderAsc: true,
       summaryCollapsed: false,
       showBanner: false,
+      // DEBUG: Temporary hide functionality
+      DEBUG_hiddenEventIds: new Set(),
     }
   },
   computed: {
@@ -730,6 +744,13 @@ export default {
       }
       // console.log('[EventList.headers] Generated headers:', baseHeaders)
       return baseHeaders
+    },
+    // DEBUG: Filtered event list (removes hidden event IDs)
+    DEBUG_filteredEventList() {
+      if (this.DEBUG_hiddenEventIds.size === 0) {
+        return this.eventList.objects
+      }
+      return this.eventList.objects.filter(item => !this.DEBUG_hiddenEventIds.has(item._id))
     },
     activeContext() {
       return this.$store.state.activeContext
@@ -1097,23 +1118,24 @@ export default {
           .filter(tl => this.$store.state.enabledTimelines.includes(tl.id))
           .some(tl => tl.status === 'processing')
     },
-    // debugEventList: function() {
-    //   // Helper method to inspect eventList in browser console
-    //   // Usage in console: vm.$children[X].$children[X].debugEventList()
-    //   console.log('=== EventList Debug State ===')
-    //   console.log('searchInProgress:', this.searchInProgress)
-    //   console.log('eventList.objects.length:', this.eventList.objects.length)
-    //   console.log('eventList.meta:', this.eventList.meta)
-    //   console.log('currentQueryString:', this.currentQueryString)
-    //   console.log('currentQueryFilter:', this.currentQueryFilter)
-    //   console.log('eventList.objects sample:', this.eventList.objects.slice(0, 3))
-    //   return {
-    //     searchInProgress: this.searchInProgress,
-    //     objectsCount: this.eventList.objects.length,
-    //     meta: this.eventList.meta,
-    //     objects: this.eventList.objects
-    //   }
-    // },
+    // DEBUG: Hide selected events from UI (temporary, not persisted)
+    DEBUG_hideSelectedEvents() {
+      // Add selected event IDs to the hidden set and reassign to trigger reactivity
+      const newHidden = new Set(this.DEBUG_hiddenEventIds)
+      this.selectedEvents.forEach(event => {
+        newHidden.add(event._id)
+      })
+      this.DEBUG_hiddenEventIds = newHidden
+      // Clear the selection
+      this.selectedEvents = []
+      console.log('[DEBUG] Hidden events. Total hidden:', this.DEBUG_hiddenEventIds.size)
+    },
+    // DEBUG: Reset hidden events
+    DEBUG_resetHiddenEvents() {
+      // Clear all hidden events
+      console.log('[DEBUG] Resetting hidden events. Was hidden:', this.DEBUG_hiddenEventIds.size)
+      this.DEBUG_hiddenEventIds = new Set()
+    },
   },
   watch: {
     tableOptions: {

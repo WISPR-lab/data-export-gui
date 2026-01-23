@@ -112,22 +112,31 @@ proceeds to the file upload dialog
         />
       </div>
     </v-card>
+
+    <!-- Privacy Settings Modal (shown after upload completes) -->
+    <PrivacySettingsModal
+      v-model="showPrivacySettings"
+      @close="finalizeUpload"
+    />
   </v-dialog>
 </template>
 
 <script>
 import PlatformUploadForm from './UploadForm.vue'
+import PrivacySettingsModal from '../PrivacySettingsModal.vue'
 
 export default {
   name: 'PlatformSelector',
   components: {
     PlatformUploadForm,
+    PrivacySettingsModal,
   },
   data() {
     return {
       dialog: false,
       step: 'platform-selection', // 'platform-selection' or 'file-upload'
       selectedPlatformId: null,
+      showPrivacySettings: false,
       platforms: [
         {
           id: 'google',
@@ -181,6 +190,9 @@ export default {
       this.selectedPlatformId = null
     },
     handleUploadSuccess() {
+      this.showPrivacySettings = true
+    },
+    finalizeUpload() {
       this.$emit('success')
       this.closeDialog()
     },

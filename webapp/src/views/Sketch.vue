@@ -278,7 +278,11 @@ limitations under the License.
         <!-- <ts-intelligence :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-intelligence> -->
         <!-- <ts-analyzer-results :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-analyzer-results> -->
         <!-- <ts-visualizations :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-visualizations> -->
+        <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item>
       </v-navigation-drawer>
+
+      <!-- Privacy Settings Modal -->
+      <privacy-settings-modal v-model="showPrivacySettings"></privacy-settings-modal>
 
       <!-- Right panel -->
       <v-navigation-drawer v-if="showRightSidePanel" fixed right width="600" style="box-shadow: 0 10px 15px -3px #888">
@@ -388,9 +392,11 @@ import TsAnalyzerResults from '../components/LeftPanel/AnalyzerResults.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsVisualizations from '../components/LeftPanel/Visualizations.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
+import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsQuestionCard from '../components/Scenarios/QuestionCard.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
 import TsInvestigation from '../components/LeftPanel/Investigation.vue'
+import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
 import DeleteAllDataDialog from '../components/DeleteAllDataDialog.vue'
 import DeleteAllDataButton from '../components/DeleteAllDataButton.vue'
 
@@ -412,11 +418,13 @@ export default {
     TsSearch,
     TsAnalyzerResults,
     TsTimelinesTable,
+    PrivacySettingsItem,
     TsEventList,
     TsVisualizations,
     TsQuestionCard,
     TsSettingsDialog,
     TsInvestigation,
+    PrivacySettingsModal,
     DeleteAllDataDialog,
     DeleteAllDataButton,
   },
@@ -437,6 +445,7 @@ export default {
       shareDialog: false,
       loadingSketch: false,
       showDeleteDialog: false,
+      showPrivacySettings: false,
       // Context
       timelineViewHeight: 60,
       showTimelineView: false,
