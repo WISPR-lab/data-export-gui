@@ -1,138 +1,104 @@
 <template>
-  <v-app>
+  <div>
     <PageHeader />
-
     <v-divider></v-divider>
 
-    <!-- Page Content -->
-    <v-container max-width="900px" class="py-8">
-      <!-- Page Header -->
-      <h2 class="text-h3 mb-8">How to Request Your Data Exports</h2>
-      <!-- Platform Selection Buttons -->
-      <div class="d-flex flex-wrap gap-2 mb-8">
-          <v-btn
-            v-for="platform in platforms"
-            :key="platform.id"
-            :outlined="selectedPlatform.id !== platform.id"
-            :color="selectedPlatform.id === platform.id ? 'primary' : 'default'"
-            @click="selectedPlatform = platform"
-            class="platform-btn"
-            large
-          >
-            <!-- <v-icon left>{{ platform.icon }}</v-icon> -->
-            {{ platform.name }}
-          </v-btn>
+    <v-container max-width="900px" class="pa-8">
+      <!-- Page Title -->
+      <h1 class="text-h3 mb-8 font-weight-light">How to Request Your Data Exports</h1>
+
+      <!-- Platform Selector -->
+      <div class="d-flex flex-wrap gap-3 mb-12">
+        <v-btn
+          v-for="platform in platforms"
+          :key="platform.id"
+          :outlined="selectedPlatform.id !== platform.id"
+          :color="selectedPlatform.id === platform.id ? 'primary' : ''"
+          @click="selectedPlatform = platform"
+          class="platform-btn"
+          large
+        >
+          {{ platform.name }}
+        </v-btn>
       </div>
-      
-      <!-- Platform Content -->
-      <v-card class="elevation-1">
-        <v-card-title class="text-h5 font-weight-medium mb-4">
-          {{ selectedPlatform.name }} - Steps to request your data
-        </v-card-title>
-        
-        <!-- <v-divider></v-divider>
 
-        <v-card-text class="pa-4"> -->
-          <!-- Overview -->
-          <!-- <div class="mb-8">
-            <h2 class="text-h6 font-weight-medium mb-4">Overview</h2>
-            <p class="text-body1 line-height-relaxed">{{ selectedPlatform.overview }}</p>
-            <v-alert
-              v-if="selectedPlatform.notes"
-              outlined
-              type="info"
-              class="mt-4"
-            >
-              <strong>Note:</strong> {{ selectedPlatform.notes }}
-            </v-alert>
-          </div> -->
+      <v-divider class="mb-10"></v-divider>
 
-          <!-- Step-by-step Instructions -->
-          <div class="mb-8">
-            <!-- <h2 class="text-h6 font-weight-medium mb-4">{{ selectedPlatform.name }} - Steps to Request Your Data</h2> -->
-            
-            <v-timeline dense class="pt-0">
-              <v-timeline-item
-                v-for="(step, index) in selectedPlatform.steps"
-                :key="index"
-                :number="index + 1"
-                small
-              >
+      <!-- Steps -->
+      <div class="steps-container">
+        <div
+          v-for="(step, index) in displayedSteps"
+          :key="index"
+          class="step-block mb-12"
+        >
+          <!-- Two-column layout: text left (50%), image right (50%) -->
+          <div class="d-flex align-start">
+            <!-- Left column: Step number and content -->
+            <div class="step-content">
+              <div class="d-flex align-start gap-4">
+                <div class="step-number">{{ index + 1 }}</div>
                 <div>
-                  <h3 class="font-weight-medium mb-2">{{ step.title }}</h3>
-                  
+                  <h2 class="text-h5 font-weight-medium mb-2">{{ step.title }}</h2>
+
                   <!-- Link if provided -->
                   <div v-if="step.link" class="mb-3">
                     <a :href="step.link.url" target="_blank" rel="noopener noreferrer" class="primary--text">
-                      {{ step.link.text || 'Visit website' }}
+                      {{ step.link.text }}
                       <v-icon x-small>mdi-open-in-new</v-icon>
                     </a>
                   </div>
-                  
-                  <p v-if="step.description && typeof step.description === 'string'" class="text-body2 mb-3">{{ step.description }}</p>
-                  
-                  <!-- Description as array (paragraph with line breaks) -->
-                  <p v-if="step.description && Array.isArray(step.description)" class="text-body2 mb-3">
-                    <span v-for="(item, i) in step.description" :key="i">
-                      {{ item }}<br v-if="i < step.description.length - 1" />
-                    </span>
-                  </p>
-                  
+
+                  <!-- Description (string or array) -->
+                  <div v-if="step.description && typeof step.description === 'string'" class="text-body1">
+                    {{ step.description }}
+                  </div>
+
+                  <div v-if="step.description && Array.isArray(step.description)" class="text-body1">
+                    <div v-for="(item, i) in step.description" :key="i" class="mb-2 step-item">
+                      {{ item }}
+                    </div>
+                  </div>
+
                   <!-- Alert if provided -->
-                  <v-alert v-if="step.alert" :type="step.alert.type || 'warning'" dense class="mt-3 mb-3 font-weight-medium">
-                    {{ step.alert.text }}
-                  </v-alert>
-                  
-                  <!-- Image -->
-                  <div v-if="step.image" class="mb-4 elevation-2" style="display: inline-block; border-radius: 4px; overflow: hidden;">
-                    <img 
-                      :src="`/${step.image}`" 
-                      :alt="step.title" 
-                      style="max-width: 100%; max-height: 400px; display: block;"
-                      @error="(e) => e.target.style.display = 'none'"
-                    />
+                  <div v-if="step.alert" class="mt-4" style="max-width: 100%;">
+                    <v-alert :type="step.alert.type || 'warning'" dense class="font-weight-medium">
+                      {{ step.alert.text }}
+                    </v-alert>
                   </div>
                 </div>
-              </v-timeline-item>
-            </v-timeline>
+              </div>
+            </div>
+
+            <!-- Right column: Image -->
+            <div v-if="step.image" class="step-image-col">
+              <img 
+                :src="`/${step.image}`" 
+                :alt="step.title" 
+                class="step-image"
+              />
+            </div>
           </div>
 
-          <!-- Tips for Safe Handling -->
-          <v-card outlined class="mb-8">
-            <v-card-title class="text-body2 font-weight-medium">Tips for Safe Handling</v-card-title>
-            <v-divider></v-divider>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-content>
-                  <v-list-item-title class="text-body2">Ensure the device you're downloading on is password-protected and secure</v-list-item-title>
-                </v-list-item-content>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-content>
-                  <v-list-item-title class="text-body2">Be aware that cloud services (OneDrive, Google Drive, Box, iCloud) may automatically sync this file to your account, making it accessible from other devices or by anyone with access to that account.</v-list-item-title>
-                </v-list-item-content>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-content>
-                  <v-list-item-title class="text-body2">Delete the file from your device after you're done using it</v-list-item-title>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
-          </v-card>
-
-        </v-card-text>
-      </v-card>
-
-      <!-- Help Section -->
-      <div class="mt-8 text-center">
-        <p class="text-body2 secondary--text mb-2">Need help? Contact your consultant for additional guidance.</p>
+          <!-- Divider between steps -->
+          <v-divider class="my-8"></v-divider>
+        </div>
       </div>
+
+      <!-- Final Warning (after all steps) -->
+      <!-- <div class="mx-16" style="max-width: 40%;">
+        <v-alert type="info" dense class="font-weight-medium d-flex align-center">
+          {{ FINAL_STEP_WARNING }}
+        </v-alert> -->
+      <!-- </div> -->
+      <div class="mb-16"></div>
     </v-container>
-  </v-app>
+  </div>
 </template>
 
 <script>
 import PageHeader from '../components/Navigation/PageHeader.vue'
+
+const FINAL_STEP_WARNING = 'This export contains your sensitive information about you. If someone gains access to this file, they could view your private messages, your location, and/or your search history. Treat it as securely as you would a password or financial records.'
 
 export default {
   name: 'HowToRequest',
@@ -141,6 +107,7 @@ export default {
   },
   data() {
     return {
+      FINAL_STEP_WARNING,
       selectedPlatform: null,
       platforms: [
         {
@@ -151,7 +118,7 @@ export default {
           notes: 'The download can be large depending on your data volume.',
           steps: [
             {
-              title: '1. Visit Google Takeout and sign in',
+              title: 'Visit Google Takeout and sign in',
               link: {
                 url: 'https://takeout.google.com',
                 text: 'Google Takeout'
@@ -159,11 +126,11 @@ export default {
         
             },
             {
-              title: '2. Select data categories',
+              title: 'Select data categories',
               description: [
                 'Click "Deselect all" first',
                 'Search for and select: Access log activity, My Activity, Google Account',
-                'Optionally add Chrome, Mail, Messages, Pixel, and Profile if relevant. Note that Mail can significantly increase export size. If selected, limit to specific folders or recent dates'
+                'Optionally add Chrome, Mail, Messages, Pixel, and Profile if relevant. Note that Mail can significantly increase export size. If you do select Mail, limit to specific folders or recent dates'
               ],
               image: 'tutorial/google_json.jpg',
               alert: {
@@ -172,39 +139,37 @@ export default {
               }
             },
             {
-              title: '3. Choose file type, frequency and destination',
+              title: 'Choose file type, frequency and destination',
               description: [
                 'Destination: "Select download link via email"',
                 'Frequency: "Export once"',
                 'File type & size: .zip and 2GB recommended'
               ],
-              image: 'google-step-3.png',
+              image: 'tutorial/google_freq.jpg',
               alert: {
-                type: 'error',
+                type: 'warning',
                 text: 'Anyone with access to this email could download your data.'
               }
             },
             {
-              title: '4. Create export',
-              description: 'Click "Create export" to start.',
-              image: 'google-step-4.png',
+              title: 'Create export',
+              description: 'Review your selections and click "Create export".',
+              //image: 'tutorial/google_create.jpg',
             },
             {
-              title: '5. Wait and download',
-              description: 'Google will email when ready (usually hours to 1 day). Download and save to a secure location. Export time typically takes 2 hours to several days depending on your data volume. Your download link will be available for 7 days.',
-              image: 'google-step-5.png',
+              title: 'Wait and download',
+              description: [
+                'Google will email when ready (usually 2 hours to several day).',
+                'Download and save to a secure location.',
+                'Your download link will be available for 7 days.'
+              ],
+              image: 'tutorial/google_takeout_email.jpg',
               alert: {
                 type: 'warning',
-                text: 'This export contains your complete digital activity and personal information across platforms. If someone gains access, they could read your private messages, see your location history, and view your search activity. Treat it as securely as you would a password or financial records.'
+                text: FINAL_STEP_WARNING
               }
             },
           ],
-          whatToExpect: [
-            'Export time: 2 hours to several days depending on data volume',
-            'File format: .zip archive containing all selected data',
-            'File size: Can range from MB to several GB',
-            'Access duration: Download link typically available for 7 days',
-          ]
         },
         {
           id: 'discord',
@@ -225,27 +190,25 @@ export default {
             },
             {
               title: 'Request Data Export',
-              description: 'Look for "Request all Explore My Data" button in Privacy & Safety. Discord will prepare an archive of your account information.',
+              description: [
+                'This includes your messages and server membership records',
+                'Discord may ask for password confirmation',
+                'The export usually completes within 1-24 hours',
+              ],
               link: {
                 url: 'https://discord.com/app',
                 text: 'Open Discord'
               },
               image: 'discord-step-3.png',
-              details: [
-                'This includes your messages and server membership records',
-                'Discord may ask for password confirmation',
-                'The export usually completes within 1-24 hours',
-              ]
             },
             {
               title: 'Download Your Data',
-              description: 'Once ready, check your email or return to Discord to download the prepared archive.',
-              image: 'discord-step-4.png',
-              details: [
+              description: [
                 'File is typically in .zip format',
                 'Download to a secure device',
                 'Delete any temporary copies from cloud storage',
-              ]
+              ],
+              image: 'discord-step-4.png',
             },
           ],
           whatToExpect: [
@@ -274,23 +237,21 @@ export default {
             },
             {
               title: 'Choose "Download Your Data"',
-              description: 'Select the option to download a copy of your data. Verify your identity when prompted.',
-              image: 'apple-step-3.png',
-              details: [
+              description: [
                 'Apple will send a verification code to your trusted device',
                 'Complete two-factor authentication',
                 'Select the categories you want to export',
-              ]
+              ],
+              image: 'apple-step-3.png',
             },
             {
               title: 'Receive and Download',
-              description: 'Apple will prepare your data and send you a link via email to download. This process takes up to 7 days.',
-              image: 'apple-step-4.png',
-              details: [
+              description: [
                 'Check both email and device for notification',
                 'Download link is valid for 7 days',
                 'Save to a secure password-protected device',
-              ]
+              ],
+              image: 'apple-step-4.png',
             },
           ],
           whatToExpect: [
@@ -319,24 +280,22 @@ export default {
             },
             {
               title: 'Download Your Information',
-              description: 'Click "Download your information" to start the process. You\'ll be prompted to review your password.',
-              image: 'facebook-step-3.png',
-              details: [
+              description: [
                 'Confirm your password for security',
                 'Choose data format (HTML or JSON)',
                 'Select date range for export (optional)',
                 'Choose specific categories to include',
-              ]
+              ],
+              image: 'facebook-step-3.png',
             },
             {
               title: 'Wait for Preparation and Download',
-              description: 'Facebook will prepare your data archive. You\'ll be notified when ready, usually within hours.',
-              image: 'facebook-step-4.png',
-              details: [
+              description: [
                 'Large exports may take up to 24 hours',
                 'Download available for 7 days after preparation',
                 'Transfer to secure storage immediately',
-              ]
+              ],
+              image: 'facebook-step-4.png',
             },
           ],
           whatToExpect: [
@@ -367,7 +326,7 @@ export default {
         //       title: 'Select Download Your Information',
         //       description: 'Choose your Instagram account and select "Download your information" to begin the export.',
         //       image: 'instagram-step-3.png',
-        //       details: [
+        //       description: [
         //         'Choose the data format (HTML or JSON)',
         //         'Select the date range if needed',
         //         'Choose categories to export',
@@ -377,7 +336,7 @@ export default {
         //       title: 'Complete and Download',
         //       description: 'Confirm your password, then wait for Instagram to prepare your data. You\'ll be notified when ready to download.',
         //       image: 'instagram-step-4.png',
-        //       details: [
+        //       description: [
         //         'Processing typically takes hours to 24 hours',
         //         'Download link available for 7 days',
         //         'Transfer to a secure device immediately',
@@ -410,34 +369,37 @@ export default {
             },
             {
               title: 'Request Your Data',
-              description: 'Look for "Download Explore My Data" option and request an export of your information.',
-              image: 'snapchat-step-3.png',
-              details: [
+              description: [
                 'Snapchat may ask for password confirmation',
                 'Export includes messages, conversation history, and account details',
                 'Processing typically takes 1-7 days',
-              ]
+              ],
+              image: 'snapchat-step-3.png',
             },
             {
               title: 'Receive and Download Link',
-              description: 'Snapchat will send a download link to your registered email address.',
-              image: 'snapchat-step-4.png',
-              details: [
+              description: [
                 'Check email for download notification',
                 'Link remains active for a limited time',
                 'Store on a secure, password-protected device',
-              ]
+              ],
+              image: 'snapchat-step-4.png',
             },
           ],
           whatToExpect: [
             'Export time: 1-7 days',
             'File format: .zip archive with JSON files',
-            'Includes: Messages, friends list, account details, usage stats',
+            'Includes: Messages, friends list, account description, usage stats',
             'Note: Some deleted messages may not be recoverable',
           ]
         },
       ],
     }
+  },
+  computed: {
+    displayedSteps() {
+      return this.selectedPlatform ? this.selectedPlatform.steps : []
+    },
   },
   mounted() {
     // Set the first platform as default
@@ -448,8 +410,48 @@ export default {
 
 <style scoped lang="scss">
 
-.platform-btn {
-  text-transform: none;
+.step-number {
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: var(--v-primary-base);
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+  min-width: 0;
+  margin-right: 60px;
+}
+
+.step-image-col {
+  flex: 1;
+}
+
+.step-image {
+  width: 100%;
+  max-width: 450px;
+  max-height: 450px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  object-fit: contain;
+}
+
+.step-item {
+  padding-left: 16px;
+  border-left: 3px solid var(--v-primary-base);
+  position: relative;
+
+  &::before {
+    content: '•';
+    position: absolute;
+    left: -8px;
+    color: var(--v-primary-base);
+  }
+}
+
+.step-block:last-child .v-divider {
+  display: none;
 }
 
 </style>

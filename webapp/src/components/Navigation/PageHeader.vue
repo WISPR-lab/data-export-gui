@@ -4,7 +4,7 @@
       <!-- Left side: Logo + Tool Name -->
       <div class="header-left">
         <v-icon size="24">mdi-database-search</v-icon>
-        <span class="tool-name ml-2">TOOL NAME</span>
+        <span class="tool-name ml-2">LEStrADE</span>
       </div>
 
       <!-- Desktop Navigation (shown on md and up) -->

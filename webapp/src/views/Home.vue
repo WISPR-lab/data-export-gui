@@ -14,7 +14,7 @@
 
           </h2>
           <p class="text-body1 secondary--text line-height-relaxed">
-            [TOOL NAME] is an open-source, browser-based tool that helps end-users uncover security events (i.e., login attempts, password changes) that might 
+            LEStrADE is an open-source, browser-based tool that helps end-users uncover security events (i.e., login attempts, password changes) that might 
             indicate an account has been compromised. 
           </p>
         </v-col>
