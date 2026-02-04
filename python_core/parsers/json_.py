@@ -185,11 +185,11 @@ class JSONParser(BaseParser):
             fcfg = pinfo.get("parser", {}).get("filter", None)
             """
             fcfg = EITHER 
-                {field: "event", op: "==", value: "Email Added"} 
+                {source: "event", op: "==", value: "Email Added"} 
             OR
                 {
                     logic: "all" or"any", 
-                    conditions: [ {field: "event", op: "==", value: "Email Added"} , ...]
+                    conditions: [ {source: "event", op: "==", value: "Email Added"} , ...]
                 }
             """
             if fcfg is None:

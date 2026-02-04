@@ -41,7 +41,10 @@ async function initPyodide() {
   }
 
   // Fetch and mount our custom Python parser logic
-  const pythonFiles = [
+  // Now mounting the centralized Python code
+  
+  // 1. Mount parsers (recursively or list known files)
+  const parserFiles = [
     'pyodide.py',
     'base.py',
     'errors.py',
@@ -55,30 +58,99 @@ async function initPyodide() {
     'time_utils.py'
   ];
 
-  for (const file of pythonFiles) {
-    const response = await fetch(`/pyparser/${file}`);
+  // Create package structure in Pyodide
+  pyodide.FS.mkdir('/parsers');
+  pyodide.FS.mkdir('/python'); // for root-level scripts
+
+  for (const file of parserFiles) {
+    const response = await fetch(`/python_core/parsers/${file}`);
     if (!response.ok) {
-      console.error(`[Pyodide] Failed to fetch ${file}: ${response.statusText}`);
-      continue;
+        console.error(`[Pyodide] Failed to fetch parser ${file}: ${response.statusText}`);
+        continue;
     }
     const content = await response.text();
-    pyodide.FS.writeFile(file, content);
-    console.log(`[Pyodide] Mounted parser module: ${file}`);
+    // Some files might expect to be at root? 
+    // The previous setup had them at root. The refactor put them in `python_core/parsers/`.
+    // We should put them in `parsers/` or root?
+    // Let's mimic the new structure: put them in `/parsers/` and add `/` to sys.path
+    pyodide.FS.writeFile(`/parsers/${file}`, content);
+    console.log(`[Pyodide] Mounted: /parsers/${file}`);
   }
-  console.log('[Pyodide] All parser modules mounted');
+
+  // 2. Mount Worker Scripts (Ingest & Compiler)
+  const workerFiles = ['ingest_worker.py', 'schema_compiler.py'];
+  for (const file of workerFiles) {
+      const response = await fetch(`/python_core/${file}`);
+      if (response.ok) {
+          const content = await response.text();
+          pyodide.FS.writeFile(`/${file}`, content); // Root level for easy import
+          console.log(`[Pyodide] Mounted: /${file}`);
+      } else {
+          console.error(`[Pyodide] Failed to fetch ${file}`);
+      }
+  }
+
+  // Mount OPFS (Shared Buffer)
+  if (navigator.storage && navigator.storage.getDirectory) {
+      const opfsRoot = await navigator.storage.getDirectory();
+      const mountPoint = "/mnt/data";
+      pyodide.FS.mkdir(mountPoint);
+      pyodide.mountNativeFS(mountPoint, opfsRoot);
+      console.log(`[Pyodide] Mounted OPFS to ${mountPoint}`);
+  }
+
+  // Mount Schemas (from public/schemas to /schemas)
+  // We can't list directory via fetch easily without a manifest.
+  // We'll rely on the worker to know what to load or mount them one by one if we knew them.
+  // Ideally, we pass the schemas list or content.
+  // For now, let's assume we might need to fetch them in the python script or pass list.
+  // But ingest_worker.py expects /schemas dir.
+  // We can try to mount the schema dir if we convert it to a zip?
+  // Or just mkdir /schemas and fetch known schemas.
+  // Let's create the directory so python doesn't crash on os.listdir check, 
+  // though it will be empty unless we fill it.
+  pyodide.FS.mkdir('/schemas');
+  
+  // Note: Schema loading is currently separate (User passes YAML string), 
+  // or we need a way to list available schemas. 
+  // ingest_worker.py tries `os.listdir('/schemas')`.
+  // We should fetch known schemas (hardcoded list or manifest) and write them.
+  const knownSchemas = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml', 'all_fields.yaml'];
+  for (const s of knownSchemas) {
+      const res = await fetch(`/schemas/${s}`);
+      if (res.ok) {
+          const txt = await res.text();
+          pyodide.FS.writeFile(`/schemas/${s}`, txt);
+      }
+  }
+  
+  console.log('[Pyodide] All modules mounted');
 
   // The files are written to the root of Pyodide's filesystem
   // Execute the bridge module directly to load all functions into the global namespace
   pyodide.runPython(`
 import sys
+# Add parsers to path
+if '/parsers' not in sys.path:
+    sys.path.insert(0, '/parsers')
 if '/' not in sys.path:
     sys.path.insert(0, '/')
 
-# Import everything from our bridge module (which is just pyodide.py in the root)
-# Execute it in the global namespace so all functions are available
-with open('pyodide.py', 'r') as f:
-    bridge_code = f.read()
-    exec(bridge_code, globals())
+# Import Ingest Logic
+try:
+    import ingest_worker
+    print("[Pyodide] Imported ingest_worker")
+except Exception as e:
+    print(f"[Pyodide] Error importing ingest_worker: {e}")
+
+# Load legacy bridge for 'group_schema_by_path' and 'parse' if still used by UI
+try:
+    with open('/parsers/pyodide.py', 'r') as f:
+        bridge_code = f.read()
+        exec(bridge_code, globals())
+except Exception as e:
+    print(f"[Pyodide] Warning: could not load legacy bridge: {e}")
+
 `);
   
   return pyodide;
@@ -183,13 +255,33 @@ self.onmessage = async (event) => {
 
     let result;
     switch (command) {
+      case 'ingest':
+        // Trigger Ingest Loop
+        // ingest_loop is async, so we use runPythonAsync or wrap in a way that returns a promise
+        await pyodide.runPythonAsync(`
+import asyncio
+try:
+    await ingest_worker.ingest_loop()
+    result = "Ingest Complete"
+except Exception as e:
+    import traceback
+    traceback.print_exc()
+    result = f"Error: {e}"
+`);
+        result = pyodide.globals.get('result');
+        break;
+
       case 'test_environment':
         result = pyodide.runPython('test_environment()').toJs({ dict_converter: Object.fromEntries });
         break;
       
+      
+      // Legacy commands support via direct python bridge for now, but should eventually migrate
       case 'group_schema_by_path':
         const { schemaYaml } = args;
         pyodide.globals.set('schema_str', schemaYaml);
+        // We need to ensure group_schema_by_path is available. 
+        // It resides in pyodide.py which we executed in globals() earlier
         result = pyodide.runPython('group_schema_by_path(schema_str)').toJs({ dict_converter: Object.fromEntries });
         break;
         

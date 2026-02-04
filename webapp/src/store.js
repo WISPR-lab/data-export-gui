@@ -19,7 +19,7 @@ limitations under the License.
 
 import Vue from 'vue'
 import Vuex from 'vuex'
-import BrowserDB from './database'
+import BrowserDB from './data/query_client'
 
 Vue.use(Vuex)
 

@@ -1,0 +1,115 @@
+manifest_version: 2
+id: instagram
+ecs_version: "9.4.0-dev"
+target: "Instagram"
+last_updated: "2025-02-04"
+
+files:
+  - id: "insta_login_activity"
+    path: "security_and_login_information/login_and_profile_creation/login_activity.json"
+    parser:
+      format: "json"
+      json_root: "account_history_login_history[]"
+
+  - id: "insta_logout_activity"
+    path: "security_and_login_information/login_and_profile_creation/logout_activity.json"
+    parser:
+      format: "json"
+      json_root: "account_history_logout_history[]"
+
+  - id: "insta_password_change"
+    path: "security_and_login_information/login_and_profile_creation/password_change_activity.json"
+    parser:
+      format: "json"
+      json_root: "account_history_password_change_history[]"
+
+  - id: "insta_profile_changes"
+    path: "personal_information/personal_information/profile_changes.json"
+    parser:
+      format: "json"
+      json_root: "profile_profile_change[]"
+
+  - id: "insta_download_requests"
+    path: "your_instagram_activity/other_activity/your_information_download_requests.json"
+    parser:
+      format: "json_label_values"
+      json_root: "[]"
+  
+  - id: "insta_devices"
+    path: "personal_information/device_information/devices.json"
+    parser:
+      format: "json"
+      json_root: "devices_devices[]"
+
+views:
+  - file:
+      id: "insta_login_activity"
+    static:
+      event.action: "user_login_success"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["start"]
+      event.outcome: "success"
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+      - {target: "client.ip", source: "string_map_data.'IP Address'.value", type: "string"}
+      - {target: "user_agent.original", source: "string_map_data.'User Agent'.value", type: "string"}
+      - {target: "PLACEHOLDER", source: "string_map_data.'Cookie Name'.value", type: "string"}
+
+  - file:
+      id: "insta_logout_activity"
+    static:
+      event.action: "user_logout"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["end"]
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+      - {target: "client.ip", source: "string_map_data.'IP Address'.value", type: "string"}
+      - {target: "user_agent.original", source: "string_map_data.'User Agent'.value", type: "string"}
+      - {target: "PLACEHOLDER", source: "string_map_data.'Cookie Name'.value", type: "string"}
+
+  - file:
+      id: "insta_password_change"
+    static:
+      event.action: "user_password_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+
+  - file:
+      id: "insta_profile_changes"
+      where:
+        - {source: "string_map_data.Changed.value", value: "Email"}
+    static:
+      event.action: "email_address_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+      - {target: "PLACEHOLDER", source: "string_map_data.'Previous Value'.value", type: "string"}
+      - {target: "PLACEHOLDER", source: "string_map_data.'New Value'.value", type: "string"}
+
+  - file:
+      id: "insta_download_requests"
+    static:
+      event.action: "data_export_request"
+      event.kind: "event"
+      event.category: ["file"]
+      event.type: ["access"]
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+
+  - file:
+      id: "insta_devices"
+    static:
+      event.kind: "asset"
+      event.category: ["authentication", "host"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+    fields:
+      - {target: "entity.last_seen_timestamp", source: "string_map_data.'Last Login'.timestamp", type: "datetime"}
+      - {target: "user_agent.original", source: "string_map_data.'User Agent'.value", type: "string"}

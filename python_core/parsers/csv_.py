@@ -133,11 +133,11 @@ class CSVParser(BaseParser):
         """
         filter_cfg = 
         EITHER 
-            {field: "event", op: "==", value: "Email Added"} 
+            {source: "event", op: "==", value: "Email Added"} 
         OR
             {
                 logic: "all" or"any", 
-                conditions: [ {field: "event", op: "==", value: "Email Added"} , ...]
+                conditions: [ {source: "event", op: "==", value: "Email Added"} , ...]
             }
         only one level of all/any nesting supported for now
         """

@@ -5,8 +5,8 @@ takeout-tool.code-workspace
 */reference_docs/
 
 webapp/dist/
-webapp/public/pyparser/
-webapp/public/schemas/
+webapp/public/python_core*
+webapp/public/schemas*
 webapp/public/pyodideWorker.js
 
 .github/*

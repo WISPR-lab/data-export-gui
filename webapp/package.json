@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "sync-assets": "mkdir -p public/pyparser public/schemas && cp ../pyparser/*.py public/pyparser/ && cp ../schemas/*.yaml public/schemas/ && cp src/pyodideWorker.js public/",
+    "sync-assets": "rm -rf public/python_core public/schemas && ln -s ../../python_core public/python_core && ln -s ../../schemas public/schemas && cp src/pyodideWorker.js public/",
     "serve": "npm run sync-assets && NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
     "build": "npm run sync-assets && NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
     "lint": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",
@@ -13,6 +13,7 @@
   "dependencies": {
     "@mdi/font": "^7.1.96",
     "@popperjs/core": "^2.4.0",
+    "@sqlite.org/sqlite-wasm": "^3.51.2-build6",
     "apexcharts": "^3.27.1",
     "axios": "^1.12.0",
     "crypto-js": "^4.2.0",
@@ -22,6 +23,7 @@
     "dayjs": "^1.10.7",
     "dexie": "^4.2.1",
     "dompurify": "^3.2.3",
+    "fflate": "^0.8.2",
     "jszip": "^3.10.1",
     "lodash": "^4.17.11",
     "marked": ">=2.0.0 <5.0.0",

@@ -42,7 +42,7 @@ test_files:
       expected:
         num_events: 0
         num_states: 1
-        keys: ["given_name", "os_ver", "model_ver_code"]
+        keys: ["given_name", "os_ver", "device.model.identifier"]
         original_record: "device-name"
   
   json_label_values:

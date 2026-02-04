@@ -1,7 +1,7 @@
-import BrowserDB from './database';
+import BrowserDB from './data/query_client';
 import JSZip from 'jszip';
-import { classifyError, ERROR_TYPES } from './errorTypes';
-import { TIMELINE_STATUS } from './database';
+import { classifyError, ERROR_TYPES } from './constants/error_types';
+import { TIMELINE_STATUS } from './data/query_client';
 import { computeMeta } from './utils/computeMeta.js';
 
 // For computing file hashes
