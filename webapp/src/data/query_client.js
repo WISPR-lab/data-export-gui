@@ -79,14 +79,14 @@ export class QueryClient {
    */
   async getEvents(options = {}) {
     // TODO: This should query the 'Silver Layer' Views (e.g., view_apple_login)
-    // For now, validting connection with raw_events
+    // For now, validting connection with raw_data
     const limit = options.limit || 50;
     const offset = options.offset || 0;
     
-    // Simple fetch from raw_events for now
+    // Simple fetch from raw_data for now
     const sql = `
       SELECT id, source_file, adapter_type, raw_data 
-      FROM raw_events 
+      FROM raw_data 
       ORDER BY id DESC 
       LIMIT ? OFFSET ?
     `;

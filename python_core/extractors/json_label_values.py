@@ -1,8 +1,25 @@
 from json_ import JSONParser
 from errors import RecordLevelError
 
-
 class JSONLabelValuesParser(JSONParser):
+
+    @classmethod
+    def extract(cls, content: str, config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+        config = config or {}
+        try:
+            
+            raw_json = cls.basic_str_to_json(content) # this is inherited
+            flat_json = cls._flatten_lv(raw_json)
+            data = cls._resolve_root(flat_json, config)
+            
+            if isinstance(data, list):
+                return [x for x in data if isinstance(x, dict)]
+            elif isinstance(data, dict):
+                return [data]
+            return []
+        except Exception as e: #TODO ERROR HANDLING
+            return [RecordLevelError(f"File-level parsing error: {str(e)}", 
+                                     context={'error_type': type(e).__name__})]
 
 
     @classmethod
