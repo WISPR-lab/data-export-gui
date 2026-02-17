@@ -7,7 +7,7 @@ from utils.misc import clean_target
 
 
 
-def message(event_action, **kwargs):
+def message(event_action, **kwargs):  # TODO add kwargs for better messages
 
     event_action = clean_target(event_action)
     # translate ecs field with dot notation to underscore notation for mapping (dots annoying in sql)

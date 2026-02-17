@@ -71,9 +71,16 @@ def parse_date(date_str: str,
     try:
         # Check if the date_str is a Unix timestamp
         if date_str.isdigit(): 
-            if int(date_str) in range(JAN_1_2000_UNIX, JAN_1_2050_UNIX):  # Unix timestamps for 1-1-2000 and 1-1-2050
+            ts = int(date_str)
+
+            # If timestamp is larger than our max seconds threshold (2050), treat as MS
+            if ts > JAN_1_2050_UNIX:
+                ts = ts / 1000.0
+            
+            
+            if JAN_1_2000_UNIX <= ts <= JAN_1_2050_UNIX:  # Unix timestamps for 1-1-2000 and 1-1-2050
                 #logging.debug(f"date_str is a digit: {date_str}")
-                return datetime.fromtimestamp(int(date_str), tz=pytz.UTC)
+                return datetime.fromtimestamp(ts, tz=pytz.UTC)
             raise ValueError("Not a valid Unix timestamp")
         else:
             default_datetime = datetime.now().replace(day=1, month=1, year=2000, hour=0, minute=0, second=0, microsecond=0, tzinfo=pytz.timezone(default_origin_tz))

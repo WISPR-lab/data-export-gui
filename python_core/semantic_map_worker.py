@@ -39,7 +39,12 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                 fields = map_utils.fields(record, views[vindex])
                 event_kind = fields.pop("event_kind", None)
                 
-                shared = {"id": str(uuid.uuid4()), "upload_id": upload_id, "file_id": file_id, "raw_data_id": raw_data_id}
+                shared = {
+                    "id": str(uuid.uuid4()), 
+                    "upload_id": upload_id, 
+                    "file_ids": [file_id], 
+                    "raw_data_ids": [raw_data_id]
+                }
 
                 # EVENTS
                 if event_kind == "event":
@@ -49,8 +54,9 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                         "event_action": event_action,
                         "event_kind": event_kind,
                         "message": amb.message(event_action, **fields),
-                        "attributes": json.dumps(fields),
-                        "is_duplicate_of": None  # to be filled in later by deduplication step
+                        "attributes": fields,
+                        "deduplicated": False,  # taken care of in deduplication step
+                        "extra_timestamps": []  # ^^
                     })
                 
                 # AUTH/DEVICE ENTITIES
@@ -60,7 +66,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                         auth_device_rows.append(shared | {
                             "entity_type": entity_type,
                             "event_kind": event_kind,
-                            "attributes": json.dumps(fields)
+                            "attributes": fields
                         })
                 else: 
                     print(f"[SemanticMapWorker] Unhandled event_kind '{event_kind}' for raw_data_id {raw_data_id}") 
@@ -68,6 +74,16 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
     
     return event_rows, auth_device_rows  # add more as we create more tables
 
+
+def _stringify(rows: list[dict]) -> list[dict]:
+    keys = ["raw_data_ids", "file_ids", "extra_timestamps", "attributes"] # add more as needed
+    for r in rows:
+        for k in keys:
+            if k in r and isinstance(r[k], (list, dict)):
+                r[k] = json.dumps(r[k])
+            elif k in r and r[k] is None:
+                r[k] = json.dumps([]) if k != "attributes" else json.dumps({})
+    return rows
 
 
 def map(platform, 
@@ -104,12 +120,15 @@ def map(platform,
             
             event_rows, auth_device_rows = _generate_table_rows(rows, manifest, upload_id)
             event_rows = deduplicate_events(event_rows)
+            event_rows = _stringify(event_rows)
+            auth_device_rows = _stringify(auth_device_rows)
+            
 
             # Insert into events table
             conn.executemany(
                 """
-                INSERT INTO events (id, upload_id, file_id, raw_data_id, timestamp, event_action, event_kind, message, attributes, is_duplicate_of)
-                VALUES (:id, :upload_id, :file_id, :raw_data_id, :timestamp, :event_action, :event_kind, :message, :attributes, :is_duplicate_of)
+                INSERT INTO events (id, upload_id, file_ids, raw_data_ids, timestamp, event_action, event_kind, message, attributes, deduplicated, extra_timestamps)
+                VALUES (:id, :upload_id, :file_ids, :raw_data_ids, :timestamp, :event_action, :event_kind, :message, :attributes, :deduplicated, :extra_timestamps)
                 """,
                 event_rows
             )
@@ -117,8 +136,8 @@ def map(platform,
             # Insert into auth_device table
             conn.executemany(
                 """
-                INSERT INTO auth_device (id, upload_id, file_id, raw_data_id, entity_type, event_kind, attributes)
-                VALUES (:id, :upload_id, :file_id, :raw_data_id, :entity_type, :event_kind, :attributes)
+                INSERT INTO auth_device (id, upload_id, file_ids, raw_data_ids, entity_type, event_kind, attributes)
+                VALUES (:id, :upload_id, :file_ids, :raw_data_ids, :entity_type, :event_kind, :attributes)
                 """,
                 auth_device_rows
             )
