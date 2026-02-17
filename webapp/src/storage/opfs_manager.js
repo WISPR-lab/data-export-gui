@@ -1,9 +1,12 @@
 import { Unzip } from 'fflate';
-import { ConfigLoader } from '../data/schema_registry';
+// TODO: ConfigLoader was removed as part of schema consolidation to Python.
+// If OPFSManager is used, implement isWhitelisted via Pyodide worker call.
+// import { ConfigLoader } from '../data/schema_registry';
 
 export class OPFSManager {
   constructor() {
-    this.configLoader = new ConfigLoader();
+    // TODO: Replace ConfigLoader with Pyodide-based schema lookup
+    this.configLoader = null; // new ConfigLoader();
     this.opfsRoot = null;
     this.bronzeDir = null;
     this.isInitialized = false;
@@ -12,13 +15,24 @@ export class OPFSManager {
   async init() {
     if (this.isInitialized) return;
     
-    await this.configLoader.loadSchemas();
+    // TODO: Load whitelist patterns from Python/Pyodide
+    // await this.configLoader.loadSchemas();
     this.opfsRoot = await navigator.storage.getDirectory();
     // Create bronze directory for raw file storage
     this.bronzeDir = await this.opfsRoot.getDirectoryHandle('bronze', { create: true });
     
     console.log('[OPFSManager] Initialized. Bronze layer ready at /bronze');
     this.isInitialized = true;
+  }
+
+  /**
+   * Check if a file is whitelisted
+   * TODO: Migrate to Pyodide-based check
+   */
+  isWhitelisted(filename) {
+    // Placeholder: accept all files until Pyodide integration
+    console.warn('[OPFSManager] isWhitelisted not implemented - accepting all files');
+    return true;
   }
 
   /**
@@ -39,7 +53,7 @@ export class OPFSManager {
     return new Promise((resolve, reject) => {
       const unzipStream = new Unzip((file) => {
         // Filter: Only process whitelisted files
-        if (this.configLoader.isWhitelisted(file.name)) {
+        if (this.isWhitelisted(file.name)) {
           console.log(`[OPFSManager] Found valid file: ${file.name}`);
           
           const safeName = this.flattenPath(file.name);

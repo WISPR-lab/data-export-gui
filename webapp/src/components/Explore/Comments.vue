@@ -86,70 +86,74 @@ limitations under the License.
 </template>
 
 <script>
-import EventBus from '../../event-bus.js'
-import BrowserDB from '../../database.js'
+import {pyDB} from '@/database.js'
 
 export default {
-  props: ['comments', 'event', 'currentSearchNode'],
+  props: ['event', 'currentSearchNode'],
   data() {
     return {
       comment: '',
+      comments: [],
       selectedComment: false,
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
-    },
-    meta() {
-      return this.$store.state.meta
-    },
     currentUser() {
       return this.$store.state.currentUser
     },
+    formattedComments() {
+      return this.comments || []
+    }
+  },
+  watch: {
+    event: {
+      handler(newVal) {
+        if (newVal && newVal._id) {
+          this.fetchComments()
+        }
+      },
+      immediate: true
+    }
   },
   methods: {
-    postComment: function () {
-      EventBus.$emit('eventAnnotated', { type: '__ts_comment', event: this.event, searchNode: this.currentSearchNode })
-      BrowserDB.saveAnnotation('event', [this.event._id], 'comment', this.comment)
-        .then((response) => {
-          // Create comment object with user/timestamp for display
-          const newComment = {
-            id: Math.random().toString(36).slice(2),
-            user: { username: this.currentUser },
-            comment: this.comment,
-            created_at: new Date().toISOString(),
-            editable: false
-          }
-          this.comments.push(newComment)
-          this.comment = ''
-        })
-        .catch((e) => {
-          console.error('Error posting comment:', e)
-        })
+    async fetchComments() {
+      try {
+        if (!this.event || !this.event._id) return
+        this.comments = await pyDB.getEventComments(this.event._id)
+      } catch (e) {
+        console.error('Failed to load comments', e)
+      }
     },
-    updateComment: function (comment, commentIndex) {
-      BrowserDB.updateAnnotation('comment', comment.comment, [comment.id])
-        .then((response) => {
-          comment.editable = false
-          comment.updated_at = new Date().toISOString()
-          this.comments.splice(commentIndex, 1, comment)
-        })
-        .catch((e) => {
-          console.error('Error updating comment:', e)
-        })
+    async postComment() {
+      if (!this.comment.trim()) return
+      
+      try {
+        await pyDB.addEventComment(this.event._id, this.comment)
+        this.comment = ''
+        await this.fetchComments() // Refresh list
+      } catch (e) {
+        console.error('Failed to post comment', e)
+      }
     },
-    deleteComment: function (commentId, commentIndex) {
-      if (confirm('Are you sure?')) {
-        BrowserDB.deleteCommentEvent(commentId)
-          .then((response) => {
-            this.comments.splice(commentIndex, 1)
-            this.event._source.comment.splice(commentIndex, 1)
-            this.$store.dispatch('updateEventLabels', { label: "__ts_comment", num: -1 })
-          })
-          .catch((e) => {
-            console.error(e)
-          })
+    async updateComment(comment, commentIndex) {
+      try {
+        await pyDB.updateEventComment(comment.id, comment.comment)
+        comment.editable = false
+        comment.updated_at = new Date().toISOString()
+        this.comments.splice(commentIndex, 1, comment)
+      } catch (e) {
+        console.error('Error updating comment:', e)
+      }
+    },
+    async deleteComment(commentId, commentIndex) {
+      if (!confirm('Are you sure?')) return
+      
+      try {
+        await pyDB.deleteEventComment(commentId)
+        this.comments.splice(commentIndex, 1)
+        this.$store.dispatch('updateEventLabels', { label: "__ts_comment", num: -1 })
+      } catch (e) {
+        console.error('Error deleting comment:', e)
       }
     },
     editComment(commentIndex, enable = true) {

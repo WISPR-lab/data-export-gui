@@ -55,11 +55,22 @@ limitations under the License.
             </v-text-field>
           </template>
 
-          <ts-search-dropdown
+          <!-- <ts-search-dropdown
             v-click-outside="onClickOutside"
             :selected-labels="selectedLabels"
             :query-string="currentQueryString"
             @setActiveView="searchView"
+            @addChip="addChip"
+            @updateLabelChips="updateLabelChips()"
+            @close-on-click="showSearchDropdown = false"
+            @node-click="jumpInHistory"
+            @setQueryAndFilter="setQueryAndFilter"
+          >
+          </ts-search-dropdown> -->
+          <ts-search-dropdown
+            v-click-outside="onClickOutside"
+            :selected-labels="selectedLabels"
+            :query-string="currentQueryString"
             @addChip="addChip"
             @updateLabelChips="updateLabelChips()"
             @close-on-click="showSearchDropdown = false"
@@ -296,7 +307,7 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../database.js'
+import DB from '@/database'
 import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
@@ -473,39 +484,39 @@ export default {
       this.activeQueryRequest = queryRequest
       this.showSearchDropdown = false
     },
-    searchView: function (viewId) {
-      this.showSearchDropdown = false
+    // searchView: function (viewId) {
+    //   this.showSearchDropdown = false
 
-      if (this.$route.name !== 'Explore') {
-        this.$router.push({ name: 'Explore', params: { sketchId: this.sketch.id } })
-      }
+    //   if (this.$route.name !== 'Explore') {
+    //     this.$router.push({ name: 'Explore', params: { sketchId: this.sketch.id } })
+    //   }
 
-      if (viewId !== parseInt(viewId, 10) && typeof viewId !== 'string') {
-        viewId = viewId.id
-      }
+    //   if (viewId !== parseInt(viewId, 10) && typeof viewId !== 'string') {
+    //     viewId = viewId.id
+    //   }
 
-      BrowserDB.getView(this.sketchId, viewId)
-        .then((response) => {
-          let view = response.data.objects[0]
-          this.currentQueryString = view.query_string
-          this.currentQueryFilter = JSON.parse(view.query_filter)
-          if (!this.currentQueryFilter.fields || !this.currentQueryFilter.fields.length) {
-            this.currentQueryFilter.fields = [{ field: 'message', type: 'text' }]
-          }
-          this.selectedFields = this.currentQueryFilter.fields
-          let chips = this.currentQueryFilter.chips
-          if (chips) {
-            for (let i = 0; i < chips.length; i++) {
-              if (chips[i].type === 'label') {
-                this.selectedLabels.push(chips[i].value)
-              }
-            }
-          }
-          this.contextEvent = false
-          this.search()
-        })
-        .catch((e) => {})
-    },
+    //   BrowserDB.getView(this.sketchId, viewId)
+    //     .then((response) => {
+    //       let view = response.data.objects[0]
+    //       this.currentQueryString = view.query_string
+    //       this.currentQueryFilter = JSON.parse(view.query_filter)
+    //       if (!this.currentQueryFilter.fields || !this.currentQueryFilter.fields.length) {
+    //         this.currentQueryFilter.fields = [{ field: 'message', type: 'text' }]
+    //       }
+    //       this.selectedFields = this.currentQueryFilter.fields
+    //       let chips = this.currentQueryFilter.chips
+    //       if (chips) {
+    //         for (let i = 0; i < chips.length; i++) {
+    //           if (chips[i].type === 'label') {
+    //             this.selectedLabels.push(chips[i].value)
+    //           }
+    //         }
+    //       }
+    //       this.contextEvent = false
+    //       this.search()
+    //     })
+    //     .catch((e) => {})
+    // },
     searchContext: function (event) {
       // TODO: Make this selectable in the UI
       const contextTime = 300
@@ -725,27 +736,9 @@ export default {
       this.$store.dispatch('updateEnabledTimelines', [])
     },
   },
-  async mounted() {
+  mounted() {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
-    EventBus.$on('setActiveView', this.searchView)
-    
-    // Load event counts for timelines from database
-    try {
-      const timelinesResponse = await BrowserDB.getTimelines(this.sketch.id)
-      const timelines = timelinesResponse.data.objects || []
-      const eventsByTimeline = {}
-      
-      // Count events for each timeline
-      for (const timeline of timelines) {
-        const count = await BrowserDB.countEvents(this.sketch.id, timeline.id)
-        eventsByTimeline[timeline.id] = count
-      }
-      
-      this.countPerTimeline = eventsByTimeline
-    } catch (error) {
-      console.error('[Explore] Error loading event counts:', error)
-    }
   },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')
@@ -761,10 +754,10 @@ export default {
       queryString: this.$route.query.q,
     }
 
-    if (this.params.viewId) {
-      this.searchView(this.params.viewId)
-      return
-    }
+    // if (this.params.viewId) {
+    //   this.searchView(this.params.viewId)
+    //   return
+    // }
 
     if (this.params.queryString) {
       this.currentQueryString = this.params.queryString

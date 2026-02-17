@@ -4,10 +4,12 @@
 takeout-tool.code-workspace
 */reference_docs/
 
-webapp/dist/
-webapp/public/python_core*
-webapp/public/schemas*
-webapp/public/pyodideWorker.js
+webapp*/dist/
+webapp*/public/python_core*
+webapp*/public/schemas*
+webapp*/public/pyodideWorker.js
+
+webapp-v3.zip
 
 .github/*
 

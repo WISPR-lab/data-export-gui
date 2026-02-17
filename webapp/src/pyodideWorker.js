@@ -109,18 +109,18 @@ async function initPyodide() {
   // Or just mkdir /schemas and fetch known schemas.
   // Let's create the directory so python doesn't crash on os.listdir check, 
   // though it will be empty unless we fill it.
-  pyodide.FS.mkdir('/schemas');
+  pyodide.FS.mkdir('/manifests');
   
   // Note: Schema loading is currently separate (User passes YAML string), 
   // or we need a way to list available schemas. 
-  // ingest_worker.py tries `os.listdir('/schemas')`.
+  // ingest_worker.py tries `os.listdir('/manifests')`.
   // We should fetch known schemas (hardcoded list or manifest) and write them.
   const knownSchemas = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml', 'all_fields.yaml'];
   for (const s of knownSchemas) {
-      const res = await fetch(`/schemas/${s}`);
+      const res = await fetch(`/manifests/${s}`);
       if (res.ok) {
           const txt = await res.text();
-          pyodide.FS.writeFile(`/schemas/${s}`, txt);
+          pyodide.FS.writeFile(`/manifests/${s}`, txt);
       }
   }
   

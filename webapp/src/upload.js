@@ -1,7 +1,6 @@
-import BrowserDB from './data/query_client';
+import BrowserDB, { TIMELINE_STATUS } from './database.js';
 import JSZip from 'jszip';
 import { classifyError, ERROR_TYPES } from './constants/error_types';
-import { TIMELINE_STATUS } from './data/query_client';
 import { computeMeta } from './utils/computeMeta.js';
 
 // For computing file hashes
@@ -70,10 +69,10 @@ function callWorker(command, args) {
   });
 }
 
-// reads files from /public/schemas/  as text
+// reads files from /public/manifests/  as text
 async function readSchemaFile(filename) {
   try {
-    const response = await fetch(`/schemas/${filename}`);
+    const response = await fetch(`/manifests/${filename}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${filename}: ${response.statusText}`);
     }

@@ -324,6 +324,11 @@ limitations under the License.
 
                 </v-menu>
 
+                <v-btn x-small outlined color="error" @click="deleteSelectedEvents">
+                  <v-icon left>mdi-trash-can-outline</v-icon>
+                  Delete Selected
+                </v-btn>
+
                 <!-- DEBUG: Hide selected events (temporary UI-only) -->
                 <v-btn x-small outlined @click="DEBUG_hideSelectedEvents()" color="orange">
                   <v-icon left>mdi-eye-off</v-icon>
@@ -766,6 +771,19 @@ export default {
     toggleSummary() {
           this.summaryCollapsed = !this.summaryCollapsed;
           localStorage.setItem('aiSummaryCollapsed', String(this.summaryCollapsed));
+    },
+    async deleteSelectedEvents() {
+      if (!confirm(`Delete ${this.selectedEvents.length} events?`)) return
+      const ids = this.selectedEvents.map(e => e._id)
+      try {
+        await BrowserDB.deleteEvents(ids)
+        this.selectedEvents = []
+        this.search(true)
+        this.$store.dispatch('setSnackBar', { message: 'Events deleted', color: 'success', timeout: 3000 })
+      } catch (e) {
+        console.error(e)
+        this.$store.dispatch('setSnackBar', { message: 'Delete failed', color: 'error', timeout: 3000 })
+      }
     },
     sortEvents(sortDesc) {
       // sortDesc is the value of Vuetify's sort-desc (true = descending, false = ascending)

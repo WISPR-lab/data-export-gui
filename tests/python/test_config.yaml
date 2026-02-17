@@ -1,18 +1,18 @@
 platforms:
   facebook: 
-    schema_path: "schemas/facebook.yaml"
+    schema_path: "manifests/facebook.yaml"
     test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/facebook"
   
   apple: 
-    schema_path: "schemas/apple.yaml"
+    schema_path: "manifests/apple.yaml"
     test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/apple"
   
   instagram: 
-    schema_path: "schemas/instagram.yaml"
+    schema_path: "manifests/instagram.yaml"
     test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/instagram"
 
   discord:
-    schema_path: "schemas/discord.yaml"
+    schema_path: "manifests/discord.yaml"
     test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/discord"
 
 

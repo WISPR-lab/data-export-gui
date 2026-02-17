@@ -19,7 +19,8 @@ limitations under the License.
 
 import Vue from 'vue'
 import Vuex from 'vuex'
-import BrowserDB from './data/query_client'
+import BrowserDB from './database.js'
+import { computeMeta } from './utils/computeMeta.js'
 
 Vue.use(Vuex)
 
@@ -287,26 +288,34 @@ export default new Vuex.Store({
   actions: {
     updateSketch(context, sketchId) {
       context.commit('SET_SKETCH_ACCESS_DENIED', false)
-      return BrowserDB.getSketch(sketchId)
-        .then((response) => {
-          context.commit('SET_SKETCH', response.data)
-          context.commit('SET_ACTIVE_USER', response.data)
-          context.dispatch('updateTimelineTags', { sketchId: sketchId })
-          context.dispatch('updateDataTypes', sketchId)
-          context.dispatch('updateCategories', sketchId)
-        })
-        .catch((e) => {
-          console.error(e)
-          context.commit('SET_SKETCH_ACCESS_DENIED', true)
-        })
+      
+      // 1. Virtualize the Project/Sketch (hardcoded Project 1)
+      const virtualSketch = {
+        id: 1,
+        name: 'Local Takeout Workspace',
+        description: 'Browser-only processing',
+        status: [{ status: 'ready' }],
+        timelines: []
+      }
+      context.commit('SET_SKETCH', { objects: [virtualSketch] })
+      context.commit('SET_ACTIVE_USER', 'local-user')
+      return BrowserDB.searchEvents('*', { size: 0 }).then(async () => {
+        const uploads = await BrowserDB.getUploads(); 
+        const sketch = { ...virtualSketch, timelines: uploads || [] }
+        const meta = await computeMeta(sketchId)
+        context.commit('SET_SKETCH', { objects: [sketch], meta })
+        context.dispatch('updateCount', sketchId)
+        context.dispatch('updateCategories', sketchId)
+      }).catch((e) => {
+        console.error('[Store] updateSketch error:', e)
+      })
     },
     updateCount(context, sketchId) {
-      // Count events for all timelines in the sketch
       return BrowserDB.countSketchEvents(sketchId)
         .then((response) => {
           context.commit('SET_COUNT', response.data.meta.count)
         })
-        .catch((e) => { console.error(e) })
+        .catch((e) => { console.error('[Store] updateCount error:', e) })
     },
     resetState(context) {
       context.commit('RESET_STATE')

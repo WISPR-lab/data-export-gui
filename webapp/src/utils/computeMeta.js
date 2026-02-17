@@ -13,7 +13,7 @@ import BrowserDB from '../database.js'
  */
 async function loadFieldDefinitions() {
   try {
-    const response = await fetch('/schemas/all_fields.yaml')
+    const response = await fetch('/manifests/all_fields.yaml')
     const text = await response.text()
     const doc = yaml.load(text)
     return {

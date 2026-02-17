@@ -176,7 +176,6 @@ limitations under the License.
 
 <script>
 import EventBus from '../../event-bus.js'
-import BrowserDB from '../../database.js'
 import TsAggregateDialog from './AggregateDialog.vue'
 import TsFormatXmlString from './FormatXMLString.vue'
 import TsLinkRedirectWarning from './LinkRedirectWarning.vue'
@@ -194,8 +193,6 @@ export default {
   props: ['event'],
   data() {
     return {
-      fullEvent: {},
-      comments: [],
       aggregatorDialog: false,
       ignoredAggregatorFields: new Set([
         'datetime',
@@ -207,7 +204,7 @@ export default {
       ]),
       ignoreFilterChips: new Set([
         'datetime',
-        'tag',
+        'tags',
       ]),
       eventKey: '',
       eventValue: '',
@@ -235,13 +232,26 @@ export default {
       return this.$store.state.currentSearchNode
     },
     fullEventFiltered() {
-      Object.getOwnPropertyNames(this.fullEvent).forEach((key) => {
-        // Remove internal properties from the UI
-        if (key.startsWith('__ts')) {
-          delete this.fullEvent[key]
-        }
-      })
-      return this.fullEvent
+      // Use _source instead of this.fullEvent/this.event
+      const source = this.event._source || {}
+      
+      const filters = [
+        'label',
+        '__ts_star', 
+        '__ts_comment',
+        '_index', 
+        '_id', 
+        '_type', 
+        'tag'
+      ]
+      
+      // Filter out internal fields
+      return Object.keys(source)
+        .filter(key => !filters.includes(key) && !key.startsWith('__ts'))
+        .reduce((obj, key) => {
+          obj[key] = source[key]
+          return obj
+        }, {})
     },
     contextLinkConf() {
       return this.$store.state.contextLinkConf
@@ -252,22 +262,16 @@ export default {
   },
   methods: {
     getEvent: function () {
-      let timelineId = this.event._source.timeline_id || this.event._source.__ts_timeline_id
-      let eventId = this.event._id
-      let includeProcessingTimelines = !!this.settings.showProcessingTimelineEvents
-      BrowserDB.getEvent(this.sketch.id, timelineId, eventId, includeProcessingTimelines)
-        .then((response) => {
-          this.fullEvent = response.data.objects[0] || {}
-          this.comments = (response.data.meta && response.data.meta.comments) || []
-          this.eventTimestamp = this.fullEvent.timestamp
-          this.eventTimestampDesc = this.fullEvent.timestamp_desc
-          if (this.comments.length > 0) {
-            this.event.showComments = true
-          }
-        })
-        .catch((e) => {
-          console.error('Error fetching event:', e);
-        });
+      // Event data is already available via this.event._source - no API call needed
+      const source = this.event._source || {}
+      this.eventTimestamp = source.timestamp || source.primary_timestamp
+      this.eventTimestampDesc = source.timestamp_desc || 'Datetime'
+      
+      // Comments are loaded separately by the Comments component via watch
+      // If event has comments indicator, show the comments panel
+      if (source.comment && source.comment.length > 0) {
+        this.event.showComments = true
+      }
     },
     getContextLinkItems(key) {
       let fieldConfList = this.contextLinkConf[key.toLowerCase()] ? this.contextLinkConf[key.toLowerCase()] : []

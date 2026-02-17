@@ -45,6 +45,10 @@ def delete_events(event_ids: List[Union[int, str]] | Union[int, str], # accepts 
         conn.commit()
 
 
+def get_event_count(db_path=cfg.DB_PATH):
+    with DatabaseSession(db_path) as conn:
+        cursor = conn.execute("SELECT COUNT(*) FROM events")
+        return cursor.fetchone()[0]
 
 
 # --- search helpers, use conn -- #

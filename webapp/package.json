@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "sync-assets": "rm -rf public/python_core public/schemas && ln -s ../../python_core public/python_core && ln -s ../../schemas public/schemas && cp src/pyodideWorker.js public/",
+    "sync-assets": "rm -rf public/python_core public/manifests && ln -s ../../python_core public/python_core && ln -s ../../manifests public/manifests",
     "serve": "npm run sync-assets && NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
     "build": "npm run sync-assets && NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
     "lint": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",

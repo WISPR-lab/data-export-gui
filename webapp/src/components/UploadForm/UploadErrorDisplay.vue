@@ -53,7 +53,7 @@ Props:
 </template>
 
 <script>
-import { getErrorMessage, isUserError } from '../../errorTypes.js';
+import { getErrorMessage, isUserError } from '@/constants/error_types';
 
 export default {
   name: 'UploadErrorDisplay',

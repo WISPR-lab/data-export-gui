@@ -468,35 +468,16 @@ export default {
     }
   },
   mounted() {
-    const sketchID = this.sketchId
     this.loadingSketch = true
     console.log('[Sketch] mounted(), loadingSketch=true')
 
-    BrowserDB.ensureSketchInitialized(sketchID)
+    this.$store.dispatch('updateSketch', this.sketchId)
       .then(() => {
-        console.log('[Sketch] ensureSketchInitialized done')
-        return this.$store.dispatch('updateSketch', sketchID)
-      })
-      .then(async () => {
-        console.log('[Sketch] updateSketch done')
-        // Compute and store metadata
-        const meta = await computeMeta(sketchID)
-        this.$store.commit('SET_SKETCH', {
-          objects: [this.$store.state.sketch],
-          meta
-        })
-        return BrowserDB.getTimelines(sketchID)
-      })
-      .then(response => {
-        const count = response.data.objects ? response.data.objects.length : 0
-        console.log('[Sketch] getTimelines done, got', count, 'timelines')
-        const sketch = this.$store.state.sketch
-        this.$set(sketch, 'timelines', response.data.objects || [])
         this.loadingSketch = false
-        console.log('[Sketch] loadingSketch=false')
+        console.log('[Sketch] Workspace loading complete')
       })
       .catch(error => {
-        console.error('[Sketch] Error:', error)
+        console.error('[Sketch] Critical error:', error)
         this.loadingSketch = false
       })
 
