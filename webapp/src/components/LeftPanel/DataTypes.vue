@@ -57,6 +57,7 @@ limitations under the License.
 
 <script>
 import TsDataTypesList from './DataTypesList.vue'
+import DB from '@/database/index.js'
 
 export default {
   props: {
@@ -68,17 +69,27 @@ export default {
   data: function () {
     return {
       expanded: false,
+      allCategories: [],
     }
   },
   computed: {
     sketch() {
       return this.$store.state.sketch
     },
-    allCategories() {
-      return this.$store.state.allCategories
+  },
+  async mounted() {
+    await this.loadCategories()
+  },
+  methods: {
+    async loadCategories() {
+      try {
+        this.allCategories = await BrowserDB.getCategories()
+      } catch (e) {
+        console.error('Error loading categories:', e)
+        this.allCategories = []
+      }
     },
   },
-  methods: {},
 }
 </script>
 

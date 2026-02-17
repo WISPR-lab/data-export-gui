@@ -91,6 +91,24 @@ export default {
     TsTagsList,
   },
   props: ['selectedLabels', 'queryString'],
+  data() {
+    return {
+      categories: [],
+    }
+  },
+  async mounted() {
+    await this.loadCategories()
+  },
+  methods: {
+    async loadCategories() {
+      try {
+        this.categories = await BrowserDB.getCategories()
+      } catch (e) {
+        console.error('Error loading categories:', e)
+        this.categories = []
+      }
+    },
+  },
   computed: {
     sketch() {
       return this.$store.state.sketch
@@ -105,7 +123,7 @@ export default {
       return this.$store.state.tags
     },
     allCategories() {
-      return this.$store.state.allCategories
+      return this.categories
     },
     filteredMetaLabels() {
       return this.meta.filter_labels.filter(

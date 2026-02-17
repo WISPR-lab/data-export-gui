@@ -77,9 +77,7 @@ export default {
   },
   computed: {
     allCategories() {
-      // Sort the data types alphabetically
-      // return [...this.$store.state.allCategories].sort((a, b) => a.data_type.localeCompare(b.data_type))
-      return [...this.$store.state.allCategories].sort((a, b) => a.category.localeCompare(b.category))
+      return [...(this.$parent.allCategories || [])].sort((a, b) => a.category.localeCompare(b.category))
     },
   },
   methods: {

@@ -30,6 +30,11 @@ module.exports = {
   devServer: {
     // See https://cli.vuejs.org/config/#devserver for more options
     port: 5001,
+    // Required headers for OPFS (Origin Private File System) with SQLite WASM
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
     proxy: {
       '^/api': {
         autoRewrite: true,

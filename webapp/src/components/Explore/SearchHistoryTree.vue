@@ -6,7 +6,6 @@
 
 <script>
 import TreeNode from './SearchHistoryTreeNode.vue'
-import BrowserDB from '../../database.js'
 import EventBus from '../../event-bus.js'
 
 // Based on https://stackoverflow.com/a/54470906
@@ -94,15 +93,9 @@ export default {
       })
     },
     fetchHistory() {
-      BrowserDB.getSearchHistoryTree(this.sketch.id)
-        .then((response) => {
-          this.treeData = response.data.objects[0]
-          if (!this.selectedNode) {
-            let lastNodeId = response.data.meta['last_node_id']
-            this.selectedNode = findSearchNode(this.treeData, 'id', (k, v) => v === lastNodeId)
-          }
-        })
-        .catch((e) => {})
+      // Search history not implemented in browser-only version (OpenSearch feature)
+      this.treeData = null
+      console.log('[SearchHistoryTree] Search history not available in browser mode')
     },
   },
   beforeDestroy() {

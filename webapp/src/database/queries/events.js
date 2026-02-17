@@ -1,7 +1,7 @@
 // custom to WISPR-lab/data-export-gui
 
 import { getDB } from '../index.js';
-import { buildWhereClause, buildOrderClause, buildPaginationClause } from '../where_clause_builder.js';
+import { buildWhereClause, buildOrderClause, buildPaginationClause } from '../whereClauseBuilder.js';
 
 export async function searchEvents(queryString = '', filter = {}) {
   const db = await getDB();
@@ -15,12 +15,12 @@ export async function searchEvents(queryString = '', filter = {}) {
   const sql = `
     SELECT 
       e.id, e.upload_id, e.timestamp, e.message, e.attributes, e.tags, e.labels,
-      e.category, e.event_kind,
+      e.event_category, e.event_action, e.event_kind,
       f.opfs_filename as source_file, 
-      u.given_name as timeline_name
+      u.given_name as timeline_name, u.platform
     FROM events e
     LEFT JOIN uploaded_files f ON json_extract(e.file_ids, '$[0]') = f.id
-    LEFT JOIN upload u ON e.upload_id = u.id
+    LEFT JOIN uploads u ON e.upload_id = u.id
     ${whereClause}
     ${orderClause}
     ${paginationClause}
@@ -28,7 +28,7 @@ export async function searchEvents(queryString = '', filter = {}) {
   
   const allParams = [...whereParams, ...paginationParams];
   
-  const rows = db.exec(sql, { 
+  const rows = await db.exec(sql, { 
     bind: allParams,
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -50,7 +50,7 @@ export async function searchEvents(queryString = '', filter = {}) {
 
 export async function getEventCount() {
   const db = await getDB();
-  const result = db.exec('SELECT COUNT(*) as count FROM events', {
+  const result = await db.exec('SELECT COUNT(*) as count FROM events', {
     returnValue: 'resultRows',
     rowMode: 'object'
   });
@@ -66,12 +66,33 @@ export async function deleteEvents(eventIds) {
   const placeholders = ids.map(() => '?').join(',');
   const sql = `DELETE FROM events WHERE id IN (${placeholders})`;
   
-  db.exec(sql, { bind: ids });
+  await db.exec(sql, { bind: ids });
+}
+
+export async function getCategories() {
+  const db = await getDB();
+  const sql = `
+    SELECT event_category, COUNT(*) as count 
+    FROM events 
+    WHERE event_category IS NOT NULL AND event_category != '[]'
+    GROUP BY event_category 
+    ORDER BY count DESC
+  `;
+  
+  const rows = await db.exec(sql, {
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  
+  return rows.map(row => ({
+    category: row.category || 'uncategorized',
+    count: row.count
+  }));
 }
 
 async function _getEventsTotalCount(db, whereClause, whereParams) {
   const sql = `SELECT COUNT(*) as count FROM events e ${whereClause}`;
-  const result = db.exec(sql, {
+  const result = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -86,7 +107,7 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
     ${whereClause} 
     GROUP BY e.upload_id
   `;
-  const rows = db.exec(sql, {
+  const rows = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -103,6 +124,7 @@ function _formatEventObject(row) {
   let attributes = {};
   let tags = [];
   let labels = [];
+  let eventCategory = [];
   
   try {
     attributes = row.attributes ? JSON.parse(row.attributes) : {};
@@ -122,17 +144,25 @@ function _formatEventObject(row) {
     console.warn('Failed to parse labels:', e);
   }
   
+  try {
+    eventCategory = row.event_category ? JSON.parse(row.event_category) : [];
+  } catch (e) {
+    console.warn('Failed to parse event_category:', e);
+  }
+  
   const source = {
     ...attributes,
     primary_timestamp: row.timestamp,
     timestamp: row.timestamp,
     message: row.message,
-    category: row.category,
+    category: eventCategory,
+    event_action: row.event_action,
     event_kind: row.event_kind,
     tags,
     labels,
     timeline_name: row.timeline_name,
     timeline_id: row.upload_id,
+    platform: row.platform,
     filename: row.source_file,
   };
   
@@ -141,4 +171,77 @@ function _formatEventObject(row) {
     _index: row.upload_id,
     _source: source,
   };
+}
+
+export async function addLabelEvent(eventIds, labels) {
+  if (!eventIds || eventIds.length === 0 || !labels || labels.length === 0) {
+    return;
+  }
+  
+  const db = await getDB();
+  
+  for (const eventId of eventIds) {
+    const result = await db.exec(
+      'SELECT labels FROM events WHERE id = ?',
+      { bind: [parseInt(eventId, 10)], returnValue: 'resultRows', rowMode: 'array' }
+    );
+    
+    if (result.length === 0) continue;
+    
+    let currentLabels = [];
+    try {
+      currentLabels = result[0][0] ? JSON.parse(result[0][0]) : [];
+    } catch (e) {
+      console.error('[addLabelEvent] Failed to parse labels:', e);
+      currentLabels = [];
+    }
+    
+    const newLabels = [...new Set([...currentLabels, ...labels])];
+    
+    await db.exec(
+      'UPDATE events SET labels = ? WHERE id = ?',
+      { bind: [JSON.stringify(newLabels), parseInt(eventId, 10)] }
+    );
+  }
+}
+
+export async function removeLabelEvent(eventIds, labels) {
+  if (!eventIds || eventIds.length === 0 || !labels || labels.length === 0) {
+    return;
+  }
+  
+  const db = await getDB();
+  
+  for (const eventId of eventIds) {
+    const result = await db.exec(
+      'SELECT labels FROM events WHERE id = ?',
+      { bind: [parseInt(eventId, 10)], returnValue: 'resultRows', rowMode: 'array' }
+    );
+    
+    if (result.length === 0) continue;
+    
+    let currentLabels = [];
+    try {
+      currentLabels = result[0][0] ? JSON.parse(result[0][0]) : [];
+    } catch (e) {
+      console.error('[removeLabelEvent] Failed to parse labels:', e);
+      continue;
+    }
+    
+    const newLabels = currentLabels.filter(label => !labels.includes(label));
+    
+    await db.exec(
+      'UPDATE events SET labels = ? WHERE id = ?',
+      { bind: [JSON.stringify(newLabels), parseInt(eventId, 10)] }
+    );
+  }
+}
+
+export async function updateEventTags(eventId, tags) {
+  const db = await getDB();
+  
+  await db.exec(
+    'UPDATE events SET tags = ? WHERE id = ?',
+    { bind: [JSON.stringify(tags || []), parseInt(eventId, 10)] }
+  );
 }

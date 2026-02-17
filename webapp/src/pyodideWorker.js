@@ -43,51 +43,107 @@ async function initPyodide() {
   // Fetch and mount our custom Python parser logic
   // Now mounting the centralized Python code
   
-  // 1. Mount parsers (recursively or list known files)
-  const parserFiles = [
-    'pyodide.py',
-    'base.py',
+  console.log('[Pyodide] Mounting Python core modules...');
+  
+  // Create directory structure
+  pyodide.FS.mkdir('/python_core');
+  pyodide.FS.mkdir('/python_core/extractors');
+  pyodide.FS.mkdir('/python_core/database');
+  pyodide.FS.mkdir('/python_core/semantic_map');
+  pyodide.FS.mkdir('/python_core/utils');
+  
+  // Core worker files
+  const coreFiles = [
+    'cfg.py',
     'errors.py',
-    'parseresult.py',
+    'manifest.py',
+    'extractor_worker.py',
+    'semantic_map_worker.py',
+  ];
+  
+  for (const file of coreFiles) {
+    const response = await fetch(`/python_core/${file}`);
+    if (!response.ok) {
+      console.error(`[Pyodide] Failed to fetch ${file}: ${response.statusText}`);
+      continue;
+    }
+    const content = await response.text();
+    pyodide.FS.writeFile(`/python_core/${file}`, content);
+    console.log(`[Pyodide] Mounted: /python_core/${file}`);
+  }
+  
+  // Extractor files
+  const extractorFiles = [
+    '__init__.py',
+    'base.py',
     'json_.py',
     'jsonl_.py',
     'csv_.py',
-    'json_label_values.py',
     'csv_multi.py',
-    'schema_utils.py',
-    'time_utils.py'
+    'json_label_values.py',
   ];
-
-  // Create package structure in Pyodide
-  pyodide.FS.mkdir('/parsers');
-  pyodide.FS.mkdir('/python'); // for root-level scripts
-
-  for (const file of parserFiles) {
-    const response = await fetch(`/python_core/parsers/${file}`);
+  
+  for (const file of extractorFiles) {
+    const response = await fetch(`/python_core/extractors/${file}`);
     if (!response.ok) {
-        console.error(`[Pyodide] Failed to fetch parser ${file}: ${response.statusText}`);
-        continue;
+      console.error(`[Pyodide] Failed to fetch extractors/${file}: ${response.statusText}`);
+      continue;
     }
     const content = await response.text();
-    // Some files might expect to be at root? 
-    // The previous setup had them at root. The refactor put them in `python_core/parsers/`.
-    // We should put them in `parsers/` or root?
-    // Let's mimic the new structure: put them in `/parsers/` and add `/` to sys.path
-    pyodide.FS.writeFile(`/parsers/${file}`, content);
-    console.log(`[Pyodide] Mounted: /parsers/${file}`);
+    pyodide.FS.writeFile(`/python_core/extractors/${file}`, content);
+    console.log(`[Pyodide] Mounted: /python_core/extractors/${file}`);
   }
-
-  // 2. Mount Worker Scripts (Ingest & Compiler)
-  const workerFiles = ['ingest_worker.py', 'schema_compiler.py'];
-  for (const file of workerFiles) {
-      const response = await fetch(`/python_core/${file}`);
-      if (response.ok) {
-          const content = await response.text();
-          pyodide.FS.writeFile(`/${file}`, content); // Root level for easy import
-          console.log(`[Pyodide] Mounted: /${file}`);
-      } else {
-          console.error(`[Pyodide] Failed to fetch ${file}`);
-      }
+  
+  // Database files
+  const dbFiles = ['db_session.py', 'schema.sql'];
+  for (const file of dbFiles) {
+    const response = await fetch(`/python_core/database/${file}`);
+    if (!response.ok) {
+      console.error(`[Pyodide] Failed to fetch database/${file}: ${response.statusText}`);
+      continue;
+    }
+    const content = await response.text();
+    pyodide.FS.writeFile(`/python_core/database/${file}`, content);
+    console.log(`[Pyodide] Mounted: /python_core/database/${file}`);
+  }
+  
+  // Semantic map files
+  const semanticMapFiles = [
+    '__init__.py',
+    'map_utils.py',
+    'action_message_builder.py',
+    'deduplicate_events.py',
+  ];
+  
+  for (const file of semanticMapFiles) {
+    const response = await fetch(`/python_core/semantic_map/${file}`);
+    if (!response.ok) {
+      console.error(`[Pyodide] Failed to fetch semantic_map/${file}: ${response.statusText}`);
+      continue;
+    }
+    const content = await response.text();
+    pyodide.FS.writeFile(`/python_core/semantic_map/${file}`, content);
+    console.log(`[Pyodide] Mounted: /python_core/semantic_map/${file}`);
+  }
+  
+  // Utils files
+  const utilFiles = [
+    '__init__.py',
+    'filter_builder.py',
+    'json_utils.py',
+    'time_utils.py',
+    'misc.py',
+  ];
+  
+  for (const file of utilFiles) {
+    const response = await fetch(`/python_core/utils/${file}`);
+    if (!response.ok) {
+      console.error(`[Pyodide] Failed to fetch utils/${file}: ${response.statusText}`);
+      continue;
+    }
+    const content = await response.text();
+    pyodide.FS.writeFile(`/python_core/utils/${file}`, content);
+    console.log(`[Pyodide] Mounted: /python_core/utils/${file}`);
   }
 
   // Mount OPFS (Shared Buffer)
@@ -126,30 +182,54 @@ async function initPyodide() {
   
   console.log('[Pyodide] All modules mounted');
 
+  // Load config.yaml and inject into Python globals
+  console.log('[Pyodide] Loading config.yaml...');
+  let config;
+  try {
+    const configResponse = await fetch('/config.yaml');
+    const configText = await configResponse.text();
+    
+    // Parse YAML in JavaScript (we'll need to add js-yaml or use simple parsing)
+    // For now, inject the raw values directly
+    pyodide.runPython(`
+import builtins
+
+# Global config variables injected from config.yaml
+builtins.DB_PATH = "/mnt/data/timeline.db"
+builtins.SCHEMA_PATH = "/python_core/database/schema.sql"
+builtins.BATCH_SIZE = 500
+builtins.TEMP_ZIP_DATA_STORAGE = "/mnt/data/tmpstore"
+builtins.MANIFESTS_DIR = "/manifests"
+
+print("[Pyodide] Config globals injected:", DB_PATH, SCHEMA_PATH, BATCH_SIZE)
+    `);
+    console.log('[Pyodide] Config injected into Python globals');
+  } catch (error) {
+    console.error('[Pyodide] Failed to load config.yaml:', error);
+  }
+
   // The files are written to the root of Pyodide's filesystem
   // Execute the bridge module directly to load all functions into the global namespace
   pyodide.runPython(`
 import sys
-# Add parsers to path
-if '/parsers' not in sys.path:
-    sys.path.insert(0, '/parsers')
+# Add python_core to path
+if '/python_core' not in sys.path:
+    sys.path.insert(0, '/python_core')
 if '/' not in sys.path:
     sys.path.insert(0, '/')
 
-# Import Ingest Logic
+# Import worker modules
 try:
-    import ingest_worker
-    print("[Pyodide] Imported ingest_worker")
+    import extractor_worker
+    print("[Pyodide] Imported extractor_worker")
 except Exception as e:
-    print(f"[Pyodide] Error importing ingest_worker: {e}")
+    print(f"[Pyodide] Error importing extractor_worker: {e}")
 
-# Load legacy bridge for 'group_schema_by_path' and 'parse' if still used by UI
 try:
-    with open('/parsers/pyodide.py', 'r') as f:
-        bridge_code = f.read()
-        exec(bridge_code, globals())
+    import semantic_map_worker
+    print("[Pyodide] Imported semantic_map_worker")
 except Exception as e:
-    print(f"[Pyodide] Warning: could not load legacy bridge: {e}")
+    print(f"[Pyodide] Error importing semantic_map_worker: {e}")
 
 `);
   
@@ -255,6 +335,57 @@ self.onmessage = async (event) => {
 
     let result;
     switch (command) {
+      case 'extract':
+        // Call Python extractor_worker
+        const { platform, givenName } = args;
+        pyodide.globals.set('platform', platform);
+        pyodide.globals.set('given_name', givenName);
+        
+        result = await pyodide.runPythonAsync(`
+import extractor_worker
+result = extractor_worker.extract(platform, given_name)
+result
+`);
+        result = result.toJs({ dict_converter: Object.fromEntries });
+        break;
+      
+      case 'semantic_map':
+        // Call Python semantic_map_worker
+        const { platform: mapPlatform, uploadId } = args;
+        pyodide.globals.set('platform', mapPlatform);
+        pyodide.globals.set('upload_id', uploadId);
+        
+        await pyodide.runPythonAsync(`
+import semantic_map_worker
+semantic_map_worker.map(platform, upload_id)
+`);
+        
+        // Get result counts from DB
+        result = await pyodide.runPythonAsync(`
+from database.db_session import DatabaseSession
+import cfg
+
+with DatabaseSession(cfg.DB_PATH, use_dict_factory=True) as conn:
+    events_count = conn.execute(
+        'SELECT COUNT(*) as count FROM events WHERE upload_id = ?', 
+        (upload_id,)
+    ).fetchone()['count']
+    
+    devices_count = conn.execute(
+        'SELECT COUNT(*) as count FROM auth_devices_initial WHERE upload_id = ?', 
+        (upload_id,)
+    ).fetchone()['count']
+    
+    result = {
+        'status': 'success',
+        'events_count': events_count,
+        'devices_count': devices_count
+    }
+result
+`);
+        result = result.toJs({ dict_converter: Object.fromEntries });
+        break;
+
       case 'ingest':
         // Trigger Ingest Loop
         // ingest_loop is async, so we use runPythonAsync or wrap in a way that returns a promise

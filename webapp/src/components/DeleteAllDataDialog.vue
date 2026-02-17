@@ -19,7 +19,8 @@ Delete All Data Confirmation Dialog
 </template>
 
 <script>
-import BrowserDB from '../database.js'
+import { wipeAllData } from '@/storage/nuke';  
+
 
 export default {
   name: 'DeleteAllDataDialog',
@@ -48,7 +49,7 @@ export default {
     async handleDelete() {
       try {
         this.isDeleting = true
-        await BrowserDB.wipeAllData()
+        await wipeAllData()
         
         // Reset Vuex store to clear stale sketch/timeline data
         this.$store.commit('RESET_STATE')

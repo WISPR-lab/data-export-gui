@@ -307,7 +307,6 @@ limitations under the License.
 </template>
 
 <script>
-import DB from '@/database'
 import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'

@@ -514,8 +514,8 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../../database.js'
-import EventBus from '../../event-bus.js'
+import DB from '@/database/index.js'
+import EventBus from '@/event-bus.js'
 
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
@@ -776,7 +776,7 @@ export default {
       if (!confirm(`Delete ${this.selectedEvents.length} events?`)) return
       const ids = this.selectedEvents.map(e => e._id)
       try {
-        await BrowserDB.deleteEvents(ids)
+        await DB.deleteEvents(ids)
         this.selectedEvents = []
         this.search(true)
         this.$store.dispatch('setSnackBar', { message: 'Events deleted', color: 'success', timeout: 3000 })
@@ -933,28 +933,28 @@ export default {
       const startTime = Date.now()
       
       try {
-        // Use BrowserDB.search() with our query string and filter
-        const formData = {
+        // Use DB.searchEvents() with query string and filter
+        console.log('[EventList.search] Calling DB.searchEvents with:', {
           query: this.currentQueryString,
-          filter: this.currentQueryFilter,
+          filter: this.currentQueryFilter
+        })
+        const response = await DB.searchEvents(this.currentQueryString, this.currentQueryFilter)
+        console.log('[EventList.search] Got response.objects length:', response.objects.length)
+
+        // Response has unwrapped format:
+        // - objects: array of {_id, _source} wrapped events
+        // - meta: metadata including count_per_timeline, total_count, etc.
+        this.eventList.objects = response.objects || []
+        this.eventList.meta = response.meta || {
+          count_per_timeline: {},
+          total_count: 0,
         }
         
-        console.log('[EventList.search] Calling BrowserDB.search with formData:', formData)
-        const response = await BrowserDB.search(this.sketch.id, formData)
-        // console.log('[EventList.search] Got response:', response)
-        console.log('[EventList.search] response.data.objects:', response.data.objects)
-
-        // Response should have:
-        // - data.objects: array of {_id, _source} wrapped events
-        // - data.meta: metadata including count_per_timeline, has_next_page, etc.
-        this.eventList.objects = response.data.objects || []
-        this.eventList.meta = response.data.meta || {
-          count_per_timeline: {},
-          num_events: 0,
-          num_states: 0,
-          has_next_page: false,
-          query_time_ms: Date.now() - startTime
-        }
+        // Calculate has_next_page based on pagination
+        const limit = this.currentQueryFilter.size || 40
+        const currentFrom = this.currentQueryFilter.from || 0
+        this.eventList.meta.has_next_page = (currentFrom + this.eventList.objects.length) < this.eventList.meta.total_count
+        this.eventList.meta.query_time_ms = Date.now() - startTime
 
         console.log('[EventList.search] Updated eventList.objects length:', this.eventList.objects.length)
         this.updateShowBanner()
@@ -1117,14 +1117,14 @@ export default {
       this.selectedEvents = []
     },
     saveSearch: function () {
-      BrowserDB.createView(this.sketch.id, this.saveSearchFormName, this.currentQueryString, this.currentQueryFilter)
-        .then((response) => {
-          this.saveSearchFormName = ''
-          this.saveSearchMenu = false
-          let newView = response.data.objects[0]
-          this.$store.state.meta.views.push(newView)
-        })
-        .catch((e) => {})
+      // Saved searches not implemented in browser-only version
+      this.$store.dispatch('setSnackBar', {
+        message: 'Saved searches are not available in browser-only mode',
+        color: 'info',
+        timeout: 3000,
+      })
+      this.saveSearchFormName = ''
+      this.saveSearchMenu = false
     },
     updateShowBanner: function() {
       // Show banner only when processing timelines are enabled and at

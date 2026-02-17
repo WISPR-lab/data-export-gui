@@ -1,0 +1,13 @@
+# Central configuration for both JavaScript and Python
+# This file is synced to webapp/public/ during build
+
+database:
+  db_path: "/mnt/data/timeline.db"
+  schema_path: "/python_core/database/schema.sql"
+  batch_size: 500
+
+storage:
+  temp_zip_storage: "/mnt/data/tmpstore"
+  manifests_dir: "/manifests"
+
+# Add other shared config here as needed

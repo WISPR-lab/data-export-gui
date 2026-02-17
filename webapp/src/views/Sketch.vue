@@ -36,18 +36,6 @@ limitations under the License.
         </v-row>
       </v-container>
 
-      <!-- Archived state (disabled) -->
-      <!-- <v-container v-if="isArchived && !loadingSketch" fill-height fluid>
-        <v-row align="center" justify="center">
-          <v-sheet class="pa-4">
-            <center>
-              <v-img src="/empty-state.png" max-height="100" max-width="300"></v-img>
-              <div style="font-size: 2em" class="mb-3 mt-3">This sketch is archived</div>
-              <v-btn rounded depressed color="primary" @click="unArchiveSketch()"> Bring it back </v-btn>
-            </center>
-          </v-sheet>
-        </v-row>
-      </v-container> -->
 
       <!-- Rename sketch dialog -->
       <v-dialog v-model="renameSketchDialog" width="600">
@@ -370,32 +358,21 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../database.js'
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
-import { computeMeta } from '../utils/computeMeta.js'
 import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.vue'
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
 import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
-import TsSigmaRules from '../components/LeftPanel/SigmaRules.vue'
-import TsIntelligence from '../components/LeftPanel/ThreatIntel.vue'
-import TsGraphs from '../components/LeftPanel/Graphs.vue'
-import TsStories from '../components/LeftPanel/Stories.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
 import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButton.vue'
-import TsShareCard from '../components/ShareCard.vue'
 import TsRenameSketch from '../components/RenameSketch.vue'
-import TsAnalyzerResults from '../components/LeftPanel/AnalyzerResults.vue'
 import TsEventList from '../components/Explore/EventList.vue'
-import TsVisualizations from '../components/LeftPanel/Visualizations.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
-import TsQuestionCard from '../components/Scenarios/QuestionCard.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
-import TsInvestigation from '../components/LeftPanel/Investigation.vue'
 import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
 import DeleteAllDataDialog from '../components/DeleteAllDataDialog.vue'
 import DeleteAllDataButton from '../components/DeleteAllDataButton.vue'
@@ -408,22 +385,13 @@ export default {
     TsDataTypes,
     TsTags,
     TsSearchTemplates,
-    TsSigmaRules,
     TsUploadTimelineFormButton,
-    TsShareCard,
     TsRenameSketch,
-    TsIntelligence,
-    TsGraphs,
-    TsStories,
     TsSearch,
-    TsAnalyzerResults,
     TsTimelinesTable,
     PrivacySettingsItem,
     TsEventList,
-    TsVisualizations,
-    TsQuestionCard,
     TsSettingsDialog,
-    TsInvestigation,
     PrivacySettingsModal,
     DeleteAllDataDialog,
     DeleteAllDataButton,
@@ -459,12 +427,6 @@ export default {
       showQuestionMenu: false,
       showRightSidePanel: false,
       showSettingsDialog: false,
-      questionCardExclusionRoutes: [
-        'VisualizationNew',
-        'SigmaNewRule',
-        'Analyze',
-        'Story'
-      ],
     }
   },
   mounted() {
@@ -516,41 +478,15 @@ export default {
     },
   },
   methods: {
-    archiveSketch: function () {
-      this.loadingSketch = true
-      BrowserDB.archiveSketch(this.sketch.id)
-        .then((response) => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.showLeftPanel = false
-            this.loadingSketch = false
-          })
-        })
-        .catch((e) => {
-          console.error(e)
-        })
-    },
-    unArchiveSketch: function () {
-      this.loadingSketch = true
-      BrowserDB.unArchiveSketch(this.sketch.id)
-        .then((response) => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.loadingSketch = false
-            this.showLeftPanel = true
-          })
-        })
-        .catch((e) => {
-          console.error(e)
-        })
-    },
-    deleteSketch: function () {
-      if (confirm('Are you sure you want to delete the sketch?')) {
-        BrowserDB.deleteSketch(this.sketch.id)
-          .then((response) => {
-            this.$router.push({ name: 'Home' })
-          })
-          .catch((e) => {
-            console.error(e)
-          })
+    deleteSketch: async function () {
+      if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
+        try {
+          await wipeAllData()
+          this.$router.push({ name: 'Home' })
+        } catch (e) {
+          console.error('[Sketch] Failed to delete all data:', e)
+          alert('Failed to delete data. See console for details.')
+        }
       }
     },
     generateContextQuery(event) {

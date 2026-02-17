@@ -177,7 +177,7 @@ limitations under the License.
 
 <script>
 import EventBus from '../../event-bus.js'
-import BrowserDB from '../../database.js'
+import BrowserDB from '@/database/index.js'
 
 import TsUploadTimelineForm from '../UploadForm/UploadFormButton.vue'
 import TsTimelineComponent from '../Explore/TimelineComponent.vue'
@@ -275,18 +275,17 @@ export default {
       }
       return count
     },
-    save(timeline, newTimelineName = false) {
-      BrowserDB.saveSketchTimeline(
-        this.sketch.id,
-        timeline.id,
-        newTimelineName || timeline.name,
-        timeline.description,
-        timeline.color
-      )
-        .then(() => this.$store.dispatch('updateSketch', this.sketch.id))
-        .catch((e) => {
-          console.error(e)
+    async save(timeline, newTimelineName = false) {
+      try {
+        await BrowserDB.updateUpload(timeline.id, {
+          given_name: newTimelineName || timeline.name,
+          description: timeline.description,
+          color: timeline.color
         })
+        await this.$store.dispatch('updateSketch', this.sketch.id)
+      } catch (e) {
+        console.error('[TimelinesTable] Failed to update upload:', e)
+      }
     },
   },
   data: function () {

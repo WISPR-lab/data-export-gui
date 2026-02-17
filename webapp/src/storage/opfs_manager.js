@@ -103,17 +103,24 @@ export class OPFSManager {
     });
   }
 
-  /**
-   * Internal helper to write a single file entry to OPFS
-   */
+  async clearOPFSFiles() {
+    try {
+      const root = await navigator.storage.getDirectory();
+      for await (const [name] of root.entries()) {
+        await root.removeEntry(name, { recursive: true });
+      }
+      console.log('[OPFS Manager] All files deleted successfully.');
+    } catch (error) {
+      console.error('[OPFS Manager] Failed to delete files:', error);
+      throw error;
+    }
+  }
+
+  // write a single file entry to OPFS
   async _saveFileEntry(filename, fflateFile) {
-    // 1. Get handle
     const fileHandle = await this.bronzeDir.getFileHandle(filename, { create: true });
-    
-    // 2. Create writable stream
     const writable = await fileHandle.createWritable();
     
-    // 3. Pipe data
     fflateFile.ondatabuffer = (chunk, final) => {
       writable.write(chunk);
       if (final) {
@@ -122,7 +129,7 @@ export class OPFSManager {
       }
     };
     
-    // 4. Start processing this file in the zip stream
     fflateFile.start();
   }
+
 }

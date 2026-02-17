@@ -160,7 +160,7 @@ limitations under the License.
       </v-slide-x-reverse-transition>
     </v-row>
     <v-dialog scrollable v-model="aggregatorDialog" @click:outside="($event) => (this.aggregatorDialog = false)">
-      <ts-aggregate-dialog
+      <!-- <ts-aggregate-dialog
         :eventKey="eventKey"
         :eventValue="eventValue"
         :eventTimestamp="eventTimestamp"
@@ -168,7 +168,7 @@ limitations under the License.
         :reloadData="aggregatorDialog"
         @cancel="aggregatorDialog = false"
       >
-      </ts-aggregate-dialog>
+      </ts-aggregate-dialog> -->
     </v-dialog>
     <br />
   </div>
@@ -176,7 +176,7 @@ limitations under the License.
 
 <script>
 import EventBus from '../../event-bus.js'
-import TsAggregateDialog from './AggregateDialog.vue'
+// import TsAggregateDialog from './AggregateDialog.vue'
 import TsFormatXmlString from './FormatXMLString.vue'
 import TsLinkRedirectWarning from './LinkRedirectWarning.vue'
 import TsComments from './Comments.vue'
@@ -184,7 +184,7 @@ import TsUnfurlDialog from './UnfurlDialog.vue'
 
 export default {
   components: {
-    TsAggregateDialog,
+    // TsAggregateDialog,
     TsFormatXmlString,
     TsLinkRedirectWarning,
     TsComments,

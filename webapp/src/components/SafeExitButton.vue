@@ -25,7 +25,8 @@
 </template>
 
 <script>
-import BrowserDB from '../database.js'
+import { terminateWorker } from '@/upload.js'
+import { wipeAllData } from '@/storage/nuke.js'
 
 export default {
   name: 'SafeExitButton',
@@ -34,39 +35,19 @@ export default {
       try {
         console.log('[SafeExit] Initiating safe exit...')
         
-        // Wipe all stored data
-        await BrowserDB.wipeAllData()
-        console.log('[SafeExit] Data wiped')
-        
-        // Clear browser storage
-        localStorage.clear()
-        sessionStorage.clear()
+        terminateWorker()
+        wipeAllData()
         console.log('[SafeExit] Storage cleared')
         
-        // Reset in-memory state
         this.$store.commit('RESET_STATE')
         console.log('[SafeExit] Store reset')
         
-        // Terminate Pyodide worker if running
-        try {
-          const worker = new Worker('/pyodideWorker.js')
-          worker.terminate()
-          console.log('[SafeExit] Worker terminated')
-        } catch (e) {
-          console.log('[SafeExit] No worker to terminate')
-        }
-        
-        // Clear DOM
         document.body.innerHTML = ''
-        
-        // Try to close the window
+
         window.close()
-        
-        // Fallback if close is blocked - use replace to disable back button
         window.location.replace('https://www.google.com')
       } catch (error) {
         console.error('[SafeExit] Error during safe exit:', error)
-        // Force close anyway
         window.close()
       }
     }

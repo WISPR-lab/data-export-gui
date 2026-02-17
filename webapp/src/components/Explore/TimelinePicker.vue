@@ -47,7 +47,7 @@ limitations under the License.
 <script>
 import EventBus from '../../event-bus.js'
 import TsTimelineChip from './TimelineChip.vue'
-import BrowserDB from '../../database.js'
+import BrowserDB from '@/database/index.js'
 
 import _ from 'lodash'
 
@@ -100,42 +100,39 @@ export default {
       }
       return 0
     },
-    remove(timeline) {
+    async remove(timeline) {
       this.isLoading = true
-      BrowserDB.deleteSketchTimeline(this.sketch.id, timeline.id)
-        .then(() => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.syncSelectedTimelines()
-            this.isLoading = false
-          })
-        })
-        .catch((e) => {
-          console.error(e)
-          this.isLoading = false
-        })
+      try {
+        await BrowserDB.deleteUpload(timeline.id)
+        await this.$store.dispatch('updateSketch', this.sketch.id)
+        this.syncSelectedTimelines()
+      } catch (e) {
+        console.error('[TimelinePicker] Failed to delete upload:', e)
+      } finally {
+        this.isLoading = false
+      }
     },
-    save(timeline, newTimelineName = false) {
+    async save(timeline, newTimelineName = false) {
       // Only show the progress bar if renaming the timeline
       if (newTimelineName) {
         this.isLoading = true
       }
-      BrowserDB.saveSketchTimeline(
-        this.sketch.id,
-        timeline.id,
-        newTimelineName || timeline.name,
-        timeline.description,
-        timeline.color
-      )
-        .then(() => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.syncSelectedTimelines()
-            this.isLoading = false
-          })
+      
+      try {
+        await BrowserDB.updateUpload(timeline.id, {
+          given_name: newTimelineName || timeline.name,
+          description: timeline.description,
+          color: timeline.color
         })
-        .catch((e) => {
-          console.error(e)
+        await this.$store.dispatch('updateSketch', this.sketch.id)
+        this.syncSelectedTimelines()
+      } catch (e) {
+        console.error('[TimelinePicker] Failed to update upload:', e)
+      } finally {
+        if (newTimelineName) {
           this.isLoading = false
-        })
+        }
+      }
     },
     disableAllOtherTimelines(timeline) {
       this.$store.dispatch('updateEnabledTimelines', [timeline.id])

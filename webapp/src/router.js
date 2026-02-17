@@ -102,24 +102,6 @@ const routes = [
           },
         ]
       },
-      {
-        path: 'graph',
-        name: 'Graph',
-        component: Canvas,
-        props: { sketchId: 1 },
-      },
-      {
-        path: 'story/:storyId',
-        name: 'Story',
-        component: Canvas,
-        props: { sketchId: 1, storyId: true },
-      },
-      {
-        path: 'analyzers',
-        name: 'Analyze',
-        component: Canvas,
-        props: { sketchId: 1 },
-      },
     ],
   },
 ]

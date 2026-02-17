@@ -90,7 +90,7 @@ limitations under the License.
 <script>
 import dayjs from '@/plugins/dayjs'
 import DatePicker from 'v-calendar/lib/components/date-picker.umd.js'
-import BrowserDB from '../../database.js'
+import BrowserDB from '@/database/index.js'
 
 export default {
   props: ['datetimeProp'],

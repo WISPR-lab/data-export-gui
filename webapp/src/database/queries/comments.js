@@ -12,7 +12,7 @@ export async function getEventComments(eventId) {
     ORDER BY created_at ASC
   `;
   
-  const rows = db.exec(sql, {
+  const rows = await db.exec(sql, {
     bind: [parseInt(eventId, 10)],
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -30,17 +30,17 @@ export async function addEventComment(eventId, commentText) {
     VALUES (?, ?, ?, ?)
   `;
   
-  db.exec(sql, {
+  await db.exec(sql, {
     bind: [parseInt(eventId, 10), commentText, now, now]
   });
   
-  const result = db.exec('SELECT last_insert_rowid() as id', {
+  const result = await db.exec('SELECT last_insert_rowid() as id', {
     returnValue: 'resultRows',
     rowMode: 'object'
   });
   
   return {
-    id: result[0].id,
+    id: (result[0] && result[0].id) || null,
     event_id: eventId,
     comment: commentText,
     created_at: now,
@@ -58,11 +58,11 @@ export async function updateEventComment(commentId, newText) {
     WHERE id = ?
   `;
   
-  db.exec(sql, {
+  await db.exec(sql, {
     bind: [newText, now, parseInt(commentId, 10)]
   });
   
-  const result = db.exec('SELECT * FROM event_comments WHERE id = ?', {
+  const result = await db.exec('SELECT * FROM event_comments WHERE id = ?', {
     bind: [parseInt(commentId, 10)],
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -75,7 +75,7 @@ export async function deleteEventComment(commentId) {
   const db = await getDB();
   
   const sql = 'DELETE FROM event_comments WHERE id = ?';
-  db.exec(sql, {
+  await db.exec(sql, {
     bind: [parseInt(commentId, 10)]
   });
 }

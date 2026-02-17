@@ -1,10 +1,18 @@
 import os
 import json
 import sys
-import cfg
 from datetime import datetime, UTC
 import uuid
 import hashlib
+
+
+def get_config_value(name, default):
+    """Get config value from builtins (injected by JS) or use default."""
+    try:
+        import builtins
+        return getattr(builtins, name, default)
+    except (ImportError, AttributeError):
+        return default
 
 
 try:
@@ -31,9 +39,13 @@ def _file_hash(filepath, alg="sha256"):
 
 def extract(platform, 
             given_name, 
-            db_path=cfg.DB_PATH, 
-            tmp_storage_dir=cfg.TEMP_ZIP_DATA_STORAGE, 
-            manifest_dir=cfg.MANIFESTS_DIR):
+            db_path=None, 
+            tmp_storage_dir=None, 
+            manifest_dir=None):
+    
+    db_path = db_path or get_config_value('DB_PATH', '/mnt/data/timeline.db')
+    tmp_storage_dir = tmp_storage_dir or get_config_value('TEMP_ZIP_DATA_STORAGE', '/mnt/data/tmpstore')
+    manifest_dir = manifest_dir or get_config_value('MANIFESTS_DIR', '/manifests')
     
     print(f"[Extractor] Extracting '{platform}' files from {tmp_storage_dir} using manifest from {manifest_dir}...")
     ts = datetime.now(UTC).timestamp()
@@ -53,9 +65,17 @@ def extract(platform,
             files = [f for f in os.listdir(tmp_storage_dir) if os.path.isfile(os.path.join(tmp_storage_dir, f))]
             print(f"[Extractor] Found {len(files)} files.")
 
+            # Auto-generate upload name: "platform" or "platform 2", "platform 3", etc.
+            result = conn.execute(
+                'SELECT COUNT(*) FROM uploads WHERE platform = ?',
+                [platform]
+            ).fetchone()
+            count = result[0] if result else 0
+            auto_name = platform if count == 0 else f"{platform} {count + 1}"
+            
             conn.execute(
-                'INSERT INTO upload (id, platform, given_name, upload_timestamp) VALUES (?, ?, ?, ?)',
-                (upload_id, platform, given_name, ts)
+                'INSERT INTO uploads (id, platform, given_name, upload_timestamp, updated_at) VALUES (?, ?, ?, ?, ?)',
+                (upload_id, platform, auto_name, ts, ts)
             )
 
 

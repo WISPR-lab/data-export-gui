@@ -90,7 +90,7 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../../database.js'
+import BrowserDB from '@/database/index.js'
 
 export default {
   props: ['events'],

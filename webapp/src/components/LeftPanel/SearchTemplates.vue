@@ -72,7 +72,6 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../../database.js'
 import TsSearchTemplate from './SearchTemplate.vue'
 
 export default {
@@ -99,7 +98,9 @@ export default {
     },
   },
   created() {
-    BrowserDB.getSearchTemplates()
+    // Search templates not available in browser-only mode
+    console.log('[SearchTemplates] Search templates not implemented')
+    Promise.resolve({ data: { objects: [] } })
       .then((response) => {
         this.searchtemplates = response.data.objects[0]
         if (typeof this.searchtemplates === 'undefined') {

@@ -20,12 +20,21 @@ def dict_factory(cursor, row):
     return d
 
 
+def get_config_value(name, default):
+    """Get config value from builtins (injected by JS) or use default."""
+    try:
+        import builtins
+        return getattr(builtins, name, default)
+    except (ImportError, AttributeError):
+        return default
+
 
 class DatabaseSession:
     # synchronous context manager for SQLite
-    def __init__(self, db_path, schema_path=None, use_dict_factory=False):
-        self.db_path = db_path   # e.g. /mnt/data/forensics.db
-        self.schema_path = schema_path  # e.g. database/schema.sql
+    def __init__(self, db_path=None, schema_path=None, use_dict_factory=False):
+        # Use injected globals if available, otherwise use defaults
+        self.db_path = db_path or get_config_value('DB_PATH', '/mnt/data/timeline.db')
+        self.schema_path = schema_path or get_config_value('SCHEMA_PATH', '/python_core/database/schema.sql')
         self.use_dict_factory = use_dict_factory
         self.conn = None
         self.logger = logging.getLogger(__name__)

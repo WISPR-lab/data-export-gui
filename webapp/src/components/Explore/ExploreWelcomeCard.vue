@@ -39,6 +39,7 @@ limitations under the License.
 
 <script>
 import TsSearchGuideCard from './SearchGuideCard.vue'
+import BrowserDB from '../../database/index.js'
 
 export default {
   name: 'TsExploreWelcomeCard',
@@ -51,6 +52,24 @@ export default {
   components: {
     TsSearchGuideCard,
   },
+  data() {
+    return {
+      categories: [],
+    }
+  },
+  async mounted() {
+    await this.loadCategories()
+  },
+  methods: {
+    async loadCategories() {
+      try {
+        this.categories = await BrowserDB.getCategories()
+      } catch (e) {
+        console.error('Error loading categories:', e)
+        this.categories = []
+      }
+    },
+  },
   computed: {
     showTags() {
       if (!this.$store.state.tags || !this.$store.state.meta.filter_labels) return false
@@ -60,7 +79,7 @@ export default {
       return [...this.$store.state.tags, ...filteredLabels].length > 0
     },
     showDataTypes() {
-      return this.$store.state.allCategories.length > 0
+      return this.categories.length > 0
     },
     showSavedSearches() {
       return (this.$store.state.meta.views || []).length > 0

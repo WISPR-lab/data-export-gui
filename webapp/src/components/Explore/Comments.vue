@@ -86,7 +86,7 @@ limitations under the License.
 </template>
 
 <script>
-import {pyDB} from '@/database.js'
+import DB from '@/database/index.js'
 
 export default {
   props: ['event', 'currentSearchNode'],

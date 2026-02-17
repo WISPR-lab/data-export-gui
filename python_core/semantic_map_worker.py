@@ -1,9 +1,17 @@
 import os
-import cfg
 import sys
 import json
 from itertools import groupby
 import uuid
+
+
+def get_config_value(name, default):
+    """Get config value from builtins (injected by JS) or use default."""
+    try:
+        import builtins
+        return getattr(builtins, name, default)
+    except (ImportError, AttributeError):
+        return default
 
 
 from manifest import Manifest
@@ -88,8 +96,11 @@ def _stringify(rows: list[dict]) -> list[dict]:
 
 def map(platform, 
         upload_id, 
-        db_path=cfg.DB_PATH, 
-        manifest_dir=cfg.MANIFESTS_DIR):
+        db_path=None, 
+        manifest_dir=None):
+
+    db_path = db_path or get_config_value('DB_PATH', '/mnt/data/timeline.db')
+    manifest_dir = manifest_dir or get_config_value('MANIFESTS_DIR', '/manifests')
 
     print(f"[SemanticMapWorker] Starting mapping for upload_id: {upload_id}")
 
