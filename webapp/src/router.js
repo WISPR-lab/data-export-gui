@@ -26,6 +26,7 @@ import Canvas from './views/Canvas.vue'
 import Sketch from './views/Sketch.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
+import DebugOPFS from './views/DebugOPFS.vue'
 
 Vue.use(VueRouter)
 
@@ -39,6 +40,16 @@ const routes = [
     name: 'HowToRequest',
     path: '/how-to-request',
     component: HowToRequest,
+  },
+  {
+    name: 'Debug',
+    path: '/debug/:section',
+    component: DebugOPFS,
+  },
+  {
+    // redirect /debug to /debug/opfs
+    path: '/debug',
+    redirect: '/debug/opfs',
   },
   {
     // App layout (wrapper for all sketch views)

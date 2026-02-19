@@ -141,9 +141,9 @@ export default {
   computed: {
     getUnfurlLogo() {
       if (this.$vuetify.theme.dark) {
-        return '/unfurl-logo-dark.png'
+        return '/images/unfurl-logo-dark.png'
       } else {
-        return '/unfurl-logo.png'
+        return '/images/unfurl-logo.png'
       }
     },
   },

@@ -1,14 +1,6 @@
-from json_ import JSONParser
+from .json_ import JSONParser
 from errors import RecordLevelError
 from typing import List, Dict, Any, Optional
-
-
-try:
-    from python_core.utils.filter_builder import make_filter
-except ImportError:
-    from ..utils.filter_builder import make_filter
-
-
 from utils.filter_builder import make_filter
 
 

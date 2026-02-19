@@ -62,9 +62,13 @@ const defaultState = () => {
       mappings: [],
     },
     
+    // Event actions (categories from event_action field)
+    eventActions: [],
+    
     // Browser-specific settings
     localTimezoneAbbr: getLocalTimezoneAbbr(),
     settings: userSettings,
+    eventActions: [],
     
     // UI state
     currentSearchNode: null, // Search history tree (legacy OpenSearch feature)
@@ -116,12 +120,8 @@ export default new Vuex.Store({
     SET_EVENT_LABELS(state, payload) {
       Vue.set(state.meta, 'filter_labels', payload)
     },
-    SET_DATA_TYPES(state, payload) {
-      let buckets = payload.objects[0]['field_bucket']['buckets']
-      Vue.set(state, 'allCategories', buckets)
-    },
-    SET_CATEGORIES(state, categories) {
-      Vue.set(state, 'allCategories', categories)
+    SET_EVENT_ACTIONS(state, eventActions) {
+      Vue.set(state, 'eventActions', eventActions)
     },
     SET_COUNT(state, payload) {
       Vue.set(state, 'count', payload)
@@ -232,6 +232,7 @@ export default new Vuex.Store({
     FAIL_UPLOAD(state, payload) {
       // Accept summary object with errorType, errors, warnings
       const errorObj = typeof payload === 'string' ? { errors: [payload] } : payload;
+      console.error('[Store] Upload failed:', errorObj)
       Vue.set(state, 'uploadState', {
         ...state.uploadState,
         isProcessing: false,

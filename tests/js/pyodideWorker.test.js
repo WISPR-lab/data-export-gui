@@ -15,14 +15,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
- * createMockWorkerInterface() 
- * simulates the pyodideWorker.js interface
- * 
+ * createMockWorkerInterface()
+ * simulates the pyodide-worker.js interface
+ *
  * the actual worker:
- * 1. initializes pyodide/wasm
- * 2. fetches files from /pyparser/ and mounts them to wasm filesystem
- * 4. listens for messages with { id, command, args }
- * 5. posts back { id, result, success } or { id, error, success: false }
+ * 1. initializes pyodide/wasm + python_core modules
+ * 2. listens for messages with { id, command, args }
+ * 3. posts back { id, result, success } or { id, error, success: false }
+ *
+ * Active commands: extract, semantic_map, get_whitelist
  */
 function createMockWorkerInterface() {
   const messageHandlers = {};
@@ -62,55 +63,29 @@ function createMockWorkerInterface() {
         let result;
 
         switch (command) {
-          case 'test_environment':
-            // Mock response from test_environment()
+          case 'extract':
+            // Mock: Python extractor_worker.extract(platform, given_name)
             result = {
-              py_function: 'test_environment',
-              health: {
-                'base.py': true,
-                'json_.py': true,
-                'jsonl_.py': true,
-                'csv_.py': true,
-                'json_label_values.py': true,
-                'csv_multi.py': true,
-                'schema_utils.py': true,
-                'time_utils.py': true,
-                'import_test': true,
-              },
+              status: 'success',
+              upload_id: 'mock-upload-001',
             };
             break;
 
-          case 'group_schema_by_path':
-            // mock response: would normally parse YAML and group by file path
+          case 'semantic_map':
+            // Mock: Python semantic_map_worker.map(platform, upload_id)
             result = {
-              py_function: 'group_schema_by_path',
-              path_schemas: {
-                'security_and_login_information/account_activity.json': [
-                  {
-                    category: 'auth.login.success',
-                    temporal: 'event',
-                    parser: { format: 'json', json_root: 'account_activity_v2[]' },
-                    fields: [],
-                  },
-                ],
-              },
+              status: 'success',
+              events_count: 5,
+              devices_count: 2,
             };
             break;
 
-          case 'parse':
-            // mock response: would normally parse file content with schema
-            result = {
-              events: [
-                {
-                  primary_timestamp: 1234567890000,
-                  ip: '192.168.1.1',
-                  message: 'Login event',
-                },
-              ],
-              states: [],
-              fatal: false,
-              errors: [],
-            };
+          case 'get_whitelist':
+            // Mock: Manifest(platform).file_paths()
+            result = [
+              'security_and_login_information/account_activity.json',
+              'security_and_login_information/logins_and_logouts.json',
+            ];
             break;
 
           default:
@@ -146,59 +121,42 @@ describe('PyodideWorker', () => {
     workerInterface = null;
   });
 
-  describe('test_environment', () => {
-    it('should report healthy file structure', async () => {
-      const result = await workerInterface.sendMessage('test_environment');
+  describe('extract', () => {
+    it('should call Python extractor and return upload_id', async () => {
+      const result = await workerInterface.sendMessage('extract', {
+        platform: 'facebook',
+        givenName: 'test.zip',
+      });
 
-      expect(result).toHaveProperty('py_function', 'test_environment');
-      expect(result).toHaveProperty('health');
-      expect(result.health).toEqual(
-        expect.objectContaining({
-          'base.py': true,
-          'json_.py': true,
-          'jsonl_.py': true,
-          'csv_.py': true,
-        })
-      );
+      expect(result).toHaveProperty('status', 'success');
+      expect(result).toHaveProperty('upload_id');
+      expect(typeof result.upload_id).toBe('string');
     });
   });
 
-  describe('group_schema_by_path', () => {
-    it('should group schema entries by file path', async () => {
-      const mockSchema = `
-data_types:
-  - temporal: event
-    category: 'auth.login.success'
-    files:
-      - path: security_and_login_information/account_activity.json
-`;
-
-      const result = await workerInterface.sendMessage('group_schema_by_path', {
-        schemaYaml: mockSchema,
+  describe('semantic_map', () => {
+    it('should map raw data to events and return counts', async () => {
+      const result = await workerInterface.sendMessage('semantic_map', {
+        platform: 'facebook',
+        uploadId: 'mock-upload-001',
       });
 
-      expect(result).toHaveProperty('py_function', 'group_schema_by_path');
-      expect(result).toHaveProperty('path_schemas');
-      expect(typeof result.path_schemas).toBe('object');
+      expect(result).toHaveProperty('status', 'success');
+      expect(result).toHaveProperty('events_count');
+      expect(result).toHaveProperty('devices_count');
+      expect(result.events_count).toBeGreaterThanOrEqual(0);
     });
   });
 
-  describe('parse', () => {
-    it('should parse file content and return events', async () => {
-      const mockSchema = '{}';
-      const mockFileContent = '[{"timestamp": 1234567890, "action": "login"}]';
-
-      const result = await workerInterface.sendMessage('parse', {
-        schemaYaml: mockSchema,
-        fileContent: mockFileContent,
-        filename: 'account_activity.json',
+  describe('get_whitelist', () => {
+    it('should return file path patterns from the manifest', async () => {
+      const result = await workerInterface.sendMessage('get_whitelist', {
+        platform: 'facebook',
       });
 
-      expect(result).toHaveProperty('events');
-      expect(result).toHaveProperty('states');
-      expect(result).toHaveProperty('errors');
-      expect(result).toHaveProperty('fatal', false);
-      expect(Array.isArray(result.events)).toBe(true);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('.json');
     });
   });
 
@@ -221,23 +179,23 @@ data_types:
 
   describe('message protocol', () => {
     it('should handle concurrent messages with unique IDs', async () => {
-      const promise1 = workerInterface.sendMessage('test_environment');
-      const promise2 = workerInterface.sendMessage('test_environment');
+      const promise1 = workerInterface.sendMessage('extract', { platform: 'facebook', givenName: 'a.zip' });
+      const promise2 = workerInterface.sendMessage('extract', { platform: 'facebook', givenName: 'b.zip' });
 
       const [result1, result2] = await Promise.all([promise1, promise2]);
 
-      expect(result1).toHaveProperty('py_function', 'test_environment');
-      expect(result2).toHaveProperty('py_function', 'test_environment');
+      expect(result1).toHaveProperty('status', 'success');
+      expect(result2).toHaveProperty('status', 'success');
     });
 
     it('should timeout on unresponsive worker', async () => {
       const unresponsiveWorker = createMockWorkerInterface();
       unresponsiveWorker.postMessage = () => {
-        // do nothing lol
+        // do nothing — simulates a hung worker
       };
 
       await expect(
-        unresponsiveWorker.sendMessage('test_environment')
+        unresponsiveWorker.sendMessage('extract', { platform: 'facebook', givenName: 'a.zip' })
       ).rejects.toThrow('timeout');
     }, { timeout: 10000 }); // extend timeout for this test
   });

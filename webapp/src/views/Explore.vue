@@ -25,9 +25,9 @@ limitations under the License.
     <!-- Search and Filters -->
     <v-card flat class="pa-3 pt-0 mt-n3" color="transparent">
       <v-card class="d-flex align-start mb-1" outlined>
-        <v-sheet class="mt-2">
+        <!-- <v-sheet class="mt-2">
           <ts-search-history-buttons @toggleSearchHistory="toggleSearchHistory()"></ts-search-history-buttons>
-        </v-sheet>
+        </v-sheet> -->
 
         <v-menu v-model="showSearchDropdown" offset-y attach :close-on-content-click="false" :close-on-click="true">
           <template v-slot:activator="{ on, attrs }">
@@ -113,12 +113,12 @@ limitations under the License.
             class="pa-md-4 no-scrollbars"
             style="overflow: scroll; white-space: nowrap; max-height: 500px; min-height: 100px"
           >
-            <ts-search-history-tree
+            <!-- <ts-search-history-tree
               @node-click="jumpInHistory"
               :show-history="showSearchHistory"
               v-bind:style="{ transform: 'scale(' + zoomLevel + ')' }"
               style="transform-origin: top left"
-            ></ts-search-history-tree>
+            ></ts-search-history-tree> -->
           </div>
         </v-card>
       </div>
@@ -393,10 +393,10 @@ export default {
       return this.$store.state.meta
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip.type === 'label' || chip.type === 'term')
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term'))
     },
     timeFilterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip.type.startsWith('datetime'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && chip.type.startsWith('datetime'))
     },
     filteredLabels() {
       return this.$store.state.meta.filter_labels.filter((label) => !label.label.startsWith('__'))
@@ -580,7 +580,7 @@ export default {
     copyFilterChip(chip) {
       let textToCopy = ''
       // Different handling based on chip type
-      if (chip.type.startsWith('datetime')) {
+      if (chip && chip.type && chip.type.startsWith('datetime')) {
         // For datetime chips, just copy the value
         textToCopy = chip.value
       } else {

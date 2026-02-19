@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+
+<!--- NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui -->
+
+
 <template>
   <v-card outlined min-height="550" style="overflow: hidden">
     <v-row>
@@ -57,7 +61,7 @@ limitations under the License.
         <h5 class="mt-3 ml-4">Data types</h5>
         <v-list dense style="height: 500px" class="overflow-y-auto" :class="scrollbarTheme">
           <v-list-item
-            v-for="dataType in matches.allCategories"
+            v-for="action in matches.eventActions"
             :key="dataType.data_type"
             v-on:click="searchForDataType(dataType.data_type)"
             style="font-size: 0.9em"
@@ -85,6 +89,7 @@ limitations under the License.
 
 <script>
 import TsTagsList from '../LeftPanel/TagsList.vue'
+import DB from '@/database/index.js'
 
 export default {
   components: {
@@ -93,21 +98,16 @@ export default {
   props: ['selectedLabels', 'queryString'],
   data() {
     return {
-      categories: [],
+      eventActions: [],
     }
   },
   async mounted() {
-    await this.loadCategories()
-  },
-  methods: {
-    async loadCategories() {
       try {
-        this.categories = await BrowserDB.getCategories()
+        this.eventActions = await DB.getEventActions()
       } catch (e) {
-        console.error('Error loading categories:', e)
-        this.categories = []
+        console.error('Error loading eventActions:', e)
+        this.eventActions = []
       }
-    },
   },
   computed: {
     sketch() {
@@ -122,8 +122,8 @@ export default {
     tags() {
       return this.$store.state.tags
     },
-    allCategories() {
-      return this.categories
+    eventActionsForDropdown() {
+      return this.eventActions
     },
     filteredMetaLabels() {
       return this.meta.filter_labels.filter(
@@ -135,7 +135,7 @@ export default {
         fields: this.meta.mappings,
         tags: this.tags,
         labels: this.filteredMetaLabels,
-        allCategories: this.allCategories,
+        eventActions: this.eventActions,
         savedSearches: this.meta.views,
         timeFilters: this.timeFilters
       }
@@ -160,8 +160,8 @@ export default {
       matches.labels = this.filteredMetaLabels.filter((label) =>
         label.label.toLowerCase().includes(this.queryString.toLowerCase())
       )
-      matches.allCategories = this.allCategories.filter((dataType) =>
-        dataType.data_type.toLowerCase().includes(this.queryString.toLowerCase())
+      matches.eventActions = this.eventActions.filter((action) =>
+        action.action.toLowerCase().includes(this.queryString.toLowerCase())
       )
       matches.savedSearches = this.meta.views.filter((savedSearch) =>
         savedSearch.name.toLowerCase().includes(this.queryString.toLowerCase())

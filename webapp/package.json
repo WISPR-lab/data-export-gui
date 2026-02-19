@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "sync-assets": "rm -rf public/python_core public/manifests public/sqlite-wasm public/sqliteWorker.js public/config.yaml && ln -s ../../python_core public/python_core && ln -s ../../manifests public/manifests && cp -r node_modules/@sqlite.org/sqlite-wasm/dist public/sqlite-wasm && cp src/database/sqliteWorker.js public/sqliteWorker.js && cp ../config.yaml public/config.yaml",
+    "sync-assets": "bash sync_assets.sh",
     "serve": "npm run sync-assets && NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
     "build": "npm run sync-assets && NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
     "lint": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",

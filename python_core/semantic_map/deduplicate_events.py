@@ -67,6 +67,7 @@ def deduplicate_events(
             seen_originals[key].append(e)
             final_rows.append(e)
 
+    return final_rows
 
 
 

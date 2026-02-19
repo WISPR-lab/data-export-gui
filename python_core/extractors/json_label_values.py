@@ -1,5 +1,6 @@
-from json_ import JSONParser
+from .json_ import JSONParser
 from errors import RecordLevelError
+from typing import List, Dict, Any, Optional
 
 class JSONLabelValuesParser(JSONParser):
 

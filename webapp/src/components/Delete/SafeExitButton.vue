@@ -25,8 +25,8 @@
 </template>
 
 <script>
-import { terminateWorker } from '@/upload.js'
-import { wipeAllData } from '@/storage/nuke.js'
+import { terminatePyodideWorker } from '@/pyodide/pyodide-client.js'
+import { OPFSManager } from '@/storage/opfs_manager';   
 
 export default {
   name: 'SafeExitButton',
@@ -35,8 +35,9 @@ export default {
       try {
         console.log('[SafeExit] Initiating safe exit...')
         
-        terminateWorker()
-        wipeAllData()
+        terminatePyodideWorker();
+        const opfsManager = new OPFSManager();
+        await opfsManager.nukeAll();
         console.log('[SafeExit] Storage cleared')
         
         this.$store.commit('RESET_STATE')

@@ -1,28 +1,28 @@
 import os
 import json
 import sys
+import traceback
 from datetime import datetime, UTC
 import uuid
 import hashlib
 
 
-def get_config_value(name, default):
-    """Get config value from builtins (injected by JS) or use default."""
-    try:
-        import builtins
-        return getattr(builtins, name, default)
-    except (ImportError, AttributeError):
-        return default
+def get_config_value(name):
+    """Get config value from builtins (injected by JS)."""
+    import builtins
+    if not hasattr(builtins, name):
+        raise ValueError(f"Config value '{name}' not found in builtins. Ensure config.yaml is loaded.")
+    return getattr(builtins, name)
 
 
 try:
     from manifest import Manifest
-    from python_core.database.db_session import DatabaseSession
+    from db_session import DatabaseSession
     from extractors import get_parser
 except ImportError:
     sys.path.append(os.path.dirname(__file__))
     from manifest import Manifest
-    from python_core.database.db_session import DatabaseSession
+    from db_session import DatabaseSession
     from extractors import get_parser
 
 
@@ -43,9 +43,9 @@ def extract(platform,
             tmp_storage_dir=None, 
             manifest_dir=None):
     
-    db_path = db_path or get_config_value('DB_PATH', '/mnt/data/timeline.db')
-    tmp_storage_dir = tmp_storage_dir or get_config_value('TEMP_ZIP_DATA_STORAGE', '/mnt/data/tmpstore')
-    manifest_dir = manifest_dir or get_config_value('MANIFESTS_DIR', '/manifests')
+    db_path = db_path or get_config_value('DB_PATH')
+    tmp_storage_dir = tmp_storage_dir or get_config_value('TEMP_ZIP_DATA_STORAGE')
+    manifest_dir = manifest_dir or get_config_value('MANIFESTS_DIR')
     
     print(f"[Extractor] Extracting '{platform}' files from {tmp_storage_dir} using manifest from {manifest_dir}...")
     ts = datetime.now(UTC).timestamp()
@@ -54,16 +54,23 @@ def extract(platform,
     try:
 
         manifest = Manifest(platform=platform, manifest_dir=manifest_dir)
-        schema_path = os.path.join(os.path.dirname(__file__), 'database', 'schema.sql')
 
-        with DatabaseSession(db_path, schema_path) as conn:
+        with DatabaseSession(db_path) as conn:
             
             if not os.path.exists(tmp_storage_dir):
                 print(f"[Extractor] temp storage directory not found: {tmp_storage_dir}")
-                return
+                parent = os.path.dirname(tmp_storage_dir)
+                if os.path.exists(parent):
+                    print(f"[Extractor] Parent dir '{parent}' contents: {os.listdir(parent)}")
+                else:
+                    print(f"[Extractor] Parent dir '{parent}' also does not exist. Check OPFS mount.")
+                return {"status": "failure", "error": f"Temp storage directory not found: {tmp_storage_dir}"}
 
             files = [f for f in os.listdir(tmp_storage_dir) if os.path.isfile(os.path.join(tmp_storage_dir, f))]
-            print(f"[Extractor] Found {len(files)} files.")
+            print(f"[Extractor] Found {len(files)} files in {tmp_storage_dir}.")
+            if len(files) == 0:
+                print(f"[Extractor] Raw dir listing: {os.listdir(tmp_storage_dir)}")
+                return {"status": "failure", "error": f"OPFS_EMPTY: No files found in {tmp_storage_dir}. Files were written by JS but are not visible to Python — likely an OPFS/NativeFS sync issue."}
 
             # Auto-generate upload name: "platform" or "platform 2", "platform 3", etc.
             result = conn.execute(
@@ -87,13 +94,13 @@ def extract(platform,
                 
                 manifest_filename = file_cfg.get('path')
                 manifest_file_id = file_cfg.get('id')
-                parser_cfg = file_cfg.get('parser_config', {})
+                parser_cfg = file_cfg.get('parser', {})  # manifest YAML uses 'parser' not 'parser_config'
                 if not manifest_file_id or not parser_cfg or not parser_cfg.get('format'):
                     success = False
                     continue
 
                 fmt = parser_cfg.get('format')
-                print(f"[Extractor] Processing {opfs_filename} -> Source: {manifest_file_id} (Format: {fmt})")
+                # print(f"[Extractor] Processing {opfs_filename} -> Source: {manifest_file_id} (Format: {fmt})")
 
                 try:
                     parser = get_parser(fmt)
@@ -108,8 +115,8 @@ def extract(platform,
                         print(f"  -> No records extracted from {opfs_filename}")
                         success = False
                         continue
-                    print(f"  -> Extracted {len(records)} records. Inserting...")
-                    
+                    # print(f"  -> Extracted {len(records)} records. Inserting...")
+                    print(f"[Extractor] Extracted {len(records)} records from {manifest_file_id}")
 
                     # read into db
                     file_id = str(uuid.uuid4())
@@ -119,18 +126,22 @@ def extract(platform,
                         file_info
                     )
                     
-                    raw_data_rows = (
-                        (str(uuid.uuid4()), upload_id, file_id, json.dumps(r)) 
+                    raw_data_rows = [
+                        (str(uuid.uuid4()), upload_id, file_id, json.dumps(r))
                         for r in records
-                    )
+                    ]
                     conn.executemany(
                         'INSERT INTO raw_data (id, upload_id, file_id, data) VALUES (?, ?, ?, ?)',
                         raw_data_rows
                     )
                     conn.commit()
 
+                    row = conn.execute("SELECT COUNT(*) as count FROM raw_data").fetchone()
+                    # print(f"  -> Total raw_data rows in DB: {row[0] if row else 'unknown'}")
+
                 except Exception as e:
                     print(f"[Extractor] Error processing {opfs_filename}: {e}")
+                    traceback.print_exc()
                     success=False       
         
         return {"status": "success", "upload_id": upload_id}

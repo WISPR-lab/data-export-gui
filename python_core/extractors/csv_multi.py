@@ -1,5 +1,4 @@
-from base import BaseParser
-from parseresult import ParseResult
+from .base import BaseParser
 from errors import FileLevelError
 import re
 

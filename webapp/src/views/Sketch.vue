@@ -28,7 +28,7 @@ limitations under the License.
         <v-row align="center" justify="center">
           <v-sheet class="pa-4" style="background: transparent">
             <center>
-              <v-img src="/empty-state.png" max-height="100" max-width="300"></v-img>
+              <v-img src="/images/empty-state.png" max-height="100" max-width="300"></v-img>
               <div style="font-size: 2em" class="mb-3 mt-3">It's empty around here</div>
               <ts-upload-timeline-form-button btn-size="normal" btn-type="rounded"></ts-upload-timeline-form-button>
             </center>
@@ -241,7 +241,7 @@ limitations under the License.
         hide-overlay
         :width="navigationDrawer.width"
       >
-        <ts-investigation
+        <!-- <ts-investigation
           v-if="systemSettings.ENABLE_V3_INVESTIGATION_VIEW
             && (systemSettings.DFIQ_ENABLED
               || (systemSettings.LLM_FEATURES_AVAILABLE
@@ -249,7 +249,7 @@ limitations under the License.
           :icon-only="isMiniDrawer"
           @toggleDrawer="toggleDrawer()"
         >
-        </ts-investigation>
+        </ts-investigation> -->
         <!-- <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search> -->
         <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
         <ts-saved-searches
@@ -290,7 +290,7 @@ limitations under the License.
       <v-main class="notransition">
         <!-- Scenario context -->
         <!--<ts-scenario-navigation v-if="sketch.status && hasTimelines && !isArchived"></ts-scenario-navigation>-->
-        <ts-question-card
+        <!-- <ts-question-card
           v-if="
             sketch.status &&
             hasTimelines &&
@@ -298,7 +298,7 @@ limitations under the License.
             systemSettings.DFIQ_ENABLED &&
             !questionCardExclusionRoutes.includes(currentRouteName)
           "
-        ></ts-question-card>
+        ></ts-question-card> -->
 
         <router-view
           v-if="sketch.status && hasTimelines && !isArchived"
@@ -374,8 +374,8 @@ import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
 import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
-import DeleteAllDataDialog from '../components/DeleteAllDataDialog.vue'
-import DeleteAllDataButton from '../components/DeleteAllDataButton.vue'
+import DeleteAllDataDialog from '../components/Delete/DeleteAllDataDialog.vue'
+import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
 
 export default {
   props: ['sketchId'],

@@ -1,5 +1,5 @@
 from typing import Callable, List
-from json_utils import get_value_at_path  # nested json traversal
+from utils.json_utils import get_value_at_path  # nested json traversal
 
 
 OP_MAPPING = {

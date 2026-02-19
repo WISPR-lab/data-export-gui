@@ -30,7 +30,7 @@ The frontend usually runs on `http://localhost:5001`
 
 3. Parsing engine (Python/Pyodide): JavaScript passes each remaining file string AND the schema YAML to the functions in `pyparser/`. Python handles all the data cleaning and field name standardization.
 
-> **Note**: The `pyparser` logic is developed in the root directory and `pyodideWorker.js` in `webapp/src/`, but they are automatically synced to `webapp/public/` when the development server or build runs to bypass legacy build limitations. #TODO UPDATE
+> **Note**: The `pyparser` logic is developed in the root directory and `pyodide-worker.js` in `webapp/src/`, but they are automatically synced to `webapp/public/` when the development server or build runs to bypass legacy build limitations. #TODO UPDATE
 
 4. Storage (Dexie.js/IndexedDB): Python/Pyodide passes "rows" of data in JSON back to Java Script. This is saved into a searchable database (IndexedDB) with a Dexie.js wrapper.
 

@@ -69,13 +69,16 @@ export async function deleteEvents(eventIds) {
   await db.exec(sql, { bind: ids });
 }
 
-export async function getCategories() {
+// Note: Frontend uses event_action field (from manifest view static fields).
+// The event_category field (ECS event.category) is not used in UI filtering.
+
+export async function getEventActions() {
   const db = await getDB();
   const sql = `
-    SELECT event_category, COUNT(*) as count 
+    SELECT event_action, COUNT(*) as count 
     FROM events 
-    WHERE event_category IS NOT NULL AND event_category != '[]'
-    GROUP BY event_category 
+    WHERE event_action IS NOT NULL AND event_action != ''
+    GROUP BY event_action 
     ORDER BY count DESC
   `;
   
@@ -85,11 +88,10 @@ export async function getCategories() {
   });
   
   return rows.map(row => ({
-    category: row.category || 'uncategorized',
+    action: row.event_action,
     count: row.count
   }));
 }
-
 async function _getEventsTotalCount(db, whereClause, whereParams) {
   const sql = `SELECT COUNT(*) as count FROM events e ${whereClause}`;
   const result = await db.exec(sql, {

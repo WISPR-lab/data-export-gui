@@ -1,20 +1,39 @@
-// pyodideWorker.js
-// SOURCE: webapp/src/pyodideWorker.js
+// pyodide-worker.js
+// SOURCE: webapp/src/pyodide-worker.js
 // NOTE: This file is automatically copied to public/ during build (npm run sync-assets).
 // DO NOT EDIT the version in the public/ folder.
 
+// const { reject } = require("lodash");
+
 importScripts('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js');
+importScripts('https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js');
 
 let pyodide;
 let pyodideReadyPromise;
-let initError = null; // Track init failures for error reporting
+let initError = null;
+let config = null;
+let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
+
+async function loadConfig() {
+  const response = await fetch('/config.yaml');
+  if (!response.ok) {
+    throw new Error('Failed to load config.yaml: ' + response.statusText);
+  }
+  const text = await response.text();
+  config = jsyaml.load(text);
+  return config;
+}
 
 async function initPyodide() {
+  console.log('[Pyodide] Loading config...');
+  config = await loadConfig();
+  console.log('[Pyodide] Config loaded:', config);
+  
   pyodide = await loadPyodide();
   console.log('[Pyodide] Loaded Pyodide core');
   
-  console.log('[Pyodide] Loading built-in packages: pyyaml, pytz, pandas');
-  await pyodide.loadPackage(['pyyaml', 'pytz', 'pandas']);
+  console.log('[Pyodide] Loading built-in packages: pyyaml, pytz, pandas, sqlite3');
+  await pyodide.loadPackage(['pyyaml', 'pytz', 'pandas', 'sqlite3']);
   console.log('[Pyodide] Built-in packages loaded');
 
   console.log('[Pyodide] Loading micropip for installing hjson, json5');
@@ -46,30 +65,30 @@ async function initPyodide() {
   console.log('[Pyodide] Mounting Python core modules...');
   
   // Create directory structure
-  pyodide.FS.mkdir('/python_core');
-  pyodide.FS.mkdir('/python_core/extractors');
-  pyodide.FS.mkdir('/python_core/database');
-  pyodide.FS.mkdir('/python_core/semantic_map');
-  pyodide.FS.mkdir('/python_core/utils');
+  const pyCorePath = config.paths.python_core;
+  pyodide.FS.mkdir(pyCorePath);
+  pyodide.FS.mkdir(`${pyCorePath}/extractors`);
+  pyodide.FS.mkdir(`${pyCorePath}/semantic_map`);
+  pyodide.FS.mkdir(`${pyCorePath}/utils`);
   
   // Core worker files
   const coreFiles = [
-    'cfg.py',
     'errors.py',
     'manifest.py',
+    'db_session.py',
     'extractor_worker.py',
     'semantic_map_worker.py',
   ];
   
   for (const file of coreFiles) {
-    const response = await fetch(`/python_core/${file}`);
+    const response = await fetch(`${pyCorePath}/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch ${file}: ${response.statusText}`);
       continue;
     }
     const content = await response.text();
-    pyodide.FS.writeFile(`/python_core/${file}`, content);
-    console.log(`[Pyodide] Mounted: /python_core/${file}`);
+    pyodide.FS.writeFile(`${pyCorePath}/${file}`, content);
+    console.log(`[Pyodide] Mounted: ${pyCorePath}/${file}`);
   }
   
   // Extractor files
@@ -84,29 +103,28 @@ async function initPyodide() {
   ];
   
   for (const file of extractorFiles) {
-    const response = await fetch(`/python_core/extractors/${file}`);
+    const response = await fetch(`${pyCorePath}/extractors/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch extractors/${file}: ${response.statusText}`);
       continue;
     }
     const content = await response.text();
-    pyodide.FS.writeFile(`/python_core/extractors/${file}`, content);
-    console.log(`[Pyodide] Mounted: /python_core/extractors/${file}`);
+    pyodide.FS.writeFile(`${pyCorePath}/extractors/${file}`, content);
+    console.log(`[Pyodide] Mounted: ${pyCorePath}/extractors/${file}`);
   }
   
-  // Database files
-  const dbFiles = ['db_session.py', 'schema.sql'];
-  for (const file of dbFiles) {
-    const response = await fetch(`/python_core/database/${file}`);
+  // schema.sql lives at the repo root, served from /schema.sql
+  {
+    const response = await fetch(config.paths.schema);
     if (!response.ok) {
-      console.error(`[Pyodide] Failed to fetch database/${file}: ${response.statusText}`);
-      continue;
+      console.error(`[Pyodide] Failed to fetch schema.sql: ${response.statusText}`);
+    } else {
+      const content = await response.text();
+      pyodide.FS.writeFile(config.paths.schema, content);
+      console.log(`[Pyodide] Mounted: ${config.paths.schema}`);
     }
-    const content = await response.text();
-    pyodide.FS.writeFile(`/python_core/database/${file}`, content);
-    console.log(`[Pyodide] Mounted: /python_core/database/${file}`);
   }
-  
+
   // Semantic map files
   const semanticMapFiles = [
     '__init__.py',
@@ -116,14 +134,14 @@ async function initPyodide() {
   ];
   
   for (const file of semanticMapFiles) {
-    const response = await fetch(`/python_core/semantic_map/${file}`);
+    const response = await fetch(`${pyCorePath}/semantic_map/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch semantic_map/${file}: ${response.statusText}`);
       continue;
     }
     const content = await response.text();
-    pyodide.FS.writeFile(`/python_core/semantic_map/${file}`, content);
-    console.log(`[Pyodide] Mounted: /python_core/semantic_map/${file}`);
+    pyodide.FS.writeFile(`${pyCorePath}/semantic_map/${file}`, content);
+    console.log(`[Pyodide] Mounted: ${pyCorePath}/semantic_map/${file}`);
   }
   
   // Utils files
@@ -136,85 +154,76 @@ async function initPyodide() {
   ];
   
   for (const file of utilFiles) {
-    const response = await fetch(`/python_core/utils/${file}`);
+    const response = await fetch(`${pyCorePath}/utils/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch utils/${file}: ${response.statusText}`);
       continue;
     }
     const content = await response.text();
-    pyodide.FS.writeFile(`/python_core/utils/${file}`, content);
-    console.log(`[Pyodide] Mounted: /python_core/utils/${file}`);
+    pyodide.FS.writeFile(`${pyCorePath}/utils/${file}`, content);
+    console.log(`[Pyodide] Mounted: ${pyCorePath}/utils/${file}`);
   }
 
   // Mount OPFS (Shared Buffer)
   if (navigator.storage && navigator.storage.getDirectory) {
       const opfsRoot = await navigator.storage.getDirectory();
-      const mountPoint = "/mnt/data";
-      pyodide.FS.mkdir(mountPoint);
-      pyodide.mountNativeFS(mountPoint, opfsRoot);
-      console.log(`[Pyodide] Mounted OPFS to ${mountPoint}`);
+      // Derive mount point from db_path (e.g. "/mnt/data/timeline.db" -> "/mnt/data")
+      const dbPathParts = config.database.db_path.split('/');
+      const mountPoint = dbPathParts.slice(0, -1).join('/');
+      const mountParent = dbPathParts.slice(0, -2).join('/');
+
+      // Create parent folder first; ignore "already exists" errors on retries
+      try { pyodide.FS.mkdir(mountParent); } catch (e) {}
+      try { pyodide.FS.mkdir(mountPoint); } catch (e) {}
+
+      try {
+        await pyodide.mountNativeFS(mountPoint, opfsRoot);
+        opfsMountPoint = mountPoint;
+        console.log(`[Pyodide] Mounted OPFS to ${mountPoint}`);
+        try {
+          const mountContents = pyodide.FS.readdir(mountPoint).filter(f => f !== '.' && f !== '..');
+          console.log(`[Pyodide] OPFS mount contents at ${mountPoint} (at init):`, mountContents);
+        } catch (e) {
+          console.warn(`[Pyodide] Could not list mount point ${mountPoint}:`, e.message);
+        }
+      } catch (e) {
+        console.error(`[Pyodide] Failed to mount NativeFS:`, e);
+      }
   }
 
-  // Mount Schemas (from public/schemas to /schemas)
-  // We can't list directory via fetch easily without a manifest.
-  // We'll rely on the worker to know what to load or mount them one by one if we knew them.
-  // Ideally, we pass the schemas list or content.
-  // For now, let's assume we might need to fetch them in the python script or pass list.
-  // But ingest_worker.py expects /schemas dir.
-  // We can try to mount the schema dir if we convert it to a zip?
-  // Or just mkdir /schemas and fetch known schemas.
-  // Let's create the directory so python doesn't crash on os.listdir check, 
-  // though it will be empty unless we fill it.
-  pyodide.FS.mkdir('/manifests');
-  
-  // Note: Schema loading is currently separate (User passes YAML string), 
-  // or we need a way to list available schemas. 
-  // ingest_worker.py tries `os.listdir('/manifests')`.
-  // We should fetch known schemas (hardcoded list or manifest) and write them.
-  const knownSchemas = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml', 'all_fields.yaml'];
+  // Mount manifests so Python can os.listdir(MANIFESTS_DIR)
+  const manifestsPath = config.paths.manifests;
+  pyodide.FS.mkdir(manifestsPath);
+  const knownSchemas = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml'];
   for (const s of knownSchemas) {
-      const res = await fetch(`/manifests/${s}`);
+      const res = await fetch(`${manifestsPath}/${s}`);
       if (res.ok) {
           const txt = await res.text();
-          pyodide.FS.writeFile(`/manifests/${s}`, txt);
+          pyodide.FS.writeFile(`${manifestsPath}/${s}`, txt);
       }
   }
   
   console.log('[Pyodide] All modules mounted');
 
-  // Load config.yaml and inject into Python globals
-  console.log('[Pyodide] Loading config.yaml...');
-  let config;
-  try {
-    const configResponse = await fetch('/config.yaml');
-    const configText = await configResponse.text();
-    
-    // Parse YAML in JavaScript (we'll need to add js-yaml or use simple parsing)
-    // For now, inject the raw values directly
-    pyodide.runPython(`
+  // Inject config into Python globals
+  pyodide.runPython(`
 import builtins
 
-# Global config variables injected from config.yaml
-builtins.DB_PATH = "/mnt/data/timeline.db"
-builtins.SCHEMA_PATH = "/python_core/database/schema.sql"
-builtins.BATCH_SIZE = 500
-builtins.TEMP_ZIP_DATA_STORAGE = "/mnt/data/tmpstore"
-builtins.MANIFESTS_DIR = "/manifests"
+builtins.DB_PATH = "${config.database.db_path}"
+builtins.SCHEMA_PATH = "${config.paths.schema}"
+builtins.TEMP_ZIP_DATA_STORAGE = "${config.storage.temp_zip_storage}"
+builtins.MANIFESTS_DIR = "${config.paths.manifests}"
 
-print("[Pyodide] Config globals injected:", DB_PATH, SCHEMA_PATH, BATCH_SIZE)
-    `);
-    console.log('[Pyodide] Config injected into Python globals');
-  } catch (error) {
-    console.error('[Pyodide] Failed to load config.yaml:', error);
-  }
+print("[Pyodide] Config loaded:", DB_PATH, SCHEMA_PATH)
+  `);
+  console.log('[Pyodide] Config injected into Python globals');
 
-  // The files are written to the root of Pyodide's filesystem
-  // Execute the bridge module directly to load all functions into the global namespace
+  // Import the worker modules into the Python runtime
   pyodide.runPython(`
 import sys
 # Add python_core to path
-if '/python_core' not in sys.path:
-    sys.path.insert(0, '/python_core')
+if '${config.paths.python_core}' not in sys.path:
+    sys.path.insert(0, '${config.paths.python_core}')
 if '/' not in sys.path:
     sys.path.insert(0, '/')
 
@@ -289,6 +298,24 @@ async function initPyodideWithRetry() {
 pyodideReadyPromise = initPyodideWithRetry();
 
 /**
+ * Flush Pyodide's in-memory database to OPFS storage.
+ * Synchronizes the filesystem so Python writes are persisted.
+ */
+async function flushOPFSDatabase() {
+  return new Promise((resolve, reject) => {
+    pyodide.FS.syncfs(false, (err) => {
+      if (err) {
+        console.error('[Pyodide Worker] sync to opfs failed:', err);
+        reject(err);
+      } else {
+        console.log('[Pyodide Worker] database flushed to opfs');
+        resolve();
+      }
+    });
+  });
+}
+
+/**
  * Message handler for main thread commands.
  * 
  * Structured error response format:
@@ -335,23 +362,70 @@ self.onmessage = async (event) => {
 
     let result;
     switch (command) {
-      case 'extract':
+      case 'extract': {
         // Call Python extractor_worker
         const { platform, givenName } = args;
+        console.log(`[Pyodide Worker] extract called: platform=${platform}, givenName=${givenName}`);
+
+        // Remount OPFS so Emscripten picks up files written by JS after initial mount.
+        // syncfs() only syncs file contents, NOT new directory entries.
+        // Unmount + remount forces a full directory rescan.
+        if (opfsMountPoint) {
+          console.log(`[Pyodide Worker] Remounting OPFS at ${opfsMountPoint} to pick up new files...`);
+          try {
+            pyodide.FS.unmount(opfsMountPoint);
+            const freshRoot = await navigator.storage.getDirectory();
+            await pyodide.mountNativeFS(opfsMountPoint, freshRoot);
+            console.log('[Pyodide Worker] OPFS remounted successfully');
+          } catch (e) {
+            console.error('[Pyodide Worker] OPFS remount failed:', e);
+          }
+        } else {
+          console.warn('[Pyodide Worker] opfsMountPoint not set — cannot remount OPFS');
+        }
+
+        // Show what Python can see in tmpstore after remount
+        try {
+          const tmpPath = config.storage.temp_zip_storage;
+          const tmpContents = pyodide.FS.readdir(tmpPath).filter(f => f !== '.' && f !== '..');
+          // console.log(`[Pyodide Worker] tmpstore visible to Python after remount (${tmpPath}):`, tmpContents);
+        } catch (e) {
+          console.warn(`[Pyodide Worker] tmpstore not visible after remount (${config.storage.temp_zip_storage}):`, e.message);
+        }
+
         pyodide.globals.set('platform', platform);
         pyodide.globals.set('given_name', givenName);
-        
+
         result = await pyodide.runPythonAsync(`
 import extractor_worker
 result = extractor_worker.extract(platform, given_name)
 result
 `);
+
+        await flushOPFSDatabase();
+
         result = result.toJs({ dict_converter: Object.fromEntries });
+        console.log(`[Pyodide Worker] extract result:`, result);
         break;
+      }
+        // result = result.toJs({ dict_converter: Object.fromEntries });
+        // if (result.status !== 'success') {
+        //   console.error('[Pyodide Worker] ❌ extractor_worker returned failure:', result);
+        // } else {
+        //   console.log(`[Pyodide Worker] extract result:`, result);
+        // }
+        // break;
       
-      case 'semantic_map':
+      
+      case 'semantic_map': {
         // Call Python semantic_map_worker
         const { platform: mapPlatform, uploadId } = args;
+        console.log(`[Pyodide Worker] semantic_map called: platform=${mapPlatform}, uploadId=${uploadId}`);
+        
+        if (!uploadId) {
+          throw new Error(`uploadId is missing from args: ${JSON.stringify(args)}`);
+        }
+        
         pyodide.globals.set('platform', mapPlatform);
         pyodide.globals.set('upload_id', uploadId);
         
@@ -360,12 +434,14 @@ import semantic_map_worker
 semantic_map_worker.map(platform, upload_id)
 `);
         
+        await flushOPFSDatabase();
+        
         // Get result counts from DB
         result = await pyodide.runPythonAsync(`
-from database.db_session import DatabaseSession
-import cfg
+import builtins
+from db_session import DatabaseSession
 
-with DatabaseSession(cfg.DB_PATH, use_dict_factory=True) as conn:
+with DatabaseSession(builtins.DB_PATH, use_dict_factory=True) as conn:
     events_count = conn.execute(
         'SELECT COUNT(*) as count FROM events WHERE upload_id = ?', 
         (upload_id,)
@@ -385,52 +461,29 @@ result
 `);
         result = result.toJs({ dict_converter: Object.fromEntries });
         break;
+      }
 
-      case 'ingest':
-        // Trigger Ingest Loop
-        // ingest_loop is async, so we use runPythonAsync or wrap in a way that returns a promise
-        await pyodide.runPythonAsync(`
-import asyncio
-try:
-    await ingest_worker.ingest_loop()
-    result = "Ingest Complete"
-except Exception as e:
-    import traceback
-    traceback.print_exc()
-    result = f"Error: {e}"
+      case 'get_whitelist': {
+        // Returns file path patterns from the manifest for a given platform
+        const { platform: wlPlatform } = args;
+        pyodide.globals.set('platform', wlPlatform);
+        
+        result = await pyodide.runPythonAsync(`
+from manifest import Manifest
+m = Manifest(platform=platform)
+paths = m.file_paths()
+paths
 `);
-        result = pyodide.globals.get('result');
+        result = result.toJs();
         break;
+      }
 
-      case 'test_environment':
-        result = pyodide.runPython('test_environment()').toJs({ dict_converter: Object.fromEntries });
-        break;
-      
-      
-      // Legacy commands support via direct python bridge for now, but should eventually migrate
-      case 'group_schema_by_path':
-        const { schemaYaml } = args;
-        pyodide.globals.set('schema_str', schemaYaml);
-        // We need to ensure group_schema_by_path is available. 
-        // It resides in pyodide.py which we executed in globals() earlier
-        result = pyodide.runPython('group_schema_by_path(schema_str)').toJs({ dict_converter: Object.fromEntries });
-        break;
-        
-      case 'parse':
-        const { schemaYaml: parseSchema, fileContent, filename } = args;
-        // use global variables to pass large strings to avoid shell escaping issues with runPython
-        pyodide.globals.set('schema_str', parseSchema);
-        pyodide.globals.set('file_content', fileContent);
-        pyodide.globals.set('filename', filename);
-        
-        result = pyodide.runPython('parse(schema_str, file_content, filename)').toJs({ dict_converter: Object.fromEntries });
-        break;
-        
       default:
         throw new Error(`Unknown command: ${command}`);
     }
     
     self.postMessage({ id, result, success: true });
+    console.log(`[Pyodide Worker] Command '${command}' completed successfully`);
   } catch (error) {
     const errorMsg = error.message || String(error);
     

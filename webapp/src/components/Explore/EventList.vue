@@ -468,9 +468,7 @@ limitations under the License.
                   >
                   </span>
                 </span>
-                <!-- <span>{{ item._source[field.text] }} hihihih {{ field.text }} </span> -->
-                <span>{{ field.text === 'category' ? $options.filters.categoryName(item._source[field.text]) : item._source[field.text] }}</span>
-                <!-- <span>{{ field.text === 'category' ? $options.filters.categoryName(item._source[field.text]) : item._source[field.text] }}</span> -->
+                <span>{{ item._source[field.text] }}</span>
               </span>
             </div>
           </template>
@@ -609,7 +607,7 @@ export default {
       isSummaryLoading: false,
       currentItemsPerPage: this.itemsPerPage,
       expandedRows: [],
-      selectedFields: [{ field: 'category', type: 'text' }],
+      selectedFields: [{ field: 'message', type: 'text' }],
       searchColumns: '',
       columnDialog: false,
       saveSearchMenu: false,
@@ -687,7 +685,7 @@ export default {
       return parseInt(this.currentQueryFilter.from) + parseInt(this.currentQueryFilter.size)
     },
     timeFilterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip.type.startsWith('datetime'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && chip.type.startsWith('datetime'))
     },
     currentSearchNode() {
       return this.$store.state.currentSearchNode
@@ -764,7 +762,7 @@ export default {
       return this.$store.state.settings
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip.type === 'label' || chip.type === 'term')
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term'))
     },
   },
   methods: {
@@ -863,7 +861,7 @@ export default {
     },
     getTimelineColor(event) {
       let timeline = this.getTimeline(event)
-      let backgroundColor = timeline.color
+      let backgroundColor = timeline.color || '#999'
       if (!backgroundColor.startsWith('#')) {
         backgroundColor = '#' + backgroundColor
       }

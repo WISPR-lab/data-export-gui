@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS uploaded_files ( -- filled during extraction step
 
 
 CREATE TABLE IF NOT EXISTS raw_data ( -- filled during extraction step
-    id INTEGER PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     upload_id TEXT,
     file_id TEXT,             
-    data JSON,
+    data JSONTEXT,
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE,
     FOREIGN KEY(file_id) REFERENCES uploaded_files(id) ON DELETE CASCADE
 );
@@ -33,33 +33,31 @@ CREATE TABLE IF NOT EXISTS raw_data ( -- filled during extraction step
 
 
 CREATE TABLE IF NOT EXISTS events ( -- filled during semantic map
-    id INTEGER PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     upload_id TEXT,
-    file_ids JSON,  -- multiple possible after deduplication
-    raw_data_ids JSON,  -- can be multiple raw data entries that map to the same event, stored as JSON list of raw_data ids
+    file_ids JSONTEXT,  -- multiple possible after deduplication
+    raw_data_ids JSONTEXT,  -- can be multiple raw data entries that map to the same event, stored as JSON list of raw_data ids
     --             
     timestamp REAL,
     event_action TEXT,
     event_kind TEXT,
-    event_category JSON DEFAULT '[]',
+    event_category JSONTEXT DEFAULT '[]',
     --
     message TEXT,
-    attributes JSON,    --
-    tags JSON DEFAULT "[]",
-    labels JSON DEFAULT "[]",
+    attributes JSONTEXT,    --
+    tags JSONTEXT DEFAULT "[]",
+    labels JSONTEXT DEFAULT "[]",
     --
     deduplicated BOOLEAN DEFAULT 0,
-    extra_timestamps JSON DEFAULT "[]"
+    extra_timestamps JSONTEXT DEFAULT "[]",
     --
-    FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE,
-    -- FOREIGN KEY(file_id) REFERENCES uploaded_files(id) ON DELETE CASCADE,
-    -- FOREIGN KEY(raw_data_id) REFERENCES raw_data(id) ON DELETE CASCADE
+    FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
 
 CREATE TABLE IF NOT EXISTS event_comments (
-    id INTEGER PRIMARY KEY,
-    event_id INTEGER,
+    id TEXT PRIMARY KEY,
+    event_id TEXT,
     comment TEXT,
     created_at REAL,
     updated_at REAL,
@@ -69,16 +67,16 @@ CREATE TABLE IF NOT EXISTS event_comments (
 
 
 CREATE TABLE IF NOT EXISTS auth_devices_initial ( -- filled during semantic map
-    id INTEGER PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     upload_id TEXT,
     file_id TEXT,
     raw_data_id TEXT,
     --
     entity_type TEXT,
     event_kind TEXT,
-    event_category JSON DEFAULT '[]',
+    event_category JSONTEXT DEFAULT '[]',
     --
-    attributes JSON,     
+    attributes JSONTEXT,     
     --        
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE,
     FOREIGN KEY(file_id) REFERENCES uploaded_files(id) ON DELETE CASCADE,
@@ -126,3 +124,11 @@ UNION
 SELECT DISTINCT key AS field, 'text' AS type
 FROM auth_devices_initial, json_each(auth_devices_initial.attributes)
 WHERE auth_devices_initial.attributes IS NOT NULL AND auth_devices_initial.attributes != '';
+
+
+
+-- all event action types
+CREATE VIEW IF NOT EXISTS v_event_actions AS
+SELECT DISTINCT event_action
+FROM events
+WHERE event_action IS NOT NULL AND event_action != '';

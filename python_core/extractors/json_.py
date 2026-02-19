@@ -3,10 +3,7 @@ import hjson
 import json5
 from typing import List, Dict, Any, Optional
 from .base import BaseParser
-try:
-    from python_core.utils.json_utils import get_value_at_path
-except ImportError:
-    from ..utils.json_utils import get_value_at_path
+from utils.json_utils import get_value_at_path
 from errors import FileLevelError, RecordLevelError, FieldLevelError
 
 # Try to import demjson3 for extra-lenient parsing, but make it optional

@@ -2,11 +2,12 @@ import yaml
 import re
 import os
 import logging
-from cfg import MANIFESTS_DIR
+import builtins
 
 class Manifest:
 
-    def __init__(self, platform, manifest_dir=MANIFESTS_DIR, validate=True):
+    def __init__(self, platform, manifest_dir=None, validate=True):
+        manifest_dir = manifest_dir or getattr(builtins, 'MANIFESTS_DIR', '/manifests')
         self.platform = platform
         self.view_index_map = {}  # manifest file_id --> list of view indexes
         self.config = {}

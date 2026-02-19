@@ -12,7 +12,7 @@ export async function getUploads() {
       u.platform,
       u.upload_timestamp as created_at,
       u.updated_at,
-      u.color,
+      COALESCE(u.color, '5E75C2') as color,
       'ready' as status,
       COUNT(e.id) as event_count
     FROM uploads u
@@ -32,6 +32,10 @@ export async function getUploads() {
 }
 
 export async function getUploadById(uploadId) {
+  if (!uploadId) {
+    console.error('[Uploads DB] No uploadId provided');
+    return null;
+  }
   const db = await getDB();
   
   const sql = `
@@ -41,7 +45,7 @@ export async function getUploadById(uploadId) {
       u.platform,
       u.upload_timestamp as created_at,
       u.updated_at,
-      u.color,
+      COALESCE(u.color, '5E75C2') as color,
       'ready' as status,
       COUNT(e.id) as event_count
     FROM uploads u
@@ -62,7 +66,7 @@ export async function getUploadById(uploadId) {
 export async function updateUpload(uploadId, updates) {
   const db = await getDB();
   
-  const allowedFields = ['given_name', 'color', 'description'];
+  const allowedFields = ['given_name', 'color'];
   const setClauses = [];
   const values = [];
   

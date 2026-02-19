@@ -19,7 +19,8 @@ Delete All Data Confirmation Dialog
 </template>
 
 <script>
-import { wipeAllData } from '@/storage/nuke';  
+import { clearAllTables } from '@/database/index.js';
+import { OPFSManager } from '@/storage/opfs_manager.js';
 
 
 export default {
@@ -49,10 +50,13 @@ export default {
     async handleDelete() {
       try {
         this.isDeleting = true
-        await wipeAllData()
-        
-        // Reset Vuex store to clear stale sketch/timeline data
-        this.$store.commit('RESET_STATE')
+        await clearAllTables()
+
+        const opfsManager = new OPFSManager();
+        await opfsManager.clearTempStorage();
+
+        localStorage.clear();
+        this.$store.commit('RESET_STATE');
         
         this.isOpen = false
         

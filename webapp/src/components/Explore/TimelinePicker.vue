@@ -121,7 +121,6 @@ export default {
       try {
         await BrowserDB.updateUpload(timeline.id, {
           given_name: newTimelineName || timeline.name,
-          description: timeline.description,
           color: timeline.color
         })
         await this.$store.dispatch('updateSketch', this.sketch.id)
@@ -150,15 +149,11 @@ export default {
       }
       let newArray = []
       this.currentQueryFilter.indices.forEach((index) => {
-        if (typeof index === 'string') {
-          let timeline = this.activeTimelines.find((t) => {
-            return t.searchindex.index_name === index
-          })
-          newArray.push(timeline)
-        } else if (typeof index === 'number') {
-          let timeline = this.activeTimelines.find((t) => {
-            return t.id === index
-          })
+        // In browser version, indices are timeline IDs (strings or numbers)
+        let timeline = this.activeTimelines.find((t) => {
+          return String(t.id) === String(index)
+        })
+        if (timeline) {
           newArray.push(timeline)
         }
       })
