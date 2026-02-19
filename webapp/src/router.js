@@ -27,6 +27,7 @@ import Sketch from './views/Sketch.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
+import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 
 Vue.use(VueRouter)
 
@@ -117,7 +118,24 @@ const routes = [
   },
 ]
 
-export default new VueRouter({
+// Memoize warmup promise so it only happens once
+let warmupPromise = null;
+
+const router = new VueRouter({
   mode: 'history',
   routes,
-})
+});
+
+router.afterEach((to, from) => {
+  // Warmup Pyodide when user navigates to /explore
+  if (to.path.includes('explore')) {
+    if (!warmupPromise) {
+      warmupPromise = callPyodideWorker('warmup', {}).catch(err => {
+        console.warn('[Router] Pyodide warmup error:', err);
+        warmupPromise = null; // Reset on error so retry on next nav
+      });
+    }
+  }
+});
+
+export default router;

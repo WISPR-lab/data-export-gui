@@ -15,7 +15,7 @@ export async function searchEvents(queryString = '', filter = {}) {
   const sql = `
     SELECT 
       e.id, e.upload_id, e.timestamp, e.message, e.attributes, e.tags, e.labels,
-      e.event_category, e.event_action, e.event_kind,
+      e.event_category, e.event_type, e.event_action, e.event_kind,
       f.opfs_filename as source_file, 
       u.given_name as timeline_name, u.platform
     FROM events e
@@ -127,6 +127,7 @@ function _formatEventObject(row) {
   let tags = [];
   let labels = [];
   let eventCategory = [];
+  let eventType = [];
   
   try {
     attributes = row.attributes ? JSON.parse(row.attributes) : {};
@@ -152,12 +153,19 @@ function _formatEventObject(row) {
     console.warn('Failed to parse event_category:', e);
   }
   
+  try {
+    eventType = row.event_type ? JSON.parse(row.event_type) : [];
+  } catch (e) {
+    console.warn('Failed to parse event_type:', e);
+  }
+  
   const source = {
     ...attributes,
     primary_timestamp: row.timestamp,
     timestamp: row.timestamp,
     message: row.message,
     category: eventCategory,
+    type: eventType,
     event_action: row.event_action,
     event_kind: row.event_kind,
     tags,
@@ -185,7 +193,7 @@ export async function addLabelEvent(eventIds, labels) {
   for (const eventId of eventIds) {
     const result = await db.exec(
       'SELECT labels FROM events WHERE id = ?',
-      { bind: [parseInt(eventId, 10)], returnValue: 'resultRows', rowMode: 'array' }
+      { bind: [eventId], returnValue: 'resultRows', rowMode: 'array' }
     );
     
     if (result.length === 0) continue;
@@ -202,7 +210,7 @@ export async function addLabelEvent(eventIds, labels) {
     
     await db.exec(
       'UPDATE events SET labels = ? WHERE id = ?',
-      { bind: [JSON.stringify(newLabels), parseInt(eventId, 10)] }
+      { bind: [JSON.stringify(newLabels), eventId] }
     );
   }
 }
@@ -217,7 +225,7 @@ export async function removeLabelEvent(eventIds, labels) {
   for (const eventId of eventIds) {
     const result = await db.exec(
       'SELECT labels FROM events WHERE id = ?',
-      { bind: [parseInt(eventId, 10)], returnValue: 'resultRows', rowMode: 'array' }
+      { bind: [eventId], returnValue: 'resultRows', rowMode: 'array' }
     );
     
     if (result.length === 0) continue;
@@ -234,7 +242,7 @@ export async function removeLabelEvent(eventIds, labels) {
     
     await db.exec(
       'UPDATE events SET labels = ? WHERE id = ?',
-      { bind: [JSON.stringify(newLabels), parseInt(eventId, 10)] }
+      { bind: [JSON.stringify(newLabels), eventId] }
     );
   }
 }
@@ -244,6 +252,6 @@ export async function updateEventTags(eventId, tags) {
   
   await db.exec(
     'UPDATE events SET tags = ? WHERE id = ?',
-    { bind: [JSON.stringify(tags || []), parseInt(eventId, 10)] }
+    { bind: [JSON.stringify(tags || []), eventId] }
   );
 }

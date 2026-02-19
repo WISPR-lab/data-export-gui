@@ -57,10 +57,14 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                 # EVENTS
                 if event_kind == "event":
                     event_action = fields.pop('event_action', None)
+                    event_category = fields.pop('event_category', [])
+                    event_type = fields.pop('event_type', [])
                     event_rows.append(shared | {
                         "timestamp": fields.pop('timestamp', None),
                         "event_action": event_action,
                         "event_kind": event_kind,
+                        "event_category": event_category,
+                        "event_type": event_type,
                         "message": amb.message(event_action, **fields),
                         "attributes": fields,
                         "deduplicated": False,  # taken care of in deduplication step
@@ -70,6 +74,9 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                 # AUTH/DEVICE ENTITIES
                 elif event_kind == "asset" or event_kind == "entity":
                     entity_type = fields.pop('entity_type', None)
+                    # Pop event_category and event_type from fields before storing as attributes
+                    fields.pop('event_category', [])
+                    fields.pop('event_type', [])
                     if entity_type == "authenticated_device":
                         auth_device_rows.append({
                             "id": str(uuid.uuid4()),
@@ -88,7 +95,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
 
 
 def _stringify(rows: list[dict]) -> list[dict]:
-    list_keys = ["raw_data_ids", "file_ids", "extra_timestamps", "event_category"]
+    list_keys = ["raw_data_ids", "file_ids", "extra_timestamps", "event_category", "event_type"]
     dict_keys = ["attributes"]
     for r in rows:
         for k in list_keys:
@@ -160,8 +167,8 @@ def map(platform,
                 print(f"[SemanticMapWorker] Inserting {len(event_rows)} events...")
                 conn.executemany(
                     """
-                    INSERT INTO events (id, upload_id, file_ids, raw_data_ids, timestamp, event_action, event_kind, message, attributes, deduplicated, extra_timestamps)
-                    VALUES (:id, :upload_id, :file_ids, :raw_data_ids, :timestamp, :event_action, :event_kind, :message, :attributes, :deduplicated, :extra_timestamps)
+                    INSERT INTO events (id, upload_id, file_ids, raw_data_ids, timestamp, event_action, event_kind, event_category, event_type, message, attributes, deduplicated, extra_timestamps)
+                    VALUES (:id, :upload_id, :file_ids, :raw_data_ids, :timestamp, :event_action, :event_kind, :event_category, :event_type, :message, :attributes, :deduplicated, :extra_timestamps)
                     """,
                     event_rows
                 )

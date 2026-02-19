@@ -10,7 +10,6 @@ importScripts('https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js');
 
 let pyodide;
 let pyodideReadyPromise;
-let initError = null;
 let config = null;
 let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
 
@@ -242,6 +241,7 @@ except Exception as e:
 
 `);
   
+  console.log('[Pyodide] Fully initialized and ready for use');
   return pyodide;
 }
 
@@ -277,14 +277,8 @@ async function initPyodideWithRetry() {
         `Pyodide init failed (attempt ${attempt}/${MAX_RETRIES}): ${errorMsg}`
       );
       
-      // If this was the last attempt, store error and rethrow
+      // If this was the last attempt, rethrow
       if (attempt === MAX_RETRIES) {
-        initError = {
-          type: 'PYODIDE_INIT_FAILED',
-          message: errorMsg,
-          attempt: attempt,
-          timestamp: new Date().toISOString(),
-        };
         throw error;
       }
       
@@ -331,17 +325,6 @@ self.onmessage = async (event) => {
   const { id, command, args } = event.data;
   
   try {
-    // Check if Pyodide init failed
-    if (initError) {
-      return self.postMessage({
-        id,
-        success: false,
-        error: initError.message,
-        errorType: 'PYODIDE_INIT_FAILED',
-        source: 'pyodide_init',
-      });
-    }
-
     // Wait for Pyodide to be ready
     try {
       await Promise.race([
@@ -362,6 +345,15 @@ self.onmessage = async (event) => {
 
     let result;
     switch (command) {
+      case 'isPyodideReady': {
+        result = { pyodideReady: typeof pyodide !== 'undefined' };
+        break;
+      }
+      case 'warmup': {
+        // Just wait for Pyodide to be ready, don't do anything else
+        result = { status: 'warmup_complete' };
+        break;
+      }
       case 'extract': {
         // Call Python extractor_worker
         const { platform, givenName } = args;

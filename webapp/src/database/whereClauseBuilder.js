@@ -24,7 +24,7 @@ export function buildWhereClause(filter = {}) {
     if (uploadIds.length > 0) {
       const placeholders = uploadIds.map(() => '?').join(',');
       conditions.push(`e.upload_id IN (${placeholders})`);
-      params.push(...uploadIds.map(id => parseInt(id, 10)));
+      params.push(...uploadIds);
     }
   }
 

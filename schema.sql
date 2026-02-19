@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS events ( -- filled during semantic map
     event_action TEXT,
     event_kind TEXT,
     event_category JSONTEXT DEFAULT '[]',
+    event_type JSONTEXT DEFAULT '[]',
     --
     message TEXT,
     attributes JSONTEXT,    --

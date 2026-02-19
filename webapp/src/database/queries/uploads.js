@@ -78,6 +78,7 @@ export async function updateUpload(uploadId, updates) {
   }
   
   if (setClauses.length === 0) {
+    console.log('[uploadDB.updateUpload] No allowed fields found to update');
     return;
   }
   
@@ -85,30 +86,30 @@ export async function updateUpload(uploadId, updates) {
   setClauses.push('updated_at = ?');
   values.push(Date.now() / 1000);  // Convert to Unix timestamp (seconds)
   
-  values.push(parseInt(uploadId, 10));
+  values.push(uploadId);  // uploadId is already a string UUID, don't parseInt it
   
   const sql = `UPDATE uploads SET ${setClauses.join(', ')} WHERE id = ?`;
-  db.exec(sql, { bind: values });
+  await db.exec(sql, { bind: values });
 }
 
 export async function deleteUpload(uploadId) {
   const db = await getDB();
   
   // Delete related data first (cascading deletes)
-  db.exec('DELETE FROM events WHERE upload_id = ?', { 
-    bind: [parseInt(uploadId, 10)] 
+  await db.exec('DELETE FROM events WHERE upload_id = ?', { 
+    bind: [uploadId]
   });
   
-  db.exec('DELETE FROM uploaded_files WHERE upload_id = ?', { 
-    bind: [parseInt(uploadId, 10)] 
+  await db.exec('DELETE FROM uploaded_files WHERE upload_id = ?', { 
+    bind: [uploadId]
   });
   
-  db.exec('DELETE FROM raw_data WHERE upload_id = ?', { 
-    bind: [parseInt(uploadId, 10)] 
+  await db.exec('DELETE FROM raw_data WHERE upload_id = ?', { 
+    bind: [uploadId]
   });
   
   // Finally delete the upload record
-  db.exec('DELETE FROM uploads WHERE id = ?', { 
-    bind: [parseInt(uploadId, 10)] 
+  await db.exec('DELETE FROM uploads WHERE id = ?', { 
+    bind: [uploadId]
   });
 }

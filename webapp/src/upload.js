@@ -44,8 +44,22 @@ export async function processUpload(file, platform, sketchId, store) {
       return summary;
     }
     
-    // Step 2: Call Python extractor worker
-    log('Step 2: Running Python extractor...');
+    // Step 2: Check if Pyodide is ready, warmup if needed
+    log('Step 2: Checking parser status...');
+    if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'parsing', progress: 25 });
+    
+    try {
+      const readyStatus = await callPyodideWorker('isPyodideReady', {});
+      if (!readyStatus.pyodideReady) {
+        log('Parser not ready yet, waiting for initialization...');
+        if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'initializing', progress: 28 });
+      }
+    } catch (error) {
+      log(`Warning: Could not check parser status: ${error.message}`);
+    }
+    
+    // Step 3: Call Python extractor worker
+    log('Step 3: Running Python extractor...');
     if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'parsing', progress: 30 });
 
     let uploadId;
@@ -71,8 +85,8 @@ export async function processUpload(file, platform, sketchId, store) {
       return summary;
     }
 
-    // Step 3 Clean up OPFS temp files — no longer needed after extraction
-    log('Step 3: Cleaning up OPFS temp files...');
+    // Step 4 Clean up OPFS temp files — no longer needed after extraction
+    log('Step 4: Cleaning up OPFS temp files...');
     try {
       await opfsManager.clearTempStorage();
       log('OPFS temp files cleared');
@@ -81,8 +95,8 @@ export async function processUpload(file, platform, sketchId, store) {
       summary.warnings.push('Temp files may not have been cleaned up from local storage.');
     }
     
-    // Step 3: Call Python semantic mapper
-    log('Step 3: Running Python semantic mapper...');
+    // Step 5: Call Python semantic mapper
+    log('Step 5: Running Python semantic mapper...');
     if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'inserting', progress: 60 });
     
     try {
@@ -110,8 +124,8 @@ export async function processUpload(file, platform, sketchId, store) {
       return summary;
     }
     
-    // Step 4: Update UI store
-    log('Step 4: Refreshing UI...');
+    // Step 6: Update UI store
+    log('Step 6: Refreshing UI...');
     if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'complete', progress: 90 });
     
     try {

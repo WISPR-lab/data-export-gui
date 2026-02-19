@@ -235,7 +235,7 @@ limitations under the License.
         <div v-if="!timelineFailed" class="px-4">
           <v-color-picker
             @update:color="updateColor"
-            :value="timeline.color"
+            :value="'#' + timeline.color"
             :show-swatches="!showCustomColorPicker"
             :swatches="colorPickerSwatches"
             :hide-canvas="!showCustomColorPicker"
@@ -401,11 +401,11 @@ export default {
         this.$emit('toggle', this.timeline)
       }
     },
-    // Set debounce to 300ms to limit requests to the server.
-    updateColor: _.debounce(function (color) {
+    // Browser model: no server, so no need for debounce
+    updateColor(color) {
       Vue.set(this.timeline, 'color', color.hex.substring(1))
       this.$emit('save', this.timeline)
-    }, 300),
+    },
     async loadDocumentMetadata() {
       // Upload metadata is already loaded in timeline object
       // No separate document_metadata table needed
