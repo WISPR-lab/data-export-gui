@@ -28,13 +28,11 @@ The frontend usually runs on `http://localhost:5001`
 
 2. Unzip (JavaScript): JS unzips the uploaded file in local browser storage and discards files not mentioned in the platform schemas.
 
-3. Parsing engine (Python/Pyodide): JavaScript passes each remaining file string AND the schema YAML to the functions in `pyparser/`. Python handles all the data cleaning and field name standardization.
+3. Parsing engine (Python/Pyodide): JavaScript passes each remaining file string AND the schema YAML to functions in `python_core/`. Python handles all the data cleaning and field name standardization.
 
-> **Note**: The `pyparser` logic is developed in the root directory and `pyodide-worker.js` in `webapp/src/`, but they are automatically synced to `webapp/public/` when the development server or build runs to bypass legacy build limitations. #TODO UPDATE
+4. Storage (SQLite/OPFS): Python/Pyodide extracts raw data into SQLite, which is persisted in the browser's Origin Private File System (OPFS). Data is normalized and stored in structured tables for querying.
 
-4. Storage (Dexie.js/IndexedDB): Python/Pyodide passes "rows" of data in JSON back to Java Script. This is saved into a searchable database (IndexedDB) with a Dexie.js wrapper.
-
-5. UI (JavaScript): UI elements are rendered from the local DB.
+5. UI (JavaScript): UI elements are rendered from the local SQLite database.
 
 The way I like to think about it, the Python/Pyodide engine pretends to be the "server" in the classic client-server model, even though the data doesn't leave the local machine.
 

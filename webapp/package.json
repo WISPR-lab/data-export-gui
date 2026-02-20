@@ -5,7 +5,7 @@
   "scripts": {
     "sync-assets": "bash sync_assets.sh",
     "serve": "npm run sync-assets && NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
-    "build": "npm run sync-assets && NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
+    "build": "bash sync_assets.sh --copy && NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
     "lint": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",
     "test": "vitest --dom",
     "test:unit": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service test:unit"
