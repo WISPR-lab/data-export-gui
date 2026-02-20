@@ -18,7 +18,7 @@ limitations under the License.
   
 <template>
   <div>
-    <h3>Rename sketch</h3>
+    <h3>Rename project</h3>
     <br />
     <v-form @submit.prevent="renameSketch()">
       <v-text-field

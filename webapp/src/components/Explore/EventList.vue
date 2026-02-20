@@ -450,14 +450,14 @@ limitations under the License.
                   v-if="
                     displayOptions.showTags &&
                     // index === 3 &&
-                    (field.text === 'category' || (index === 4 && headers[3].value === '_source.comment')) &&
+                    (field.text === 'message' || (index === 4 && headers[3].value === '_source.comment')) &&
                     (item._source.tags && item._source.tags.length > 0)
                   "
                 >
                   <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
                 <!-- Emojis -->
-                <span v-if="displayOptions.showEmojis && (field.text === 'category' || (index === 4 && headers[3].value === '_source.comment')) && item._source.__ts_emojis">
+                <span v-if="displayOptions.showEmojis && (field.text === 'message' || (index === 4 && headers[3].value === '_source.comment')) && item._source.__ts_emojis">
                 <!-- <span v-if="displayOptions.showEmojis && index === 3 && item._source.__ts_emojis"> -->
                   <span
                     class="mr-2"
@@ -1070,12 +1070,12 @@ export default {
       
       if (isStarred) {
         event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
-        BrowserDB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
+        DB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       } else {
         event._source.labels.push('__ts_star')
-        BrowserDB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
+        DB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       }
@@ -1103,12 +1103,12 @@ export default {
       
       // Persist changes to database
       if (eventsToStar.length > 0) {
-        BrowserDB.addLabelEvent(eventsToStar, ['__ts_star']).catch(e => {
+        DB.addLabelEvent(eventsToStar, ['__ts_star']).catch(e => {
           console.error('Error starring events:', e)
         })
       }
       if (eventsToUnstar.length > 0) {
-        BrowserDB.removeLabelEvent(eventsToUnstar, ['__ts_star']).catch(e => {
+        DB.removeLabelEvent(eventsToUnstar, ['__ts_star']).catch(e => {
           console.error('Error unstarring events:', e)
         })
       }

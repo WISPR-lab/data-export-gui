@@ -187,7 +187,6 @@ views:
       event.kind: "event"
       event.category: ["iam"]
       event.type: ["change"]
-      event.explanation: "Requested Password Reset"
     fields:
       - {target: "@timestamp", source: "timestamp", type: "datetime"}
       - {target: "client.ip", source: "ip_address", type: "string"}

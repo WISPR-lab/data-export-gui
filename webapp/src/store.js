@@ -65,6 +65,9 @@ const defaultState = () => {
     // Event actions (categories from event_action field)
     eventActions: [],
     
+    // Tags state (populated from events)
+    tags: [],
+    
     // Browser-specific settings
     localTimezoneAbbr: getLocalTimezoneAbbr(),
     settings: userSettings,
@@ -280,12 +283,14 @@ export default new Vuex.Store({
         return
       }
       let allLabels = context.state.meta.filter_labels
-      let label = allLabels.find(label => label.label === inputLabel);
+      let label = allLabels.find(label => label.tag === inputLabel);
       if (label !== undefined) {
         label.count += num
       } else {
-        allLabels.push({ label: inputLabel, count: num })
+        allLabels.push({ tag: inputLabel, count: num })
       }
+      // Remove tags with zero or negative count
+      allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)
     },
     setSnackBar(context, snackbar) {

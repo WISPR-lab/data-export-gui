@@ -119,7 +119,7 @@ export default {
     async fetchComments() {
       try {
         if (!this.event || !this.event._id) return
-        this.comments = await pyDB.getEventComments(this.event._id)
+        this.comments = await DB.getEventComments(this.event._id)
       } catch (e) {
         console.error('Failed to load comments', e)
       }
@@ -128,7 +128,7 @@ export default {
       if (!this.comment.trim()) return
       
       try {
-        await pyDB.addEventComment(this.event._id, this.comment)
+        await DB.addEventComment(this.event._id, this.comment)
         this.comment = ''
         await this.fetchComments() // Refresh list
       } catch (e) {
@@ -137,7 +137,7 @@ export default {
     },
     async updateComment(comment, commentIndex) {
       try {
-        await pyDB.updateEventComment(comment.id, comment.comment)
+        await DB.updateEventComment(comment.id, comment.comment)
         comment.editable = false
         comment.updated_at = new Date().toISOString()
         this.comments.splice(commentIndex, 1, comment)
@@ -149,7 +149,7 @@ export default {
       if (!confirm('Are you sure?')) return
       
       try {
-        await pyDB.deleteEventComment(commentId)
+        await DB.deleteEventComment(commentId)
         this.comments.splice(commentIndex, 1)
         this.$store.dispatch('updateEventLabels', { label: "__ts_comment", num: -1 })
       } catch (e) {

@@ -2,6 +2,7 @@
 
 
 import { getDB } from '../index.js';
+import * as events from './events.js';
 
 
 export async function getEventMeta() {
@@ -16,18 +17,28 @@ export async function getEventMeta() {
 
   let mappings = [];
   let totalItems = 0
+  let filterLabels = [];
+  
   if (countResult.length != 0) {
     mappings = await db.exec(
         'SELECT field, type FROM v_event_field_mappings ORDER BY field ASC', 
         { returnValue: 'resultRows', rowMode: 'object'}
     );
     totalItems = (countResult[0] && countResult[0].count) || 0;
+    
+    // Get tags from events
+    try {
+      filterLabels = await events.getEventTags();
+    } catch (e) {
+      console.warn('Failed to get event tags:', e);
+      filterLabels = [];
+    }
   }
   
   return {
     mappings: mappings || [],
     attributes: {},
-    filter_labels: [],
+    filter_labels: filterLabels || [],
     count_per_index: {},
     emojis: {},
     search_node: null,

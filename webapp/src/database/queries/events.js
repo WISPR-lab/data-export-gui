@@ -92,6 +92,47 @@ export async function getEventActions() {
     count: row.count
   }));
 }
+
+export async function getEventTags() {
+  const db = await getDB();
+  // Get all events with tags, parse the JSON, and aggregate
+  const sql = `
+    SELECT tags 
+    FROM events 
+    WHERE tags IS NOT NULL AND tags != '' AND tags != '[]'
+  `;
+  
+  const rows = await db.exec(sql, {
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  
+  // Aggregate tags from all events
+  const tagCounts = {};
+  rows.forEach(row => {
+    try {
+      const tags = JSON.parse(row.tags);
+      if (Array.isArray(tags)) {
+        tags.forEach(tag => {
+          if (tag) {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to parse tags:', row.tags, e);
+    }
+  });
+  
+  // Convert to array format with tag/count
+  return Object.entries(tagCounts)
+    .map(([tag, count]) => ({
+      tag,
+      count
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
 async function _getEventsTotalCount(db, whereClause, whereParams) {
   const sql = `SELECT COUNT(*) as count FROM events e ${whereClause}`;
   const result = await db.exec(sql, {

@@ -177,7 +177,7 @@ limitations under the License.
 
 <script>
 import EventBus from '../../event-bus.js'
-import BrowserDB from '@/database/index.js'
+import DB from '@/database/index.js'
 
 import TsUploadTimelineForm from '../UploadForm/UploadFormButton.vue'
 import TsTimelineComponent from '../Explore/TimelineComponent.vue'
@@ -277,7 +277,7 @@ export default {
     },
     async save(timeline, newTimelineName = false) {
       try {
-        await BrowserDB.updateUpload(timeline.id, {
+        await DB.updateUpload(timeline.id, {
           given_name: newTimelineName || timeline.name,
           description: timeline.description,
           color: timeline.color

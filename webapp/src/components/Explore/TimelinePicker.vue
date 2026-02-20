@@ -47,7 +47,7 @@ limitations under the License.
 <script>
 import EventBus from '../../event-bus.js'
 import TsTimelineChip from './TimelineChip.vue'
-import BrowserDB from '@/database/index.js'
+import DB from '@/database/index.js'
 
 import _ from 'lodash'
 
@@ -103,7 +103,7 @@ export default {
     async remove(timeline) {
       this.isLoading = true
       try {
-        await BrowserDB.deleteUpload(timeline.id)
+        await DB.deleteUpload(timeline.id)
         await this.$store.dispatch('updateSketch', this.sketch.id)
         this.syncSelectedTimelines()
       } catch (e) {
@@ -119,7 +119,7 @@ export default {
       }
       
       try {
-        await BrowserDB.updateUpload(timeline.id, {
+        await DB.updateUpload(timeline.id, {
           given_name: newTimelineName || timeline.name,
           color: timeline.color
         })

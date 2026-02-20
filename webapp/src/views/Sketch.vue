@@ -252,6 +252,7 @@ limitations under the License.
         </ts-investigation> -->
         <!-- <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search> -->
         <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
+        <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
         <ts-saved-searches
           v-if="meta && meta.views"
           :icon-only="isMiniDrawer"
@@ -371,6 +372,7 @@ import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButto
 import TsRenameSketch from '../components/RenameSketch.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
+import TsDevices from '../components/LeftPanel/Devices.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
 import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
@@ -389,6 +391,7 @@ export default {
     TsRenameSketch,
     TsSearch,
     TsTimelinesTable,
+    TsDevices,
     PrivacySettingsItem,
     TsEventList,
     TsSettingsDialog,

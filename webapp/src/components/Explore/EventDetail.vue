@@ -259,6 +259,10 @@ export default {
     settings() {
       return this.$store.state.settings
     },
+    comments() {
+      const source = this.event._source || {}
+      return source.comment || []
+    },
   },
   methods: {
     getEvent: function () {
@@ -274,11 +278,13 @@ export default {
       }
     },
     getContextLinkItems(key) {
+      if (!this.contextLinkConf) return []
       let fieldConfList = this.contextLinkConf[key.toLowerCase()] ? this.contextLinkConf[key.toLowerCase()] : []
       let shortNameList = fieldConfList.map((x) => x.short_name)
       return shortNameList
     },
     checkContextLinkDisplay(key, value) {
+      if (!this.contextLinkConf) return false
       const fieldConfList = this.contextLinkConf[key.toLowerCase()] ? this.contextLinkConf[key.toLowerCase()] : []
       for (const confItem of fieldConfList) {
         if (confItem['validation_regex'] !== '' && confItem['validation_regex'] !== undefined) {
@@ -301,6 +307,7 @@ export default {
       return false
     },
     contextLinkRedirect(key, item, value) {
+      if (!this.contextLinkConf) return
       const fieldConfList = this.contextLinkConf[key.toLowerCase()] ? this.contextLinkConf[key.toLowerCase()] : []
       for (const confItem of fieldConfList) {
         if (confItem['short_name'] === item) {

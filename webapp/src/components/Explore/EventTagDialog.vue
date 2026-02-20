@@ -90,7 +90,7 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '@/database/index.js'
+import DB from '@/database/index.js'
 
 export default {
   props: ['events'],
@@ -152,12 +152,12 @@ export default {
         if (event._source && event._source.tags) {
           const newTags = event._source.tags.filter(t => t !== tag)
           if (newTags.length !== event._source.tags.length) {
-            await BrowserDB.updateEventTags(event._id, newTags)
+            await DB.updateEventTags(event._id, newTags)
             event._source.tags = newTags
           }
         }
       }
-      this.$store.dispatch('updateTimelineTags', { sketchId: this.sketch.id, tag: tag, num: -1 })
+      this.$store.dispatch('updateEventLabels', { label: tag, num: -1 })
     },
     async addTags(tagToAdd) {
       if (!tagToAdd) return
@@ -170,7 +170,7 @@ export default {
         // Merge unique
         const newTags = [...new Set([...currentTags, ...tagList])]
         try {
-          await BrowserDB.updateEventTags(event._id, newTags)
+          await DB.updateEventTags(event._id, newTags)
           // Update local state
           if (!event._source) event._source = {}
           event._source.tags = newTags
@@ -179,7 +179,7 @@ export default {
         }
       }
       this.$emit('close')
-      this.$store.dispatch('updateTimelineTags', { sketchId: this.sketch.id, tag: tagList[0], num: 1 })
+      this.$store.dispatch('updateEventLabels', { label: tagList[0], num: 1 })
       
       this.$nextTick(() => {
         this.selectedTags = null
