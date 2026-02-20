@@ -12,7 +12,7 @@ webapp*/public/sqlite-worker.js
 webapp*/public/pyodide-worker.js
 webapp*/public/config.yaml
 webapp*/public/schema.sql
-webapp*/public/config.yaml
+webapp*/public/_dynamic_py_manifest.json
 
 webapp-v3.zip
 

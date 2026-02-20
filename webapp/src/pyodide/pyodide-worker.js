@@ -5,13 +5,15 @@
 
 // const { reject } = require("lodash");
 
-importScripts('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js');
+// importScripts('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js');
+importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js');
 importScripts('https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js');
 
 let pyodide;
 let pyodideReadyPromise;
 let config = null;
 let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
+const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
 
 async function loadConfig() {
   const response = await fetch('/config.yaml');
@@ -21,6 +23,31 @@ async function loadConfig() {
   const text = await response.text();
   config = jsyaml.load(text);
   return config;
+}
+
+async function setupOPFSMount(pyInstance, mountPoint) {
+  const opfsRoot = await navigator.storage.getDirectory();
+  
+  const parts = mountPoint.split('/').filter(p => p);
+  let currentPath = '';
+  for (const part of parts) {
+    currentPath += `/${part}`;
+    try { 
+      pyInstance.FS.mkdir(currentPath); 
+    } catch (e) { 
+    }
+  }
+
+  try {
+    pyInstance.FS.unmount(mountPoint);
+    console.log(`[Pyodide Worker] Unmounted stale OPFS at ${mountPoint}`);
+  } catch (e) {
+    //
+  }
+
+  await pyInstance.mountNativeFS(mountPoint, opfsRoot);
+  console.log(`[Pyodide Worker] OPFS successfully mounted to ${mountPoint}`);
+  return mountPoint;
 }
 
 async function initPyodide() {
@@ -63,6 +90,25 @@ async function initPyodide() {
   
   console.log('[Pyodide] Mounting Python core modules...');
   
+  // Fetch dynamic Python manifest
+  let pythonManifest;
+  try {
+    const manifestResponse = await fetch('/_dynamic_py_manifest.json');
+    if (!manifestResponse.ok) {
+      throw new Error(`Failed to fetch manifest: ${manifestResponse.statusText}`);
+    }
+    pythonManifest = await manifestResponse.json();
+    console.log('[Pyodide] Loaded Python manifest:', pythonManifest);
+  } catch (error) {
+    console.error('[Pyodide] Failed to load manifest, falling back to hardcoded lists:', error);
+    pythonManifest = {
+      core_files: ['errors.py', 'manifest.py', 'db_session.py', 'extractor_worker.py', 'semantic_map_worker.py'],
+      extractors: ['__init__.py', 'base.py', 'json_.py', 'jsonl_.py', 'csv_.py', 'csv_multi.py', 'json_label_values.py'],
+      semantic_map: ['__init__.py', 'map_utils.py', 'action_message_builder.py', 'deduplicate_events.py'],
+      utils: ['__init__.py', 'filter_builder.py', 'safe_path_utils.py', 'json_utils.py', 'time_utils.py', 'misc.py']
+    };
+  }
+  
   // Create directory structure
   const pyCorePath = config.paths.python_core;
   pyodide.FS.mkdir(pyCorePath);
@@ -70,16 +116,8 @@ async function initPyodide() {
   pyodide.FS.mkdir(`${pyCorePath}/semantic_map`);
   pyodide.FS.mkdir(`${pyCorePath}/utils`);
   
-  // Core worker files
-  const coreFiles = [
-    'errors.py',
-    'manifest.py',
-    'db_session.py',
-    'extractor_worker.py',
-    'semantic_map_worker.py',
-  ];
-  
-  for (const file of coreFiles) {
+  // Mount core files
+  for (const file of pythonManifest.core_files) {
     const response = await fetch(`${pyCorePath}/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch ${file}: ${response.statusText}`);
@@ -90,18 +128,8 @@ async function initPyodide() {
     console.log(`[Pyodide] Mounted: ${pyCorePath}/${file}`);
   }
   
-  // Extractor files
-  const extractorFiles = [
-    '__init__.py',
-    'base.py',
-    'json_.py',
-    'jsonl_.py',
-    'csv_.py',
-    'csv_multi.py',
-    'json_label_values.py',
-  ];
-  
-  for (const file of extractorFiles) {
+  // Mount extractor files
+  for (const file of pythonManifest.extractors) {
     const response = await fetch(`${pyCorePath}/extractors/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch extractors/${file}: ${response.statusText}`);
@@ -124,15 +152,8 @@ async function initPyodide() {
     }
   }
 
-  // Semantic map files
-  const semanticMapFiles = [
-    '__init__.py',
-    'map_utils.py',
-    'action_message_builder.py',
-    'deduplicate_events.py',
-  ];
-  
-  for (const file of semanticMapFiles) {
+  // Mount semantic map files
+  for (const file of pythonManifest.semantic_map) {
     const response = await fetch(`${pyCorePath}/semantic_map/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch semantic_map/${file}: ${response.statusText}`);
@@ -143,16 +164,8 @@ async function initPyodide() {
     console.log(`[Pyodide] Mounted: ${pyCorePath}/semantic_map/${file}`);
   }
   
-  // Utils files
-  const utilFiles = [
-    '__init__.py',
-    'filter_builder.py',
-    'json_utils.py',
-    'time_utils.py',
-    'misc.py',
-  ];
-  
-  for (const file of utilFiles) {
+  // Mount utils files
+  for (const file of pythonManifest.utils) {
     const response = await fetch(`${pyCorePath}/utils/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch utils/${file}: ${response.statusText}`);
@@ -164,30 +177,33 @@ async function initPyodide() {
   }
 
   // Mount OPFS (Shared Buffer)
+  //     try { pyodide.FS.mkdir(mountPoint); } catch (e) {}
+
+  //     try {
+  //       await pyodide.mountNativeFS(mountPoint, opfsRoot);
+  //       opfsMountPoint = mountPoint;
+  //       console.log(`[Pyodide] Mounted OPFS to ${mountPoint}`);
+  //       try {
+  //         const mountContents = pyodide.FS.readdir(mountPoint).filter(f => f !== '.' && f !== '..');
+  //         console.log(`[Pyodide] OPFS mount contents at ${mountPoint} (at init):`, mountContents);
+  //       } catch (e) {
+  //         console.warn(`[Pyodide] Could not list mount point ${mountPoint}:`, e.message);
+  //       }
+  //     } catch (e) {
+  //       console.error(`[Pyodide] Failed to mount NativeFS:`, e);
+  //     }
+  // }
+  // Mount OPFS (Shared Buffer)
   if (navigator.storage && navigator.storage.getDirectory) {
-      const opfsRoot = await navigator.storage.getDirectory();
-      // Derive mount point from db_path (e.g. "/mnt/data/timeline.db" -> "/mnt/data")
-      const dbPathParts = config.database.db_path.split('/');
-      const mountPoint = dbPathParts.slice(0, -1).join('/');
-      const mountParent = dbPathParts.slice(0, -2).join('/');
-
-      // Create parent folder first; ignore "already exists" errors on retries
-      try { pyodide.FS.mkdir(mountParent); } catch (e) {}
-      try { pyodide.FS.mkdir(mountPoint); } catch (e) {}
-
-      try {
-        await pyodide.mountNativeFS(mountPoint, opfsRoot);
-        opfsMountPoint = mountPoint;
-        console.log(`[Pyodide] Mounted OPFS to ${mountPoint}`);
-        try {
-          const mountContents = pyodide.FS.readdir(mountPoint).filter(f => f !== '.' && f !== '..');
-          console.log(`[Pyodide] OPFS mount contents at ${mountPoint} (at init):`, mountContents);
-        } catch (e) {
-          console.warn(`[Pyodide] Could not list mount point ${mountPoint}:`, e.message);
-        }
-      } catch (e) {
-        console.error(`[Pyodide] Failed to mount NativeFS:`, e);
-      }
+    // Derive mount point from db_path (e.g. "/mnt/data/timeline.db" -> "/mnt/data")
+    const dbPathParts = config.database.db_path.split('/');
+    const mountPoint = dbPathParts.slice(0, -1).join('/');
+    
+    try {
+      opfsMountPoint = await setupOPFSMount(pyodide, mountPoint);
+    } catch (e) {
+      console.error(`[Pyodide] Failed to mount NativeFS:`, e);
+    }
   }
 
   // Mount manifests so Python can os.listdir(MANIFESTS_DIR)
@@ -212,6 +228,8 @@ builtins.DB_PATH = "${config.database.db_path}"
 builtins.SCHEMA_PATH = "${config.paths.schema}"
 builtins.TEMP_ZIP_DATA_STORAGE = "${config.storage.temp_zip_storage}"
 builtins.MANIFESTS_DIR = "${config.paths.manifests}"
+builtins.IS_FIREFOX = ${isFirefox? 'True' : 'False'}
+
 
 print("[Pyodide] Config loaded:", DB_PATH, SCHEMA_PATH)
   `);
@@ -296,6 +314,24 @@ pyodideReadyPromise = initPyodideWithRetry();
  * Synchronizes the filesystem so Python writes are persisted.
  */
 async function flushOPFSDatabase() {
+  if (isFirefox) {
+    // Python already manually flushed the bytes to OPFS safely.
+    console.log("[Pyodide Worker] Firefox detected: manually syncing db to opfs without calling syncfs() to avoid Firefox stat() crash.");
+    try {
+      const dbBytes = pyodide.FS.readFile('/mnt/data/timeline.db') // TODO EVENTUALLY NO HARDCODING
+      const opfsRoot = await navigator.storage.getDirectory();
+      const dbHandle = await opfsRoot.getFileHandle('timeline.db', { create: true });
+      const accessHandle = await dbHandle.createSyncAccessHandle();
+      accessHandle.truncate(0);
+      accessHandle.write(dbBytes, { at: 0 });
+      accessHandle.flush();
+      accessHandle.close();
+      return; 
+    } catch (e) {
+      console.error('[Pyodide Worker] Firefox manual OPFS sync failed:', e);
+      return;
+    }
+  }
   return new Promise((resolve, reject) => {
     pyodide.FS.syncfs(false, (err) => {
       if (err) {
@@ -363,12 +399,9 @@ self.onmessage = async (event) => {
         // syncfs() only syncs file contents, NOT new directory entries.
         // Unmount + remount forces a full directory rescan.
         if (opfsMountPoint) {
-          console.log(`[Pyodide Worker] Remounting OPFS at ${opfsMountPoint} to pick up new files...`);
+          console.log(`[Pyodide Worker] Remounting OPFS at ${opfsMountPoint}...`);
           try {
-            pyodide.FS.unmount(opfsMountPoint);
-            const freshRoot = await navigator.storage.getDirectory();
-            await pyodide.mountNativeFS(opfsMountPoint, freshRoot);
-            console.log('[Pyodide Worker] OPFS remounted successfully');
+            await setupOPFSMount(pyodide, opfsMountPoint);
           } catch (e) {
             console.error('[Pyodide Worker] OPFS remount failed:', e);
           }

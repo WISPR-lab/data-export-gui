@@ -324,16 +324,24 @@ export class OPFSManager {
       let gotFinal = false;
 
       // Safety timeout — if fflate never calls ondata with final=true
-      const timeout = setTimeout(() => {
-        if (!gotFinal) {
-          const msg = `[OPFSManager] TIMEOUT: ${filename} never received final chunk (${chunkCount} chunks, ${totalBytes} bytes so far)`;
-          console.error(msg);
-          writable.close().catch(() => {});
-          reject(new Error(msg));
-        }
-      }, 30000);
+
+      let timeout;
+      const resetTimeout = () => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          if (!gotFinal) {
+            const msg = `[OPFSManager] TIMEOUT: ${filename} stalled (${chunkCount} chunks, ${totalBytes} bytes)`;
+            console.error(msg);
+            writable.close().catch(() => {});
+            reject(new Error(msg));
+          }
+        }, 10000); // 10 seconds of pure silence = stall
+      };
+
+      resetTimeout(); // Start the clock
 
       fflateFile.ondata = (err, data, final) => {
+        resetTimeout(); // Reset the clock because we got data!
         if (err) {
           clearTimeout(timeout);
           console.error(`[OPFSManager] fflate ondata error for ${filename}:`, err);
