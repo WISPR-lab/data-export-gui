@@ -24,7 +24,7 @@ class CSVParser(BaseParser):
             return [] # TODO error handling
 
     @classmethod
-    def str_to_df(self, s: str):
+    def str_to_df(cls, s: str):
         bad_lines = []
         def handle_bad_line(line):
             bad_lines.append(f"Malformed or ragged line skipped: {','.join(line[:5])}...")
