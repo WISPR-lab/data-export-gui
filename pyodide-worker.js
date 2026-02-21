@@ -116,9 +116,10 @@ async function initPyodide() {
   pyodide.FS.mkdir(`${pyCorePath}/semantic_map`);
   pyodide.FS.mkdir(`${pyCorePath}/utils`);
   
+  const fetchBaseUrl = pyCorePath.startsWith('/') ? `.${pyCorePath}` : `./${pyCorePath}`;
   // Mount core files
   for (const file of pythonManifest.core_files) {
-    const response = await fetch(`${pyCorePath}/${file}`);
+    const response = await fetch(`${fetchBaseUrl}/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch ${file}: ${response.statusText}`);
       continue;
@@ -130,7 +131,7 @@ async function initPyodide() {
   
   // Mount extractor files
   for (const file of pythonManifest.extractors) {
-    const response = await fetch(`${pyCorePath}/extractors/${file}`);
+    const response = await fetch(`${fetchBaseUrl}/extractors/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch extractors/${file}: ${response.statusText}`);
       continue;
@@ -141,8 +142,7 @@ async function initPyodide() {
   }
   
   // schema.sql lives at the repo root, served from /schema.sql
-  {
-    const response = await fetch(config.paths.schema);
+    const response = await fetch(config.paths.schema.startsWith('/') ? `.${config.paths.schema}` : `./${config.paths.schema}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch schema.sql: ${response.statusText}`);
     } else {
@@ -150,11 +150,10 @@ async function initPyodide() {
       pyodide.FS.writeFile(config.paths.schema, content);
       console.log(`[Pyodide] Mounted: ${config.paths.schema}`);
     }
-  }
 
   // Mount semantic map files
   for (const file of pythonManifest.semantic_map) {
-    const response = await fetch(`${pyCorePath}/semantic_map/${file}`);
+    const response = await fetch(`${fetchBaseUrl}/semantic_map/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch semantic_map/${file}: ${response.statusText}`);
       continue;
@@ -166,7 +165,7 @@ async function initPyodide() {
   
   // Mount utils files
   for (const file of pythonManifest.utils) {
-    const response = await fetch(`${pyCorePath}/utils/${file}`);
+    const response = await fetch(`${fetchBaseUrl}/utils/${file}`);
     if (!response.ok) {
       console.error(`[Pyodide] Failed to fetch utils/${file}: ${response.statusText}`);
       continue;
@@ -208,10 +207,11 @@ async function initPyodide() {
 
   // Mount manifests so Python can os.listdir(MANIFESTS_DIR)
   const manifestsPath = config.paths.manifests;
+  const manifestsBaseUrl = manifestsPath.startsWith('/') ? `.${manifestsPath}` : `./${manifestsPath}`;
   pyodide.FS.mkdir(manifestsPath);
   const knownSchemas = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml'];
   for (const s of knownSchemas) {
-      const res = await fetch(`${manifestsPath}/${s}`);
+      const res = await fetch(`${manifestsBaseUrl}/${s}`);
       if (res.ok) {
           const txt = await res.text();
           pyodide.FS.writeFile(`${manifestsPath}/${s}`, txt);
