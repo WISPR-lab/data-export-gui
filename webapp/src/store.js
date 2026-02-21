@@ -251,6 +251,11 @@ export default new Vuex.Store({
   actions: {
     async updateSketch(context, sketchId) {
       // Virtualize the Project/Sketch (hardcoded - not saved to DB)
+      if (!window.crossOriginIsolated) {
+        console.warn('[Store.updateSketch] security headers missing. skippng db init.');
+        return;
+      }
+
       const sketchName = localStorage.getItem('sketchName') || 'Local Takeout Workspace'
       const virtualSketch = {
         id: 1,
