@@ -17,6 +17,9 @@ webapp*/public/_dynamic_py_manifest.json
 webapp-v3.zip
 
 .github/*
+!.github/workflows/
+!.github/workflows/*.yml
+
 
 data/opensearch/
 data/*.db
