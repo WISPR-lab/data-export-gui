@@ -19,7 +19,7 @@ limitations under the License.
 module.exports = {
   lintOnSave: false,
   // For gh-pages deployment: use repo name as path
-  publicPath: process.env.NODE_ENV === 'production' ? '/data-exports-gui/' : '/',
+  publicPath: process.env.NODE_ENV === 'production' ? '/data-export-gui/' : '/',
   configureWebpack: (config) => {
     config.watchOptions = {
       aggregateTimeout: 500,
