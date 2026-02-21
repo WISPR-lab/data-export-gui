@@ -26,6 +26,8 @@ import Canvas from './views/Canvas.vue'
 import Sketch from './views/Sketch.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
+import DebugOPFS from './views/DebugOPFS.vue'
+import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 
 Vue.use(VueRouter)
 
@@ -39,6 +41,16 @@ const routes = [
     name: 'HowToRequest',
     path: '/how-to-request',
     component: HowToRequest,
+  },
+  {
+    name: 'Debug',
+    path: '/debug/:section',
+    component: DebugOPFS,
+  },
+  {
+    // redirect /debug to /debug/opfs
+    path: '/debug',
+    redirect: '/debug/opfs',
   },
   {
     // App layout (wrapper for all sketch views)
@@ -102,29 +114,28 @@ const routes = [
           },
         ]
       },
-      {
-        path: 'graph',
-        name: 'Graph',
-        component: Canvas,
-        props: { sketchId: 1 },
-      },
-      {
-        path: 'story/:storyId',
-        name: 'Story',
-        component: Canvas,
-        props: { sketchId: 1, storyId: true },
-      },
-      {
-        path: 'analyzers',
-        name: 'Analyze',
-        component: Canvas,
-        props: { sketchId: 1 },
-      },
     ],
   },
 ]
 
-export default new VueRouter({
-  mode: 'history',
+// Memoize warmup promise so it only happens once
+let warmupPromise = null;
+
+const router = new VueRouter({
+  mode: 'hash',
   routes,
-})
+});
+
+router.afterEach((to, from) => {
+  // Warmup Pyodide when user navigates to /explore
+  if (to.path.includes('explore')) {
+    if (!warmupPromise) {
+      warmupPromise = callPyodideWorker('warmup', {}).catch(err => {
+        console.warn('[Router] Pyodide warmup error:', err);
+        warmupPromise = null; // Reset on error so retry on next nav
+      });
+    }
+  }
+});
+
+export default router;

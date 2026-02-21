@@ -324,6 +324,11 @@ limitations under the License.
 
                 </v-menu>
 
+                <v-btn x-small outlined color="error" @click="deleteSelectedEvents">
+                  <v-icon left>mdi-trash-can-outline</v-icon>
+                  Delete Selected
+                </v-btn>
+
                 <!-- DEBUG: Hide selected events (temporary UI-only) -->
                 <v-btn x-small outlined @click="DEBUG_hideSelectedEvents()" color="orange">
                   <v-icon left>mdi-eye-off</v-icon>
@@ -445,14 +450,14 @@ limitations under the License.
                   v-if="
                     displayOptions.showTags &&
                     // index === 3 &&
-                    (field.text === 'category' || (index === 4 && headers[3].value === '_source.comment')) &&
+                    (field.text === 'message' || (index === 4 && headers[3].value === '_source.comment')) &&
                     (item._source.tags && item._source.tags.length > 0)
                   "
                 >
                   <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
                 <!-- Emojis -->
-                <span v-if="displayOptions.showEmojis && (field.text === 'category' || (index === 4 && headers[3].value === '_source.comment')) && item._source.__ts_emojis">
+                <span v-if="displayOptions.showEmojis && (field.text === 'message' || (index === 4 && headers[3].value === '_source.comment')) && item._source.__ts_emojis">
                 <!-- <span v-if="displayOptions.showEmojis && index === 3 && item._source.__ts_emojis"> -->
                   <span
                     class="mr-2"
@@ -463,9 +468,7 @@ limitations under the License.
                   >
                   </span>
                 </span>
-                <!-- <span>{{ item._source[field.text] }} hihihih {{ field.text }} </span> -->
-                <span>{{ field.text === 'category' ? $options.filters.categoryName(item._source[field.text]) : item._source[field.text] }}</span>
-                <!-- <span>{{ field.text === 'category' ? $options.filters.categoryName(item._source[field.text]) : item._source[field.text] }}</span> -->
+                <span>{{ item._source[field.text] }}</span>
               </span>
             </div>
           </template>
@@ -509,8 +512,8 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../../database.js'
-import EventBus from '../../event-bus.js'
+import DB from '@/database/index.js'
+import EventBus from '@/event-bus.js'
 
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
@@ -604,7 +607,7 @@ export default {
       isSummaryLoading: false,
       currentItemsPerPage: this.itemsPerPage,
       expandedRows: [],
-      selectedFields: [{ field: 'category', type: 'text' }],
+      selectedFields: [{ field: 'message', type: 'text' }],
       searchColumns: '',
       columnDialog: false,
       saveSearchMenu: false,
@@ -682,7 +685,7 @@ export default {
       return parseInt(this.currentQueryFilter.from) + parseInt(this.currentQueryFilter.size)
     },
     timeFilterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip.type.startsWith('datetime'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && chip.type.startsWith('datetime'))
     },
     currentSearchNode() {
       return this.$store.state.currentSearchNode
@@ -759,13 +762,26 @@ export default {
       return this.$store.state.settings
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip.type === 'label' || chip.type === 'term')
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term'))
     },
   },
   methods: {
     toggleSummary() {
           this.summaryCollapsed = !this.summaryCollapsed;
           localStorage.setItem('aiSummaryCollapsed', String(this.summaryCollapsed));
+    },
+    async deleteSelectedEvents() {
+      if (!confirm(`Delete ${this.selectedEvents.length} events?`)) return
+      const ids = this.selectedEvents.map(e => e._id)
+      try {
+        await DB.deleteEvents(ids)
+        this.selectedEvents = []
+        this.search(true)
+        this.$store.dispatch('setSnackBar', { message: 'Events deleted', color: 'success', timeout: 3000 })
+      } catch (e) {
+        console.error(e)
+        this.$store.dispatch('setSnackBar', { message: 'Delete failed', color: 'error', timeout: 3000 })
+      }
     },
     sortEvents(sortDesc) {
       // sortDesc is the value of Vuetify's sort-desc (true = descending, false = ascending)
@@ -845,7 +861,7 @@ export default {
     },
     getTimelineColor(event) {
       let timeline = this.getTimeline(event)
-      let backgroundColor = timeline.color
+      let backgroundColor = timeline.color || '#999'
       if (!backgroundColor.startsWith('#')) {
         backgroundColor = '#' + backgroundColor
       }
@@ -915,28 +931,28 @@ export default {
       const startTime = Date.now()
       
       try {
-        // Use BrowserDB.search() with our query string and filter
-        const formData = {
+        // Use DB.searchEvents() with query string and filter
+        console.log('[EventList.search] Calling DB.searchEvents with:', {
           query: this.currentQueryString,
-          filter: this.currentQueryFilter,
+          filter: this.currentQueryFilter
+        })
+        const response = await DB.searchEvents(this.currentQueryString, this.currentQueryFilter)
+        console.log('[EventList.search] Got response.objects length:', response.objects.length)
+
+        // Response has unwrapped format:
+        // - objects: array of {_id, _source} wrapped events
+        // - meta: metadata including count_per_timeline, total_count, etc.
+        this.eventList.objects = response.objects || []
+        this.eventList.meta = response.meta || {
+          count_per_timeline: {},
+          total_count: 0,
         }
         
-        console.log('[EventList.search] Calling BrowserDB.search with formData:', formData)
-        const response = await BrowserDB.search(this.sketch.id, formData)
-        // console.log('[EventList.search] Got response:', response)
-        console.log('[EventList.search] response.data.objects:', response.data.objects)
-
-        // Response should have:
-        // - data.objects: array of {_id, _source} wrapped events
-        // - data.meta: metadata including count_per_timeline, has_next_page, etc.
-        this.eventList.objects = response.data.objects || []
-        this.eventList.meta = response.data.meta || {
-          count_per_timeline: {},
-          num_events: 0,
-          num_states: 0,
-          has_next_page: false,
-          query_time_ms: Date.now() - startTime
-        }
+        // Calculate has_next_page based on pagination
+        const limit = this.currentQueryFilter.size || 40
+        const currentFrom = this.currentQueryFilter.from || 0
+        this.eventList.meta.has_next_page = (currentFrom + this.eventList.objects.length) < this.eventList.meta.total_count
+        this.eventList.meta.query_time_ms = Date.now() - startTime
 
         console.log('[EventList.search] Updated eventList.objects length:', this.eventList.objects.length)
         this.updateShowBanner()
@@ -1054,12 +1070,12 @@ export default {
       
       if (isStarred) {
         event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
-        BrowserDB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
+        DB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       } else {
         event._source.labels.push('__ts_star')
-        BrowserDB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
+        DB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       }
@@ -1087,26 +1103,26 @@ export default {
       
       // Persist changes to database
       if (eventsToStar.length > 0) {
-        BrowserDB.addLabelEvent(eventsToStar, ['__ts_star']).catch(e => {
+        DB.addLabelEvent(eventsToStar, ['__ts_star']).catch(e => {
           console.error('Error starring events:', e)
         })
       }
       if (eventsToUnstar.length > 0) {
-        BrowserDB.removeLabelEvent(eventsToUnstar, ['__ts_star']).catch(e => {
+        DB.removeLabelEvent(eventsToUnstar, ['__ts_star']).catch(e => {
           console.error('Error unstarring events:', e)
         })
       }
       this.selectedEvents = []
     },
     saveSearch: function () {
-      BrowserDB.createView(this.sketch.id, this.saveSearchFormName, this.currentQueryString, this.currentQueryFilter)
-        .then((response) => {
-          this.saveSearchFormName = ''
-          this.saveSearchMenu = false
-          let newView = response.data.objects[0]
-          this.$store.state.meta.views.push(newView)
-        })
-        .catch((e) => {})
+      // Saved searches not implemented in browser-only version
+      this.$store.dispatch('setSnackBar', {
+        message: 'Saved searches are not available in browser-only mode',
+        color: 'info',
+        timeout: 3000,
+      })
+      this.saveSearchFormName = ''
+      this.saveSearchMenu = false
     },
     updateShowBanner: function() {
       // Show banner only when processing timelines are enabled and at

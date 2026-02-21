@@ -193,16 +193,6 @@ limitations under the License.
             </v-card>
           </v-dialog>
 
-          <!-- <v-list-item
-            v-if="timeline.status === 'ready'"
-            style="cursor: pointer"
-            @click="goToAnalyzers()"
-          >
-            <v-list-item-action>
-              <v-icon>mdi-auto-fix</v-icon>
-            </v-list-item-action>
-            <v-list-item-subtitle>Run Analyzers</v-list-item-subtitle>
-          </v-list-item> -->
 
           <v-list-item v-if="timelineAvailable" style="cursor: pointer" @click="deleteConfirmation = true">
             <v-list-item-action>
@@ -245,7 +235,7 @@ limitations under the License.
         <div v-if="!timelineFailed" class="px-4">
           <v-color-picker
             @update:color="updateColor"
-            :value="timeline.color"
+            :value="'#' + timeline.color"
             :show-swatches="!showCustomColorPicker"
             :swatches="colorPickerSwatches"
             :hide-canvas="!showCustomColorPicker"
@@ -268,8 +258,6 @@ limitations under the License.
 <script>
 import Vue from 'vue'
 import _ from 'lodash'
-import dayjs from '@/plugins/dayjs'
-import BrowserDB from '../../database.js'
 
 const gradients = [
   ['#222'],
@@ -413,19 +401,15 @@ export default {
         this.$emit('toggle', this.timeline)
       }
     },
-    // Set debounce to 300ms to limit requests to the server.
-    updateColor: _.debounce(function (color) {
+    // Browser model: no server, so no need for debounce
+    updateColor(color) {
       Vue.set(this.timeline, 'color', color.hex.substring(1))
       this.$emit('save', this.timeline)
-    }, 300),
+    },
     async loadDocumentMetadata() {
-      // Fetch document_metadata records for this timeline from browser DB
-      try {
-        const response = await BrowserDB.getDocumentMetadataByTimeline(this.timeline.id)
-        this.documentMetadata = response.data.objects || []
-      } catch (error) {
-        console.error('Error loading document metadata:', error)
-      }
+      // Upload metadata is already loaded in timeline object
+      // No separate document_metadata table needed
+      this.documentMetadata = []
     },
 
     // fetchData() {

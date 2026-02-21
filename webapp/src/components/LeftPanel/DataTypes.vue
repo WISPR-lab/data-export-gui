@@ -32,22 +32,22 @@ limitations under the License.
   </div>
   <div v-else>
     <div
-      :style="allCategories && allCategories.length ? 'cursor: pointer' : ''"
+      :style="eventActions && eventActions.length ? 'cursor: pointer' : ''"
       class="pa-4"
       @click="expanded = !expanded"
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
       <!-- <span> <v-icon left>mdi-database-outline</v-icon> Data Types </span> -->
-       <span> <v-icon left>mdi-filter-multiple-outline</v-icon> Categories </span>
+       <span> <v-icon left>mdi-filter-multiple-outline</v-icon> Event Actions </span>
       <span class="float-right" style="margin-right: 10px">
-        <small v-if="allCategories"
-          ><strong>{{ allCategories.length }}</strong></small
+        <small v-if="eventActions"
+          ><strong>{{ eventActions.length }}</strong></small
         >
       </span>
     </div>
 
     <v-expand-transition>
-      <div v-show="expanded && allCategories.length">
+      <div v-show="expanded && eventActions.length">
         <ts-data-types-list></ts-data-types-list>
       </div>
     </v-expand-transition>
@@ -57,6 +57,7 @@ limitations under the License.
 
 <script>
 import TsDataTypesList from './DataTypesList.vue'
+import DB from '@/database/index.js'
 
 export default {
   props: {
@@ -68,17 +69,22 @@ export default {
   data: function () {
     return {
       expanded: false,
+      eventActions: [],
     }
   },
   computed: {
     sketch() {
       return this.$store.state.sketch
     },
-    allCategories() {
-      return this.$store.state.allCategories
-    },
   },
-  methods: {},
+  async mounted() {
+    try {
+      this.eventActions = await DB.getEventActions()
+    } catch (e) {
+      console.error('Error loading event actions:', e)
+      this.eventActions = []
+    }
+  },
 }
 </script>
 

@@ -41,13 +41,13 @@ limitations under the License.
 
       <span class="float-right" style="margin-right: 10px">
         <small
-          ><strong v-if="tags && filteredLabels">{{ tags.length + filteredLabels.length }}</strong></small
+          ><strong v-if="tags && filteredLabels">{{ (tags || []).length + (filteredLabels || []).length }}</strong></small
         >
       </span>
     </div>
 
     <v-expand-transition>
-      <div v-show="expanded && (tags.length || filteredLabels.length)">
+      <div v-show="expanded && ((tags || []).length || (filteredLabels || []).length)">
         <ts-tags-list></ts-tags-list>
       </div>
     </v-expand-transition>
@@ -82,7 +82,7 @@ export default {
     },
     filteredLabels() {
       if (!this.meta.filter_labels) return []
-      return this.meta.filter_labels.filter((label) => !label.label.startsWith('__ts_fact'))
+      return this.meta.filter_labels.filter((label) => !label.tag.startsWith('__ts_fact'))
     },
   },
 }

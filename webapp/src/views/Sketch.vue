@@ -28,7 +28,7 @@ limitations under the License.
         <v-row align="center" justify="center">
           <v-sheet class="pa-4" style="background: transparent">
             <center>
-              <v-img src="/empty-state.png" max-height="100" max-width="300"></v-img>
+              <v-img src="/images/empty-state.png" max-height="100" max-width="300"></v-img>
               <div style="font-size: 2em" class="mb-3 mt-3">It's empty around here</div>
               <ts-upload-timeline-form-button btn-size="normal" btn-type="rounded"></ts-upload-timeline-form-button>
             </center>
@@ -36,18 +36,6 @@ limitations under the License.
         </v-row>
       </v-container>
 
-      <!-- Archived state (disabled) -->
-      <!-- <v-container v-if="isArchived && !loadingSketch" fill-height fluid>
-        <v-row align="center" justify="center">
-          <v-sheet class="pa-4">
-            <center>
-              <v-img src="/empty-state.png" max-height="100" max-width="300"></v-img>
-              <div style="font-size: 2em" class="mb-3 mt-3">This sketch is archived</div>
-              <v-btn rounded depressed color="primary" @click="unArchiveSketch()"> Bring it back </v-btn>
-            </center>
-          </v-sheet>
-        </v-row>
-      </v-container> -->
 
       <!-- Rename sketch dialog -->
       <v-dialog v-model="renameSketchDialog" width="600">
@@ -253,7 +241,7 @@ limitations under the License.
         hide-overlay
         :width="navigationDrawer.width"
       >
-        <ts-investigation
+        <!-- <ts-investigation
           v-if="systemSettings.ENABLE_V3_INVESTIGATION_VIEW
             && (systemSettings.DFIQ_ENABLED
               || (systemSettings.LLM_FEATURES_AVAILABLE
@@ -261,9 +249,10 @@ limitations under the License.
           :icon-only="isMiniDrawer"
           @toggleDrawer="toggleDrawer()"
         >
-        </ts-investigation>
+        </ts-investigation> -->
         <!-- <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search> -->
         <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
+        <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
         <ts-saved-searches
           v-if="meta && meta.views"
           :icon-only="isMiniDrawer"
@@ -302,7 +291,7 @@ limitations under the License.
       <v-main class="notransition">
         <!-- Scenario context -->
         <!--<ts-scenario-navigation v-if="sketch.status && hasTimelines && !isArchived"></ts-scenario-navigation>-->
-        <ts-question-card
+        <!-- <ts-question-card
           v-if="
             sketch.status &&
             hasTimelines &&
@@ -310,7 +299,7 @@ limitations under the License.
             systemSettings.DFIQ_ENABLED &&
             !questionCardExclusionRoutes.includes(currentRouteName)
           "
-        ></ts-question-card>
+        ></ts-question-card> -->
 
         <router-view
           v-if="sketch.status && hasTimelines && !isArchived"
@@ -370,35 +359,25 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../database.js'
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
-import { computeMeta } from '../utils/computeMeta.js'
 import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.vue'
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
 import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
-import TsSigmaRules from '../components/LeftPanel/SigmaRules.vue'
-import TsIntelligence from '../components/LeftPanel/ThreatIntel.vue'
-import TsGraphs from '../components/LeftPanel/Graphs.vue'
-import TsStories from '../components/LeftPanel/Stories.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
 import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButton.vue'
-import TsShareCard from '../components/ShareCard.vue'
 import TsRenameSketch from '../components/RenameSketch.vue'
-import TsAnalyzerResults from '../components/LeftPanel/AnalyzerResults.vue'
 import TsEventList from '../components/Explore/EventList.vue'
-import TsVisualizations from '../components/LeftPanel/Visualizations.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
+import TsDevices from '../components/LeftPanel/Devices.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
-import TsQuestionCard from '../components/Scenarios/QuestionCard.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
-import TsInvestigation from '../components/LeftPanel/Investigation.vue'
 import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
-import DeleteAllDataDialog from '../components/DeleteAllDataDialog.vue'
-import DeleteAllDataButton from '../components/DeleteAllDataButton.vue'
+import DeleteAllDataDialog from '../components/Delete/DeleteAllDataDialog.vue'
+import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
 
 export default {
   props: ['sketchId'],
@@ -408,22 +387,14 @@ export default {
     TsDataTypes,
     TsTags,
     TsSearchTemplates,
-    TsSigmaRules,
     TsUploadTimelineFormButton,
-    TsShareCard,
     TsRenameSketch,
-    TsIntelligence,
-    TsGraphs,
-    TsStories,
     TsSearch,
-    TsAnalyzerResults,
     TsTimelinesTable,
+    TsDevices,
     PrivacySettingsItem,
     TsEventList,
-    TsVisualizations,
-    TsQuestionCard,
     TsSettingsDialog,
-    TsInvestigation,
     PrivacySettingsModal,
     DeleteAllDataDialog,
     DeleteAllDataButton,
@@ -459,44 +430,19 @@ export default {
       showQuestionMenu: false,
       showRightSidePanel: false,
       showSettingsDialog: false,
-      questionCardExclusionRoutes: [
-        'VisualizationNew',
-        'SigmaNewRule',
-        'Analyze',
-        'Story'
-      ],
     }
   },
   mounted() {
-    const sketchID = this.sketchId
     this.loadingSketch = true
     console.log('[Sketch] mounted(), loadingSketch=true')
 
-    BrowserDB.ensureSketchInitialized(sketchID)
+    this.$store.dispatch('updateSketch', this.sketchId)
       .then(() => {
-        console.log('[Sketch] ensureSketchInitialized done')
-        return this.$store.dispatch('updateSketch', sketchID)
-      })
-      .then(async () => {
-        console.log('[Sketch] updateSketch done')
-        // Compute and store metadata
-        const meta = await computeMeta(sketchID)
-        this.$store.commit('SET_SKETCH', {
-          objects: [this.$store.state.sketch],
-          meta
-        })
-        return BrowserDB.getTimelines(sketchID)
-      })
-      .then(response => {
-        const count = response.data.objects ? response.data.objects.length : 0
-        console.log('[Sketch] getTimelines done, got', count, 'timelines')
-        const sketch = this.$store.state.sketch
-        this.$set(sketch, 'timelines', response.data.objects || [])
         this.loadingSketch = false
-        console.log('[Sketch] loadingSketch=false')
+        console.log('[Sketch] Workspace loading complete')
       })
       .catch(error => {
-        console.error('[Sketch] Error:', error)
+        console.error('[Sketch] Critical error:', error)
         this.loadingSketch = false
       })
 
@@ -535,41 +481,15 @@ export default {
     },
   },
   methods: {
-    archiveSketch: function () {
-      this.loadingSketch = true
-      BrowserDB.archiveSketch(this.sketch.id)
-        .then((response) => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.showLeftPanel = false
-            this.loadingSketch = false
-          })
-        })
-        .catch((e) => {
-          console.error(e)
-        })
-    },
-    unArchiveSketch: function () {
-      this.loadingSketch = true
-      BrowserDB.unArchiveSketch(this.sketch.id)
-        .then((response) => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.loadingSketch = false
-            this.showLeftPanel = true
-          })
-        })
-        .catch((e) => {
-          console.error(e)
-        })
-    },
-    deleteSketch: function () {
-      if (confirm('Are you sure you want to delete the sketch?')) {
-        BrowserDB.deleteSketch(this.sketch.id)
-          .then((response) => {
-            this.$router.push({ name: 'Home' })
-          })
-          .catch((e) => {
-            console.error(e)
-          })
+    deleteSketch: async function () {
+      if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
+        try {
+          await wipeAllData()
+          this.$router.push({ name: 'Home' })
+        } catch (e) {
+          console.error('[Sketch] Failed to delete all data:', e)
+          alert('Failed to delete data. See console for details.')
+        }
       }
     },
     generateContextQuery(event) {

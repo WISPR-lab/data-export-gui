@@ -4,10 +4,17 @@
 takeout-tool.code-workspace
 */reference_docs/
 
-webapp/dist/
-webapp/public/pyparser/
-webapp/public/schemas/
-webapp/public/pyodideWorker.js
+webapp*/dist/
+webapp*/public/python_core*
+webapp*/public/manifests*
+webapp*/public/sqlite-wasm*
+webapp*/public/sqlite-worker.js
+webapp*/public/pyodide-worker.js
+webapp*/public/config.yaml
+webapp*/public/schema.sql
+webapp*/public/_dynamic_py_manifest.json
+
+webapp-v3.zip
 
 .github/*
 

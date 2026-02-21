@@ -19,12 +19,12 @@ limitations under the License.
 <template>
   <div>
     <v-data-iterator
-      :items="allCategories"
+      :items="eventActions"
       :items-per-page.sync="itemsPerPage"
       :search="search"
-      :hide-default-footer="allCategories.length <= itemsPerPage"
+      :hide-default-footer="eventActions.length <= itemsPerPage"
     >
-      <template v-slot:header v-if="allCategories.length > itemsPerPage">
+      <template v-slot:header v-if="eventActions.length > itemsPerPage">
         <v-toolbar flat>
           <v-text-field
             v-model="search"
@@ -46,15 +46,15 @@ limitations under the License.
           style="cursor: pointer; font-size: 0.9em"
         > -->
         <div
-          v-for="cat in props.items"
-          :key="cat.category"
-          @click="setQueryAndFilter(cat.category)"
+          v-for="action in props.items"
+          :key="action.action"
+          @click="setQueryAndFilter(action.action)"
           style="cursor: pointer; font-size: 0.9em"
         >
           <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
             <span
-              >{{ $options.filters.categoryName(cat.category) }} (<small
-                ><strong>{{ cat.count | compactNumber }}</strong></small
+              >{{ action.action }} (<small
+                ><strong>{{ action.count | compactNumber }}</strong></small
               >)</span
             >
           </v-row>
@@ -76,19 +76,15 @@ export default {
     }
   },
   computed: {
-    allCategories() {
-      // Sort the data types alphabetically
-      // return [...this.$store.state.allCategories].sort((a, b) => a.data_type.localeCompare(b.data_type))
-      return [...this.$store.state.allCategories].sort((a, b) => a.category.localeCompare(b.category))
+    eventActions() {
+      return [...(this.$parent.eventActions || [])].sort((a, b) => a.action.localeCompare(b.action))
     },
   },
   methods: {
-    // setQueryAndFilter(dataType) {
-    setQueryAndFilter(category) {
+    setQueryAndFilter(action) {
       let eventData = {}
       eventData.doSearch = true
-      eventData.queryString = 'category:' + '"' + category + '"'
-      // eventData.queryString = 'data_type:' + '"' + dataType + '"'
+      eventData.queryString = 'event_action:' + '"' + action + '"'
       EventBus.$emit('setQueryAndFilter', eventData)
     },
   },

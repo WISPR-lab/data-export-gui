@@ -44,8 +44,7 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../../database.js'
-import EventBus from '../../event-bus.js'
+import EventBus from '@/event-bus.js'
 
 export default {
   props: ['event'],
@@ -68,17 +67,19 @@ export default {
       EventBus.$emit('showContextWindow', this.event)
     },
     copyEventAsJSON() {
-      BrowserDB.getEvent(this.sketch.id, this.event._index, this.event._id, !!this.settings.showProcessingTimelineEvents)
-        .then((response) => {
-          let fullEvent = response.data.objects
-          let eventJSON = JSON.stringify(fullEvent, null, 3)
-          navigator.clipboard.writeText(eventJSON)
-          this.infoSnackBar('Event JSON copied to clipboard')
-        })
-        .catch((e) => {
-          this.errorSnackBar('Failed to load JSON into the clipboard')
-          console.error(e)
-        })
+      // Event data is already available via this.event._source
+      try {
+        const fullEvent = {
+          _id: this.event._id,
+          _source: this.event._source
+        }
+        const eventJSON = JSON.stringify(fullEvent, null, 3)
+        navigator.clipboard.writeText(eventJSON)
+        this.infoSnackBar('Event JSON copied to clipboard')
+      } catch (e) {
+        this.errorSnackBar('Failed to copy JSON to clipboard')
+        console.error(e)
+      }
     },
     copyEventUrlToClipboard() {
       try {

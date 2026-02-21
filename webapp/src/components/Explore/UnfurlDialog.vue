@@ -60,7 +60,7 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../../database.js'
+import DB from '@/database/index.js'
 import cytoscape from 'cytoscape'
 import dagre from 'cytoscape-dagre'
 
@@ -141,9 +141,9 @@ export default {
   computed: {
     getUnfurlLogo() {
       if (this.$vuetify.theme.dark) {
-        return '/unfurl-logo-dark.png'
+        return '/images/unfurl-logo-dark.png'
       } else {
-        return '/unfurl-logo.png'
+        return '/images/unfurl-logo.png'
       }
     },
   },
@@ -155,15 +155,9 @@ export default {
       this.$emit('cancel')
     },
     getUnfurlData: function (url) {
-      BrowserDB.getUnfurlGraph(url)
-        .then((response) => {
-          this.unfurlData = response.data
-          this.unfurlReady = true
-          this.buildUnfurlGraph(this.unfurlData)
-        })
-        .catch((e) => {
-          console.error('getting unfurl error: ', e)
-        })
+      // Unfurl feature not available in browser-only mode (requires server-side API)
+      console.log('[UnfurlDialog] Unfurl not available in browser mode')
+      this.$emit('cancel')
     },
     resizeCanvasWithDelay: function () {
       this.resizeTimeout = setTimeout(() => {

@@ -18,7 +18,7 @@ limitations under the License.
   
 <template>
   <div>
-    <h3>Rename sketch</h3>
+    <h3>Rename project</h3>
     <br />
     <v-form @submit.prevent="renameSketch()">
       <v-text-field
@@ -43,9 +43,8 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../database.js'
-
 export default {
+  props: ['sketchId'],
   data() {
     return {
       newSketchName: '',
@@ -62,13 +61,16 @@ export default {
   },
   methods: {
     renameSketch() {
-      BrowserDB.saveSketchSummary(this.sketch.id, this.newSketchName, '')
-        .then((response) => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {})
-        })
-        .catch((e) => {
-          console.error(e)
-        })
+      // Update virtual sketch name in localStorage
+      localStorage.setItem('sketchName', this.newSketchName)
+      
+      // Update Vuex state
+      const updatedSketch = { ...this.sketch, name: this.newSketchName }
+      this.$store.commit('SET_SKETCH', { 
+        objects: [updatedSketch], 
+        meta: this.$store.state.meta 
+      })
+      
       this.$emit('close')
     },
     closeDialog: function () {

@@ -19,12 +19,12 @@ limitations under the License.
 
 import Vue from 'vue'
 import Vuex from 'vuex'
-import BrowserDB from './database'
+import  DB from '@/database/index.js'
+
 
 Vue.use(Vuex)
 
-const defaultState = (currentUser) => {
-
+const defaultState = () => {
   const getLocalTimezoneAbbr = () => {
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZoneName: 'short'
@@ -33,53 +33,57 @@ const defaultState = (currentUser) => {
     return tzPart ? tzPart.value : 'UTC'
   }
 
+  // Load user settings from localStorage
+  let userSettings = {
+    showProcessingTimelineEvents: false,
+    showLeftPanel: true,
+    aiPoweredFeaturesMain: false,
+    eventSummarization: false,
+    generateQuery: false,
+  }
+  
+  try {
+    const stored = localStorage.getItem('userSettings')
+    if (stored) {
+      userSettings = { ...userSettings, ...JSON.parse(stored) }
+    }
+  } catch (e) {
+    console.error('[Store] Failed to load settings from localStorage:', e)
+  }
+
   return {
+    // Core sketch data (virtual, not persisted to DB)
     sketch: {},
+    
+    // Field mappings and metadata (computed once on load)
     meta: {
       attributes: {},
       filter_labels: [],
-      mappings: {},
+      mappings: [],
     },
-    localTimezoneAbbr: getLocalTimezoneAbbr(),
-    searchHistory: {},
-    timeFilters: {},
-    scenarios: [],
-    hiddenScenarios: [],
-    scenarioTemplates: [],
-    graphPlugins: [],
-    savedGraphs: [],
+    
+    // Event actions (categories from event_action field)
+    eventActions: [],
+    
+    // Tags state (populated from events)
     tags: [],
-    allCategories: [],
-    // allCategories: [{data_type: "login_event", count: 42 }, { data_type: "message_sent", count: 15 }],
-    count: 0,
-    currentSearchNode: null,
-    currentUser: currentUser,
-    settings: {
-      showProcessingTimelineEvents: false,
-    },
-    systemSettings: {
-      ENABLE_V3_INVESTIGATION_VIEW: false,
-      DFIQ_ENABLED: false,
-      LLM_FEATURES_AVAILABLE: {},
-    },
-    activeContext: {
-      scenario: {},
-      facet: {},
-      question: {},
-    },
+    
+    // Browser-specific settings
+    localTimezoneAbbr: getLocalTimezoneAbbr(),
+    settings: userSettings,
+    eventActions: [],
+    
+    // UI state
+    currentSearchNode: null, // Search history tree (legacy OpenSearch feature)
+    enabledTimelines: [], // Timeline filter state
     snackbar: {
       active: false,
       color: '',
       message: '',
       timeout: -1,
     },
-    contextLinkConf: {},
-    sketchAnalyzerList: {},
-    savedVisualizations: [],
-    activeAnalyses: [],
-    analyzerResults: [],
-    enabledTimelines: [],
-    sketchAccessDenied: false,
+    
+    // Upload processing state
     uploadState: {
       isProcessing: false,
       currentFile: null,
@@ -107,42 +111,38 @@ export default new Vuex.Store({
     SET_SEARCH_HISTORY(state, payload) {
       Vue.set(state, 'searchHistory', payload.objects)
     },
-    SET_SCENARIOS(state, payload) {
-      Vue.set(state, 'scenarios', payload.objects[0])
-    },
-    SET_SCENARIO_TEMPLATES(state, payload) {
-      Vue.set(state, 'scenarioTemplates', payload.objects)
-    },
+    // SET_SCENARIOS(state, payload) {
+    //   Vue.set(state, 'scenarios', payload.objects[0])
+    // },
+    // SET_SCENARIO_TEMPLATES(state, payload) {
+    //   Vue.set(state, 'scenarioTemplates', payload.objects)
+    // },
     SET_TIMELINE_TAGS(state, buckets) {
       Vue.set(state, 'tags', buckets)
     },
     SET_EVENT_LABELS(state, payload) {
       Vue.set(state.meta, 'filter_labels', payload)
     },
-    SET_DATA_TYPES(state, payload) {
-      let buckets = payload.objects[0]['field_bucket']['buckets']
-      Vue.set(state, 'allCategories', buckets)
-    },
-    SET_CATEGORIES(state, categories) {
-      Vue.set(state, 'allCategories', categories)
+    SET_EVENT_ACTIONS(state, eventActions) {
+      Vue.set(state, 'eventActions', eventActions)
     },
     SET_COUNT(state, payload) {
       Vue.set(state, 'count', payload)
     },
-    SET_SEARCH_NODE(state, payload) {
-      Vue.set(state, 'currentSearchNode', payload)
-    },
-    SET_SIGMA_LIST(state, payload) {
-      Vue.set(state, 'sigmaRuleList', payload['objects'])
-      Vue.set(state, 'sigmaRuleList_count', payload['meta']['rules_count'])
-    },
-    SET_VISUALIZATION_LIST(state, payload) {
-      Vue.set(state, 'savedVisualizations', payload)
-    },
-    SET_ACTIVE_USER(state, payload) {
-      // Browser version: no user system, default to 'local-user'
-      Vue.set(state, 'currentUser', 'local-user')
-    },
+    // SET_SEARCH_NODE(state, payload) {
+    //   Vue.set(state, 'currentSearchNode', payload)
+    // },
+    // SET_SIGMA_LIST(state, payload) {
+    //   Vue.set(state, 'sigmaRuleList', payload['objects'])
+    //   Vue.set(state, 'sigmaRuleList_count', payload['meta']['rules_count'])
+    // },
+    // SET_VISUALIZATION_LIST(state, payload) {
+    //   Vue.set(state, 'savedVisualizations', payload)
+    // },
+    // SET_ACTIVE_USER(state, payload) {
+    //   // Browser version: no user system, default to 'local-user'
+    //   Vue.set(state, 'currentUser', 'local-user')
+    // },
     SET_ACTIVE_CONTEXT(state, payload) {
       localStorage.setItem(
         'sketchContext' + state.sketch.id.toString(),
@@ -162,12 +162,6 @@ export default new Vuex.Store({
       }
       Vue.set(state, 'activeContext', payload)
     },
-    SET_GRAPH_PLUGINS(state, payload) {
-      Vue.set(state, 'graphPlugins', payload)
-    },
-    SET_SAVED_GRAPHS(state, payload) {
-      Vue.set(state, 'savedGraphs', payload.objects[0] || [])
-    },
     SET_SNACKBAR(state, snackbar) {
       Vue.set(state, 'snackbar', snackbar)
     },
@@ -175,30 +169,8 @@ export default new Vuex.Store({
       // Browser version: reset to default with 'local-user'
       Object.assign(state, defaultState('local-user'))
     },
-    SET_CONTEXT_LINKS(state, payload) {
-      Vue.set(state, 'contextLinkConf', payload)
-    },
-    SET_ANALYZER_LIST(state, payload) {
-      Vue.set(state, 'sketchAnalyzerList', payload)
-    },
-    SET_SAVED_VISUALIZATIONS(state, payload) {
-      Vue.set(state, 'savedVisualizations', payload)
-    },
-    SET_ACTIVE_ANALYSES(state, payload) {
-      Vue.set(state, 'activeAnalyses', payload)
-    },
-    ADD_ACTIVE_ANALYSES(state, payload) {
-      const freshActiveAnalyses = [...state.activeAnalyses, ...payload]
-      Vue.set(state, 'activeAnalyses', freshActiveAnalyses)
-    },
-    SET_ANALYZER_RESULTS(state, payload) {
-      Vue.set(state, 'analyzerResults', payload)
-    },
     SET_ENABLED_TIMELINES(state, payload) {
       Vue.set(state, 'enabledTimelines', payload)
-    },
-    SET_TIME_FILTERS(state, payload) {
-      Vue.set(state, 'timeFilters', payload)
     },
     ADD_ENABLED_TIMELINES(state, payload) {
       const freshEnabledTimelines = [...state.enabledTimelines, ...payload]
@@ -223,17 +195,8 @@ export default new Vuex.Store({
         Vue.set(state, 'enabledTimelines', freshEnabledTimelines)
       }
     },
-    SET_SYSTEM_SETTINGS(state, payload) {
-      Vue.set(state, 'systemSettings', payload || {})
-    },
-    SET_USER_SETTINGS(state, payload) {
-      Vue.set(state, 'settings', payload.objects[0] || {})
-    },
-    SET_SKETCH_ACCESS_DENIED(state, payload) {
-      Vue.set(state, 'sketchAccessDenied', payload)
-    },
 
-       // Upload processing
+    // Upload processing
     SET_UPLOAD_STATE(state, payload) {
       Vue.set(state, 'uploadState', { ...state.uploadState, ...payload })
     },
@@ -272,6 +235,7 @@ export default new Vuex.Store({
     FAIL_UPLOAD(state, payload) {
       // Accept summary object with errorType, errors, warnings
       const errorObj = typeof payload === 'string' ? { errors: [payload] } : payload;
+      console.error('[Store] Upload failed:', errorObj)
       Vue.set(state, 'uploadState', {
         ...state.uploadState,
         isProcessing: false,
@@ -285,28 +249,28 @@ export default new Vuex.Store({
     },
   },
   actions: {
-    updateSketch(context, sketchId) {
-      context.commit('SET_SKETCH_ACCESS_DENIED', false)
-      return BrowserDB.getSketch(sketchId)
-        .then((response) => {
-          context.commit('SET_SKETCH', response.data)
-          context.commit('SET_ACTIVE_USER', response.data)
-          context.dispatch('updateTimelineTags', { sketchId: sketchId })
-          context.dispatch('updateDataTypes', sketchId)
-          context.dispatch('updateCategories', sketchId)
-        })
-        .catch((e) => {
-          console.error(e)
-          context.commit('SET_SKETCH_ACCESS_DENIED', true)
-        })
-    },
-    updateCount(context, sketchId) {
-      // Count events for all timelines in the sketch
-      return BrowserDB.countSketchEvents(sketchId)
-        .then((response) => {
-          context.commit('SET_COUNT', response.data.meta.count)
-        })
-        .catch((e) => { console.error(e) })
+    async updateSketch(context, sketchId) {
+      // Virtualize the Project/Sketch (hardcoded - not saved to DB)
+      const sketchName = localStorage.getItem('sketchName') || 'Local Takeout Workspace'
+      const virtualSketch = {
+        id: 1,
+        name: sketchName,
+        description: 'Browser-only processing',
+        status: [{ status: 'ready' }],
+        timelines: []
+      }
+      
+      try {
+        console.log('[Store.updateSketch] Fetching uploads from database...');
+        const uploads = await DB.getUploads()
+        console.log('[Store.updateSketch] Received uploads:', uploads.objects);
+        const sketch = { ...virtualSketch, timelines: uploads.objects || [] }
+        const meta = await DB.getEventMeta()
+        console.log('[Store.updateSketch] Committing SET_SKETCH with timelines:', sketch.timelines.map(t => ({ id: t.id, name: t.name, color: t.color })));
+        context.commit('SET_SKETCH', { objects: [sketch], meta })
+      } catch (e) {
+        console.error('[Store] updateSketch error:', e)
+      }
     },
     resetState(context) {
       context.commit('RESET_STATE')
@@ -314,92 +278,20 @@ export default new Vuex.Store({
     updateSearchNode(context, nodeId) {
       context.commit('SET_SEARCH_NODE', nodeId)
     },
-    updateSearchHistory(context, sketchId) {
-      // Browser version: stub (no server API available)
-      return Promise.resolve()
-    },
-    updateTimeFilters(context, sketchId) {
-      // Browser version: stub (no server API available)
-      return Promise.resolve()
-    },
-    updateScenarios(context, sketchId) {
-      // Browser version: stub (DFIQ scenarios not implemented)
-      return Promise.resolve()
-    },
-    updateScenarioTemplates(context, sketchId) {
-      // Browser version: stub (DFIQ scenarios not implemented)
-      return Promise.resolve()
-    },
     updateEventLabels(context, { label: inputLabel, num }) {
       if (!inputLabel || !num) {
         return
       }
       let allLabels = context.state.meta.filter_labels
-      let label = allLabels.find(label => label.label === inputLabel);
+      let label = allLabels.find(label => label.tag === inputLabel);
       if (label !== undefined) {
         label.count += num
       } else {
-        allLabels.push({ label: inputLabel, count: num })
+        allLabels.push({ tag: inputLabel, count: num })
       }
+      // Remove tags with zero or negative count
+      allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)
-    },
-    updateTimelineTags(context, payload) {
-      // Browser version: tags aggregation not implemented yet
-      // TODO: Compute from BrowserDB.search() results
-      return Promise.resolve()
-    },
-    updateDataTypes(context, sketchId) {
-      // Browser version: data type aggregation not implemented yet
-      // TODO: Compute from BrowserDB.search() results
-      return Promise.resolve()
-    },
-    updateCategories(context, sketchId) {
-      return BrowserDB.getEvents(sketchId)
-        .then((events) => {
-          if (!events || events.length === 0) {
-            context.commit('SET_CATEGORIES', [])
-            return
-          }
-          const categoryMap = {}
-          events.forEach((event) => {
-            const category = event.category || 'uncategorized'
-            if (categoryMap[category]) {
-              categoryMap[category].count += 1
-            } else {
-              categoryMap[category] = { category, count: 1 }
-            }
-          })
-          const categories = Object.values(categoryMap).sort((a, b) => b.count - a.count)
-          context.commit('SET_CATEGORIES', categories)
-        })
-        .catch((e) => {
-          console.error('Error computing categories:', e)
-          context.commit('SET_CATEGORIES', [])
-        })
-    },
-    updateSigmaList(context) {
-      console.warn('store.js::updateSigmaList: this is just a stub')
-      return Promise.resolve()
-      // ApiClient.getSigmaRuleList()
-      //   .then((response) => {
-      //     context.commit('SET_SIGMA_LIST', response.data)
-      //   })
-      //   .catch((e) => { console.error(e) })
-    },
-    updateSavedVisualizationList(context, sketchId) {
-      console.warn('store.js::updateSavedVisualizationList: this is just a stub')
-      return Promise.resolve()
-      // ApiClient.getAggregations(sketchId)
-      //   .then((response) => {
-      //     context.commit('SET_VISUALIZATION_LIST', response.data.objects[0] || [])
-      //   })
-      //   .catch((e) => { console.error(e) })
-    },
-    setActiveContext(context, activeScenarioContext) {
-      context.commit('SET_ACTIVE_CONTEXT', activeScenarioContext)
-    },
-    clearActiveContext(context) {
-      context.commit('CLEAR_ACTIVE_CONTEXT')
     },
     setSnackBar(context, snackbar) {
       context.commit('SET_SNACKBAR', {
@@ -408,67 +300,6 @@ export default new Vuex.Store({
         message: snackbar.message,
         timeout: snackbar.timeout,
       })
-    },
-    updateContextLinks(context) {
-      console.warn('store.js::updateContextLinks: this is just a stub')
-      return Promise.resolve()
-      // ApiClient.getContextLinkConfig()
-      //   .then((response) => {
-      //     context.commit('SET_CONTEXT_LINKS', response.data)
-      //   })
-      //   .catch((e) => { console.error(e) })
-    },
-    updateGraphPlugins(context) {
-      console.warn('store.js::updateGraphPlugins: this is just a stub')
-      return Promise.resolve()
-      // ApiClient.getGraphPluginList()
-      //   .then((response) => {
-      //     context.commit('SET_GRAPH_PLUGINS', response.data)
-      //   })
-      //   .catch((e) => { console.error(e) })
-    },
-    updateSavedGraphs(context, sketchId) {
-      console.warn('store.js::updateSavedGraphs: this is just a stub')
-      return Promise.resolve()
-      // if (!sketchId) {
-      //   sketchId = context.state.sketch.id
-      // }
-      // ApiClient.getSavedGraphList(sketchId)
-      //   .then((response) => {
-      //     context.commit('SET_SAVED_GRAPHS', response.data)
-      //   })
-      //   .catch((e) => {
-      //     console.error(e)
-      //   })
-    },
-    updateAnalyzerList(context, sketchId) {
-      console.warn('store.js::updateAnalyzerList: this is just a stub')
-      return Promise.resolve()
-      // if (!sketchId) {
-      //   sketchId = context.state.sketch.id
-      // }
-      // ApiClient.getAnalyzers(sketchId)
-      //   .then((response) => {
-      //     let analyzerList = {}
-      //     if (response.data !== undefined) {
-      //       response.data.forEach((analyzer) => {
-      //         analyzerList[analyzer.name] = analyzer
-      //       })
-      //     }
-      //     context.commit('SET_ANALYZER_LIST', analyzerList)
-      //   })
-      //   .catch((e) => {
-      //     console.error(e)
-      //   })
-    },
-    updateActiveAnalyses(context, activeAnalyses) {
-      context.commit('SET_ACTIVE_ANALYSES', activeAnalyses)
-    },
-    addActiveAnalyses(context, activeAnalyses) {
-      context.commit('ADD_ACTIVE_ANALYSES', activeAnalyses)
-    },
-    updateAnalyzerResults(context, analyzerResults) {
-      context.commit('SET_ANALYZER_RESULTS', analyzerResults)
     },
     enableTimeline(context, timeline) {
       context.commit('ADD_ENABLED_TIMELINES', [timeline])
@@ -481,28 +312,6 @@ export default new Vuex.Store({
     },
     toggleEnabledTimeline(context, timelineId) {
       context.commit('TOGGLE_ENABLED_TIMELINE', timelineId)
-    },
-    updateSystemSettings(context) {
-      console.warn('store.js::updateSystemSettings: this is just a stub')
-      return Promise.resolve()
-      // return ApiClient.getSystemSettings()
-      //   .then((response) => {
-      //     context.commit('SET_SYSTEM_SETTINGS', response.data)
-      //   })
-      //   .catch((e) => {
-      //     console.error(e)
-      //   })
-    },
-    updateUserSettings(context) {
-      console.warn('store.js::updateUserSettings: this is just a stub')
-      return Promise.resolve()
-      // return ApiClient.getUserSettings()
-      //   .then((response) => {
-      //     context.commit('SET_USER_SETTINGS', response.data)
-      //   })
-      //   .catch((e) => {
-      //     console.error(e)
-      //   })
     },
   },
 })

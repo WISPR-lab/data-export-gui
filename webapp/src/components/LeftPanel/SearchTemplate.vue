@@ -60,7 +60,6 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../../database.js'
 import EventBus from '../../event-bus.js'
 
 export default {
@@ -94,7 +93,8 @@ export default {
     },
     parseQueryAndSearch() {
       let queryString
-      BrowserDB.parseSearchTemplate(this.searchtemplate.id, this.params)
+      // Search templates not available in browser-only mode
+      console.log('[SearchTemplate] Search templates not implemented')
         .then((response) => {
           queryString = response.data.objects[0].query_string
           this.search(queryString)

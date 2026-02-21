@@ -47,7 +47,7 @@ limitations under the License.
 <script>
 import EventBus from '../../event-bus.js'
 import TsTimelineChip from './TimelineChip.vue'
-import BrowserDB from '../../database.js'
+import DB from '@/database/index.js'
 
 import _ from 'lodash'
 
@@ -100,42 +100,38 @@ export default {
       }
       return 0
     },
-    remove(timeline) {
+    async remove(timeline) {
       this.isLoading = true
-      BrowserDB.deleteSketchTimeline(this.sketch.id, timeline.id)
-        .then(() => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.syncSelectedTimelines()
-            this.isLoading = false
-          })
-        })
-        .catch((e) => {
-          console.error(e)
-          this.isLoading = false
-        })
+      try {
+        await DB.deleteUpload(timeline.id)
+        await this.$store.dispatch('updateSketch', this.sketch.id)
+        this.syncSelectedTimelines()
+      } catch (e) {
+        console.error('[TimelinePicker] Failed to delete upload:', e)
+      } finally {
+        this.isLoading = false
+      }
     },
-    save(timeline, newTimelineName = false) {
+    async save(timeline, newTimelineName = false) {
       // Only show the progress bar if renaming the timeline
       if (newTimelineName) {
         this.isLoading = true
       }
-      BrowserDB.saveSketchTimeline(
-        this.sketch.id,
-        timeline.id,
-        newTimelineName || timeline.name,
-        timeline.description,
-        timeline.color
-      )
-        .then(() => {
-          this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-            this.syncSelectedTimelines()
-            this.isLoading = false
-          })
+      
+      try {
+        await DB.updateUpload(timeline.id, {
+          given_name: newTimelineName || timeline.name,
+          color: timeline.color
         })
-        .catch((e) => {
-          console.error(e)
+        await this.$store.dispatch('updateSketch', this.sketch.id)
+        this.syncSelectedTimelines()
+      } catch (e) {
+        console.error('[TimelinePicker] Failed to update upload:', e)
+      } finally {
+        if (newTimelineName) {
           this.isLoading = false
-        })
+        }
+      }
     },
     disableAllOtherTimelines(timeline) {
       this.$store.dispatch('updateEnabledTimelines', [timeline.id])
@@ -153,15 +149,11 @@ export default {
       }
       let newArray = []
       this.currentQueryFilter.indices.forEach((index) => {
-        if (typeof index === 'string') {
-          let timeline = this.activeTimelines.find((t) => {
-            return t.searchindex.index_name === index
-          })
-          newArray.push(timeline)
-        } else if (typeof index === 'number') {
-          let timeline = this.activeTimelines.find((t) => {
-            return t.id === index
-          })
+        // In browser version, indices are timeline IDs (strings or numbers)
+        let timeline = this.activeTimelines.find((t) => {
+          return String(t.id) === String(index)
+        })
+        if (timeline) {
           newArray.push(timeline)
         }
       })

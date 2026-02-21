@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+
+<!--- NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui -->
+
+
 <template>
   <ts-search-guide-card
     :flat="inDialog"
@@ -39,6 +43,7 @@ limitations under the License.
 
 <script>
 import TsSearchGuideCard from './SearchGuideCard.vue'
+import DB from '@/database/index.js'
 
 export default {
   name: 'TsExploreWelcomeCard',
@@ -51,6 +56,20 @@ export default {
   components: {
     TsSearchGuideCard,
   },
+  data() {
+    return {
+      eventActions: [],
+    }
+  },
+  async mounted() {
+    try {
+      this.eventActions = await DB.getEventActions()
+    } catch (e) {
+      console.error('Error loading event actions:', e)
+      this.eventActions = []
+    }
+  },
+  methods: {},
   computed: {
     showTags() {
       if (!this.$store.state.tags || !this.$store.state.meta.filter_labels) return false
@@ -60,7 +79,7 @@ export default {
       return [...this.$store.state.tags, ...filteredLabels].length > 0
     },
     showDataTypes() {
-      return this.$store.state.allCategories.length > 0
+      return this.eventActions.length > 0
     },
     showSavedSearches() {
       return (this.$store.state.meta.views || []).length > 0

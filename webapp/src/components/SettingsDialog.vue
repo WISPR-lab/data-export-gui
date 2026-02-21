@@ -124,7 +124,8 @@ limitations under the License.
   </v-card>
 </template>
 <script>
-import BrowserDB from '../database.js'
+
+
 const DEFAULT_SETTINGS = {
   showLeftPanel: true,
   aiPoweredFeaturesMain: false,
@@ -163,16 +164,17 @@ export default {
   },
   methods: {
     saveSettings() {
-      BrowserDB.saveUserSettings(this.settings)
-        .then(() => {
-          return this.$store.dispatch('updateUserSettings')
-        })
-        .then(() => {
-          this.settings = { ...this.userSettings }
-        })
-        .catch((error) => {
-          console.log(error)
-        })
+      // Store settings in localStorage (browser-only, no DB)
+      localStorage.setItem('userSettings', JSON.stringify(this.settings))
+      
+      // Update Vuex state
+      this.$store.state.settings = { ...this.settings }
+      
+      this.$store.dispatch('setSnackBar', {
+        message: 'Settings saved',
+        color: 'success',
+        timeout: 2000,
+      })
     },
     updateAiFeatures() {
       if (!this.settings.aiPoweredFeaturesMain) {

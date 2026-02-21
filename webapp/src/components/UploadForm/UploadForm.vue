@@ -133,7 +133,6 @@ It replaces the generic UploadForm for the new workflow.
 </template>
 
 <script>
-import BrowserDB from '../../database.js';
 import { processUpload } from '../../upload.js';
 import UploadProgressDialog from './ProgressDialog.vue';
 import UploadErrorDisplay from './UploadErrorDisplay.vue';
@@ -239,27 +238,9 @@ export default {
       this.localErrors = [];
     },
     async suggestTimelineName() {
-      /**
-       * Auto-suggest a timeline name based on the platform and existing timelines.
-       * Prevents name collisions when uploading multiple exports from the same platform.
-       */
-      try {
-        const sketchId = this.$store.state.sketch.id;
-        if (!sketchId) {
-          return;
-        }
-
-        const suggestedName = await BrowserDB.generateTimelineName(
-          sketchId,
-          this.selectedPlatform
-        );
-
-        // Only set if user hasn't manually entered one
-        if (!this.timelineName || this.timelineName === '') {
-          this.timelineName = suggestedName;
-        }
-      } catch (error) {
-        console.warn('Error suggesting timeline name:', error);
+      // Python extractor auto-generates names on upload
+      // Just use platform name as placeholder
+      if (!this.timelineName || this.timelineName === '') {
         this.timelineName = this.selectedPlatform;
       }
     },

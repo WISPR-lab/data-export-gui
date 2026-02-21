@@ -35,35 +35,25 @@ class MockWorker {
 
   handleMockMode(data) {
     setTimeout(() => {
-      if (data.command === 'group_schema_by_path') {
-        this.onmessage({ data: { id: data.id, success: true, result: { path_schemas: { 'test.json': {} } } } })
-      } else if (data.command === 'parse') {
-        const events = [{ timestamp: Date.now(), message: 'Mock Event' }]
-        this.onmessage({ data: { id: data.id, success: true, result: { events, states: [] } } })
+      if (data.command === 'extract') {
+        this.onmessage({ data: { id: data.id, success: true, result: { status: 'success', upload_id: 'mock-upload-001' } } })
+      } else if (data.command === 'semantic_map') {
+        this.onmessage({ data: { id: data.id, success: true, result: { status: 'success', events_count: 1, devices_count: 0 } } })
+      } else if (data.command === 'get_whitelist') {
+        this.onmessage({ data: { id: data.id, success: true, result: ['security_and_login_information/account_activity.json'] } })
       }
     }, 0)
   }
 
   handleBridgeMode(data) {
-    if (data.command === 'group_schema_by_path') {
-      // Still simple regex for now to identify paths in the manifest
-      const paths = {}
-      const pathMatches = data.args.schemaYaml.matchAll(/path: ["']?([^"'\n ]+)["']?/g)
-      for (const match of pathMatches) {
-        paths[match[1]] = {}
-      }
-      setTimeout(() => {
-        this.onmessage({ data: { id: data.id, success: true, result: { path_schemas: paths } } })
-      }, 0)
-    } else if (data.command === 'parse') {
+    if (data.command === 'extract') {
       try {
         const input = JSON.stringify({
-          schema_str: data.args.schemaYaml,
-          file_content: data.args.fileContent,
-          filename: data.args.filename
+          platform: data.args.platform,
+          given_name: data.args.givenName,
         })
-        const resultRaw = execSync(`${PYTHON_PATH} ${BRIDGE_PATH}`, { 
-          input, 
+        const resultRaw = execSync(`${PYTHON_PATH} ${BRIDGE_PATH} extract`, {
+          input,
           encoding: 'utf-8',
           maxBuffer: 10 * 1024 * 1024
         })
@@ -74,6 +64,45 @@ class MockWorker {
       } catch (e) {
         setTimeout(() => {
           this.onmessage({ data: { id: data.id, success: false, error: e.message } })
+        }, 0)
+      }
+    } else if (data.command === 'semantic_map') {
+      try {
+        const input = JSON.stringify({
+          platform: data.args.platform,
+          upload_id: data.args.uploadId,
+        })
+        const resultRaw = execSync(`${PYTHON_PATH} ${BRIDGE_PATH} semantic_map`, {
+          input,
+          encoding: 'utf-8',
+          maxBuffer: 10 * 1024 * 1024
+        })
+        const result = JSON.parse(resultRaw)
+        setTimeout(() => {
+          this.onmessage({ data: { id: data.id, success: true, result } })
+        }, 0)
+      } catch (e) {
+        setTimeout(() => {
+          this.onmessage({ data: { id: data.id, success: false, error: e.message } })
+        }, 0)
+      }
+    } else if (data.command === 'get_whitelist') {
+      // Use regex to extract paths from the manifest for bridge mode
+      const platform = data.args.platform
+      const schemaPath = path.join(__dirname, '../../manifests', `${platform}.yaml`)
+      if (fs.existsSync(schemaPath)) {
+        const content = fs.readFileSync(schemaPath, 'utf8')
+        const paths = []
+        const pathMatches = content.matchAll(/path: ["']?([^"'\n ]+)["']?/g)
+        for (const match of pathMatches) {
+          paths.push(match[1])
+        }
+        setTimeout(() => {
+          this.onmessage({ data: { id: data.id, success: true, result: paths } })
+        }, 0)
+      } else {
+        setTimeout(() => {
+          this.onmessage({ data: { id: data.id, success: true, result: [] } })
         }, 0)
       }
     }

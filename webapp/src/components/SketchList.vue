@@ -70,7 +70,6 @@ limitations under the License.
 </template>
 
 <script>
-import BrowserDB from '../database.js'
 
 export default {
   data() {
@@ -114,16 +113,16 @@ export default {
     },
     getSketches: function () {
       this.loading = true
-      BrowserDB.getSketchList(this.scope, this.options.page, this.options.itemsPerPage, this.searchQuery)
-        .then((response) => {
-          this.sketches = response.data.objects
-          this.numSketches = response.data.meta.total_items
-          this.loading = false
-        })
-        .catch((e) => {
-          this.loading = false
-          console.error(e)
-        })
+      // Browser-only mode: single virtual sketch
+      const virtualSketch = this.$store.state.sketch
+      if (virtualSketch && virtualSketch.id) {
+        this.sketches = [virtualSketch]
+        this.numSketches = 1
+      } else {
+        this.sketches = []
+        this.numSketches = 0
+      }
+      this.loading = false
     },
   },
 }
