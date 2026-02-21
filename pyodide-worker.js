@@ -16,7 +16,7 @@ let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS ro
 const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
 
 async function loadConfig() {
-  const response = await fetch('/config.yaml');
+  const response = await fetch('./config.yaml');
   if (!response.ok) {
     throw new Error('Failed to load config.yaml: ' + response.statusText);
   }
@@ -93,7 +93,7 @@ async function initPyodide() {
   // Fetch dynamic Python manifest
   let pythonManifest;
   try {
-    const manifestResponse = await fetch('/_dynamic_py_manifest.json');
+    const manifestResponse = await fetch('./_dynamic_py_manifest.json');
     if (!manifestResponse.ok) {
       throw new Error(`Failed to fetch manifest: ${manifestResponse.statusText}`);
     }
