@@ -1,0 +1,297 @@
+manifest_version: 2
+id: facebook
+ecs_version: "9.4.0-dev"
+target: "Facebook"
+last_updated: "2025-02-04"
+
+files:
+  - id: "fb_account_activity"
+    path: "security_and_login_information/account_activity.json"
+    parser:
+      format: "json"
+      json_root: "account_activity_v2[]"
+
+  - id: "fb_logins_logouts"
+    path: "security_and_login_information/logins_and_logouts.json"
+    parser:
+      format: "json"
+      json_root: "account_accesses_v2[]"
+
+  - id: "fb_record_details"
+    path: "security_and_login_information/record_details.json"
+    parser:
+      format: "json"
+      json_root: "admin_records_v2[]"
+
+  - id: "fb_download_requests"
+    path: "your_facebook_activity/other_activity/your_information_download_requests.json"
+    parser:
+      format: "json_label_values"
+      json_root: "[]"
+
+  - id: "fb_mobile_devices"
+    path: "security_and_login_information/mobile_devices.json"
+    parser:
+      format: "json"
+      json_root: "devices_v2[]"
+
+  - id: "fb_profile_devices"
+    path: "personal_information/profile_information/your_devices.json"
+    parser:
+      format: "json_label_values"
+      json_root: "[]"
+
+  - id: "fb_recognized_devices"
+    path: "security_and_login_information/recognized_devices.json"
+    parser:
+      format: "json"
+      json_root: "recognized_devices_v2[]"
+
+  - id: "fb_active_sessions"
+    path: "security_and_login_information/where_you're_logged_in.json"
+    parser:
+      format: "json"
+      json_root: "active_sessions_v2[]"
+
+views:
+  - file: 
+      id: "fb_account_activity"
+      where:
+        {source: "action", op: "==", value: "Login"}
+    static:
+      event.action: "user_login_success"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["start"]
+      event.outcome: "success"
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_logins_logouts"
+      where:
+        {source: "action", op: "==", value: "Login"}
+    static:
+      event.action: "user_login_success"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["start"]
+      event.outcome: "success"
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+
+  - file:
+      id: "fb_record_details"
+      where:
+        logic: "any"
+        conditions:
+        - {source: "event", op: "==", value: "Checkpoint"}
+        - {source: "event", op: "startswith", value: "Checkpoint:*"}
+        - {source: "event", op: "==", value: "Two-factor authentication"}
+    static:
+      event.action: "auth_checkpoint_init"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["info"]
+    fields:
+      - {target: "@timestamp", source: "session.created_timestamp", type: "datetime"}
+      - {target: "client.ip", source: "session.ip_address", type: "string"}
+      - {target: "user_agent.original", source: "session.user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "session.datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_record_details"
+      where:
+        {source: "event", op: "==", value: "Checkpoint Passed"}
+    static:
+      event.action: "auth_checkpoint_pass"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["info"]
+    fields:
+      - {target: "@timestamp", source: "session.created_timestamp", type: "datetime"}
+      - {target: "client.ip", source: "session.ip_address", type: "string"}
+      - {target: "user_agent.original", source: "session.user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "session.datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_account_activity"
+      where:
+        {source: "action", op: "==", value: "Log out"}
+    static:
+      event.action: "user_logout"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["end"]
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_logins_logouts"
+      where:
+        {source: "action", op: "==", value: "Log out"}
+    static:
+      event.action: "user_logout"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["end"]
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_account_activity"
+      where:
+        {source: "action", op: "==", value: "Password Change"}
+    static:
+      event.action: "user_password_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_record_details"
+      where:
+        {source: "event", op: "==", value: "Password Change"}
+    static:
+      event.action: "user_password_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "session.created_timestamp", type: "datetime"}
+      - {target: "client.ip", source: "session.ip_address", type: "string"}
+      - {target: "user_agent.original", source: "session.user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "session.datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_account_activity"
+      where:
+        {source: "action", op: "==", value: "Requested Password Reset"}
+    static:
+      event.action: "password_reset_request"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_account_activity"
+      where:
+        {source: "action", op: "==", value: "Email Added"}
+    static:
+      event.action: "email_addition"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_record_details"
+      where:
+        {source: "event", op: "==", value: "Email Added"}
+    static:
+      event.action: "email_addition"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "session.created_timestamp", type: "datetime"}
+      - {target: "client.ip", source: "session.ip_address", type: "string"}
+      - {target: "user_agent.original", source: "session.user_agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "session.datr_cookie", type: "string"}
+
+  - file:
+      id: "fb_download_requests"
+    static:
+      event.action: "data_export_request"
+      event.kind: "event"
+      event.category: ["file"]
+      event.type: ["access"]
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+
+  - file:
+      id: "fb_mobile_devices"
+    static:
+      event.kind: "asset"
+      event.category: ["authentication", "host"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+    fields:
+      - {target: "entity.last_seen_timestamp", source: "update_time", type: "datetime"}
+      - {target: "device.model.identifier", source: "type", type: "string"}
+      - {target: "PLACEHOLDER", source: "os", type: "string"}
+      - {target: "PLACEHOLDER", source: "os_version", type: "string"}
+      - {target: "PLACEHOLDER", source: "push_tokens[0].device_id", type: "string"}
+      - {target: "PLACEHOLDER", source: "family_device_id", type: "string"}
+      - {target: "PLACEHOLDER", source: "advertiser_id", type: "string"}
+
+  - file:
+      id: "fb_profile_devices"
+    static:
+      event.kind: "asset"
+      event.category: ["authentication", "host"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+    fields:
+      - {target: "entity.first_seen_timestamp", source: "'Device ID details'.first_seen_time", type: "datetime"}
+      - {target: "entity.last_seen_timestamp", source: "'Device ID details'.last_seen_time", type: "datetime"}
+      - {target: "device.model.identifier", source: "Device type", type: "string"}
+      - {target: "user_agent.original", source: "User agent", type: "string"}
+      - {target: "PLACEHOLDER", source: "Android ID", type: "string"}
+      - {target: "PLACEHOLDER", source: "Device ID", type: "string"}
+      - {target: "PLACEHOLDER", source: "Google Ad ID", type: "string"}
+      - {target: "PLACEHOLDER", source: "Hardware ID", type: "string"}
+      - {target: "PLACEHOLDER", source: "OS", type: "string"}
+      - {target: "PLACEHOLDER", source: "OS Version", type: "string"}
+
+  - file:
+      id: "fb_recognized_devices"
+    static:
+      event.kind: "asset"
+      event.category: ["authentication", "host"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+    fields:
+      - {target: "entity.first_seen_timestamp", source: "created_timestamp", type: "datetime"}
+      - {target: "entity.last_seen_timestamp", source: "updated_timestamp", type: "datetime"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "service.name", source: "name", type: "string"}
+
+  - file:
+      id: "fb_active_sessions"
+    static:
+      event.kind: "asset"
+      event.category: ["authentication", "host"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+    fields:
+      - {target: "entity.first_seen_timestamp", source: "created_timestamp", type: "datetime"}
+      - {target: "entity.last_seen_timestamp", source: "updated_timestamp", type: "datetime"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "service.name", source: "name", type: "string"}

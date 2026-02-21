@@ -1,0 +1,14 @@
+# Central configuration for both JavaScript and Python
+# This file is synced to webapp/public/ during build
+
+database:
+  db_path: "/mnt/data/timeline.db"
+
+storage:
+  temp_zip_storage: "/mnt/data/tmpstore"
+
+# Public-facing paths (where files are served from browser)
+paths:
+  python_core: "/python_core"
+  manifests: "/manifests"
+  schema: "/schema.sql"

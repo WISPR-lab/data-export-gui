@@ -1,0 +1,74 @@
+manifest_version: 1
+id: instagram
+name: "Instagram"
+last_updated: "2025-11-24"
+
+data_types:
+
+# LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login.success"
+  files:
+  - path: "security_and_login_information/login_and_profile_creation/login_activity.json"
+    parser: #todo
+    primary_date: "<D>account_history_logout_history<L><D>string_map_data<D>Time<D>timestamp"
+    identifiers: 
+      ip: "<D>account_history_login_history<L><D>string_map_data<D>IP Address<D>value"
+      user_agent: "<D>account_history_login_history<L><D>string_map_data<D>User Agent<D>value"
+      cookie: "<D>account_history_login_history<L><D>string_map_data<D>Cookie Name<D>value"
+
+  # LOGOUT EVENTS
+- temporal: "event" 
+  category: "auth.logout"
+  files:
+  - path: "security_and_login_information/login_and_profile_creation/logout_activity.json"
+    parser: #todo
+    primary_date: "<D>account_history_logout_history<L><D>string_map_data<D>Time<D>timestamp"
+    identifiers: 
+      ip: "<D>account_history_logout_history<L><D>string_map_data<D>IP Address<D>value"
+      user_agent: "<D>account_history_logout_history<L><D>string_map_data<D>User Agent<D>value"
+      cookie: "<D>account_history_logout_history<L><D>string_map_data<D>Cookie Name<D>value"
+
+
+
+# PASSWORD CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.pwd.change"
+  files:
+  - path: "security_and_login_information/login_and_profile_creation/password_change_activity.json"
+    parser: #todo
+    primary_date: "<D>account_history_password_change_history<L><D>string_map_data<D>Time<D>timestamp"
+
+
+
+# RECOVERY/LEGACY CONTACT EVENTS
+- temporal: "event" 
+  category: "auth.primary_email.addition"
+  files:
+  - path: "personal_information/personal_information/profile_changes.json"
+    parser: #todo - group by Email
+    primary_date: "<D>profile_profile_change<L><D>string_map_data<D>Change Date<D>timestamp"
+
+
+# DATA TAKEOUT EVENTS
+- temporal: "event" 
+  category: "data_export.request"
+  files:
+  - path:  "your_instagram_activity/other_activity/your_information_download_requests.json"
+    parser: #todo
+    primary_date: "<L><D>timestamp"
+
+# ---------------------------------------------- #
+# AUTHENTICATED DEVICES
+- temporal: "state" 
+  category: "auth.sessions"
+  files:
+  - path: "personal_information/device_information/devices.json"
+    parser: #todo
+    first_date: 
+    last_date: "<D>devices_devices<L><D>string_map_data<D>Last Login<D>timestamp"
+    identifiers:
+      user_agent: "<D>devices_devices<L><D>string_map_data<D>User Agent<D>value"
+  
+
+

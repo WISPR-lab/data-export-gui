@@ -1,0 +1,75 @@
+valid_categories:
+- code: "auth.login.attempt"
+  name: "Login attempt"
+- code: "auth.login.success"
+  name: "Successful login"
+- code: "auth.login"
+  name: "Successful login"
+- code: "auth.login.failure"
+  name: "Failed login"
+- code: "auth.logout"
+  name: "Logout"
+- code: "auth.checkpoint.initiate"
+  name: "Account verification request"
+- code: "auth.checkpoint.pass"
+  name: "Account verification passed"
+- code: "auth.pwd.change"
+  name: "Password changed"
+- code: "auth.pwd.reset_request"
+  name: "Password reset requested"
+- code: "auth.primary_email.change"
+  name: "Primary email changed"
+- code: "auth.primary_email.addition"
+  name: "Primary email changed"
+- code: "auth.primary_email.change_attempt"
+  name: "Attempted to change primary email"
+- code: "auth.primary_phone.change"
+  name: "Primary phone changed"
+- code: "auth.primary_phone.change_attempt"
+  name: "Attempted to change primary phone"
+- code: "auth.recovery_email.addition"
+  name: "Recovery contact added"
+- code: "auth.recovery_email.removal"
+  name: "Recovery contact removed"
+- code: "data_export.request"
+  name: "Data export requested by user"
+- code: "data_takeout.request"
+  name: "Data export requested by user"
+- code: "data_export.completion"
+  name: "Data export request fulfilled"
+
+time_fields:
+- primary_timestamp
+- first_timestamp
+- last_timestamp
+
+device_id_fields:
+  - app_info
+  - ip
+  - browser
+  - serial
+  - imei
+  - meid
+  - user_agent
+  - device_model
+  - model
+  - model_ver
+  - model_ver_code
+  - os
+  - os_ver
+  - cookie
+  - cookie_redacted
+  - given_name
+  - internal_device_id
+  - internal_hardware_id
+  - google_ad_id
+  - android_id
+  - fb_ad_id
+  - session_id
+  - app_info
+
+
+misc_fields:
+- old_email
+- new_email
+

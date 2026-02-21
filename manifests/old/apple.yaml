@@ -1,0 +1,80 @@
+manifest_version: 1
+id: apple
+name: "Apple/iCloud"
+last_updated: "2025-11-24"
+
+data_types:
+
+# LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login.success"
+  files:
+  - path: "Apple ID account and device information/Apple ID SignOn Information.csv"
+    parser: #todo
+    primary_date: "Logged In Date"
+    identifiers: 
+      ip: "IP Address"
+      internal_device_id: "Device Identifier"
+
+# PASSWORD CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.pwd.change"
+  files:
+  - path: "Apple ID account and device information/Apple ID Account Information.csv"
+    parser: #todo
+    primary_date: "Last Password Change Date"
+    identifiers: 
+      ip: "Last Changed From IP Address"
+
+
+# RECOVERY/LEGACY CONTACT EVENTS
+- temporal: "event" 
+  category: "auth.recovery_email.addition"
+  files:
+  - path: "Apple ID account and device information/Apple ID Account Recovery Contacts Information.csv"
+    parser: #todo - group by REcivery ID
+    primary_date: "Recovery Create Date"
+    identifiers: 
+      ip: "Recovery IP Address"
+      model_ver: "Device Model"
+  - path: "Apple ID account and device information/Apple ID Account Legacy Contacts Information.csv"
+    parser: #todo
+    primary_date: "Beneficiary Create Date"
+    identifiers: 
+      ip: "Beneficiary IP Address"
+      model_ver: "Device Model Name"
+
+# DATA TAKEOUT EVENTS
+- temporal: "event" 
+  category: "data_export.request"
+  files:
+  - path: "Apple ID account and device information/Data & Privacy Request History.csv"
+    parser: #todo - group by Request ID
+    primary_date: "Request Time"
+  
+# ---------------------------------------------- #
+# AUTHENTICATED DEVICES
+- temporal: "state" 
+  category: "auth.sessions"
+  files:
+  - path: "Apple ID account and device information/Apple ID Device Information.csv"
+    parser: #todo
+    first_date: "Device Added Date"
+    last_date: "Device Last Heartbeat Timestamp"
+    identifiers:
+      ip: "IP Address"
+      imei: "Device IMEI"
+      serial: "Device Serial Number"
+      model: "Device Model Name"
+      given_name: "Device Name"
+  
+  - path: "Devices Registered with Apple Messaging.json"
+    parser: #todo
+    identifiers:
+      ip: "IP Address"
+      model_ver: "<D>devices<L><D>hardware-version" # todo documentation
+      user_agent:  "<D>devices<L><D>os-version"
+      given_name:  "<D>devices<L><D>device-name"
+
+
+

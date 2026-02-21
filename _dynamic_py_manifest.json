@@ -1,0 +1,14 @@
+{
+  "core_files": [
+    "db_session.py",    "device_grouping_worker.py",    "errors.py",    "extractor_worker.py",    "manifest.py",    "semantic_map_worker.py"
+  ],
+  "extractors": [
+    "__init__.py",    "base.py",    "csv_.py",    "csv_multi.py",    "json_.py",    "json_label_values.py",    "jsonl_.py"
+  ],
+  "semantic_map": [
+    "__init__.py",    "action_message_builder.py",    "deduplicate_events.py",    "map_utils.py"
+  ],
+  "utils": [
+    "__init__.py",    "filter_builder.py",    "json_utils.py",    "misc.py",    "safe_file_utils.py",    "time_utils.py"
+  ]
+}

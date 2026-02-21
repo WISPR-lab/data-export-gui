@@ -1,0 +1,152 @@
+manifest_version: 2
+id: apple
+ecs_version: "9.4.0-dev"
+target: "Apple/iCloud"
+last_updated: "2025-11-24"
+
+
+
+
+files:
+  - id: "apple_signon_info"
+    path: "Apple ID account and device information/Apple ID SignOn Information.csv"
+    parser:
+      format: "csv"
+
+  - id: "apple_account_info_PWD"
+    path: "Apple ID account and device information/Apple ID Account Information.csv"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Last Password Change Date"], keep: "last"}
+
+  - id: "apple_recovery_contacts"
+    path: "Apple ID account and device information/Apple ID Account Recovery Contacts Information.csv"
+    parser: 
+      format: "csv"
+      drop_duplicates: { subset: ["Recovery ID"], keep: "row_completeness"}
+
+  - id: "apple_legacy_contacts"
+    path: "Apple ID account and device information/Apple ID Account Legacy Contacts Information.csv"
+    parser: 
+      format: "csv"
+      drop_duplicates: { subset: ["Beneficiary ID"], keep: "row_completeness"}
+  
+  - id: "apple_data_privacy_requests"
+    path: "Apple ID account and device information/Data & Privacy Request History.csv"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Request ID"], keep: last}
+  
+  - id: "apple_device_info"
+    path: "Apple ID account and device information/Apple ID Device Information.csv"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Device Serial Number"], keep: "last"}
+
+  - id: "apple_messaging_devices"
+    path: "Apple ID account and device information/Apple ID Messaging Devices Information.csv"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Messaging Device ID"], keep: "last"}
+
+
+
+
+views:
+  
+- file: 
+    id: "apple_signon_info"
+  static:
+      event.action: "user_login_success"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["start"]
+      event.outcome: "success"
+  fields:
+  - {target: "@timestamp", source: "Logged In Date", type: "datetime"}
+  - {target: "client.ip", source: "IP Address", type: "string"}
+  - {target: "device.id.apple", source: "Device Identifier", type: "string"} # apple's specific device fingerprint
+  - {target: "service.name", source: "Application", type: "string"}
+
+
+- file: 
+    id: "apple_account_info_PWD"
+  static:
+      event.action: "user_password_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+  fields:
+  - {target: "@timestamp", source: "Last Password Change Date", type: "datetime"}
+  - {target: "client.ip", source: "Advanced Data Protection - Device IP Address", type: "string"}
+  - {target: "device.given_name", source: "Advanced Data Protection - Device Name", type: "string"}
+  - {target: "device.serial_number", source: "Advanced Data Protection - Device Serial Number", type: "string"}
+
+
+- file: 
+    id: "apple_recovery_contacts"
+  static:
+      event.action: "recovery_contact_addition"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["creation", "user"]
+  fields:
+  - {target: "@timestamp", source: "Recovery Create Date", type: "datetime"}
+  - {target: "client.ip", source: "Recovery IP Address", type: "string"}
+  - {target: "device.model.name", source: "Device Model", type: "string"}
+
+- file: 
+    id: "apple_legacy_contacts"
+  static:
+      event.action: "legacy_contact_addition"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["creation", "user"]
+  fields:
+  - {target: "@timestamp", source: "Beneficiary Create Date", type: "datetime"}
+  - {target: "client.ip", source: "Beneficiary IP Address", type: "string"}
+  - {target: "device.model.identifier", source: "Device Model Name", type: "string"}
+
+
+- file: 
+    id: "apple_data_privacy_requests"
+  static:
+      event.action: "data_export_request"
+      event.kind: "event"
+      event.category: ["file"]
+      event.type: ["access"]
+
+  fields:
+  - {target: "@timestamp", source: "Request Time", type: "datetime"}
+  - {target: "event.end", source: "Request Completion Time", type: "datetime"}
+
+- file: 
+    id:   "apple_device_info"
+  static:
+      event.kind: "asset"
+      event.category: ["authentication", "host"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+  fields:
+  - {target: "entity.last_seen_timestamp", source: "Device Last Heartbeat Timestamp", type: "datetime"}
+  - {target: "entity.first_seen_timestamp", source: "Device Added Date", type: "datetime"}
+  - {target: "device.given_name", source: "Device Name", type: "string"}
+  - {target: "device.serial_number", source: "Device Serial Number", type: "string"}
+  - {target: "device.model.name", source: "Device Model Name", type: "string"}
+  - {target: "device.imei", source: "Device IMEI", type: "string"}
+  - {target: "device.meid", source: "Device MEID", type: "string"}
+  - {target: "client.ip", source: "Device Last Heartbeat IP Address", type: "string"}
+
+- file: 
+    id: "apple_messaging_devices"
+  static:
+      event.kind: "asset"
+      event.category: ["authentication", "host"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+  fields:
+  - {target: "device.model.identifier", source: "hardware-version", type: "string"}
+  - {target: "device.given_name", source: "device-name", type: "string"}
+  - {target: "user_agent.original", source: "os-version", type: "string"}
+  # TODO: potential 2FA field
+

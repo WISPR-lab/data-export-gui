@@ -1,0 +1,88 @@
+manifest_version: 1
+id: discord
+name: "Discord"
+last_updated: "2025-11-24"
+
+
+discord_identifiers: &discord_identifiers
+  browser: "browser"
+  ip: "ip"
+  user_agent: "browser_user_agent"
+  model_ver_code: "device"
+  internal_device_id: "device_vendor_id"
+  session_id: ["session", "client_heartbeat_session_id"]
+  os: "os"
+  os_ver: "os_version"
+
+
+data_types:
+
+  # LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login.success"
+  files:
+  - path: "activity/tns/events-2025-00001-of-00001.json"
+    
+    parser:
+      format: "jsonl"
+      filter: "event_type == login_successful"
+
+    primary_date: "timestamp"
+    identifiers: *discord_identifiers
+  
+# FAILED/ATTEMPTED LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login.attempt"
+  files:
+  - path: "activity/tns/events-2025-00001-of-00001.json"
+    
+    parser:
+      format: "jsonl"
+      filter: "event_type == login_attempted"
+    
+    primary_date: "timestamp"
+    identifiers: *discord_identifiers
+
+# PASSWORD CHANGE EVENTS
+# - temporal: "event" 
+#   category: "auth.pwd.change"
+#   files:
+#   - path: "
+#     parser: #todo
+#     primary_date: "timestamp"
+#     identifiers: *discord_identifiers
+
+
+- temporal: "event" 
+  category: "auth.primary_email.change"
+  files:
+  - path: "activity/tns/events-2025-00001-of-00001.json"
+    parser: # user_account_email_change_save_new_email
+    primary_date: "timestamp"
+    identifiers: *discord_identifiers
+
+
+- temporal: "event" 
+  category: "auth.primary_email.change_attempt"
+  files:
+  - path: "activity/tns/events-2025-00001-of-00001.json"
+    parser: # user_account_email_change_attempted
+    primary_date: "timestamp"
+    identifiers: *discord_identifiers
+
+
+# DATA TAKEOUT EVENTS
+- temporal: "event"
+  category: "data_export.request"
+  files:
+  - path: "activity/tns/events-2025-00001-of-00001.json"
+    parser: #todo - data_request_initiated
+    primary_date: "timestamp"
+    identifiers: *discord_identifiers
+
+
+# ---------------------------------------------- #
+# AUTHENTICATED DEVICES
+
+  
+

@@ -1,0 +1,85 @@
+manifest_version: 1
+id: snapchat
+name: "Snapchat"
+last_updated: "2025-11-24"
+
+data_types:
+
+  # LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login.success"
+  files:
+    - path: "json/account.json"
+      parser: #todo
+      primary_date: "<D>Login History<L><D>Created"
+      identifiers: 
+        ip: "<D>Login History<L><D>IP"
+        user_agent: "<D>Login History<L><D>Device"
+
+# FAILED LOGIN EVENTS
+- temporal: "event" 
+  category: "auth.login.failed"
+  files:
+  - path: "json/account.json"
+    parser: #todo group by status failed
+    primary_date: "<D>Login History<L><D>Created"
+    identifiers: 
+      ip: "<D>Login History<L><D>IP"
+      user_agent: "<D>Login History<L><D>Device"
+
+# PASSWORD CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.pwd.change"
+  files:
+  - path: "json/account_history.json"
+    parser: #todo
+    primary_date: "<D>Password Change<L><D>Date"
+
+# EMAIL CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.primary_email.change"
+  files:
+  - path: "json/account_history.json"
+    parser: #todo
+    primary_date: "<D>Email Change<L><D>Date"
+
+# PHONE CHANGE EVENTS
+- temporal: "event" 
+  category: "auth.primary_phone.change"
+  files:
+  - path: "json/account_history.json"
+    parser: #todo
+    primary_date: "<D>Mobile Number Change<L><D>Date"
+
+# RECOVERY/LEGACY CONTACT EVENTS
+- temporal: "event" 
+  category: "data_export.request"
+  files:
+  - path: "json/account_history.json"
+    parser: #todo - group by REcivery ID
+    primary_date: "<D>Download My Data Reports<L><D>Date"
+
+    
+  # ---------------------------------------------- #
+  # AUTHENTICATED DEVICES
+- temporal: "state" 
+  category: "auth.sessions"
+  files:
+  - path: "json/account.json"
+    parser: #todo
+    first_date: 
+    last_date:
+    identifiers:
+      model_ver: "<D>Device Information<D>Model Name"
+      model_ver_code: "<D>Device Information<D>Model ID"
+      os: "<D>Device Information<D>OS Type"
+      os_ver: "<D>Device Information<D>OS Version"
+
+  - path: "json/account.json"
+    parser: #todo
+    first_date: "<D>DeviceHistory<L><D>Start Time"
+    last_date:
+    identifiers:
+      model_ver_code: "<D>DeviceHistory<L><D>Model"
+
+
