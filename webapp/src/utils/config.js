@@ -6,7 +6,7 @@ let config = null;
 export async function loadConfig() {
   if (config) return config;
   
-  const response = await fetch('/config.yaml');
+  const response = await fetch('./config.yaml');
   if (!response.ok) {
     throw new Error('Failed to load config.yaml: ' + response.statusText);
   }

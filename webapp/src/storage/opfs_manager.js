@@ -24,7 +24,7 @@ export class OPFSManager {
     if (this.isInitialized) return;
 
     // 1. Read config and resolve OPFS storage path
-    const configResp = await fetch('/config.yaml');
+    const configResp = await fetch('./config.yaml');
     if (!configResp.ok) throw new Error('[OPFSManager] Failed to fetch config.yaml');
     const config = jsyaml.load(await configResp.text());
 

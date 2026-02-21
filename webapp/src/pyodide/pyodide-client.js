@@ -4,7 +4,8 @@ let workerMessageId = 0;
 
 export function getPyodideWorker() {
   if (!pyodideWorker) {
-    pyodideWorker = new Worker('/pyodide-worker.js');
+    // Use relative path that works with publicPath
+    pyodideWorker = new Worker('./pyodide-worker.js');
     console.log('[PyodideClient] Created Pyodide worker (singleton)');
   }
   return pyodideWorker;

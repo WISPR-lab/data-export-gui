@@ -34,7 +34,8 @@ function callPyodideWorker(method, args) {
 export async function getDB() {
   if (!worker) {
     console.log('[Database] Initializing stateless sqlite-worker...');
-    worker = new Worker('/sqlite-worker.js');
+    // Use relative path that works with publicPath
+    worker = new Worker('./sqlite-worker.js');
     window.dbWorker = worker; // debug
   }
 
@@ -44,7 +45,7 @@ export async function getDB() {
       return callPyodideWorker('exec', { 
         sql, 
         options: options || {},
-        schemaPath: '/schema.sql' // attached so worker can self-heal TODO FIX HARDCODING IN CONFIG
+        schemaPath: './schema.sql' // attached so worker can self-heal TODO FIX HARDCODING IN CONFIG
       });
     }
   }
@@ -66,7 +67,7 @@ export async function getDB() {
       // which Pyodide (mounting OPFS root at /mnt/data) sees as /mnt/data/timeline.db.
       const dbFilename = cfg.database.db_path.split('/').pop(); // "timeline.db"
       
-      worker = new Worker('/sqlite-worker.js');
+      worker = new Worker('./sqlite-worker.js');
       window.dbWorker = worker;
       
       await callPyodideWorker('init', { 
