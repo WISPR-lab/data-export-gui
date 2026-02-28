@@ -92,14 +92,12 @@ export default {
       EventBus.$emit('setQueryAndFilter', eventData)
     },
     parseQueryAndSearch() {
-      let queryString
-      // Search templates not available in browser-only mode
-      console.log('[SearchTemplate] Search templates not implemented')
-        .then((response) => {
-          queryString = response.data.objects[0].query_string
-          this.search(queryString)
-        })
-        .catch((e) => {})
+      const spec = this.searchTemplateSpec;
+      let queryString = spec.query_string || '';
+      Object.entries(this.params).forEach(([key, val]) => {
+        queryString = queryString.replace(new RegExp('\\{\\{' + key + '\\}\\}', 'g'), val);
+      });
+      this.search(queryString);
     },
   },
 }

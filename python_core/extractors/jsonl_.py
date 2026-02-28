@@ -1,5 +1,5 @@
 from .json_ import JSONParser
-from errors import RecordLevelError
+from errors import FileLevelError, RecordLevelError
 from typing import List, Dict, Any, Optional
 from utils.filter_builder import make_filter
 
@@ -20,8 +20,10 @@ class JSONLParser(JSONParser):
                 if "where" in config and not filter_callable(obj):
                     continue
                 res.append(obj)
-            except:
-                continue # TODO ERROR HANDLING
+            except FileLevelError:
+                raise
+            except Exception:
+                continue
 
         return res
         

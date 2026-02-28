@@ -207,7 +207,9 @@ export default {
     statusMessage(newVal) {
       if (newVal === 'complete') {
         this.$emit('success');
-        this.closeDialog();
+        if (!this.uploadWarnings.length) {
+          this.closeDialog();
+        }
       }
     },
   },

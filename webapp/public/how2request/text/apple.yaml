@@ -1,0 +1,59 @@
+id: apple
+name: Apple
+icon: mdi-apple
+overview: Apple provides a data export through their Data and Privacy portal. Note that this process is stricter than Google's and may take longer to verify your identity.
+
+steps:
+  - title: Visit Apple Privacy and sign in
+    link:
+      url: https://privacy.apple.com
+      text: Apple Data & Privacy
+    alert:
+      type: info
+      text: You will need your Apple ID password and a **Two-Factor Authentication (2FA)** code from a trusted device or phone number. 
+    description: |
+      FYI ALSO THIS MAY NOTIFY OTHER DEVICES ON YOUR ICLOUD ACCOUNT !!! TODO
+
+  - title: Start the request
+    image: how2request/images/apple_menu.jpg
+    description: |
+      1. Under the "Get a copy of your data" section, click **`Request a copy of your data`**.
+      2. This will open a list of available data categories.
+
+  - title: Select data categories
+    image: how2request/images/apple_selection.jpg
+    alert:
+      type: info
+      text: "Apple **does not** export iMessage or SMS content through this tool. It only provides metadata (who you contacted), not what was said."
+    description: |
+      1. Scroll through the list. You do not need to "Select All".
+      2. **Mandatory**: Select the core audit data:
+         - **`Apple ID account and device information`** (Login logs/Devices)
+         - **`Apple Media Services information`** (App usage/Activity)
+         - **`Sign-in with Apple`** (Third-party apps using your ID)
+      3. **Optional**: Select these if relevant:
+         - **`iCloud Bookmarks and Reading List`** (Web history)
+         - **`iCloud Calendars and Reminders`**
+         - **`Maps`** (Saved locations/Guides)
+         - **`Wallet Activity`**
+      4. **Optional**: You may add **`iCloud Mail`**, **`iCloud Photos`**, or **`iCloud Drive`**, but these will create massive files.
+         - Only select these if you have the storage space and bandwidth to download them.
+
+  - title: Choose file size
+    image: how2request/images/apple_size.jpg
+    description: |
+      - Click **`Continue`**.
+      - Apple will ask for a maximum file size to split the download.
+      - We recommend selecting **`1GB`** or **`2GB`** to ensure the files are manageable.
+      - Click **`Complete Request`**.
+
+  - title: Wait and download
+    image: how2request/images/apple_email.jpg
+    alert:
+      type: warning
+      text: This export contains your sensitive information. Treat it as securely as you would a password or financial records.
+    description: |
+      - **Timeline**: Apple takes longer than Google. It typically takes **up to 7 days** to verify your identity and prepare the data.
+      - **Notification**: You will receive an email when the data is ready.
+      - **Retention**: The download link is valid for **14 days**.
+      - **Safety**: Download to a secure location and [permanently delete](https://support.apple.com/guide/icloud/delete-email-mm6b1a17e3/icloud) the notification email immediately after downloading if you share an account or device.

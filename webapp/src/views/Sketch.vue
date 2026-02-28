@@ -28,7 +28,7 @@ limitations under the License.
         <v-row align="center" justify="center">
           <v-sheet class="pa-4" style="background: transparent">
             <center>
-              <v-img src="/images/empty-state.png" max-height="100" max-width="300"></v-img>
+              <v-img src="./images/empty-state.png" max-height="100" max-width="300"></v-img>
               <div style="font-size: 2em" class="mb-3 mt-3">It's empty around here</div>
               <ts-upload-timeline-form-button btn-size="normal" btn-type="rounded"></ts-upload-timeline-form-button>
             </center>

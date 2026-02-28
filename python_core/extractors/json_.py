@@ -4,7 +4,7 @@ import json5
 from typing import List, Dict, Any, Optional
 from .base import BaseParser
 from utils.json_utils import get_value_at_path
-from errors import FileLevelError, RecordLevelError, FieldLevelError
+from errors import FileLevelError, FieldLevelError
 
 # Try to import demjson3 for extra-lenient parsing, but make it optional
 try:
@@ -28,8 +28,10 @@ class JSONParser(BaseParser):
             elif isinstance(root_data, dict):
                 return [root_data]
             return []
-        except Exception: #TODO ERROR HANDLING
-            return []
+        except FileLevelError:
+            raise
+        except Exception as e:
+            raise FileLevelError(f"JSON extraction failed: {e}", context={'error_type': type(e).__name__})
 
 
     @classmethod

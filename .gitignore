@@ -24,6 +24,10 @@ webapp-v3.zip
 data/opensearch/
 data/*.db
 
+venv/
+.venv/
+
+*devtools.sh
 
 pyvenv.cfg
 

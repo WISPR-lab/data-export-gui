@@ -1,21 +1,21 @@
 import pytest
 import json
-from pyparser.csv_ import CSVParser
+from extractors.csv_ import CSVParser
 from conftest import validate_results
+
 
 @pytest.mark.format("csv")
 def test_csv_parse(test_case):
     content = test_case.read_content()
-    result = CSVParser.parse(content, test_case.filename, test_case.schema)
-    events = result.events
-    states = result.states
-    errors = result.errors
+    records = CSVParser.extract(content, test_case.parser_cfg)
 
-    if events:
-        print("\n\n ==== Printing first event === \n" + json.dumps(events[0], indent=2))
-    if states:
-        print("\n\n ==== Printing first state ===\n" + json.dumps(states[0], indent=2))
-    validate_results(test_case, events, states, errors)
+    if records:
+        print("\n\n ==== Printing first record === \n" + json.dumps(records[0], indent=2))
+
+    validate_results(test_case, records)
 
 
-    
+def test_csv_raises_file_level_error_on_empty_input():
+    from errors import FileLevelError
+    with pytest.raises(FileLevelError):
+        CSVParser.extract("", {})

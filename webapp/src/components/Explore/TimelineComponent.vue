@@ -421,12 +421,9 @@ export default {
     //       // datasources importing at the same time, or multiple timelines importing to
     //       // the same index.
     //       //
-    //       // TODO: Add datasource ID to all events at import time like we do with
-    //       // timeline ID. This will give us the ability to calculate index progress per
-    //       // datasource, and also enable deletion of datasources from opensearch
-    //       // indices.
+    //       // NOTE (browser model): upload_id is stored on every event at import time.
+    //       // Source file attribution is queryable via the uploaded_files JOIN in events.js.
     //       //
-    //       // Tracking in: https://github.com/google/timesketch/issues/2361
     //       let tmpAllIndexedEvents = this.allIndexedEvents
     //       this.allIndexedEvents = response.data.meta.lines_indexed
     //       let deltaEvents = this.allIndexedEvents - tmpAllIndexedEvents

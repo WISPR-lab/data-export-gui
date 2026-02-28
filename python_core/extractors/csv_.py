@@ -3,8 +3,7 @@ import io
 import csv
 from typing import List, Dict, Any, Optional
 from .base import BaseParser
-
-pd.options.mode.copy_on_write = True
+from errors import FileLevelError
 
 class CSVParser(BaseParser):
 
@@ -20,8 +19,10 @@ class CSVParser(BaseParser):
             # Convert to list of dicts. 
             return df.to_dict(orient='records')
             
-        except Exception:
-            return [] # TODO error handling
+        except FileLevelError:
+            raise
+        except Exception as e:
+            raise FileLevelError(f"CSV extraction failed: {e}", context={'error_type': type(e).__name__})
 
     @classmethod
     def str_to_df(cls, s: str):
@@ -41,8 +42,8 @@ class CSVParser(BaseParser):
             )
             df = df.dropna(how='all') # Drop fully empty rows
             return df, bad_lines
-        except Exception:  # TODO error handling 
-            return pd.DataFrame(), []
+        except Exception as e:
+            raise FileLevelError(f"CSV parse failed: {e}", context={'error_type': type(e).__name__})
 
 
 

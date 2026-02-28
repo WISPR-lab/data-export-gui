@@ -300,6 +300,17 @@ limitations under the License.
                             </v-list-item-content>
                           </v-list-item>
                         </v-list-item-group>
+                        <v-list-item-group>
+                          <v-list-item :ripple="false">
+                            <v-list-item-action>
+                              <v-switch dense v-model="displayOptions.showSourceFile"></v-switch>
+                            </v-list-item-action>
+                            <v-list-item-content>
+                              <v-list-item-title>Source file</v-list-item-title>
+                              <v-list-item-subtitle>Show originating file name</v-list-item-subtitle>
+                            </v-list-item-content>
+                          </v-list-item>
+                        </v-list-item-group>
                       </v-list>
                     </v-list>
                   </v-card>
@@ -482,6 +493,14 @@ limitations under the License.
               }}</span></v-chip>
           </template>
 
+          <template v-slot:item.source_file="{ item }">
+            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-if="item._source.filename">
+              <span class="timeline-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">{{
+                item._source.filename
+              }}</span>
+            </v-chip>
+          </template>
+
           <!-- Comment field -->
           <template v-slot:item._source.comment="{ item }">
             <div class="d-inline-block">
@@ -635,6 +654,7 @@ export default {
         showEmojis: true,
         showMillis: false,
         showTimelineName: true,
+        showSourceFile: false,
       },
       showHistogram: false,
       branchParent: null,
@@ -741,6 +761,14 @@ export default {
       if (this.displayOptions.showTimelineName) {
         baseHeaders.push({
           value: 'timeline_name',
+          align: 'end',
+          sortable: false,
+        })
+      }
+      if (this.displayOptions.showSourceFile) {
+        baseHeaders.push({
+          value: 'source_file',
+          text: 'Source file',
           align: 'end',
           sortable: false,
         })

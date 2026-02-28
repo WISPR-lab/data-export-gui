@@ -127,11 +127,12 @@
             <div class="d-flex flex-wrap gap-2">
               <v-chip
                 v-for="platform in supportedPlatforms"
-                :key="platform"
+                :key="platform.name"
                 small
                 outlined
               >
-                {{ platform }}
+                <v-icon small left>{{ platform.icon }}</v-icon>
+                {{ platform.name }}
               </v-chip>
             </div>
           </v-card>
@@ -182,7 +183,14 @@ export default {
         'Local-first processing - no data leaves your browser',
         'Support for Google, Discord, Apple, Facebook, Instagram, and Snapchat',
       ],
-      supportedPlatforms: ['Google', 'Discord', 'Apple', 'Facebook', 'Instagram', 'Snapchat'],
+      supportedPlatforms: [
+        { name: 'Google', icon: 'mdi-google' },
+        { name: 'Discord', icon: 'mdi-discord' },
+        { name: 'Apple', icon: 'mdi-apple' },
+        { name: 'Facebook', icon: 'mdi-facebook' },
+        { name: 'Instagram', icon: 'mdi-instagram' },
+        { name: 'Snapchat', icon: 'mdi-snapchat' },
+      ],
     }
   },
   methods: {

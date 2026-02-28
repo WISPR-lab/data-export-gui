@@ -12,8 +12,8 @@
         <v-btn text router-link to="/" class="nav-link">Home</v-btn>
         <v-btn text router-link to="/explore" class="nav-link">Explore My Data</v-btn>
         <v-btn text router-link to="/how-to-request" class="nav-link">Tutorials</v-btn>
-        <v-btn text href="#" class="nav-link">Research</v-btn>
-        <v-btn text href="https://github.com/google/timesketch" target="_blank" class="nav-link">
+        <v-btn text href="#" class="nav-link">Research</v-btn> <!-- todo --> 
+        <v-btn text href="https://github.com/WISPR-lab/data-export-gui/" target="_blank" class="nav-link">
           GitHub
           <v-icon small class="ml-1">mdi-github</v-icon>
         </v-btn>

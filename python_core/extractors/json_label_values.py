@@ -1,5 +1,5 @@
 from .json_ import JSONParser
-from errors import RecordLevelError
+from errors import FileLevelError, RecordLevelError
 from typing import List, Dict, Any, Optional
 
 class JSONLabelValuesParser(JSONParser):
@@ -18,9 +18,10 @@ class JSONLabelValuesParser(JSONParser):
             elif isinstance(data, dict):
                 return [data]
             return []
-        except Exception as e: #TODO ERROR HANDLING
-            return [RecordLevelError(f"File-level parsing error: {str(e)}", 
-                                     context={'error_type': type(e).__name__})]
+        except FileLevelError:
+            raise
+        except Exception as e:
+            raise FileLevelError(f"Label-values extraction failed: {e}", context={'error_type': type(e).__name__})
 
 
     @classmethod

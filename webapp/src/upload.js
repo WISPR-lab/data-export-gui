@@ -76,6 +76,16 @@ export async function processUpload(file, platform, sketchId, store) {
         throw new Error('Extractor did not return an upload ID');
       }
       log(`Extraction complete. Upload ID: ${uploadId}`);
+      if (extractResult.partial_errors && extractResult.partial_errors.length) {
+        extractResult.partial_errors.forEach(e => {
+          if (e.level === 'error') {
+            summary.warnings.push(`Skipped "${e.file}": ${e.msg}`);
+          } else {
+            log(`File ${e.level} for ${e.file}: ${e.msg}`);
+          }
+        });
+        log(`Extraction complete with ${extractResult.partial_errors.length} file-level issue(s).`);
+      }
     } catch (error) {
       await DB.getDB();
       const msg = `Python extraction error: ${error.message}`;

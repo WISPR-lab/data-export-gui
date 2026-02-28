@@ -31,24 +31,36 @@ function callPyodideWorker(method, args) {
   });
 }
 
+let cachedPaths = null;
+
+async function getDbPaths() {
+  if (cachedPaths) return cachedPaths;
+  const cfg = await loadConfig();
+  cachedPaths = {
+    schemaPath: cfg.paths.schema,
+    dbPath: '/' + cfg.database.db_path.split('/').pop(),
+  };
+  return cachedPaths;
+}
+
 export async function getDB() {
   if (!worker) {
     console.log('[Database] Initializing stateless sqlite-worker...');
-    // Use relative path that works with publicPath
     worker = new Worker('./sqlite-worker.js');
     window.dbWorker = worker; // debug
   }
 
-
   return {
-    exec(sql, options) {
+    async exec(sql, options) {
+      const { schemaPath, dbPath } = await getDbPaths();
       return callPyodideWorker('exec', { 
         sql, 
         options: options || {},
-        schemaPath: './schema.sql' // attached so worker can self-heal TODO FIX HARDCODING IN CONFIG
+        schemaPath,
+        dbPath,
       });
     }
-  }
+  };
 };
 
 /*

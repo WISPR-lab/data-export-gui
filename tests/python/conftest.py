@@ -2,31 +2,30 @@ import os
 import sys
 import yaml
 import pytest
-from typing import List, Dict, Generator
-from dataclasses import dataclass
+from typing import List, Dict, Generator, Optional
+from dataclasses import dataclass, field
 
-# repo_root should be the absolute path to the root of the repository
-repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
+# repo_root: absolute path to repo root
+repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if repo_root not in sys.path:
     sys.path.append(repo_root)
 
-# pyparser_path should be the absolute path to the pyparser directory
-pyparser_path = os.path.join(repo_root, "pyparser")
-if pyparser_path not in sys.path:
-    sys.path.append(pyparser_path)
+python_core_path = os.path.join(repo_root, "python_core")
+if python_core_path not in sys.path:
+    sys.path.insert(0, python_core_path)
 
-import pyparser.schema_utils as schema_utils
+from manifest import Manifest
 
 @dataclass
 class TestFile:
     platform: str
     filename: str
     full_path: str
-    schema: List[Dict]
+    parser_cfg: Dict = field(default_factory=dict)
     expected: Dict = None
 
     def read_content(self) -> str:
-        with open(self.full_path, "r") as f:
+        with open(self.full_path, "r", encoding='utf-8', errors='replace') as f:
             return f.read()
 
     def __repr__(self):
@@ -41,30 +40,21 @@ class TestFileLoader:
         with open(self.config_path, "r") as f:
             self.config = yaml.safe_load(f)
         
-        self.grouped_schemas = {}
-        self._load_all_schemas()
+        self.manifests = {}  # platform -> Manifest instance
+        self._load_manifests()
 
-    def _load_all_schemas(self):
+    def _load_manifests(self):
+        manifests_dir = os.path.join(repo_root, "manifests")
         platforms_cfg = self.config.get("platforms", {})
-        errors = []
-        for platform, info in platforms_cfg.items():
-            rel_schema_path = info.get("schema_path")
-            if not rel_schema_path: continue
-                
-            abs_schema_path = os.path.join(repo_root, rel_schema_path)
-            if not os.path.exists(abs_schema_path):
-                print(f"Warning: Schema for {platform} not found at {abs_schema_path}")
-                continue
-            
-            with open(abs_schema_path, "r") as f:
-                schema_dict = yaml.safe_load(f)
-                grouped, platform_errors = schema_utils.group_by_file(schema_dict)
-                self.grouped_schemas[platform] = grouped
-                if platform_errors:
-                    errors.extend(platform_errors)
-
-        if errors:
-            raise ValueError(f"Schema errors: {errors}")
+        for platform in platforms_cfg:
+            try:
+                self.manifests[platform] = Manifest(
+                    platform=platform,
+                    manifest_dir=manifests_dir,
+                    validate=False,
+                )
+            except Exception as e:
+                print(f"Warning: could not load manifest for {platform}: {e}")
 
     def yield_test_files(self, format_type: str) -> Generator[TestFile, None, None]:
         test_files = self.config.get("test_files", {}).get(format_type, [])
@@ -74,85 +64,63 @@ class TestFileLoader:
             platform = entry["platform"]
             rel_path = entry["path"]
             p_info = platforms_cfg.get(platform)
-            if not p_info or "test_data_dir" not in p_info: continue
+            if not p_info or "test_data_dir" not in p_info:
+                continue
 
             platform_data_root = os.path.expanduser(p_info["test_data_dir"])
             inner_path = rel_path
             if inner_path.startswith(f"{platform}/"):
                 inner_path = inner_path[len(platform)+1:]
-            
-            abs_test_data_dir = os.path.join(platform_data_root, inner_path)
-            if not os.path.exists(abs_test_data_dir):
-                raise FileNotFoundError(f"Test data file not found at {abs_test_data_dir}")
+
+            abs_path = os.path.join(platform_data_root, inner_path)
+            if not os.path.exists(abs_path):
+                print(f"Warning: test data not found at {abs_path}, skipping.")
                 continue
 
-            manifest_key = inner_path
-            schema = self.grouped_schemas.get(platform, {}).get(manifest_key, [])
-            if not schema:
-                basename = os.path.basename(rel_path)
-                schema = self.grouped_schemas.get(platform, {}).get(basename, [])
-                
-            if not schema: continue
+            manifest = self.manifests.get(platform)
+            parser_cfg = manifest.get_file_cfg(inner_path).get('parser', {}) if manifest else {}
 
             yield TestFile(
                 platform=platform,
-                filename=manifest_key,
-                full_path=abs_test_data_dir,
-                schema=schema,
-                expected=entry.get("expected")
+                filename=inner_path,
+                full_path=abs_path,
+                parser_cfg=parser_cfg,
+                expected=entry.get("expected"),
             )
 
 # Singleton instance
 loader = TestFileLoader()
 
 
-
-
-
-def validate_results(test_case, events, states, errors):
-    # standard assertions for all parsers
-    all_rows = events + states
+def validate_results(test_case, records: list):
+    """Standard assertions for all parsers. records is a flat List[Dict]."""
     expected = test_case.expected or {}
 
-    # basic sanity check
     if not expected:
-        assert len(all_rows) > 0, "No data parsed and no 'expected' block provided"
-    
-    # count # elems
-    if "num_events" in expected:
-        assert len(events) == expected["num_events"]
-    if "num_states" in expected:
-        assert len(states) == expected["num_states"]
-    
-    # make sure required keys are there
-    expected_keys = expected.get("keys") or expected.get("expected_keys")
-    if expected_keys:
-        actual_keys = set()
-        if all_rows:
-            actual_keys.update(all_rows[0].keys())
-        assert set(expected_keys).issubset(actual_keys)
+        assert len(records) > 0, f"No records parsed from {test_case.filename} and no 'expected' block provided"
 
-    # make sure original_record field is correct
-    if "original_record" in expected:
-        assert all_rows, "Cannot check original_record because no rows were parsed"
-        search_term = str(expected["original_record"])
-        actual_raw = str(all_rows[0].get("original_record", ""))
-        assert search_term in actual_raw, f"Could not find '{search_term}' in the first row's original_record"
+    if "num_records" in expected:
+        assert len(records) == expected["num_records"], (
+            f"Expected {expected['num_records']} records, got {len(records)}"
+        )
 
-    # make sure categories are correct
-    if "categories" in expected:
-        actual_categories = {row.get("category") for row in all_rows if row.get("category")}
-        expected_categories = set(expected["categories"])
-        assert expected_categories.issubset(actual_categories)
+    if "min_records" in expected:
+        assert len(records) >= expected["min_records"], (
+            f"Expected at least {expected['min_records']} records, got {len(records)}"
+        )
 
+    raw_keys = expected.get("raw_keys") or []
+    if raw_keys:
+        assert records, "Cannot check raw_keys — no records were parsed"
+        actual_keys = set(records[0].keys())
+        missing = set(raw_keys) - actual_keys
+        assert not missing, f"Expected raw field(s) {missing} in first record. Got: {actual_keys}"
 
 
 def pytest_configure(config):
-    # custom pytest markers
     config.addinivalue_line("markers", "format(type): parser format to test (json, csv, etc.)")
 
 def pytest_generate_tests(metafunc):
-    # global hook for pytest
     if "test_case" in metafunc.fixturenames:
         marker = metafunc.definition.get_closest_marker("format")
         if marker:

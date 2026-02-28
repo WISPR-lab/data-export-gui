@@ -20,11 +20,13 @@ try:
     from manifest import Manifest
     from db_session import DatabaseSession
     from extractors import get_parser
+    from errors import FileLevelError
 except ImportError:
     sys.path.append(os.path.dirname(__file__))
     from manifest import Manifest
     from db_session import DatabaseSession
     from extractors import get_parser
+    from errors import FileLevelError
 
 
 def _file_size_bytes(filepath, is_firefox=False):
@@ -103,7 +105,7 @@ def extract(platform,
                 (upload_id, platform, auto_name, ts, ts)
             )
 
-
+            partial_errors = []
             for opfs_filename in files:
                 success = True
                 opfs_filepath = os.path.join(tmp_storage_dir, opfs_filename)
@@ -163,12 +165,17 @@ def extract(platform,
                     row = conn.execute("SELECT COUNT(*) as count FROM raw_data").fetchone()
                     # print(f"  -> Total raw_data rows in DB: {row[0] if row else 'unknown'}")
 
+                except FileLevelError as e:
+                    print(f"[Extractor] File-level parse error for {opfs_filename}: {e}")
+                    partial_errors.append({'file': opfs_filename, 'level': 'error', 'msg': str(e)})
+                    success = False
                 except Exception as e:
                     print(f"[Extractor] Error processing {opfs_filename}: {e}")
                     traceback.print_exc()
-                    success=False       
-        
-        return {"status": "success", "upload_id": upload_id}
+                    partial_errors.append({'file': opfs_filename, 'level': 'error', 'msg': str(e)})
+                    success = False
+
+            return {"status": "success", "upload_id": upload_id, "partial_errors": partial_errors}
     
     except Exception as e:
         print(f"[Extractor] Fatal Database Error: {e}")
