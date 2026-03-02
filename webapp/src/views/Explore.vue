@@ -159,6 +159,8 @@ limitations under the License.
               <v-icon left small>mdi-eye-off</v-icon>
               <span>Unselect all</span>
             </v-btn>
+            <delete-all-data-button @click="showDeleteDialog = true"></delete-all-data-button>
+            <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog>
           </span>
         </v-toolbar>
         <v-expand-transition>
@@ -320,6 +322,8 @@ import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButto
 import TsAddManualEvent from '../components/Explore/AddManualEvent.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsSearchHelpCard from '../components/Explore/SearchHelpCard.vue'
+import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
+import DeleteAllDataDialog from '../components/Delete/DeleteAllDataDialog.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -346,6 +350,8 @@ export default {
     TsAddManualEvent,
     TsEventList,
     TsSearchHelpCard,
+    DeleteAllDataButton,
+    DeleteAllDataDialog,
   },
   props: ['sketchId'],
   data() {
@@ -368,6 +374,7 @@ export default {
       selectedLabels: [],
       showSearchHistory: false,
       showSearchHelp: false,
+      showDeleteDialog: false,
       zoomLevel: 0.7,
       zoomOrigin: {
         x: 0,

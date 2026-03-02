@@ -17,6 +17,10 @@ It replaces the generic UploadForm for the new workflow.
     <v-dialog v-model="dialog" persistent max-width="700px">
       <v-card>
         <v-card-title class="pb-2">
+          <svg v-if="selectedPlatform === 'discord'" viewBox="0 0 24 24" style="width:20px;height:20px;margin-right:12px;fill:var(--v-primary-base)" aria-hidden="true">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.101 18.079.11 18.1.128 18.112a19.9 19.9 0 0 0 5.994 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+          </svg>
+          <v-icon v-else color="primary" class="mr-3">{{ platformIcon }}</v-icon>
           <span>Import {{ platformName }} Data</span>
           <v-spacer></v-spacer>
           <v-btn icon small @click="closeDialog">
@@ -27,38 +31,14 @@ It replaces the generic UploadForm for the new workflow.
         <v-divider></v-divider>
 
         <v-card-text class="pa-6">
-          <!-- Platform Info Section -->
-          <div class="mb-6">
-            <div class="d-flex align-center mb-4">
-              <v-icon size="48" color="primary" class="mr-4">{{ platformIcon }}</v-icon>
-              <div>
-                <h3 class="text-body1 font-weight-medium">Upload your {{ platformName }} data export</h3>
-              </div>
-            </div>
-          </div>
-
-          <!-- Instructions -->
-          <v-alert outlined type="info" class="mb-6">
-            <h4 class="text-body2 font-weight-medium mb-2">Before you upload:</h4>
-            <ul class="text-body2 mb-0">
-              <li>Make sure you've downloaded the ZIP file from {{ platformName }}</li>
-              <li>The file should contain the exported data structure exactly as downloaded</li>
-              <li>Do not modify or extract files from the ZIP before uploading</li>
-            </ul>
-          </v-alert>
 
           <!-- Need Help Link -->
-          <div class="mb-6 pa-4 bg-blue-lighten rounded">
-            <div class="d-flex align-center">
-              <v-icon small class="mr-2">mdi-help-circle-outline</v-icon>
-              <span class="text-body2">
-                Unsure how to get this data?
-                <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
-                  View our step-by-step guide
-                </router-link>
-              </span>
-            </div>
-          </div>
+          <v-alert dense text type="info" class="mb-5">
+            Don't have your export yet?
+            <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
+              View step-by-step instructions
+            </router-link>
+          </v-alert>
 
           <!-- Error & Warning Display -->
           <upload-error-display
@@ -69,19 +49,25 @@ It replaces the generic UploadForm for the new workflow.
           ></upload-error-display>
 
           <!-- File Upload -->
-          <div class="mb-6">
+          <div class="mb-4">
             <v-file-input
               v-model="selectedFile"
               label="Choose ZIP file"
               outlined
               dense
               accept=".zip"
-              prepend-icon="mdi-file-archive"
+              prepend-inner-icon="mdi-file-archive"
+              prepend-icon=""
               show-size
               @change="handleFileSelected"
               @click:clear="clearFile"
             ></v-file-input>
           </div>
+
+          <!-- File Ready Confirmation -->
+          <v-alert v-if="selectedFile && fileValid" dense text type="success" class="mb-4">
+            <strong>{{ selectedFile.name }}</strong> &mdash; {{ formatFileSize(selectedFile.size) }}
+          </v-alert>
 
           <!-- Timeline Name Input (appears after file selection) -->
           <div v-if="selectedFile" class="mb-6">
@@ -98,17 +84,7 @@ It replaces the generic UploadForm for the new workflow.
             ></v-text-field>
           </div>
 
-          <!-- File Info Summary -->
-          <div v-if="selectedFile && fileValid" class="mb-6 pa-4 bg-green-lighten rounded">
-            <div class="d-flex align-center">
-              <v-icon small color="success" class="mr-2">mdi-check-circle</v-icon>
-              <div class="text-body2">
-                <strong>Ready to import:</strong>
-                <br />
-                {{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})
-              </div>
-            </div>
-          </div>
+
         </v-card-text>
 
         <!-- Action Buttons -->
@@ -280,22 +256,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.bg-blue-lighten {
-  background-color: #e3f2fd;
-}
-
-.bg-green-lighten {
-  background-color: #e8f5e9;
-}
-
 // Dark mode support
 :deep(.v-application--dark) {
-  .bg-blue-lighten {
-    background-color: #1a237e;
-  }
-
-  .bg-green-lighten {
-    background-color: #1b5e20;
+  .text-muted {
+    color: rgba(255, 255, 255, 0.54);
   }
 }
 </style>

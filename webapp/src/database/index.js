@@ -168,6 +168,7 @@ export default {
   
   getUploads: uploads.getUploads,
   getUploadById: uploads.getUploadById,
+  getUploadedFiles: uploads.getUploadedFiles,
   updateUpload: uploads.updateUpload,
   deleteUpload: uploads.deleteUpload,
   

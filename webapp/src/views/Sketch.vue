@@ -100,9 +100,6 @@ limitations under the License.
         
         <v-spacer></v-spacer>
 
-        <!-- Delete All Data button -->
-        <delete-all-data-button @click="showDeleteDialog = true"></delete-all-data-button>
-
         <!-- Sharing dialog -->
         <!-- <v-dialog v-model="shareDialog" width="500">
           <template v-slot:activator="{ on, attrs }">
@@ -403,12 +400,12 @@ export default {
     return {
       showSketchMetadata: false,
       navigationDrawer: {
-        width: 56,
+        width: 350,
       },
-      isMiniDrawer: true,
+      isMiniDrawer: false,
       selectedScenario: null,
       scenarioDialog: false,
-      showLeftPanel: false,
+      showLeftPanel: true,
       leftPanelTab: 0,
       leftPanelTabItems: ['EXPLORE', 'INVESTIGATE'],
       renameSketchDialog: false,

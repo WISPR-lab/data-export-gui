@@ -149,10 +149,10 @@ limitations under the License.
             <v-card>
               <div class="pa-4">
                 <ul style="list-style-type: none">
-                  <li><strong>Timeline name: </strong>{{ timeline.name }}</li>
+                  <li><strong>Upload name: </strong>{{ timeline.name }}</li>
                   <li v-if="timeline.status === 'processing' || timeline.status === 'ready'">
                     <strong>Number of events: </strong>
-                    {{ allIndexedEvents | compactNumber }}
+                    {{ timeline.event_count | compactNumber }}
                   </li>
                   <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
                   <li>
@@ -160,28 +160,33 @@ limitations under the License.
                     <small>({{ timeline.created_at | timeSince }})</small>
                   </li>
                   <li><strong>Number of files uploaded: </strong>{{ documentMetadata.length }}</li>
+                  <v-spacer class="ma-5"></v-spacer>
+                  <li class="font-italic">
+                    This tool doesn't process all files in the ZIP you uploaded, only those that are useful for security analysis. If parsing fails for any file in the ZIP, its contents will not be indexed by the tool. To upload these files again, delete the upload and re-import the data.
+                  </li>
                 </ul>
+
+                <!-- <v-alert text class="ma-5">
+                  This tool doesn't process all files in the ZIP you uploaded, only those that are useful for security analysis. If parsing fails for any file in the ZIP, its contents will not be indexed by the tool. To upload these files again, delete the upload and re-import the data.
+                </v-alert> -->
 
                 <v-alert
                   v-for="doc in documentMetadata"
                   :key="doc.id"
-                  outlined
+                  border="top"
+                  colored-border
                   text
-                  :color="doc.source_config && doc.source_config.parse_error_message ? 'error' : 'success'"
+                  dense
+                  :type="doc.parse_status === 'fail' ? 'error' : 'success'"
                   class="ma-5"
                 >
                   <ul style="list-style-type: none">
-                    <li><strong>File name:</strong> {{ doc.file_name }}</li>
-                    <li><strong>Path in ZIP:</strong> {{ doc.path }}</li>
-                    <li><strong>File size:</strong> {{ doc.size_bytes | compactBytes }}</li>
-                    <li><strong>MIME type:</strong> {{ doc.mime_type }}</li>
-                    <li><strong>Rows parsed:</strong> {{ (doc.source_config && doc.source_config.rows_parsed) || 0 | compactNumber }}</li>
-                    <li v-if="doc.labels && doc.labels.length"><strong>Labels:</strong> {{ doc.labels.join(', ') }}</li>
-                    <li v-if="doc.source_config && doc.source_config.parse_error_message">
-                      <strong>Parse error:</strong>
-                      <code> {{ doc.source_config.parse_error_message }}</code>
+                    <li><strong>File name:</strong> {{ doc.manifest_filename }}</li>
+                    <li><strong>File size:</strong> {{ doc.file_size_bytes | compactBytes }}</li>
+                    <li v-if="doc.parse_status === 'fail'">
+                      <strong>Status:</strong> <code>parse failed</code>
                     </li>
-                    <li v-else class="text-success">✓ Parsed successfully</li>
+                    <!-- <li v-else class="text-success">✓ Parsed successfully</li> -->
                   </ul>
                 </v-alert>
               </div>
@@ -209,14 +214,10 @@ limitations under the License.
                 <ul style="list-style-type: none">
                   <li><strong>Name: </strong>{{ timeline.name }}</li>
                   <li><strong>Status: </strong>{{ timeline.status }}</li>
-                  <li v-if="timeline.status === 'processing' || timeline.status === 'ready'">
+                  <li>
                     <strong>Number of events: </strong>
-                    {{ allIndexedEvents | compactNumber }}
+                    {{ timeline.event_count | compactNumber }}
                   </li>
-                  <strong>Number of events: </strong>
-                  {{
-                    allIndexedEvents | compactNumber
-                  }}
                   <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
                   <li>
                     <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
@@ -258,6 +259,8 @@ limitations under the License.
 <script>
 import Vue from 'vue'
 import _ from 'lodash'
+import DB from '@/database/index.js'
+import { VSpacer } from 'vuetify/lib';
 
 const gradients = [
   ['#222'],
@@ -407,9 +410,12 @@ export default {
       this.$emit('save', this.timeline)
     },
     async loadDocumentMetadata() {
-      // Upload metadata is already loaded in timeline object
-      // No separate document_metadata table needed
-      this.documentMetadata = []
+      try {
+        this.documentMetadata = await DB.getUploadedFiles(this.timeline.id)
+      } catch (e) {
+        console.error('[TimelineComponent] Failed to load uploaded files:', e)
+        this.documentMetadata = []
+      }
     },
 
     // fetchData() {

@@ -2,7 +2,7 @@
   <v-dialog v-model="dialog" max-width="600px" persistent>
     <v-card>
       <!-- Header -->
-      <v-toolbar flat dense class="grey lighten-4">
+      <v-toolbar flat dense color="grey lighten-4" height="70">
         <v-icon left large class="text--primary">mdi-shield-account</v-icon>
         <v-toolbar-title class="text-h6 ma-4">Privacy & Visibility Settings</v-toolbar-title>
         <v-spacer></v-spacer>
@@ -14,13 +14,8 @@
       <!-- Content -->
       <v-card-text class="pa-6">
         <!-- Main description -->
-        <div class="mb-3">
-          <div class="mb-3">
-            In addition to login information, your data export contains records of account activity that might useful to you. Some of this data might be sensitive.
-          </div>
-          <div class="mb-3">
-            <strong>You are in full control of what data is visible on the screen.</strong>
-          </div>
+        <div class="mb-4">
+          Your export may contain sensitive content like messages, contact names, search history. Choose how each category is displayed by default. You can change these at any time.
         </div>
 
         <div class="py-2"></div>
@@ -103,7 +98,7 @@
       <v-card-actions class="pa-4">
         <v-spacer></v-spacer>
         <v-btn text @click="handleClose">
-          Cancel
+          Skip
         </v-btn>
         <v-btn color="primary" @click="handleSave">
           Save & Continue

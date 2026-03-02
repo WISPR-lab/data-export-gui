@@ -5,21 +5,18 @@ Extracted progress spinner. Cleaner separation from form logic.
 Displays status, progress bar, and current step message.
 -->
 <template>
-  <v-dialog v-model="isOpen" persistent width="700">
-    <v-card flat class="pa-5">
-      <h3 class="mb-4">Processing Your Data Export...</h3>
-      <br />
+  <v-dialog v-model="isOpen" persistent width="500">
+    <v-card flat class="pa-6">
+      <div class="d-flex align-center mb-4">
+        <v-progress-circular indeterminate color="primary" size="20" width="2" class="mr-3"></v-progress-circular>
+        <span class="text-body1">{{ friendlyStatus }}</span>
+      </div>
       <v-progress-linear
         color="primary"
-        height="25"
+        height="6"
+        rounded
         :value="progress"
-      >
-        {{ progress }}%
-      </v-progress-linear>
-      <v-divider class="my-4"></v-divider>
-      <p class="text-body2 text-muted">
-        {{ statusMessage }}
-      </p>
+      ></v-progress-linear>
     </v-card>
   </v-dialog>
 </template>
@@ -49,6 +46,17 @@ export default {
       set(val) {
         this.$emit('update:open', val);
       },
+    },
+    friendlyStatus() {
+      const map = {
+        validating: 'Reading ZIP file...',
+        parsing: 'Parsing records...',
+        initializing: 'Parsing records...',
+        inserting: 'Mapping events...',
+        complete: 'Almost done...',
+        error: 'Something went wrong',
+      };
+      return map[this.statusMessage] || 'Processing...';
     },
   },
 };

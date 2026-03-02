@@ -10,7 +10,7 @@ export async function getUploads() {
       u.id,
       u.given_name as name,
       u.platform,
-      u.upload_timestamp as created_at,
+      CAST(u.upload_timestamp * 1000 AS INTEGER) as created_at,
       u.updated_at,
       COALESCE(u.color, '5E75C2') as color,
       'ready' as status,
@@ -43,7 +43,7 @@ export async function getUploadById(uploadId) {
       u.id,
       u.given_name as name,
       u.platform,
-      u.upload_timestamp as created_at,
+      CAST(u.upload_timestamp * 1000 AS INTEGER) as created_at,
       u.updated_at,
       COALESCE(u.color, '5E75C2') as color,
       'ready' as status,
@@ -90,6 +90,16 @@ export async function updateUpload(uploadId, updates) {
   
   const sql = `UPDATE uploads SET ${setClauses.join(', ')} WHERE id = ?`;
   await db.exec(sql, { bind: values });
+}
+
+export async function getUploadedFiles(uploadId) {
+  const db = await getDB();
+  const rows = await db.exec(
+    `SELECT id, manifest_filename, opfs_filename, file_size_bytes, parse_status, upload_timestamp
+     FROM uploaded_files WHERE upload_id = ? ORDER BY upload_timestamp ASC`,
+    { bind: [uploadId], returnValue: 'resultRows', rowMode: 'object' }
+  );
+  return rows || [];
 }
 
 export async function deleteUpload(uploadId) {

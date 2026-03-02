@@ -98,6 +98,7 @@ limitations under the License.
               :is-selected="isEnabled(item)"
               @toggle="toggleTimeline"
               @save="save"
+              @remove="removeTimeline"
               @disableAllOtherTimelines="disableAllOtherTimelines"
               :timeline="item"
             >
@@ -285,6 +286,14 @@ export default {
         await this.$store.dispatch('updateSketch', this.sketch.id)
       } catch (e) {
         console.error('[TimelinesTable] Failed to update upload:', e)
+      }
+    },
+    async removeTimeline(timeline) {
+      try {
+        await DB.deleteUpload(timeline.id)
+        await this.$store.dispatch('updateSketch', this.sketch.id)
+      } catch (e) {
+        console.error('[TimelinesTable] Failed to delete upload:', e)
       }
     },
   },
