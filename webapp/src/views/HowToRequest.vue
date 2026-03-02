@@ -125,7 +125,7 @@ export default {
     async loadPlatformData(id) {
       try {
         // Fetch from public/how2request/[id].yaml
-        const response = await fetch(`/how2request/text/${id}.yaml`);
+        const response = await fetch(`/how2request/text/${id}_instr.yaml`);
         if (!response.ok) throw new Error('File not found');
         
         const text = await response.text();
