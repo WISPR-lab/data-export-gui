@@ -5,7 +5,7 @@ DEFAULT_EVENT_ACTIONS_TO_EXCLUDE = []  # e.g. messages, potentially, which might
 
 
 def deduplicate_events(
-        event_rows: list[dict], # event_rows, from semantic_map_worker.py
+        event_rows: list[dict], # event_rows, from semantic_map/worker.py
         tolerance_ms=100,
         merge_conflict_policy="keep_original", # or "log_conflict"
         exclude=DEFAULT_EVENT_ACTIONS_TO_EXCLUDE) -> list[dict]:        
@@ -75,7 +75,7 @@ def deduplicate_events(
 
 
 def old_deduplicate_events(
-        event_rows: list[dict], # event_rows, from semantic_map_worker.py
+        event_rows: list[dict], # event_rows, from semantic_map/worker.py
         tolerance_ms=100,
         exclude=DEFAULT_EVENT_ACTIONS_TO_EXCLUDE) -> list[dict]:
     

@@ -23,7 +23,6 @@ from semantic_map.deduplicate_events import deduplicate_events
 
 
 
-
 def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
     # rows to add to tables
     event_rows = []

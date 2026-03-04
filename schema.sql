@@ -85,6 +85,71 @@ CREATE TABLE IF NOT EXISTS auth_devices_initial ( -- filled during semantic map
 );
 
 
+CREATE TABLE IF NOT EXISTS auth_devices ( -- hard merge based on static device identifiers. user cannot edit this.
+    id TEXT PRIMARY KEY,
+    upload_ids JSONTEXT NOT NULL,  -- JSON list of uploads that contributed to this merged device
+    file_ids JSONTEXT NOT NULL,    -- ^^ for uploaded_files.id 
+    auth_devices_initial_ids JSONTEXT NOT NULL,  -- ^^ for auth_devices_initial.id
+    --
+    attributes JSONTEXT    -- merged attributes
+);
+
+
+CREATE TABLE IF NOT EXISTS device_groups (
+    id TEXT PRIMARY KEY,
+    auth_devices_ids JSONTEXT NOT NULL,  -- JSON list of auth_devices.id that are in this cluster
+    --
+    initial_soft_merge BOOLEAN DEFAULT 0,
+    soft_merge_flag_status TEXT DEFAULT "na", -- "na" | "shown" | "user_confirmed" | "user_rejected"
+    --
+    created_at REAL,
+    updated_at REAL,
+    --
+    tags JSONTEXT DEFAULT "[]",
+    labels JSONTEXT DEFAULT "[]"
+);
+
+CREATE TABLE IF NOT EXISTS device_group_comments (
+    id TEXT PRIMARY KEY,
+    device_group_id TEXT,
+    comment TEXT,
+    created_at REAL,
+    updated_at REAL,
+    FOREIGN KEY(device_group_id) REFERENCES device_groups(id) ON DELETE CASCADE
+);
+
+
+-- CREATE TABLE IF NOT EXISTS device_group_history (
+--     id TEXT PRIMARY KEY,
+--     device_group_id TEXT NOT NULL,
+--     timestamp REAL,
+--     action TEXT, -- "added" | "removed" 
+--     auth_device_ids JSONTEXT,  -- elements added/removed
+--     origin TEXT, -- "initial_system_group" | "user"
+-- ); 
+
+
+
+
+-- CREATE TABLE IF NOT EXISTS device_clusters ( -- filled during device grouping
+--     id TEXT PRIMARY KEY,
+--     upload_id TEXT NOT NULL,
+--     label TEXT,                              -- user-editable display name
+--     source_ids JSONTEXT NOT NULL,            -- JSON list of auth_devices_initial.id
+--     attributes JSONTEXT,                     -- merged best-guess attribute set
+--     match_type TEXT NOT NULL,                -- "hard" | "soft_suggested" | "user_confirmed" | "user_split"
+--     merged_into TEXT,                        -- self-ref: if this cluster was merged into another
+--     created_at REAL,
+--     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE,
+--     FOREIGN KEY(merged_into) REFERENCES device_clusters(id)
+-- );
+
+
+
+
+
+
+
 
 
 -----------------------------------------
