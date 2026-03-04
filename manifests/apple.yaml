@@ -13,7 +13,7 @@ files:
     parser:
       format: "csv"
 
-  - id: "apple_account_info_PWD"
+  - id: "apple_account_info_PWD" # not ideal that this is duplicated but necessary
     path: "Apple ID account and device information/Apple ID Account Information.csv"
     parser:
       format: "csv"
@@ -30,6 +30,7 @@ files:
     parser: 
       format: "csv"
       drop_duplicates: { subset: ["Beneficiary ID"], keep: "row_completeness"}
+  
   
   - id: "apple_data_privacy_requests"
     path: "Apple ID account and device information/Data & Privacy Request History.csv"
@@ -50,16 +51,37 @@ files:
       drop_duplicates: { subset: ["Messaging Device ID"], keep: "last"}
 
 
+  - id: "apple_saved_safari_history" 
+    path: "anon-apple/Other Data Part 4 of 5/Apple Features Using iCloud/SafariBrowsingHistory/SafariBrowsingHistory.csv"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["URL", "Time"], keep: "first"}
+
+  - id: "apple_passkey"
+    path: "Apple ID account and device information/Passkeys Information.csv"
+    parser:
+      format: "csv"
+      drop_duplicates: { subset: ["Created Date"], keep: "first"}
+
+
+  - id: "apple_app_download_history" # TODO LINK
+    path: "Apple Media Services Information/Update and Redownload History/iTunes and App-Book Re-download and Update History.csv"
+    parser:
+      format: "csv"
+
+  # TODO NEED TO GET INTO OTHER_DATA_4
+
 
 
 views:
   
+# -------------------------- AUTHENTICATION EVENTS --------------------------
 - file: 
     id: "apple_signon_info"
   static:
       event.action: "user_login_success"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["start"]
       event.outcome: "success"
   fields:
@@ -74,7 +96,7 @@ views:
   static:
       event.action: "user_password_change"
       event.kind: "event"
-      event.category: ["iam"]
+      event.category: ["authentication"]
       event.type: ["change"]
   fields:
   - {target: "@timestamp", source: "Last Password Change Date", type: "datetime"}
@@ -88,7 +110,7 @@ views:
   static:
       event.action: "recovery_contact_addition"
       event.kind: "event"
-      event.category: ["iam"]
+      event.category: ["configuration"]
       event.type: ["creation", "user"]
   fields:
   - {target: "@timestamp", source: "Recovery Create Date", type: "datetime"}
@@ -100,14 +122,28 @@ views:
   static:
       event.action: "legacy_contact_addition"
       event.kind: "event"
-      event.category: ["iam"]
+      event.category: ["configuration"]
       event.type: ["creation", "user"]
   fields:
   - {target: "@timestamp", source: "Beneficiary Create Date", type: "datetime"}
   - {target: "client.ip", source: "Beneficiary IP Address", type: "string"}
   - {target: "device.model.identifier", source: "Device Model Name", type: "string"}
 
+- file:
+    id: "apple_passkey"
+  static:
+    event.action: "passkey_creation"
+    event.kind: "event"
+    event.category: ["authentication"]
+    event.type: ["creation", "user"]
+  fields:
+  - {target: "@timestamp", source: "Created Date", type: "datetime"}
+  - {target: "device.given_name", source: "Device Name", type: "string"}
+  - {target: "device.serial_number", source: "Device Serial Number", type: "string"}
+  # TODO FINISH
 
+
+# -------------------------- MISC ACTIVITY EVENTS --------------------------
 - file: 
     id: "apple_data_privacy_requests"
   static:
@@ -115,16 +151,35 @@ views:
       event.kind: "event"
       event.category: ["file"]
       event.type: ["access"]
-
   fields:
   - {target: "@timestamp", source: "Request Time", type: "datetime"}
   - {target: "event.end", source: "Request Completion Time", type: "datetime"}
+
+
+- file: 
+    id: "apple_saved_safari_history"
+  static:
+    event.kind: "event"
+    event.action: "safari_search"
+    event.category: ["web"]
+    event.type: ["access"]
+  fields:
+  - {target: "@timestamp", source: "Time", type: "datetime"}
+  - {target: "url.full", source: "URL", type: "string"}
+  - {target: "url.title", source: "Title", type: "string"}
+
+
+
+
+
+
+# -------------------------- ASSETS --------------------------
 
 - file: 
     id:   "apple_device_info"
   static:
       event.kind: "asset"
-      event.category: ["authentication", "host"]
+      event.category: ["authentication", "session"]
       event.type: ["info"]
       entity.type: "authenticated_device"
   fields:
@@ -141,7 +196,7 @@ views:
     id: "apple_messaging_devices"
   static:
       event.kind: "asset"
-      event.category: ["authentication", "host"]
+      event.category: ["authentication", "session"]
       event.type: ["info"]
       entity.type: "authenticated_device"
   fields:
@@ -149,4 +204,3 @@ views:
   - {target: "device.given_name", source: "device-name", type: "string"}
   - {target: "user_agent.original", source: "os-version", type: "string"}
   # TODO: potential 2FA field
-

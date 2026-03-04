@@ -4,9 +4,13 @@ let workerMessageId = 0;
 
 export function getPyodideWorker() {
   if (!pyodideWorker) {
-    // Use relative path that works with publicPath
     pyodideWorker = new Worker('./pyodide-worker.js');
     console.log('[PyodideClient] Created Pyodide worker (singleton)');
+    pyodideWorker.addEventListener('message', (event) => {
+      if (event.data.type === 'packageInstallFailure') {
+        console.error('[PyodideClient] Packages failed to install in Pyodide:', event.data.packages);
+      }
+    });
   }
   return pyodideWorker;
 }

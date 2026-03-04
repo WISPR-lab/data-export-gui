@@ -74,7 +74,7 @@ views:
     static:
       event.action: "user_password_change"
       event.kind: "event"
-      event.category: ["iam"]
+      event.category: ["configuration"]
       event.type: ["change"]
     fields:
       - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
@@ -86,7 +86,7 @@ views:
     static:
       event.action: "email_address_change"
       event.kind: "event"
-      event.category: ["iam"]
+      event.category: ["configuration"]
       event.type: ["change"]
     fields:
       - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}

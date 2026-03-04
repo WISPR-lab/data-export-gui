@@ -230,6 +230,7 @@ limitations under the License.
 
       <!-- Left panel -->
       <v-navigation-drawer
+        v-if="hasTimelines"
         v-model="showLeftPanel"
         app
         clipped

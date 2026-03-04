@@ -68,21 +68,20 @@ async function initPyodide() {
   const micropip = pyodide.pyimport('micropip');
   console.log('[Pyodide] Micropip module imported, starting installation...');
   
-  try {
-    console.log('[Pyodide] Installing hjson...');
-    await micropip.install('hjson');
-    console.log('[Pyodide] hjson installed');
-    
-    console.log('[Pyodide] Installing json5...');
-    await micropip.install('json5');
-    console.log('[Pyodide] json5 installed');
-  
-    
-    console.log('[Pyodide] All JSON packages installed successfully');
-  } catch (error) {
-    console.error('[Pyodide] JSON package installation error:', error);
-    console.error('[Pyodide] Error details:', error.message || String(error));
-    console.warn('[Pyodide] Parsing will continue with available parsers');
+  const micropipPackages = ['hjson', 'json5', 'device_detector'];
+  const failedPackages = [];
+  for (const pkg of micropipPackages) {
+    try {
+      console.log(`[Pyodide] Installing ${pkg}...`);
+      await micropip.install(pkg);
+      console.log(`[Pyodide] ${pkg} installed`);
+    } catch (error) {
+      console.error(`[Pyodide] Failed to install ${pkg}:`, error.message || String(error));
+      failedPackages.push(pkg);
+    }
+  }
+  if (failedPackages.length > 0) {
+    self.postMessage({ type: 'packageInstallFailure', packages: failedPackages });
   }
 
   // Fetch and mount our custom Python parser logic
@@ -104,8 +103,9 @@ async function initPyodide() {
     pythonManifest = {
       core_files: ['errors.py', 'manifest.py', 'db_session.py', 'extractor_worker.py', 'semantic_map_worker.py'],
       extractors: ['__init__.py', 'base.py', 'json_.py', 'jsonl_.py', 'csv_.py', 'csv_multi.py', 'json_label_values.py'],
-      semantic_map: ['__init__.py', 'map_utils.py', 'action_message_builder.py', 'deduplicate_events.py'],
-      utils: ['__init__.py', 'filter_builder.py', 'safe_path_utils.py', 'json_utils.py', 'time_utils.py', 'misc.py']
+      semantic_map: ['__init__.py', 'map_utils.py', 'action_message_builder.py', 'deduplicate_events.py', 'ua_normalize.py', 'device_normalize.py', 'geo_normalize.py'],
+      utils: ['__init__.py', 'filter_builder.py', 'safe_path_utils.py', 'json_utils.py', 'time_utils.py', 'misc.py'],
+      device_grouping: ['__init__.py']
     };
   }
   
@@ -115,6 +115,7 @@ async function initPyodide() {
   pyodide.FS.mkdir(`${pyCorePath}/extractors`);
   pyodide.FS.mkdir(`${pyCorePath}/semantic_map`);
   pyodide.FS.mkdir(`${pyCorePath}/utils`);
+  pyodide.FS.mkdir(`${pyCorePath}/device_grouping`);
   
   const fetchBaseUrl = pyCorePath.startsWith('/') ? `.${pyCorePath}` : `./${pyCorePath}`;
   // Mount core files
@@ -173,6 +174,18 @@ async function initPyodide() {
     const content = await response.text();
     pyodide.FS.writeFile(`${pyCorePath}/utils/${file}`, content);
     console.log(`[Pyodide] Mounted: ${pyCorePath}/utils/${file}`);
+  }
+
+  // Mount device grouping files
+  for (const file of pythonManifest.device_grouping || []) {
+    const response = await fetch(`${fetchBaseUrl}/device_grouping/${file}`);
+    if (!response.ok) {
+      console.error(`[Pyodide] Failed to fetch device_grouping/${file}: ${response.statusText}`);
+      continue;
+    }
+    const content = await response.text();
+    pyodide.FS.writeFile(`${pyCorePath}/device_grouping/${file}`, content);
+    console.log(`[Pyodide] Mounted: ${pyCorePath}/device_grouping/${file}`);
   }
 
   // Mount OPFS (Shared Buffer)

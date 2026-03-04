@@ -535,7 +535,7 @@ export default {
         this.originalContext = { queryString: currentQueryStringCopy, queryFilter: currentQueryFilterCopy }
       }
 
-      const dateTimeTemplate = 'YYYY-MM-DDTHH:mm:ss'
+      const dateTimeTemplate = 'YYYY-MM-DDTHH:mm:ss[Z]'
       let startDateTimeMoment = this.$moment.utc(this.contextEvent._source.datetime)
       let newStartDate = startDateTimeMoment.clone().subtract(contextTime, 's').format(dateTimeTemplate)
       let newEndDate = startDateTimeMoment.clone().add(contextTime, 's').format(dateTimeTemplate)

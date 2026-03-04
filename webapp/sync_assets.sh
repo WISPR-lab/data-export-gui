@@ -78,6 +78,11 @@ generate_manifest() {
     find "$python_core_dir/semantic_map" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'
     echo "  ],"
     
+    # Device grouping
+    echo '  "device_grouping": ['
+    find "$python_core_dir/device_grouping" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'
+    echo "  ],"
+
     # Utils
     echo '  "utils": ['
     find "$python_core_dir/utils" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'

@@ -140,12 +140,15 @@ If transform is set to "coalesce" (or if source is a list), the engine will pick
 #### Custom ECS Fields currently used
 ECS isn't really built for this use case, so we have a couple of custom fields that we're consistently using at the moment
 
-- `device.id.[platform]`: internal device fingerprint (not user ID) for a specific platform
+- `device.id.[platform]`: internal device fingerprint (not user ID) for a specific platform --> also + .ad
 - `device.given_name`: user-defined nickname for device (e.g., "Bob's iPhone"), common in Apple
 - `device.imei`: International Mobile Equipment Identity
 - `device.meid`: Mobile Equipment Identifier
 - `entity.type`: for assets. use value `"authenticated_device"` for trusted device lists
 - `entity.[first/last]_seen_timestamp`: for assets, instead of `@timestamp`
-
+- `url.title`: for title of web page associated with a search/website
+- `client.session.id` and `client.session.type`
+- `user.email.new` and `user.email.old`
+- `device.screen_resolution`
 
 

@@ -34,6 +34,16 @@ module.exports = {
         "env": {
           "jest": true
         }
+      },
+      {
+        "files": ["public/**/*.js"],
+        "env": {
+          "browser": true,
+          "worker": true
+        },
+        "rules": {
+          "no-console": "off"
+        }
       }
     ]
 }

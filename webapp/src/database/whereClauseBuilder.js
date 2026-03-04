@@ -46,7 +46,7 @@ export function buildWhereClause(filter = {}) {
     });
   }
 
-  // Date range filter
+  // Date range filter (legacy direct dateRange object)
   if (filter.dateRange) {
     if (filter.dateRange.start) {
       conditions.push(`e.timestamp >= ?`);
@@ -55,6 +55,44 @@ export function buildWhereClause(filter = {}) {
     if (filter.dateRange.end) {
       conditions.push(`e.timestamp <= ?`);
       params.push(filter.dateRange.end);
+    }
+  }
+
+  // Datetime chip filters (time filter UI chips with type 'datetime_range')
+  // Timestamps in DB are stored as microseconds (REAL). Chip values are ISO date/datetime strings.
+  if (filter.chips && Array.isArray(filter.chips)) {
+    const activeTimeChips = filter.chips.filter(
+      chip => chip && chip.active !== false && chip.type && chip.type.startsWith('datetime')
+    );
+    if (activeTimeChips.length > 0) {
+      const timeConditions = [];
+      activeTimeChips.forEach(chip => {
+        const parts = chip.value.split(',');
+        const startStr = parts[0];
+        const endStr = parts[1];
+        if (!startStr) return;
+
+        const startUs = new Date(startStr).getTime() * 1000;
+        if (isNaN(startUs)) return;
+
+        if (endStr) {
+          // For date-only end strings (YYYY-MM-DD), extend to end of that UTC day
+          const isDateOnly = endStr.length === 10 && !endStr.includes('T');
+          const endMs = new Date(endStr).getTime() + (isDateOnly ? (24 * 60 * 60 * 1000 - 1) : 0);
+          const endUs = endMs * 1000;
+          if (!isNaN(endUs)) {
+            timeConditions.push('(e.timestamp >= ? AND e.timestamp <= ?)');
+            params.push(startUs, endUs);
+            return;
+          }
+        }
+        timeConditions.push('e.timestamp >= ?');
+        params.push(startUs);
+      });
+
+      if (timeConditions.length > 0) {
+        conditions.push('(' + timeConditions.join(' OR ') + ')');
+      }
     }
   }
 
