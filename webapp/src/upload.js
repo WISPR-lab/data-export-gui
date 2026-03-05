@@ -1,7 +1,7 @@
 import { OPFSManager } from '@/storage/opfs_manager.js';
 import { classifyError, ERROR_TYPES } from '@/constants/error_types';
 import DB from '@/database/index.js';
-import { callPyodideWorker } from '@/pyodide/pyodide-client.js';
+import { executeUpload } from '@/pyodide/pyodide-client.js';
 
 const DEBUG_LOGGING = true;
 
@@ -27,116 +27,36 @@ export async function processUpload(file, platform, sketchId, store) {
 
   try {
     if (store) store.commit('START_UPLOAD', file.name);
-    log(`Starting upload process for ${platform} platform with file: ${file.name}`);
-    
-    // Step 1: Extract ZIP to OPFS
-    log('Step 1: Extracting ZIP to OPFS...');
-    if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'validating', progress: 10 });
+    log(`Starting upload process for ${platform} with file: ${file.name}`);
     
     const opfsManager = new OPFSManager();
-    try {
-      await opfsManager.processZipUpload(file, platform);
-      log('ZIP extraction complete');
-    } catch (error) {
-      const msg = `Failed to extract ZIP: ${error.message}`;
-      summary.errors.push(msg);
-      if (store) store.commit('FAIL_UPLOAD', { errors: [msg], errorType: ERROR_TYPES.FILE_ERROR });
-      return summary;
-    }
     
-    // Step 2: Check if Pyodide is ready, warmup if needed
-    log('Step 2: Checking parser status...');
-    if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'parsing', progress: 25 });
-    
-    try {
-      const readyStatus = await callPyodideWorker('isPyodideReady', {});
-      if (!readyStatus.pyodideReady) {
-        log('Parser not ready yet, waiting for initialization...');
-        if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'initializing', progress: 28 });
+    const result = await executeUpload(file, platform, opfsManager, {
+      onProgress: (evt) => {
+        log(`${evt.stage} (${evt.progress}%)`);
+        if (store) {
+          store.commit('UPDATE_UPLOAD_PROGRESS', { status: evt.stage, progress: evt.progress });
+        }
+      },
+      onError: (evt) => {
+        logError(`${evt.stage}: ${evt.error}`);
       }
-    } catch (error) {
-      log(`Warning: Could not check parser status: ${error.message}`);
-    }
-    
-    // Step 3: Call Python extractor worker
-    log('Step 3: Running Python extractor...');
-    if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'parsing', progress: 30 });
+    });
 
-    let uploadId;
-    try {
-      const extractResult = await callPyodideWorker('extract', {platform, givenName: file.name});
-      if (extractResult.status !== 'success') {
-        const errMsg = extractResult.error || 'Extraction failed';
-        console.error('[UploadService] Extractor returned failure:', errMsg);
-        throw new Error(errMsg);
-    }
-      uploadId = extractResult.upload_id;
-      if (!uploadId) {
-        logError('Extractor did not return an upload ID');
-        throw new Error('Extractor did not return an upload ID');
-      }
-      log(`Extraction complete. Upload ID: ${uploadId}`);
-      if (extractResult.partial_errors && extractResult.partial_errors.length) {
-        extractResult.partial_errors.forEach(e => {
-          if (e.level === 'error') {
-            summary.warnings.push(`Skipped "${e.file}": ${e.msg}`);
-          } else {
-            log(`File ${e.level} for ${e.file}: ${e.msg}`);
-          }
-        });
-        log(`Extraction complete with ${extractResult.partial_errors.length} file-level issue(s).`);
-      }
-    } catch (error) {
-      await DB.getDB();
-      const msg = `Python extraction error: ${error.message}`;
-      summary.errors.push(msg);
-      summary.errorType = error.errorType || ERROR_TYPES.PARSER_ERROR;
-      if (store) store.commit('FAIL_UPLOAD', summary);
-      return summary;
-    }
-
-    // Step 4 Clean up OPFS temp files — no longer needed after extraction
-    log('Step 4: Cleaning up OPFS temp files...');
-    try {
-      await opfsManager.clearTempStorage();
-      log('OPFS temp files cleared');
-    } catch (error) {
-      log(`Warning: failed to clear OPFS temp files: ${error.message}`);
-      summary.warnings.push('Temp files may not have been cleaned up from local storage.');
-    }
+    summary.totalEventsAdded = result.events_count;
+    summary.totalStatesAdded = result.devices_count;
     
-    // Step 5: Call Python semantic mapper
-    log('Step 5: Running Python semantic mapper...');
-    if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'inserting', progress: 60 });
-    
-    try {
-      if (!uploadId) {
-        throw new Error('Upload ID not available for semantic mapping');
-      }
-      
-      const mapResult = await callPyodideWorker('semantic_map', { 
-        platform, 
-        uploadId 
+    if (result.partial_errors && result.partial_errors.length) {
+      result.partial_errors.forEach(e => {
+        if (e.level === 'error') {
+          summary.warnings.push(`Skipped "${e.file}": ${e.msg}`);
+        }
       });
-      
-      if (mapResult.status !== 'success') {
-        throw new Error(mapResult.error || 'Semantic mapping failed');
-      }
-      
-      summary.totalEventsAdded = mapResult.events_count || 0;
-      summary.totalStatesAdded = mapResult.devices_count || 0;
-      log(`Semantic mapping complete. ${summary.totalEventsAdded} events, ${summary.totalStatesAdded} devices`);
-    } catch (error) {
-      const msg = `Python semantic mapping error: ${error.message}`;
-      summary.errors.push(msg);
-      summary.errorType = error.errorType || ERROR_TYPES.DATABASE_ERROR;
-      if (store) store.commit('FAIL_UPLOAD', summary);
-      return summary;
     }
-    
-    // Step 6: Update UI store
-    log('Step 6: Refreshing UI...');
-    if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'complete', progress: 90 });
+
+    // Update UI store
+    log('Refreshing UI...');
+    if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'complete', progress: 95 });
     
     try {
       const uploads = await DB.getUploads();
@@ -156,21 +76,18 @@ export async function processUpload(file, platform, sketchId, store) {
     } catch (error) {
       const msg = `Failed to refresh UI: ${error.message}`;
       summary.errors.push(msg);
-      summary.warnings.push('Data uploaded but UI refresh failed. Try reloading the page.');
+      summary.warnings.push('Data uploaded but UI refresh failed. Try reloading.');
       if (store) store.commit('COMPLETE_UPLOAD', summary);
     }
     
   } catch (error) {
-    console.error('[UploadService] Unexpected error during upload process:', error);
-    summary.errors.push(`Unexpected error: ${error.message}`);
-    if (!summary.errorType) {
-      summary.errorType = error.errorType || ERROR_TYPES.UNKNOWN_ERROR;
-    }
+    console.error('[UploadService] Upload failed:', error);
+    summary.errors.push(error.message);
+    summary.errorType = error.errorType || ERROR_TYPES.PARSER_ERROR;
     if (store) store.commit('FAIL_UPLOAD', summary);
-
   } finally {
     summary.processingTimeMs = Date.now() - startTime;
-    log(`Upload process completed in ${summary.processingTimeMs}ms`);
+    log(`Upload completed in ${summary.processingTimeMs}ms`);
   }
   
   return summary;

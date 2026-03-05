@@ -1,0 +1,3 @@
+[submodule "UA-Extract-purepy"]
+	path = UA-Extract-purepy
+	url = https://github.com/julianonn/UA-Extract-purepy

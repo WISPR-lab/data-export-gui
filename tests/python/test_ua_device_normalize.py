@@ -1,6 +1,6 @@
 import pytest
-from fieldnorm.ua_normalize import normalize_ua_fields
-from fieldnorm.device_normalize import normalize_device_fields
+from field_normalization.user_agent import normalize_ua_fields
+from field_normalization.device import normalize_device_fields
 
 _UA_CHROME_ANDROID = (
     "Mozilla/5.0 (Linux; Android 12; SM-G991B) "

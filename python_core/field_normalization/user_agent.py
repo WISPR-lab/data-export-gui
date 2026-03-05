@@ -1,5 +1,5 @@
 import re
-from device_detector import DeviceDetector 
+from device_detector import DeviceDetector
 
 _FBAN_TOKEN_RE = re.compile(r'FB([A-Z]+)/([^;\]]+)')
 _GENERIC = {'other', 'unknown', 'generic smartphone', 'generic feature phone', 'spider', ''}

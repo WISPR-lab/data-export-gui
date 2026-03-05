@@ -1,0 +1,9 @@
+hjson
+json5
+pyyaml
+regex
+aiohttp
+tenacity
+rich
+exrex
+typer

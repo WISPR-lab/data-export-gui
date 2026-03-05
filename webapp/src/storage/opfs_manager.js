@@ -11,15 +11,9 @@ export class OPFSManager {
     this.isInitialized = false;
   }
 
-  // ── Initialisation ─────────────────────────────────────────────────
 
-  /**
-   * Initialise the manager:
-   *  1. Read storage.temp_zip_storage from config.yaml and create nested OPFS dirs
-   *  2. Fetch whitelist patterns from Pyodide and cache as RegExp[]
-   *
-   * @param {string} [platform] – manifest id (e.g. "facebook") for whitelist lookup
-   */
+
+
   async init(platform) {
     if (this.isInitialized) return;
 
@@ -44,7 +38,6 @@ export class OPFSManager {
     console.log(`[OPFSManager] Config: db_path=${dbPath}, temp_zip_storage=${storagePath}`);
     console.log(`[OPFSManager] Mount prefix: "${mountPrefix}", relative storage path: "${relativePath}"`);
 
-    // Walk each relative path segment and create directories iteratively
     this.opfsRoot = await navigator.storage.getDirectory();
     const segments = relativePath.split('/').filter(Boolean);
     let currentDir = this.opfsRoot;
@@ -54,7 +47,7 @@ export class OPFSManager {
     }
     this.storageDir = currentDir;
 
-    // Log what already exists in OPFS root for diagnostics
+
     const rootEntries = [];
     for await (const [name] of this.opfsRoot.entries()) rootEntries.push(name);
     console.log(`[OPFSManager] OPFS root contents at init:`, rootEntries);
@@ -66,7 +59,7 @@ export class OPFSManager {
       throw new Error('OPFSManager storageDir misconfiguration: pointing to OPFS root');
     }
 
-    // 2. Load whitelist file-path patterns from Pyodide manifest
+
     if (platform) {
       try {
         const paths = await callPyodideWorker('get_whitelist', { platform });
@@ -87,34 +80,21 @@ export class OPFSManager {
     this.isInitialized = true;
   }
 
-  // ── Whitelist check ────────────────────────────────────────────────
 
-  /**
-   * Returns true when the filename matches at least one manifest path
-   * pattern.  If no patterns were loaded, accepts everything (fallback).
-   */
+
+
+
   isWhitelisted(filename) {
     if (this.whitelistPatterns.length === 0) return true;
     const normalised = filename.replace(/\\/g, '/');
     return this.whitelistPatterns.some((re) => re.test(normalised));
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────
 
-  /**
-   * Flattens a path to be file-system safe (replaces / with ___)
-   */
   flattenPath(path) {
     return path.replace(/\//g, '___');
   }
 
-  // ── ZIP Processing ─────────────────────────────────────────────────
-
-  /**
-   * Processes a ZIP file stream, filtering and saving directly to OPFS
-   * @param {File} zipFile
-   * @param {string} [platform] – manifest id used for whitelist lookup
-   */
   async processZipUpload(zipFile, platform) {
     await this.init(platform);
     console.log(`[OPFSManager] Processing upload: ${zipFile.name}`);
@@ -132,7 +112,6 @@ export class OPFSManager {
         if (file.name.endsWith('/')) return;
 
         totalSeen++;
-        // Only process files that appear in the platform manifest
         if (this.isWhitelisted(file.name)) {
           totalAccepted++;
           const safeName = this.flattenPath(file.name);
@@ -166,12 +145,9 @@ export class OPFSManager {
           const { done, value } = await reader.read();
           if (done) {
             unzipStream.push(new Uint8Array(0), true);
-            // Wait for every in-flight OPFS write to complete
             await Promise.all(savedPromises);
 
             console.log(`[OPFSManager] ZIP done: ${totalSeen} scanned, ${totalAccepted} accepted, ${writeSuccesses} written, ${writeFailures} failed.`);
-
-            // Verification: enumerate what actually landed in storageDir
             const verifyNames = [];
             for await (const [name] of storageDir.entries()) {
               verifyNames.push(name);
@@ -195,19 +171,15 @@ export class OPFSManager {
     });
   }
 
-  // ── OPFS cleanup ───────────────────────────────────────────────────
 
-  /**
-   * Removes only the contents of the temp ZIP storage directory (tmpstore).
-   * Safe to call right after extraction; does NOT touch the SQLite database.
-   */
+
   async clearTempStorage() {
     try {
       if (!this.isInitialized) {
-        await this.init(); // no platform → skips whitelist, just resolves dirs
+        await this.init(); // no platform -> skips whitelist, just resolves dirs
       }
       
-      // SAFETY: Ensure we're deleting tmpstore subdirectory, NOT OPFS root
+      // SAFETY: delete temp subdirectory
       if (!this.storageDir || this.storageDir === this.opfsRoot) {
         console.warn('[OPFSManager] Safety check: storageDir is root or null, aborting cleanup');
         return;
@@ -226,11 +198,7 @@ export class OPFSManager {
     }
   }
 
-  /**
-   * Removes the SQLite database file(s) from OPFS root.
-   * Also removes WAL/SHM sidecar files if present.
-   * Does NOT touch the temp storage directory.
-   */
+
   async clearDatabase() {
     try {
       if (!this.isInitialized) {
@@ -259,11 +227,6 @@ export class OPFSManager {
     }
   }
 
-  /**
-   * Nuclear option: wipes the entire OPFS origin (temp files + database).
-   * Use for full reset / "start over". Resets init state so next call
-   * to init() recreates everything cleanly.
-   */
   async nukeAll() {
     try {
       const root = await navigator.storage.getDirectory();
@@ -273,7 +236,6 @@ export class OPFSManager {
       for (const name of entries) {
         await root.removeEntry(name, { recursive: true });
       }
-      // Reset so next init() recreates dirs cleanly
       this.opfsRoot = null;
       this.storageDir = null;
       this.dbFilename = null;
@@ -285,17 +247,8 @@ export class OPFSManager {
     }
   }
 
-  // ── File writing with queued async writes ──────────────────────────
 
-  /**
-   * Saves one fflate file entry to OPFS.
-   *
-   * fflate pushes chunks *synchronously* via `ondata` while
-   * `writable.write()` is asynchronous.  Without queuing the writes
-   * the browser will exhaust memory on large files.  We chain every
-   * `write()` behind the previous one and only `close()` the writable
-   * after the final queued chunk has been flushed.
-   */
+  
   async _saveFileEntry(filename, fflateFile) {
     console.log(`[OPFSManager] _saveFileEntry START: ${filename}`);
 

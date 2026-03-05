@@ -33,66 +33,59 @@ case "$LINK_MODE" in
     ;;
 esac
 
-# ── Clean previous artefacts ────────────────────────────────────────────────
+
+if [ ! -d "$REPO_ROOT/UA-Extract-purepy" ]; then
+  echo "[sync-assets] ERROR: UA-Extract-purepy submodule not found!"
+  echo ""
+  echo "To initialize the submodule, run:"
+  echo "  cd $REPO_ROOT"
+  echo "  git submodule update --init --recursive"
+  echo ""
+  exit 1
+fi
+
+bash "$REPO_ROOT/UA-Extract-purepy/build_wheels.sh"
+
+
 rm -rf \
-  "$PUBLIC/python_core" \
+  "$PUBLIC/python_core.zip" \
   "$PUBLIC/manifests" \
   "$PUBLIC/sqlite-wasm" \
   "$PUBLIC/sqlite-worker.js" \
   "$PUBLIC/pyodide-worker.js" \
   "$PUBLIC/config.yaml" \
   "$PUBLIC/schema.sql" \
-  "$PUBLIC/_dynamic_py_manifest.json"
+  "$PUBLIC/wheels"
 
-# ── Link or copy source files ───────────────────────────────────────────────
-$LINK_DIR_CMD "$REPO_ROOT/python_core"                   "$PUBLIC/python_core"
+
+# Create wheels directory and copy .whl AND the pointer file
+mkdir -p "$PUBLIC/wheels"
+DIST_DIR="$REPO_ROOT/UA-Extract-purepy/dist"
+
+if [ "$LINK_MODE" = "--symlink" ]; then
+  # Link wheels
+  for wheel in "$DIST_DIR"/*.whl; do
+    [ -f "$wheel" ] && ln -sf "$wheel" "$PUBLIC/wheels/$(basename "$wheel")"
+  done
+  # Link the pointer file so the worker knows which version to load
+  ln -sf "$DIST_DIR/latest_wheel.txt" "$PUBLIC/wheels/latest_wheel.txt"
+else
+  # Copy wheels and pointer
+  cp "$DIST_DIR"/*.whl "$PUBLIC/wheels/" 2>/dev/null || true
+  cp "$DIST_DIR/latest_wheel.txt" "$PUBLIC/wheels/" 2>/dev/null || true
+fi
+
 $LINK_DIR_CMD "$REPO_ROOT/manifests"                     "$PUBLIC/manifests"
 $LINK_FILE_CMD "$WEBAPP_DIR/src/pyodide/pyodide-worker.js"         "$PUBLIC/pyodide-worker.js"
 $LINK_FILE_CMD "$WEBAPP_DIR/src/database/sqlite-worker.js"         "$PUBLIC/sqlite-worker.js"
 
-# ── Copy assets that always need a build-time snapshot ─────────────────────
+
+(cd "$REPO_ROOT" && zip -r "$PUBLIC/python_core.zip" python_core -q)
+echo "[sync-assets] Created: python_core.zip"
+
+
 cp -r "$WEBAPP_DIR/node_modules/@sqlite.org/sqlite-wasm/dist" "$PUBLIC/sqlite-wasm"
 cp    "$REPO_ROOT/config.yaml" "$PUBLIC/config.yaml"
 cp    "$REPO_ROOT/schema.sql"  "$PUBLIC/schema.sql"
-
-# ── Generate dynamic Python manifest ────────────────────────────────────────
-generate_manifest() {
-  local output_file="$1"
-  local python_core_dir="$2"
-  
-  {
-    echo "{"
-    
-    # Core files
-    echo '  "core_files": ['
-    find "$python_core_dir" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'
-    echo "  ],"
-    
-    # Extractors
-    echo '  "extractors": ['
-    find "$python_core_dir/extractors" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'
-    echo "  ],"
-    
-    # Semantic map
-    echo '  "semantic_map": ['
-    find "$python_core_dir/semantic_map" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'
-    echo "  ],"
-    
-    # Device grouping
-    echo '  "device_grouping": ['
-    find "$python_core_dir/device_grouping" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'
-    echo "  ],"
-
-    # Utils
-    echo '  "utils": ['
-    find "$python_core_dir/utils" -maxdepth 1 -name "*.py" -type f -exec basename {} \; | sort | sed 's/^/    "/' | sed 's/$/"/' | paste -sd ',' - | sed 's/,$//'
-    echo "  ]"
-    
-    echo "}"
-  } > "$output_file"
-}
-
-generate_manifest "$PUBLIC/_dynamic_py_manifest.json" "$PYTHON_CORE_DIR"
-echo "[sync-assets] Generated: _dynamic_py_manifest.json"
 
 echo "[sync-assets] Done."

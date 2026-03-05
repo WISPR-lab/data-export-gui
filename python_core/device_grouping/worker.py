@@ -196,10 +196,8 @@ def group(upload_id: str, db_path: str = None) -> None:
             device_group_rows.append({
                 'id': str(uuid.uuid4()),
                 'auth_devices_ids': json.dumps(members),
-                'label': None,
                 'initial_soft_merge': 1 if is_soft else 0,
                 'soft_merge_flag_status': 'na',
-                'attributes': json.dumps(merged_attrs),
                 'tags': '[]',
                 'labels': '[]',
                 'created_at': ts,
@@ -209,11 +207,11 @@ def group(upload_id: str, db_path: str = None) -> None:
         conn.executemany(
             """
             INSERT INTO device_groups
-                (id, auth_devices_ids, label, initial_soft_merge, soft_merge_flag_status,
-                 attributes, tags, labels, created_at, updated_at)
+                (id, auth_devices_ids, initial_soft_merge, soft_merge_flag_status,
+                 tags, labels, created_at, updated_at)
             VALUES
-                (:id, :auth_devices_ids, :label, :initial_soft_merge, :soft_merge_flag_status,
-                 :attributes, :tags, :labels, :created_at, :updated_at)
+                (:id, :auth_devices_ids, :initial_soft_merge, :soft_merge_flag_status,
+                 :tags, :labels, :created_at, :updated_at)
             """,
             device_group_rows
         )

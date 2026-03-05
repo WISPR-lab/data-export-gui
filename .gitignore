@@ -1,4 +1,6 @@
-*# Files to ignore by git
+UA-Extract-purepy/dist/
+UA-Extract-purepy/*.egg-info/
+UA-Extract-purepy/build/
 
 
 takeout-tool.code-workspace
@@ -8,6 +10,7 @@ webapp*/dist/
 webapp*/public/python_core*
 webapp*/public/manifests*
 webapp*/public/sqlite-wasm*
+webapp*/public/wheels*
 webapp*/public/sqlite-worker.js
 webapp*/public/pyodide-worker.js
 webapp*/public/config.yaml
@@ -19,6 +22,8 @@ webapp-v3.zip
 .github/*
 !.github/workflows/
 !.github/workflows/*.yml
+
+.roo/*
 
 
 data/opensearch/

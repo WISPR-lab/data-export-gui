@@ -195,3 +195,23 @@ def map(platform,
         traceback.print_exc()
         return
 
+
+def get_counts(upload_id):
+    import builtins
+    with DatabaseSession(builtins.DB_PATH, use_dict_factory=True) as conn:
+        events_count = conn.execute(
+            'SELECT COUNT(*) as count FROM events WHERE upload_id = ?', 
+            (upload_id,)
+        ).fetchone()['count']
+        
+        devices_count = conn.execute(
+            'SELECT COUNT(*) as count FROM auth_devices_initial WHERE upload_id = ?', 
+            (upload_id,)
+        ).fetchone()['count']
+        
+        return {
+            'status': 'success',
+            'events_count': events_count,
+            'devices_count': devices_count
+        }
+
