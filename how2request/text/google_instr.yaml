@@ -1,0 +1,57 @@
+id: google
+name: Google
+icon: mdi-google
+overview: Google allows you to download a copy of your data through Google Takeout.
+
+steps:
+  - title: Visit Google Takeout and sign in
+    link:
+      url: https://takeout.google.com
+      text: Google Takeout
+    description: |
+      FYI ALSO THIS MAY NOTIFY OTHER DEVICES ON YOUR ACCOUNT !!! AND NEED 2FA !!! TODO
+
+  - title: Select data categories
+    image: how2request/images/google_json.jpg
+    alert:
+      type: info
+      text: If a category offers a **Multiple format** button, you should click it and select **JSON** if given the option. If there is no option, the default format is compatible.
+    description: |
+      1. Click **`Deselect all`** first.
+      2. **Mandatory**: Select the core audit data:
+         - **`Access Log Activity`** (IP/Device logs)
+         - **`Google Account`** (Recovery info)
+         - **`My Activity`** (Search/Maps history)
+      3. **Optional**: Select these if you need specific logs:
+         - **`Chrome`** (Synced web history)
+         - **`Messages`** (Google Voice & Fi texts)
+         - **`Pixel`** (Pixel phone data)
+         - **`Profile`** (Biographic account details)
+      4. **Optional**: You may also add **`Mail`** (all Gmail messages), but the file is huge and may crash the tool.
+         - If you choose to add it, click **`All Mail data included`** and filter by category to reduce file size.
+
+  - title: Choose file type and destination
+    image: how2request/images/google_freq.jpg
+    alert:
+      type: warning
+      text: Anyone with access to this Google Account could download your data. [Review](https://support.google.com/accounts/answer/3067630?hl=en) which devices are logged in.
+    description: |
+      - Destination: **`Send download link via email`**
+        - **Safety**: We do not recommend selecting "Add to Drive/Dropbox/etc". This leaves a permanent record in the cloud that may sync to shared devices.
+      - Frequency: **`Export once`**
+      - File type & size: **`.zip`** and **`2GB`**
+
+  - title: Create export
+    image: how2request/images/google_create.jpg
+    description: |
+      Review your selections and click **`Create export`**.
+
+  - title: Wait and download
+    image: how2request/images/google_takeout_email.jpg
+    alert:
+      type: warning
+      text: This export contains your sensitive information. Treat it as securely as you would a password or financial records
+    description: |
+      - You don't need to stay on this page. Google will email you when the file is ready. This may take 1 hour to 5 days depending on file size.
+      - The link is usually only valid for **7 days**.
+      - **Safety**: Download to a secure location and [permanently delete](https://support.google.com/mail/answer/7401?hl=en&sjid=14515300465516538433-NC) the notification email immediately after downloading if you share an account or device.
