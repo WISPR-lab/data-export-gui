@@ -183,7 +183,8 @@ export default {
     statusMessage(newVal) {
       if (newVal === 'complete') {
         this.$emit('success');
-        if (!this.uploadWarnings.length) {
+        const warnings = this.uploadWarnings || [];
+        if (!warnings.length) {
           this.closeDialog();
         }
       }

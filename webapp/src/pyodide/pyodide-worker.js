@@ -460,12 +460,11 @@ result
 
         pyodide.globals.set('upload_id', uploadId);
 
-//         result = await pyodide.runPythonAsync(`
-// from field_normalization import worker as norm_worker
-// result = norm_worker.normalize(upload_id)
-// result
-// `);
-        console.warn(`[Pyodide Worker] TODO IMPLEMENT NORM WORKER...`);
+        result = await pyodide.runPythonAsync(`
+from field_normalization import worker as norm_worker
+result = norm_worker.normalize(upload_id)
+result
+`);
 
         await flushOPFSDatabase();
 
@@ -487,7 +486,7 @@ result
         pyodide.globals.set('upload_id', uploadId);
         
         await pyodide.runPythonAsync(`
-import semantic_map_worker
+import semantic_map.worker as semantic_map_worker
 semantic_map_worker.map(platform, upload_id)
 `);
         

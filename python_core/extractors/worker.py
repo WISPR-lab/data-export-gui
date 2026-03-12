@@ -20,13 +20,13 @@ try:
     from manifest import Manifest
     from db_session import DatabaseSession
     from extractors import get_parser
-    from errors import FileLevelError
+    from python_core.errors import FileLevelError
 except ImportError:
     sys.path.append(os.path.dirname(__file__))
     from manifest import Manifest
     from db_session import DatabaseSession
     from extractors import get_parser
-    from errors import FileLevelError
+    from python_core.errors import FileLevelError
 
 
 def _file_size_bytes(filepath, is_firefox=False):

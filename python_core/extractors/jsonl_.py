@@ -1,5 +1,5 @@
 from .json_ import JSONParser
-from errors import FileLevelError, RecordLevelError
+from python_core.errors import FileLevelError, RecordLevelError
 from typing import List, Dict, Any, Optional
 from utils.filter_builder import make_filter
 

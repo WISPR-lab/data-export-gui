@@ -4,7 +4,7 @@ import json5
 from typing import List, Dict, Any, Optional
 from .base import BaseParser
 from utils.json_utils import get_value_at_path
-from errors import FileLevelError, FieldLevelError
+from python_core.errors import FileLevelError, FieldLevelError
 
 # Try to import demjson3 for extra-lenient parsing, but make it optional
 try:

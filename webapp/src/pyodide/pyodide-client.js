@@ -91,21 +91,21 @@ export async function executeUpload(file, platform, opfsManager, callbacks = {})
     uploadId = extractResult.upload_id;
     if (!uploadId) throw new Error('No upload ID returned');
 
-    // Step 3: Normalize fields
-    if (onProgress) onProgress({ stage: 'normalize', progress: 50 });
-    const normalizeResult = await postToWorker('normalize', { uploadId });
-    if (normalizeResult.status !== 'success') {
-      throw new Error(normalizeResult.error || 'Normalize failed');
-    }
-
-    // Step 4: Semantic mapping
-    if (onProgress) onProgress({ stage: 'semantic_map', progress: 70 });
+    // Step 2.5: Semantic mapping
+    if (onProgress) onProgress({ stage: 'semantic_map', progress: 40 });
     const mapResult = await postToWorker('semantic_map', { platform, uploadId });
     if (mapResult.status !== 'success') {
       throw new Error(mapResult.error || 'Semantic mapping failed');
     }
 
-    // Step 5: Device grouping
+    // Step 3: Normalize fields
+    if (onProgress) onProgress({ stage: 'normalize', progress: 60 });
+    const normalizeResult = await postToWorker('normalize', { uploadId });
+    if (normalizeResult.status !== 'success') {
+      throw new Error(normalizeResult.error || 'Normalize failed');
+    }
+
+    // Step 4: Device grouping
     if (onProgress) onProgress({ stage: 'group', progress: 85 });
     const groupResult = await postToWorker('group', { uploadId });
     if (groupResult.status !== 'success') {

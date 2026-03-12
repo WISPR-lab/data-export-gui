@@ -1,44 +1,52 @@
 import re
 
-_MASK_RE = re.compile(r'^[\*Xx•\-_\s]{2,}(.{4,})$')
-_FULLY_REDACTED_RE = re.compile(r'^\[?redacted\]?$', re.IGNORECASE)
+MIN_ASTERISKS = 3
+PATTERN = rf'\*{{{MIN_ASTERISKS},}}'
+
+def unmasked_segments(value: str) -> list[str]:
+    if not value:
+        return []
+    return [p.strip() for p in re.split(PATTERN, value) if p.strip()]
 
 
-def _is_redacted(value: str) -> bool:
-    if _FULLY_REDACTED_RE.match(value.strip()):
-        return True
-    return bool(_MASK_RE.match(value.strip()))
-
-
-def _extract_suffix(value: str, min_len: int = 4) -> str | None:
-    m = _MASK_RE.match(value.strip())
-    if m and len(m.group(1)) >= min_len:
-        return m.group(1).strip()
-    return None
-
-
-def values_match(a: str, b: str, min_suffix_len: int = 4) -> bool:
-    """
-    Returns True if a and b refer to the same value, accounting for redaction.
-    If either value is fully redacted (e.g. [redacted]), never matches.
-    If either value is partially redacted, extracts the visible suffix and compares.
-    """
-    a, b = (a or '').strip(), (b or '').strip()
-    if not a or not b:
+def is_masked(value: str) -> bool:
+    if not value or not isinstance(value, str):
         return False
-    if _FULLY_REDACTED_RE.match(a) or _FULLY_REDACTED_RE.match(b):
+    return bool(re.search(PATTERN, value))
+
+
+def compare_redacted_vals(*vals) -> bool:
+    if len(vals) == 1 and isinstance(vals[0], list):
+        vals = vals[0]
+    
+    if not vals or len(vals) < 2:
         return False
+    
+    for v in vals:
+        if v and not isinstance(v, str):
+            raise ValueError(f"Expected string values, got {type(v).__name__}: {v!r}")
+    
+    all_parts_lower = []
+    for v in vals:
+        parts = unmasked_segments(v)
+        parts = [p.lower() for p in parts if p]
+        if not parts:
+            return False
+        all_parts_lower.extend(parts)
+    
+    for v in vals:
+        parts = [p.lower() for p in unmasked_segments(v) if p]
+        if not any(p in all_parts_lower or any(p in ap or ap in p for ap in all_parts_lower) 
+                   for p in parts):
+            return False
+    
+    return True
 
-    a_redacted = _is_redacted(a)
-    b_redacted = _is_redacted(b)
 
-    if not a_redacted and not b_redacted:
-        return a.lower() == b.lower()
-
-    a_cmp = _extract_suffix(a, min_suffix_len) if a_redacted else a
-    b_cmp = _extract_suffix(b, min_suffix_len) if b_redacted else b
-
-    if a_cmp is None or b_cmp is None:
-        return False
-
-    return a_cmp.lower().endswith(b_cmp.lower()) or b_cmp.lower().endswith(a_cmp.lower())
+def get_unredacted_val(*vals) -> tuple[str]:
+    if not compare_redacted_vals(vals):
+        return '', 'error: values do not match'
+    for v in vals:
+        if v and isinstance(v, str) and not is_masked(v):
+            return v, ''
+    return '', 'error: all values are masked'
