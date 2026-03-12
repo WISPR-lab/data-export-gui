@@ -117,10 +117,12 @@ import { getDB, closeDB } from '@/database/index.js';
 import { OPFSManager } from '@/storage/opfs_manager.js';
 
 var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'auth_devices_initial', 'auth_devices', 'device_groups', 'event_comments'];
+var DB_VIEWS = ['v_device_groups'];
 
 var SECTIONS = [
-  { path: 'opfs', label: '📁 OPFS' }
-].concat(DB_TABLES.map(function(t) { return { path: t, label: t }; }));
+  { path: 'opfs', label: 'OPFS' }
+].concat(DB_TABLES.map(function(t) { return { path: t, label: t }; }))
+ .concat(DB_VIEWS.map(function(v) { return { path: v, label: 'view: ' + v }; }));
 
 export default {
   name: 'DebugView',
@@ -128,6 +130,7 @@ export default {
     return {
       SECTIONS: SECTIONS,
       DB_TABLES: DB_TABLES,
+      DB_VIEWS: DB_VIEWS,
       // OPFS
       opfsTree: [],
       opfsLoading: false,
@@ -135,7 +138,7 @@ export default {
       fileDialog: false,
       selectedFile: '',
       fileContent: '',
-      // Table
+      // Table / View
       tableRows: [],
       tableCols: [],
       tableLoading: false,
@@ -151,14 +154,14 @@ export default {
       return this.$route.params.section || 'opfs';
     },
     currentTable: function() {
-      return DB_TABLES.indexOf(this.currentSection) !== -1 ? this.currentSection : null;
+      return (DB_TABLES.indexOf(this.currentSection) !== -1 || DB_VIEWS.indexOf(this.currentSection) !== -1) ? this.currentSection : null;
     },
   },
   watch: {
     currentSection: function(val) {
       if (val === 'opfs') {
         this.refreshOPFS();
-      } else if (DB_TABLES.indexOf(val) !== -1) {
+      } else if (DB_TABLES.indexOf(val) !== -1 || DB_VIEWS.indexOf(val) !== -1) {
         this.loadTable();
       }
     },

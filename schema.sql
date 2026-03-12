@@ -198,3 +198,14 @@ CREATE VIEW IF NOT EXISTS v_event_actions AS
 SELECT DISTINCT event_action
 FROM events
 WHERE event_action IS NOT NULL AND event_action != '';
+
+
+
+DROP VIEW IF EXISTS v_device_groups;
+CREATE VIEW v_device_groups AS
+SELECT 
+    dg.id AS group_id,
+    json_group_array(json(ad.attributes)) AS all_device_attributes
+FROM device_groups dg, json_each(dg.auth_devices_ids) as j
+JOIN auth_devices ad ON ad.id = j.value
+GROUP BY dg.id;
