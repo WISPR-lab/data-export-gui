@@ -4,7 +4,7 @@ import { parse as parseLucene } from 'lucene-query-parser';
 
 function escapeLikePattern(value) {
   if (typeof value !== 'string') return value;
-  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '|_');
 }
 
 function wildcardToLike(term) {
@@ -26,20 +26,21 @@ function astToConditions(ast, availableFields) {
     const value = wildcardToLike(ast.term);
     const isWildcard = ast.term.includes('*') || ast.term.includes('?');
     const likeValue = isWildcard ? value : `%${value}%`;
+    const lowerLikeValue = likeValue.toLowerCase();
 
-    console.log('[astToConditions] Term:', ast.term, 'Field:', field, 'LikeValue:', likeValue);
+    console.log('[astToConditions] Term:', ast.term, 'Field:', field, 'LikeValue:', lowerLikeValue);
 
     if (field && availableFields.includes(field)) {
       return {
-        conditions: [`e.${field} LIKE ?`],
-        params: [likeValue]
+        conditions: [`LOWER(e.${field}) LIKE ? ESCAPE '|'`],
+        params: [lowerLikeValue]
       };
     } else {
       const defaultFields = ['message', 'attributes', 'event_action', 'event_category', 'event_kind'];
-      const fieldConditions = defaultFields.map(f => `e.${f} LIKE ?`);
+      const fieldConditions = defaultFields.map(f => `LOWER(e.${f}) LIKE ? ESCAPE '|'`);
       const result = {
         conditions: [`(${fieldConditions.join(' OR ')})`],
-        params: Array(defaultFields.length).fill(likeValue)
+        params: Array(defaultFields.length).fill(lowerLikeValue)
       };
       console.log('[astToConditions] No field, using defaults. Conditions:', result.conditions, 'Params:', result.params);
       return result;
