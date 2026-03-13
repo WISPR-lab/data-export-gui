@@ -70,7 +70,7 @@ export class OPFSManager {
           const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           return new RegExp(`(^|/)${escaped}$`, 'i');
         });
-        console.log(`[OPFSManager] Loaded ${this.whitelistPatterns.length} whitelist patterns`);
+        // [OPFSManager] Loaded whitelist
       } catch (err) {
         console.warn('[OPFSManager] Failed to load whitelist – accepting all files:', err);
         this.whitelistPatterns = [];
@@ -97,7 +97,7 @@ export class OPFSManager {
 
   async processZipUpload(zipFile, platform) {
     await this.init(platform);
-    console.log(`[OPFSManager] Processing upload: ${zipFile.name}`);
+    // [OPFSManager] Processing upload
 
     return new Promise((resolve, reject) => {
       const savedPromises = [];
@@ -115,7 +115,7 @@ export class OPFSManager {
         if (this.isWhitelisted(file.name)) {
           totalAccepted++;
           const safeName = this.flattenPath(file.name);
-          console.log(`[OPFSManager] Accepted [${totalAccepted}]: ${file.name}  →  ${safeName}`);
+          // [OPFSManager] File accepted
           const p = this._saveFileEntry(safeName, file)
             .then(() => { writeSuccesses++; })
             .catch((err) => {
@@ -191,7 +191,7 @@ export class OPFSManager {
         await this.storageDir.removeEntry(name, { recursive: true });
         count++;
       }
-      console.log(`[OPFSManager] Temp storage cleared (${count} entries removed).`);
+      // [OPFSManager] Temp cleared
     } catch (error) {
       console.error('[OPFSManager] Failed to clear temp storage:', error);
       throw error;
@@ -213,14 +213,14 @@ export class OPFSManager {
       for (const name of filesToRemove) {
         try {
           await this.opfsRoot.removeEntry(name);
-          console.log(`[OPFSManager] Removed DB file: ${name}`);
+          // [OPFSManager] Removed file
           count++;
         } catch (e) {
           if (e.name !== 'NotFoundError') throw e;
           // WAL/SHM may not exist – that's fine
         }
       }
-      console.log(`[OPFSManager] Database cleared (${count} file(s) removed).`);
+      // [OPFSManager] DB cleared
     } catch (error) {
       console.error('[OPFSManager] Failed to clear database:', error);
       throw error;
@@ -232,7 +232,7 @@ export class OPFSManager {
       const root = await navigator.storage.getDirectory();
       const entries = [];
       for await (const [name] of root.entries()) entries.push(name);
-      console.log(`[OPFSManager] Nuking OPFS root (${entries.length} entries):`, entries);
+      // [OPFSManager] Nuking OPFS
       for (const name of entries) {
         await root.removeEntry(name, { recursive: true });
       }
@@ -240,7 +240,7 @@ export class OPFSManager {
       this.storageDir = null;
       this.dbFilename = null;
       this.isInitialized = false;
-      console.log(`[OPFSManager] OPFS nuked – ${entries.length} top-level entries removed.`);
+      // [OPFSManager] OPFS cleared
     } catch (error) {
       console.error('[OPFSManager] Failed to nuke OPFS:', error);
       throw error;
@@ -317,7 +317,7 @@ export class OPFSManager {
             .then(async () => {
               // Verify the file actually persisted
               const verifyFile = await fileHandle.getFile();
-              console.log(`[OPFSManager] Wrote ${filename}: ${chunkCount} chunks, ${(totalBytes / 1024).toFixed(1)} KB sent, ${(verifyFile.size / 1024).toFixed(1)} KB on disk`);
+              // [OPFSManager] File write complete
               if (verifyFile.size === 0 && totalBytes > 0) {
                 console.error(`[OPFSManager] FILE IS EMPTY ON DISK despite writing ${totalBytes} bytes!`);
               }

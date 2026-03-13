@@ -40,9 +40,6 @@ export async function searchEvents(queryString = '', filter = {}) {
   
   const allParams = [...whereParams, ...paginationParams];
   
-  console.log('[searchEvents] Query:', { queryString, filter, whereClause, allParams });
-  console.log('[searchEvents] Full SQL:', sql.replace(/\n/g, ' '));
-  
   try {
     const rows = await db.exec(sql, { 
       bind: allParams,
@@ -50,13 +47,12 @@ export async function searchEvents(queryString = '', filter = {}) {
       rowMode: 'object'
     });
     
-    console.log('[searchEvents] Raw rows returned:', rows.length);
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
     const countPerTimeline = await _getEventsCountPerTimeline(db, whereClause, whereParams);
     
     const objects = rows.map(row => _formatEventObject(row));
     
-    console.log('[searchEvents] Final result - objects:', objects.length, 'totalCount:', totalCount);
+    console.log(`[Search] "${queryString}" → ${totalCount} results`);
     return {
       objects,
       meta: {
@@ -65,9 +61,7 @@ export async function searchEvents(queryString = '', filter = {}) {
       }
     };
   } catch (error) {
-    console.error('[searchEvents] ERROR executing query:', error);
-    console.error('[searchEvents] SQL was:', sql);
-    console.error('[searchEvents] params were:', allParams);
+    console.error('[searchEvents] ERROR:', error);
     throw error;
   }
 }

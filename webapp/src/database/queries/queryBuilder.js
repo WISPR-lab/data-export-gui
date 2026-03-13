@@ -28,8 +28,6 @@ function astToConditions(ast, availableFields) {
     const likeValue = isWildcard ? value : `%${value}%`;
     const lowerLikeValue = likeValue.toLowerCase();
 
-    console.log('[astToConditions] Term:', ast.term, 'Field:', field, 'LikeValue:', lowerLikeValue);
-
     if (field && availableFields.includes(field)) {
       return {
         conditions: [`LOWER(e.${field}) LIKE ? ESCAPE '|'`],
@@ -38,12 +36,10 @@ function astToConditions(ast, availableFields) {
     } else {
       const defaultFields = ['message', 'attributes', 'event_action', 'event_category', 'event_kind'];
       const fieldConditions = defaultFields.map(f => `LOWER(e.${f}) LIKE ? ESCAPE '|'`);
-      const result = {
+      return {
         conditions: [`(${fieldConditions.join(' OR ')})`],
         params: Array(defaultFields.length).fill(lowerLikeValue)
       };
-      console.log('[astToConditions] No field, using defaults. Conditions:', result.conditions, 'Params:', result.params);
-      return result;
     }
   }
 
@@ -83,10 +79,7 @@ export function parseQueryString(queryString, availableFields = []) {
 
   try {
     const ast = parseLucene(queryString);
-    console.log('[parseQueryString] Input:', queryString, 'AST:', JSON.stringify(ast, null, 2));
-    const result = astToConditions(ast, availableFields);
-    console.log('[parseQueryString] Result conditions:', result.conditions, 'params:', result.params);
-    return result;
+    return astToConditions(ast, availableFields);
   } catch (error) {
     console.warn('[parseQueryString] Parse error, falling back to literal search:', error);
     const escaped = escapeLikePattern(queryString);
@@ -225,6 +218,5 @@ export function buildPaginationClause(options = {}) {
     clause: 'LIMIT ? OFFSET ?',
     params: [limit, offset]
   };
-  console.log('[buildPaginationClause]', result);
   return result;
 }
