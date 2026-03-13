@@ -27,9 +27,6 @@ import Sketch from './views/Sketch.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
-import DeviceMockup2 from './views/DeviceMockup2.vue'
-import DeviceMockup3 from './views/DeviceMockup3.vue'
-import DeviceMockup4 from './views/DeviceMockup4.vue'
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 
 Vue.use(VueRouter)
@@ -51,11 +48,6 @@ const routes = [
     component: DebugOPFS,
   },
   {
-    name: 'DeviceMockup2',
-    path: '/debug/device-mockup',
-    component: DeviceMockup2,
-  },
-  {
     // redirect /debug to /debug/opfs
     path: '/debug',
     redirect: '/debug/opfs',
@@ -73,27 +65,9 @@ const routes = [
         props: { sketchId: 1 },
       },
       {
-        path: 'explore/devices',
+        path: 'devices',
         name: 'Devices',
         component: Devices,
-        props: { sketchId: 1 },
-      },
-      {
-        path: 'explore/devices2',
-        name: 'DeviceMockup2',
-        component: DeviceMockup2,
-        props: { sketchId: 1 },
-      },
-      {
-        path: 'explore/devices3',
-        name: 'DeviceMockup3',
-        component: DeviceMockup3,
-        props: { sketchId: 1 },
-      },
-      {
-        path: 'explore/devices4',
-        name: 'DeviceMockup4',
-        component: DeviceMockup4,
         props: { sketchId: 1 },
       },
       {

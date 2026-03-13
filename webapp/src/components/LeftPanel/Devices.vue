@@ -21,19 +21,21 @@ limitations under the License.
     style="cursor: pointer"
     @click="navigateToDevices"
   >
-    <v-icon left>mdi-devices</v-icon>
-    <div style="height: 1px"></div>
+    <v-icon :color="isActive ? 'primary' : ''">mdi-devices</v-icon>
   </div>
   <div v-else>
+    <v-divider class="mb-0"></v-divider>
     <div
-      style="cursor: pointer"
       class="pa-4"
+      style="cursor: pointer"
       @click="navigateToDevices"
-      :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
+      :class="[
+        $vuetify.theme.dark ? 'dark-hover' : 'light-hover',
+        isActive ? 'active-view' : ''
+      ]"
     >
-      <span> <v-icon left>mdi-devices</v-icon> Devices </span>
+      <span> <v-icon left :color="isActive ? 'primary' : ''">mdi-devices</v-icon> Devices </span>
     </div>
-    <v-divider></v-divider>
   </div>
 </template>
 
@@ -42,13 +44,27 @@ export default {
   props: {
     iconOnly: Boolean,
   },
+  computed: {
+    isActive() {
+      return this.$route.name === 'Devices'
+    }
+  },
   methods: {
     navigateToDevices() {
-      this.$router.push('/explore/devices')
+      if (this.$route.path !== '/devices') {
+        this.$router.push('/devices')
+      }
     },
   },
 }
 </script>
+
+<style scoped lang="scss">
+.active-view {
+  background-color: rgba(25, 118, 210, 0.05);
+  font-weight: 500;
+}
+</style>
 
 <style scoped lang="scss">
 .dark-hover:hover {

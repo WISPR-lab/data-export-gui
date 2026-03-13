@@ -239,18 +239,17 @@ limitations under the License.
         hide-overlay
         :width="navigationDrawer.width"
       >
-        <!-- <ts-investigation
-          v-if="systemSettings.ENABLE_V3_INVESTIGATION_VIEW
-            && (systemSettings.DFIQ_ENABLED
-              || (systemSettings.LLM_FEATURES_AVAILABLE
-                && systemSettings.LLM_FEATURES_AVAILABLE.log_analyzer))"
-          :icon-only="isMiniDrawer"
-          @toggleDrawer="toggleDrawer()"
-        >
-        </ts-investigation> -->
-        <!-- <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search> -->
-        <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
+        <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Views</div>
+        
+        <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
         <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
+
+        <v-divider v-if="!isMiniDrawer" class="mb-2"></v-divider>
+
+        <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Your Data</div>
+        
+        <v-divider v-if="!isMiniDrawer" class="mt-2"></v-divider>
+        <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
         <ts-saved-searches
           v-if="meta && meta.views"
           :icon-only="isMiniDrawer"
@@ -258,13 +257,8 @@ limitations under the License.
         ></ts-saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
-        <!-- <ts-graphs :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-graphs> -->
-        <!-- <ts-stories :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-stories> -->
         <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates>
-        <!-- <ts-sigma-rules :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-sigma-rules> -->
-        <!-- <ts-intelligence :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-intelligence> -->
-        <!-- <ts-analyzer-results :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-analyzer-results> -->
-        <!-- <ts-visualizations :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-visualizations> -->
+        
         <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item>
       </v-navigation-drawer>
 

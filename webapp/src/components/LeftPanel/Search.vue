@@ -14,33 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <template>
-  <div v-if="iconOnly" class="pa-4" style="cursor: pointer" @click="$emit('toggleDrawer')">
-    <router-link :to="{ name: 'Explore', params: { sketchId: sketch.id } }">
-      <v-icon left>mdi-magnify</v-icon>
-      <div style="height: 1px"></div>
-    </router-link>
+  <div
+    v-if="iconOnly"
+    class="pa-4"
+    style="cursor: pointer"
+    @click="navigateToExplore"
+  >
+    <v-icon :color="isActive ? 'primary' : ''">mdi-magnify</v-icon>
   </div>
 
   <div v-else>
-    <router-link
-      :to="{ name: 'Explore', params: { sketchId: sketch.id } }"
-      custom
-      v-slot="{ navigate }"
+    <v-divider class="mb-0"></v-divider>
+    <div
       class="pa-4"
-      :class="
-        $vuetify.theme.dark
-          ? isExploreRoute
-            ? 'dark-highlight'
-            : 'dark-hover'
-          : isExploreRoute
-          ? 'light-highlight'
-          : 'light-hover'
-      "
       style="cursor: pointer"
+      @click="navigateToExplore"
+      :class="[
+        $vuetify.theme.dark ? 'dark-hover' : 'light-hover',
+        isActive ? 'active-view' : ''
+      ]"
     >
-      <div @click="navigate" @keypress.enter="navigate" role="link"><v-icon left>mdi-magnify</v-icon>Search</div>
-    </router-link>
-    <v-divider></v-divider>
+      <span> <v-icon left :color="isActive ? 'primary' : ''">mdi-magnify</v-icon> Explore </span>
+    </div>
   </div>
 </template>
 
@@ -50,16 +45,24 @@ export default {
     iconOnly: Boolean,
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
-    },
-    isExploreRoute() {
+    isActive() {
       return this.$route.name === 'Explore'
-    },
-    sketchId() {
-      return this.$store.state.sketch.id
+    }
+  },
+  methods: {
+    navigateToExplore() {
+      if (this.$route.path !== '/explore') {
+        this.$router.push('/explore')
+      }
     },
   },
 }
 </script>
+
+<style scoped lang="scss">
+.active-view {
+  background-color: rgba(25, 118, 210, 0.05);
+  font-weight: 500;
+}
+</style>
 
