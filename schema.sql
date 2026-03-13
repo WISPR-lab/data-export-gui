@@ -102,6 +102,10 @@ CREATE TABLE IF NOT EXISTS device_groups (
     initial_soft_merge BOOLEAN DEFAULT 0,
     soft_merge_flag_status TEXT DEFAULT "na", -- "na" | "shown" | "user_confirmed" | "user_rejected"
     --
+    is_generic BOOLEAN DEFAULT 0,
+    user_label TEXT,
+    notes TEXT,
+    --
     created_at REAL,
     updated_at REAL,
     --

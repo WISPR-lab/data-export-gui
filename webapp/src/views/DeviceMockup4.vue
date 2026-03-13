@@ -25,7 +25,7 @@
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-detail-dropdown :device="dev" />
+          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -58,7 +58,7 @@
           </v-expansion-panel-header>
 
           <v-expansion-panel-content class="grey lighten-5 border-top">
-            <device-detail-dropdown :device="item" is-generic />
+            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" />
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -79,6 +79,7 @@
 import DeviceDetailDropdown from '@/components/Devices/DeviceDetailDropdown.vue';
 import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
+import { getDeviceGroups, updateDeviceGroup } from '@/database/queries/devices.js';
 
 export default {
   name: 'DeviceMockup4',
@@ -94,48 +95,36 @@ export default {
       groupDialog: false,
       selectedRecord: null,
       staging: null,
-      unassigned: [
-        { label: 'iPhone (Generic)', manufacturer: 'Apple', os: 'iOS 15.7', city: 'Madison, WI', notes: '' },
-        { label: 'iPhone (Generic)', manufacturer: 'Apple', os: 'iOS 17.7', city: 'Chicago, IL', notes: '' },
-      ],
-      devices: [
-        {
-          model: 'iPhone 7',
-          customLabel: '',
-          manufacturer: 'Apple',
-          location: 'Madison, WI',
-          icon: 'mdi-cellphone',
-          status: 'Needs Review',
-          recordCount: 12,
-          osHistory: ['iOS 15.0', 'iOS 15.7'],
-          notes: ''
-        },
-        {
-          model: 'iPhone XR',
-          customLabel: 'Mom\'s Phone',
-          manufacturer: 'Apple',
-          location: 'Chicago, IL',
-          icon: 'mdi-cellphone',
-          status: 'Done',
-          recordCount: 45,
-          osHistory: ['iOS 17.7.1'],
-          notes: 'Given to cousin in 2024.'
-        },
-        {
-          model: 'MacBook Pro 16"',
-          customLabel: '',
-          manufacturer: 'Apple',
-          location: 'Madison, WI',
-          icon: 'mdi-laptop',
-          status: 'Done',
-          recordCount: 8,
-          osHistory: ['macOS 14.5'],
-          notes: ''
-        }
-      ]
-    };
+      devices: [],
+      unassigned: [],
+    }
+  },
+  async mounted() {
+    await this.fetchDevices();
   },
   methods: {
+    async fetchDevices() {
+      try {
+        const allGroups = await getDeviceGroups();
+        // Categorize based on the logic:
+        // Everything in devices except the generic singletons
+        this.devices = allGroups.filter(g => !g.is_generic);
+        this.unassigned = allGroups.filter(g => g.is_generic);
+      } catch (err) {
+        console.error('Failed to fetch devices:', err);
+      }
+    },
+    async saveDeviceChanges(device) {
+      try {
+        await updateDeviceGroup(device.id, {
+          user_label: device.user_label,
+          notes: device.notes
+        });
+        // Optionally re-fetch if needed, but the local state is already correct
+      } catch (err) {
+        console.error('Failed to save device changes:', err);
+      }
+    },
     onDragStart(event, item) {
       this.isDragging = true;
       this.selectedRecord = item;
@@ -152,11 +141,13 @@ export default {
       this.groupDialog = true;
       this.activeDropId = null;
     },
-    confirmGroup() {
+    async confirmGroup() {
+      // TODO: Implement database move
+      console.log('Confirming group merge:', this.staging);
+      
       const idx = this.unassigned.indexOf(this.staging.source);
       if (idx > -1) this.unassigned.splice(idx, 1);
-      this.staging.target.recordCount++;
-      this.staging.target.status = 'Needs Review';
+      
       this.groupDialog = false;
       this.staging = null;
       this.selectedRecord = null;

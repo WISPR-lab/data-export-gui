@@ -77,11 +77,30 @@ def group(upload_id: str, db_path: str = None) -> None:
         
         device_group_rows = []
         for r in soft_merge(auth_devices_rows2):
+            # Check if singleton and generic
+            is_generic = 0
+            dev_ids = json.loads(r['auth_devices_ids'])
+            if len(dev_ids) == 1:
+                # Find the actual attributes for this auth_device to check specificity
+                # This is a bit inefficient inside the loop but works for now
+                target_id = dev_ids[0]
+                matched_attr = next((a['attributes'] for a in auth_devices_rows2 if a['id'] == target_id), {})
+                from device_grouping.soft_merge import _specificity, _best_value
+                model = _best_value([
+                    matched_attr.get('device_model_name', ''),
+                    matched_attr.get('user_agent_device_model', ''),
+                ])
+                if _specificity(model) == 0:
+                    is_generic = 1
+
             device_group_rows.append({
                 'id': r['id'],
                 'auth_devices_ids': r['auth_devices_ids'],  # already stringified
                 'initial_soft_merge': r['initial_soft_merge'],
                 'soft_merge_flag_status': 'na',
+                'is_generic': is_generic,
+                'user_label': None,
+                'notes': None,
                 'tags': '[]',
                 'labels': '[]',
                 'created_at': ts,
@@ -92,9 +111,11 @@ def group(upload_id: str, db_path: str = None) -> None:
             """
             INSERT INTO device_groups
                 (id, auth_devices_ids, initial_soft_merge, soft_merge_flag_status,
+                 is_generic, user_label, notes,
                  tags, labels, created_at, updated_at)
             VALUES
                 (:id, :auth_devices_ids, :initial_soft_merge, :soft_merge_flag_status,
+                 :is_generic, :user_label, :notes,
                  :tags, :labels, :created_at, :updated_at)
             """,
             device_group_rows

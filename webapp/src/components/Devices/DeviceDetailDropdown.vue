@@ -8,7 +8,7 @@
     <!-- 1. Custom Name (Only for confirmed devices) -->
     <div v-if="!isGeneric" class="mb-6">
       <v-text-field
-        v-model="device.customLabel"
+        v-model="device.user_label"
         placeholder="Give this device a name (e.g. Work Phone)"
         outlined
         dense
@@ -17,6 +17,7 @@
         class="rounded-lg"
         hide-details
         style="max-width: 500px;"
+        @change="$emit('change')"
       ></v-text-field>
     </div>
 
@@ -73,6 +74,7 @@
         rows="2"
         class="rounded-lg"
         hide-details
+        @change="$emit('change')"
       ></v-textarea>
     </div>
 
