@@ -6995,6 +6995,11 @@ lru-cache@^5.1.1:
   dependencies:
     yallist "^3.0.2"
 
+lucene-query-parser@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/lucene-query-parser/-/lucene-query-parser-1.2.0.tgz#46dad5b4ddc59abbf27f9df4c519d959c2033432"
+  integrity sha512-ZWbguSNYKmFEgw7+lfD4t9MKZkH0VlzidFRLaUJO+XnIYWp8MQxJI5ArpVEzLMIApZVT5Qias+dvLGu6ABtNMw==
+
 magic-string@^0.26.1:
   version "0.26.7"
   resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.26.7.tgz#caf7daf61b34e9982f8228c4527474dac8981d6f"

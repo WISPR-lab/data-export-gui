@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+
+
+<!-- NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui -->
+
 <template>
   <v-card width="700" style="overflow: visible">
     <v-container class="px-8">
@@ -57,11 +61,25 @@ limitations under the License.
 
       <v-row v-if="showPicker">
         <v-col cols="12">
+          <v-select
+            v-model="selectedTimezone"
+            :items="timezones"
+            label="Timezone"
+            outlined
+            hide-details
+            dense
+            style="margin-bottom: 16px"
+          ></v-select>
+        </v-col>
+      </v-row>
+
+      <v-row v-if="showPicker">
+        <v-col cols="12">
           <date-picker
             v-model="dateRange"
             mode="dateTime"
             ref="picker"
-            timezone="UTC"
+            :timezone="selectedTimezone"
             :is-dark="$vuetify.theme.dark"
             is24hr
             is-range
@@ -96,14 +114,17 @@ export default {
       },
       filterTab: null,
       showPicker: false,
+      selectedTimezone: '',
+      timezones: [],
     }
   },
   computed: {
     dateRange: {
       set(val) {
         if (val && val.start && val.end) {
-          this.range.start = dayjs.utc(val.start).millisecond(0).toISOString()
-          this.range.end = dayjs.utc(val.end).millisecond(0).toISOString()
+          // Convert local time to ISO string, then to UTC for storage
+          this.range.start = dayjs(val.start).tz(this.selectedTimezone).utc().millisecond(0).toISOString()
+          this.range.end = dayjs(val.end).tz(this.selectedTimezone).utc().millisecond(0).toISOString()
         } else {
           this.range.start = ''
           this.range.end = ''
@@ -118,16 +139,35 @@ export default {
       },
     },
     formatStartTime: function () {
-      return this.range.start
+      if (!this.range.start) return ''
+      const dt = dayjs(this.range.start).tz(this.selectedTimezone)
+      return dt.format('DD MMM YYYY h:mm A')
     },
     formatEndTime: function () {
       if (this.range.start === this.range.end || !this.range.start) {
         return ''
       }
-      return this.range.end
+      if (!this.range.end) return ''
+      const dt = dayjs(this.range.end).tz(this.selectedTimezone)
+      return dt.format('DD MMM YYYY h:mm A') 
     },
   },
   created() {
+    // Get list of all available timezones
+    if (typeof Intl !== 'undefined' && Intl.supportedValuesOf) {
+      try {
+        this.timezones = Intl.supportedValuesOf('timeZone')
+      } catch (e) {
+        this.timezones = ['UTC']
+      }
+    } else {
+      this.timezones = ['UTC']
+    }
+    
+    // Set default to user's timezone
+    const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    this.selectedTimezone = userTz
+    
     if (this.selectedChip) {
       this.range.start = this.selectedChip.value.split(',')[0]
       this.range.end = this.selectedChip.value.split(',')[1]
@@ -135,10 +175,10 @@ export default {
   },
   methods: {
     getDateRange: function (num, resolution) {
-      let now = dayjs.utc()
+      let now = dayjs().tz(this.selectedTimezone)
       let then = now.subtract(num, resolution)
       let chipType = 'datetime_range'
-      let chipValue = then.format('YYYY-MM-DD') + ',' + now.format('YYYY-MM-DD')
+      let chipValue = then.utc().format('YYYY-MM-DD') + ',' + now.utc().format('YYYY-MM-DD')
       let chip = {
         field: '',
         type: chipType,
@@ -156,21 +196,25 @@ export default {
         this.range.start = ''
         return
       }
-      this.range.start = dayjs.utc(newDateTime).toISOString()
+      this.range.start = dayjs(newDateTime).tz(this.selectedTimezone).utc().toISOString()
       if (!this.range.end) {
         if (this.range.start) {
           this.range.end = this.range.start || ''
         }
       }
-      this.$refs.picker.focusDate(this.range.start)
+      if (this.$refs.picker) {
+        this.$refs.picker.focusDate(this.range.start)
+      }
     },
     setEndTime: function (newDateTime) {
       if (!newDateTime) {
         this.range.end = ''
         return
       }
-      this.range.end = dayjs.utc(newDateTime).toISOString()
-      this.$refs.picker.focusDate(this.range.start)
+      this.range.end = dayjs(newDateTime).tz(this.selectedTimezone).utc().toISOString()
+      if (this.$refs.picker) {
+        this.$refs.picker.focusDate(this.range.start)
+      }
     },
     addDateTimeChip: function (chipValue) {
       const chipType = 'datetime_range'
