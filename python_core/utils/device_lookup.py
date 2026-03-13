@@ -25,7 +25,7 @@ OS_TYPE_MAP = {
 }
 
 VARIANT_SUFFIXES = {
-    'xr', 'xs', 'se', 'max', 'plus', 'pro', 'ultra', 'mini',
+    'x', 'xr', 'xs', 'se', 'max', 'plus', 'pro', 'ultra', 'mini',
     'air', 'lite', 'edge', 'note', 'fold', 'flip'
 }
 
