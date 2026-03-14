@@ -42,6 +42,13 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                 print(f"[SemanticMapWorker] JSON parse error for raw_data_id {raw_data_id}: {e}")
                 continue
             
+
+            if not isinstance(record, dict):
+                print(f"[SemanticMapWorker] Warning: expected dict after JSON parse for raw_data_id {raw_data_id} in {file_id}. Got {type(record)}. Skipping.")
+                print(f"Raw data content: {raw_data[:200]}...")  # print first 200 chars for debugging
+                continue
+
+                
             for vindex in map_utils.view_indexes_to_apply(record, views):
                 fields = map_utils.fields(record, views[vindex])
                 event_kind = fields.pop("event_kind", None)

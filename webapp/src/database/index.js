@@ -4,6 +4,7 @@ import * as events from './queries/events.js';
 import * as uploads from './queries/uploads.js';
 import * as comments from './queries/comments.js';
 import * as metadata from './queries/metadata.js';
+import * as devices from './queries/devices.js';
 import { loadConfig } from '../utils/config.js';
 
 

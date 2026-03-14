@@ -1,5 +1,5 @@
 from .base import BaseParser
-from errors import FileLevelError
+from python_core.errors import FileLevelError
 import re
 
 

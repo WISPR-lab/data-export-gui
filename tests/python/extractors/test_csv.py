@@ -1,6 +1,7 @@
 import pytest
 import json
-from extractors.csv_ import CSVParser
+from python_core.extractors.csv_ import CSVParser
+from python_core.errors import FileLevelError
 from conftest import validate_results
 
 
@@ -16,6 +17,6 @@ def test_csv_parse(test_case):
 
 
 def test_csv_raises_file_level_error_on_empty_input():
-    from errors import FileLevelError
+
     with pytest.raises(FileLevelError):
         CSVParser.extract("", {})

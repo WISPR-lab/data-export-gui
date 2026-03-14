@@ -3,13 +3,15 @@ import io
 import csv
 from typing import List, Dict, Any, Optional
 from .base import BaseParser
-from errors import FileLevelError
+from python_core.errors import FileLevelError
 
 class CSVParser(BaseParser):
 
     @classmethod
     def extract(cls, content: str, config: Optional[Dict] = None) -> List[Dict[str, Any]]:
         config = config or {}
+        if not content or not content.strip():
+            raise FileLevelError("Empty CSV input")
         try:
             df, bad_lines = cls.str_to_df(content)
             

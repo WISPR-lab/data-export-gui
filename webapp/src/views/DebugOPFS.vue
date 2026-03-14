@@ -1,7 +1,7 @@
 <template>
   <v-container style="max-width: 1200px;">
     <v-row align="center" style="margin-bottom: 8px;">
-      <h2 style="margin: 0;">🛠 Debug</h2>
+      <h2 style="margin: 0;">Debug</h2>
     </v-row>
 
     <!-- Nav links -->
@@ -37,7 +37,7 @@
           :style="{ paddingLeft: (node.depth * 20) + 'px', lineHeight: '1.8', cursor: node.kind === 'file' ? 'pointer' : 'default' }"
           @click="node.kind === 'file' && readFile(node)"
         >
-          <span v-if="node.kind === 'directory'">📁 {{ node.name }}/</span>
+          <span v-if="node.kind === 'directory'">{{ node.name }}/</span>
           <span v-else style="color: #1a73e8; text-decoration: underline;">
             📄 {{ node.name }} <span style="color: #888; font-size: 11px;">({{ node.size }})</span>
           </span>
@@ -113,13 +113,16 @@
 </template>
 
 <script>
-import { getDB } from '@/database/index.js';
+import { getDB, closeDB } from '@/database/index.js';
+import { OPFSManager } from '@/storage/opfs_manager.js';
 
-var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'auth_devices_initial', 'event_comments'];
+var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'auth_devices_initial', 'auth_devices', 'device_groups', 'event_comments'];
+var DB_VIEWS = ['v_device_groups'];
 
 var SECTIONS = [
-  { path: 'opfs', label: '📁 OPFS' }
-].concat(DB_TABLES.map(function(t) { return { path: t, label: t }; }));
+  { path: 'opfs', label: 'OPFS' }
+].concat(DB_TABLES.map(function(t) { return { path: t, label: t }; }))
+ .concat(DB_VIEWS.map(function(v) { return { path: v, label: 'view: ' + v }; }));
 
 export default {
   name: 'DebugView',
@@ -127,6 +130,7 @@ export default {
     return {
       SECTIONS: SECTIONS,
       DB_TABLES: DB_TABLES,
+      DB_VIEWS: DB_VIEWS,
       // OPFS
       opfsTree: [],
       opfsLoading: false,
@@ -134,7 +138,7 @@ export default {
       fileDialog: false,
       selectedFile: '',
       fileContent: '',
-      // Table
+      // Table / View
       tableRows: [],
       tableCols: [],
       tableLoading: false,
@@ -150,14 +154,14 @@ export default {
       return this.$route.params.section || 'opfs';
     },
     currentTable: function() {
-      return DB_TABLES.indexOf(this.currentSection) !== -1 ? this.currentSection : null;
+      return (DB_TABLES.indexOf(this.currentSection) !== -1 || DB_VIEWS.indexOf(this.currentSection) !== -1) ? this.currentSection : null;
     },
   },
   watch: {
     currentSection: function(val) {
       if (val === 'opfs') {
         this.refreshOPFS();
-      } else if (DB_TABLES.indexOf(val) !== -1) {
+      } else if (DB_TABLES.indexOf(val) !== -1 || DB_VIEWS.indexOf(val) !== -1) {
         this.loadTable();
       }
     },
@@ -215,28 +219,30 @@ export default {
     nukeAll: async function() {
       if (!confirm('Delete everything in OPFS (including database)?')) return;
 
-      this.opfsStatus = 'closing db'
-      await closeDB();
-      
-      var root = await navigator.storage.getDirectory();
-      for await (var entry of root.entries()) {
-        await root.removeEntry(entry[0], { recursive: true });
+      try {
+        this.opfsStatus = 'closing db...';
+        await closeDB();
+        
+        this.opfsStatus = 'nuking OPFS...';
+        const opfsManager = new OPFSManager();
+        await opfsManager.nukeAll();
+        
+        this.opfsStatus = 'Nuked.';
+        await this.refreshOPFS();
+      } catch (e) {
+        this.opfsStatus = 'Error: ' + e.message;
       }
-      this.opfsStatus = 'Nuked.';
-      await this.refreshOPFS();
     },
     clearTempOnly: async function() {
-      var root = await navigator.storage.getDirectory();
       try {
-        var tmpDir = await root.getDirectoryHandle('tmpstore');
-        for await (var entry of tmpDir.entries()) {
-          await tmpDir.removeEntry(entry[0], { recursive: true });
-        }
+        this.opfsStatus = 'clearing temp storage...';
+        const opfsManager = new OPFSManager();
+        await opfsManager.clearTempStorage();
         this.opfsStatus = 'tmpstore cleared.';
+        await this.refreshOPFS();
       } catch (e) {
-        this.opfsStatus = 'tmpstore not found or already empty.';
+        this.opfsStatus = 'Error: ' + e.message;
       }
-      await this.refreshOPFS();
     },
     // ── DB table ──────────────────────────────────────────────────────
     loadTable: async function() {

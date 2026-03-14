@@ -1,9 +1,9 @@
 # ECS geo field normalization for client/server geo attributes.
-# Decomposes client.geo.name (e.g. "City, State, Country") into ECS geo subfields.
+# Decomposes client_geo_name (e.g. "City, State, Country") into ECS geo subfields.
 
-_PREFIXES = ('client.geo.', 'server.geo.', 'source.geo.', 'destination.geo.')
+_PREFIXES = ('client_geo_', 'server_geo_', 'source_geo_', 'destination_geo_')
 
-_ISO2 = {
+GEO_ISO2 = {
     'afghanistan': 'AF', 'albania': 'AL', 'algeria': 'DZ', 'andorra': 'AD',
     'angola': 'AO', 'argentina': 'AR', 'armenia': 'AM', 'australia': 'AU',
     'austria': 'AT', 'azerbaijan': 'AZ', 'bahrain': 'BH', 'bangladesh': 'BD',
@@ -44,7 +44,7 @@ _ISO2 = {
     'yemen': 'YE', 'zambia': 'ZM', 'zimbabwe': 'ZW',
 }
 
-_CONTINENT_BY_ISO2 = {
+GEO_CONTINENT_BY_ISO2 = {
     'AF': 'AS', 'AL': 'EU', 'DZ': 'AF', 'AD': 'EU', 'AO': 'AF', 'AR': 'SA',
     'AM': 'AS', 'AU': 'OC', 'AT': 'EU', 'AZ': 'AS', 'BH': 'AS', 'BD': 'AS',
     'BY': 'EU', 'BE': 'EU', 'BZ': 'NA', 'BJ': 'AF', 'BT': 'AS', 'BO': 'SA',
@@ -71,10 +71,13 @@ _CONTINENT_BY_ISO2 = {
     'ZM': 'AF', 'ZW': 'AF',
 }
 
-_CONTINENT_NAMES = {
+GEO_CONTINENT_NAMES = {
     'AF': 'Africa', 'AN': 'Antarctica', 'AS': 'Asia', 'EU': 'Europe',
     'NA': 'North America', 'OC': 'Oceania', 'SA': 'South America',
 }
+
+
+
 
 
 def _set_if_missing(fields: dict, key: str, value):
@@ -88,7 +91,7 @@ def _country_iso2(name: str) -> str:
     name_l = name.strip().lower()
     if len(name_l) == 2:
         return name_l.upper()
-    return _ISO2.get(name_l, '')
+    return GEO_ISO2.get(name_l, '')
 
 
 def _decompose_geo_name(geo_name: str, prefix: str, fields: dict):
@@ -101,7 +104,6 @@ def _decompose_geo_name(geo_name: str, prefix: str, fields: dict):
         _set_if_missing(fields, f'{prefix}city_name', parts[0])
         _set_if_missing(fields, f'{prefix}country_name', parts[1])
     elif len(parts) == 1:
-        # Single value: likely a country or broad location — leave in .name only
         pass
 
 
@@ -110,10 +112,10 @@ def _enrich_country(prefix: str, fields: dict):
     iso2 = fields.get(f'{prefix}country_iso_code', '') or _country_iso2(country_name)
     if iso2:
         _set_if_missing(fields, f'{prefix}country_iso_code', iso2)
-        continent_code = _CONTINENT_BY_ISO2.get(iso2.upper(), '')
+        continent_code = GEO_CONTINENT_BY_ISO2.get(iso2.upper(), '')
         if continent_code:
             _set_if_missing(fields, f'{prefix}continent_code', continent_code)
-            _set_if_missing(fields, f'{prefix}continent_name', _CONTINENT_NAMES.get(continent_code, ''))
+            _set_if_missing(fields, f'{prefix}continent_name', GEO_CONTINENT_NAMES.get(continent_code, ''))
 
 
 def normalize_geo_fields(fields: dict) -> dict:

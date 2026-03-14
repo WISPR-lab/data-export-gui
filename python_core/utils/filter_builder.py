@@ -71,7 +71,7 @@ def make_filter(where: dict, default=True) -> List[Callable]:
             print(f"Invalid filter config: {where}. 'conditions' should be a list of dicts, each with keys 'source', 'op', and 'value'.")
             return lambda dct: default 
         
-        child_conditions = [_filter_leaf(cond, default=default) for cond in where.get("conditions", [])]
+        child_conditions = [_filter_leaf(cond['source'], cond['op'], cond['value'], default=default) for cond in where.get("conditions", [])]
         if where['logic'].lower() == "any":
             return lambda dct, c=child_conditions: any(cond(dct) for cond in c)
         elif where['logic'].lower() == "all":

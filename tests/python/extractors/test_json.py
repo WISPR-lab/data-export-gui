@@ -1,8 +1,8 @@
 import pytest
-from extractors.json_ import JSONParser
-from extractors.jsonl_ import JSONLParser
-from extractors.json_label_values import JSONLabelValuesParser
-from errors import FileLevelError
+from python_core.extractors.json_ import JSONParser
+from python_core.extractors.jsonl_ import JSONLParser
+from python_core.extractors.json_label_values import JSONLabelValuesParser
+from python_core.errors import FileLevelError
 from conftest import validate_results
 
 
