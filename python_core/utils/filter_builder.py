@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable
 from utils.json_utils import get_value_at_path  # nested json traversal
 
 
@@ -14,17 +14,17 @@ OP_MAPPING = {
 def _filter_leaf(source:str, op:str, value:str, default=True) -> Callable:
     
     if source is None or not isinstance(source, str):
-        print(f"Filter condition missing 'source' or value is not a string: {where}")
+        print(f"Filter condition missing 'source' or value is not a string: {source}")
         return lambda dct: default
 
     if value is None:
-        print(f"Filter condition missing 'value': {where}. Defaulting to empty string.")
+        print(f"Filter condition missing 'value'. Defaulting to empty string.")
         value = ""
     else:
         value = str(value)
     
     if op is None:
-        print(f"Filter condition missing 'op': {where}. Defaulting to equality check.")
+        print(f"Filter condition missing 'op'. Defaulting to equality check.")
         op = "=="
 
     if op in OP_MAPPING["eq"]:
@@ -44,28 +44,28 @@ def _filter_leaf(source:str, op:str, value:str, default=True) -> Callable:
 
 
 
-def make_filter(where: dict, default=True) -> List[Callable]:
+def make_filter(where: dict, default=True):
     """
     where = EITHER 
-        {field: "event", op: "==", value: "Email Added"} 
+        {source: "action", op: "==", value: "Email Added"} 
     OR
         {
-            logic: "all" or"any", 
-            conditions: [ {field: "event", op: "==", value: "Email Added"} , ...]
+            logic: "all" or "any", 
+            conditions: [{source: "action", op: "==", value: "Email Added"}, ...]
         }
     """
 
-    if where is None or where is not isinstance(where, dict):
+    if where is None or not isinstance(where, dict):
         print(f"Invalid filter config: {where}.")
         return lambda dct: default
-
+    
     if all(k in where.keys() for k in ["source", "op", "value"]):
         return _filter_leaf(where['source'], where['op'], where['value'], default=default)
  
     if "logic" in where.keys() and "conditions" in where.keys():
         if not all( \
             isinstance(cond, dict) and \
-            (k in cond.keys() for k in ["source", "op", "value"]) \
+            all(k in cond.keys() for k in ["source", "op", "value"]) \
             for cond in where.get("conditions", [])):
             
             print(f"Invalid filter config: {where}. 'conditions' should be a list of dicts, each with keys 'source', 'op', and 'value'.")

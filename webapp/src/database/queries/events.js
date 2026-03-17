@@ -1,14 +1,26 @@
 // custom to WISPR-lab/data-export-gui
 
 import { getDB } from '../index.js';
-import { buildWhereClause, buildOrderClause, buildPaginationClause } from '../whereClauseBuilder.js';
+import { buildWhereClause, buildOrderClause, buildPaginationClause } from './queryBuilder.js';
+import { getEventMeta } from './metadata.js';
 
 export async function searchEvents(queryString = '', filter = {}) {
   const db = await getDB();
-  const { clause: whereClause, params: whereParams } = buildWhereClause({
-    ...filter,
-    query: queryString
-  });
+  
+  // Get available fields from metadata for validation
+  let meta = {};
+  try {
+    meta = await getEventMeta();
+  } catch (e) {
+    console.warn('[searchEvents] Could not fetch metadata, will search without field validation:', e);
+  }
+  
+  const { clause: whereClause, params: whereParams } = buildWhereClause(
+    filter,
+    queryString,
+    meta.mappings || []
+  );
+  
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
   
@@ -28,24 +40,30 @@ export async function searchEvents(queryString = '', filter = {}) {
   
   const allParams = [...whereParams, ...paginationParams];
   
-  const rows = await db.exec(sql, { 
-    bind: allParams,
-    returnValue: 'resultRows',
-    rowMode: 'object'
-  });
-  
-  const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
-  const countPerTimeline = await _getEventsCountPerTimeline(db, whereClause, whereParams);
-  
-  const objects = rows.map(row => _formatEventObject(row));
-  
-  return {
-    objects,
-    meta: {
-      total_count: totalCount,
-      count_per_timeline: countPerTimeline,
-    }
-  };
+  try {
+    const rows = await db.exec(sql, { 
+      bind: allParams,
+      returnValue: 'resultRows',
+      rowMode: 'object'
+    });
+    
+    const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
+    const countPerTimeline = await _getEventsCountPerTimeline(db, whereClause, whereParams);
+    
+    const objects = rows.map(row => _formatEventObject(row));
+    
+    console.log(`[Search] "${queryString}" → ${totalCount} results`);
+    return {
+      objects,
+      meta: {
+        total_count: totalCount,
+        count_per_timeline: countPerTimeline,
+      }
+    };
+  } catch (error) {
+    console.error('[searchEvents] ERROR:', error);
+    throw error;
+  }
 }
 
 export async function getEventCount() {
@@ -54,7 +72,9 @@ export async function getEventCount() {
     returnValue: 'resultRows',
     rowMode: 'object'
   });
-  return (result[0] && result[0].count) || 0;
+  const count = (result[0] && result[0].count) || 0;
+  console.log('[getEventCount] Total events in DB:', count);
+  return count;
 }
 
 export async function deleteEvents(eventIds) {

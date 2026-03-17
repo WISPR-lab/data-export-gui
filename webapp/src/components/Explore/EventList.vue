@@ -918,11 +918,8 @@ export default {
       return this.sketch.timelines.map((tl) => tl.id)
     },
     search: async function (resetPagination = true, incognito = false, parent = false) {
-      console.log('[EventList.search] Called with queryString:', this.currentQueryString, 'indices:', this.currentQueryFilter.indices)
-      
       // Exit early if there are no indices selected
       if (this.currentQueryFilter.indices && !this.currentQueryFilter.indices.length) {
-        console.log('[EventList.search] No indices selected, exiting')
         this.eventList = emptyEventList()
         return
       }
@@ -935,15 +932,9 @@ export default {
       ) {
         const allIndices = this.getAllIndices();
         this.currentQueryFilter.indices = allIndices;
-        console.log('[EventList.search] Expanded _all to timelines:', this.currentQueryFilter.indices);
       }
 
       // Allow searches with empty query string (shows all events from selected timelines)
-      // if (!this.currentQueryString) {
-      //   console.log('[EventList.search] No query string, exiting')
-      //   return
-      // }
-
       this.searchInProgress = true
       this.selectedEvents = []
       this.eventList = emptyEventList()
@@ -959,13 +950,7 @@ export default {
       const startTime = Date.now()
       
       try {
-        // Use DB.searchEvents() with query string and filter
-        console.log('[EventList.search] Calling DB.searchEvents with:', {
-          query: this.currentQueryString,
-          filter: this.currentQueryFilter
-        })
         const response = await DB.searchEvents(this.currentQueryString, this.currentQueryFilter)
-        console.log('[EventList.search] Got response.objects length:', response.objects.length)
 
         // Response has unwrapped format:
         // - objects: array of {_id, _source} wrapped events
@@ -982,19 +967,17 @@ export default {
         this.eventList.meta.has_next_page = (currentFrom + this.eventList.objects.length) < this.eventList.meta.total_count
         this.eventList.meta.query_time_ms = Date.now() - startTime
 
-        console.log('[EventList.search] Updated eventList.objects length:', this.eventList.objects.length)
+        console.log(`[EventList] Displaying ${this.eventList.objects.length} / ${this.eventList.meta.total_count} events`);
         this.updateShowBanner()
         this.$emit('countPerTimeline', this.eventList.meta.count_per_timeline)
         EventBus.$emit('updateCountPerTimeline', this.eventList.meta.count_per_timeline)
         
         this.addTimeBubbles()
-        // console.log('[EventList.search] addTimeBubbles complete')
       } catch (error) {
-        console.error('[EventList.search] Error searching events:', error)
+        console.error('[EventList] Error searching:', error)
         this.errorSnackBar('Error fetching search results: ' + error.message)
       } finally {
         this.searchInProgress = false
-        console.log('[EventList.search] searchInProgress is now:', this.searchInProgress)
       }
     },
     // fetchEventSummary: function() {
@@ -1242,11 +1225,9 @@ export default {
       if (storedState === 'true') {
         this.summaryCollapsed = true;
       }
-      console.log('[EventList.created] Calling search() with queryString:', this.currentQueryString)
       this.search()
     } else {
       // No queryString provided - perform initial load with all events
-      console.log('[EventList.created] No queryString in queryRequest, loading all events')
       const storedState = localStorage.getItem('aiSummaryCollapsed');
       if (storedState === 'true') {
         this.summaryCollapsed = true;

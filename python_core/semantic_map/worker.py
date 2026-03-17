@@ -24,32 +24,31 @@ from semantic_map.deduplicate_events import deduplicate_events
 
 
 def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
-    # rows to add to tables
     event_rows = []
     auth_device_rows = []
-    # add more as we create more tables?
 
     for manifest_file_id, group in groupby(cursor_rows, key=lambda x: x[3]):
+        group_list = list(group)
         views = manifest.views(manifest_file_id)
         if not views:
             print(f"[SemanticMapWorker] No views for manifest_file_id: {manifest_file_id}")
             continue
-
-        for (raw_data_id, file_id, raw_data, _manifest_file_id) in group:
+        
+        for (raw_data_id, file_id, raw_data, _manifest_file_id) in group_list:
             try:
                 record = json.loads(raw_data)
             except Exception as e:
                 print(f"[SemanticMapWorker] JSON parse error for raw_data_id {raw_data_id}: {e}")
                 continue
-            
 
             if not isinstance(record, dict):
                 print(f"[SemanticMapWorker] Warning: expected dict after JSON parse for raw_data_id {raw_data_id} in {file_id}. Got {type(record)}. Skipping.")
-                print(f"Raw data content: {raw_data[:200]}...")  # print first 200 chars for debugging
+                print(f"Raw data content: {raw_data[:200]}...")
                 continue
 
-                
-            for vindex in map_utils.view_indexes_to_apply(record, views):
+            view_indices = list(map_utils.view_indexes_to_apply(record, views))
+            
+            for vindex in view_indices:
                 fields = map_utils.fields(record, views[vindex])
                 event_kind = fields.pop("event_kind", None)
                 
@@ -65,6 +64,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                     event_action = fields.pop('event_action', None)
                     event_category = fields.pop('event_category', [])
                     event_type = fields.pop('event_type', [])
+                    
                     event_rows.append(shared | {
                         "timestamp": fields.pop('timestamp', None),
                         "event_action": event_action,

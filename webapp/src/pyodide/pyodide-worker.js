@@ -156,9 +156,9 @@ async function installUAExtract(pyodide) {
     const wheelFilename = (await response.text()).trim();
     if (!wheelFilename) throw new Error("latest_wheel.txt was empty");
     
-    const absoluteWheelUrl = `${self.location.origin}${wheelsDir}/${wheelFilename}`;
-    console.log(`[Pyodide Worker] Installing directly from: ${absoluteWheelUrl}`);
-    await micropip.install(absoluteWheelUrl);
+    const wheelUrl = `${wheelsBaseUrl}/${wheelFilename}`;
+    console.log(`[Pyodide Worker] Installing from relative path: ${wheelUrl}`);
+    await micropip.install(wheelUrl);
 //   const vsfWheelPath = `/tmp/${wheelsPath.split('/').pop()}`;
 //   const wheelsResponse = await fetch(wheelsBaseUrl);
 //   if (!wheelsResponse.ok) {

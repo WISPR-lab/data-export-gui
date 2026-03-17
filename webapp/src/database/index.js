@@ -46,7 +46,7 @@ async function getDbPaths() {
 
 export async function getDB() {
   if (!worker) {
-    console.log('[Database] Initializing stateless sqlite-worker...');
+    // [Database] Initializing
     worker = new Worker('./sqlite-worker.js');
     window.dbWorker = worker; // debug
   }
@@ -69,7 +69,7 @@ export async function getDB() {
   
   if (!initPromise) {
     initPromise = (async () => {
-      console.log('[Database] Starting worker with OPFS...');
+      // [Database] Starting worker
       
       const cfg = await loadConfig();
 
@@ -87,7 +87,7 @@ export async function getDB() {
         dbPath: "/timeline.db",  // TODO FIX HARDCODING IN CONFIG
         schemaPath: cfg.paths.schema
       });
-      console.log('[Database] Database ready');
+      // [Database] Ready
       
       const tables = await callPyodideWorker('exec', { 
         sql: "SELECT name FROM sqlite_master WHERE type='table';", 
@@ -97,7 +97,7 @@ export async function getDB() {
         ? tables.map(function(row) { return row.name; }).join(', ') 
         : 'None';
       
-      console.log('[Database] Existing tables:', tableNames);
+      // [Database] Tables loaded
 
       
       return {
@@ -119,7 +119,7 @@ export async function closeDB() {
   if (worker) {
     worker.terminate();
     worker = null;
-    console.log('[Database] Connection closed, sqlite-worker thread terminated');
+    // [Database] Closed
   }
   // if (db) {
   //   await db.close();
@@ -135,19 +135,19 @@ export async function closeDB() {
 
 export async function clearAllTables() {
   const db = await getDB();
-  const tables = [
-    'uploads', 
-    'uploaded_files', 
-    'raw_data', 
-    'events', 
-    'auth_devices_initial', 
-    'event_comments'
-  ];
+
+  // Query sqlite_master to get all tables dynamically
+  const result = await db.exec(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';",
+    { returnValue: 'resultRows', rowMode: 'object' }
+  );
+  
+  const tables = result.map(row => row.name);
   
   for (const table of tables) {
     await db.exec(`DELETE FROM ${table};`);
   }
-  console.log('[Database] All imported data rows have been cleared.');
+  // [Database] Data cleared
 }
 
 

@@ -182,9 +182,9 @@ limitations under the License.
               <v-chip outlined v-on="on">
                 <v-icon left small> mdi-clock-outline </v-icon>
                 <span v-bind:style="[!chip.active ? { 'text-decoration': 'line-through', opacity: '50%' } : '']">
-                  <span>{{ chip.value.split(',')[0] }}</span>
+                  <span>{{ formatTimeValue(chip.value.split(',')[0]) }}</span>
                   <span v-if="chip.type === 'datetime_range' && chip.value.split(',')[0] !== chip.value.split(',')[1]">
-                    &rarr; {{ chip.value.split(',')[1] }}</span
+                    &rarr; {{ formatTimeValue(chip.value.split(',')[1]) }}</span
                   >
                 </span>
               </v-chip>
@@ -264,7 +264,7 @@ limitations under the License.
       <div v-if="filterChips.length" class="mt-1">
         <v-chip-group column>
           <span v-for="(chip, index) in filterChips" :key="index + chip.value">
-            <v-tooltip top :disabled="chip.value.length < 33" open-delay="300">
+            <v-tooltip top :disabled="formatChipDisplay(chip).length < 33" open-delay="300">
               <template v-slot:activator="{ on: onTooltip, attrs }">
                 <v-chip
                   outlined
@@ -282,10 +282,10 @@ limitations under the License.
                   }}</v-icon>
                   <span v-if="chip.operator === 'must_not'" class="filter-chip-truncate">
                     <span style="color: red">NOT </span>
-                    {{ (chip.field ? `${chip.field} : ${chip.value}` : chip.value) | formatLabelText }}
+                    {{ formatChipDisplay(chip) }}
                   </span>
                   <span v-else class="filter-chip-truncate">
-                    {{ (chip.field ? `${chip.field} : ${chip.value}` : chip.value) | formatLabelText }}
+                    {{ formatChipDisplay(chip) }}
                   </span>
                 </v-chip>
               </template>
@@ -584,6 +584,18 @@ export default {
       chip.active = !chip.active
       this.search()
     },
+    formatTimeValue(isoString) {
+      if (!isoString) return ''
+      // Check if it's date-only (no time component)
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(isoString)
+      const dayjs = require('@/plugins/dayjs').default
+      const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+      // Only show time if the string contains a time component
+      if (isDateOnly) {
+        return isoString // Return date only
+      }
+      return dayjs(isoString).tz(userTz).format('YYYY-MM-DD h:mm A')
+    },
     copyFilterChip(chip) {
       let textToCopy = ''
       // Different handling based on chip type
@@ -607,6 +619,33 @@ export default {
           this.errorSnackBar('Failed to copy to clipboard.')
           console.error(e)
         })
+    },
+    formatChipDisplay(chip) {
+      // Format datetime_range chips nicely
+      if (chip && chip.type === 'datetime_range' && chip.value) {
+        const dayjs = require('@/plugins/dayjs').default
+        const parts = chip.value.split(',')
+        const startStr = parts[0]
+        const endStr = parts[1]
+        if (!startStr) return chip.value
+        
+        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+        const start = dayjs(startStr).tz(userTz)
+        const end = endStr ? dayjs(endStr).tz(userTz) : null
+        
+        // If same day, show "DD MMM YYYY" format
+        if (end && start.format('YYYY-MM-DD') === end.format('YYYY-MM-DD')) {
+          return start.format('DD MMM YYYY')
+        }
+        // If different days, show range
+        if (end) {
+          return `${start.format('DD MMM')} - ${end.format('DD MMM YYYY')}`
+        }
+        // Single day
+        return start.format('DD MMM YYYY')
+      }
+      // For other chips, return as is
+      return chip.field ? `${chip.field} : ${chip.value}` : chip.value
     },
     removeChip: function (chip, search = true) {
       let chipIndex = this.currentQueryFilter.chips.findIndex((c) => c.value === chip.value)

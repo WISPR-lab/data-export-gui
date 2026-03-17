@@ -33,7 +33,7 @@ limitations under the License.
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Search for all events</td>
+                    <td>Search all events</td>
                     <td>
                       <a href="#" @click.prevent="emitSetQueryAndFilter('*')">
                         <code>*</code>
@@ -41,101 +41,70 @@ limitations under the License.
                     </td>
                   </tr>
                   <tr>
-                    <td>Search a word in the message field</td>
+                    <td>Search a word in message field</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:error')">
-                        <code>message:"error"</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:log')">
+                        <code>message:log</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Search filenames ending with <code>.exe</code></td>
+                    <td>Search an exact phrase</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('filename:*.exe')">
-                        <code>filename:*.exe</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('&quot;Successful login&quot;')">
+                        <code>"Successful login"</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
+                    <td>Wildcard search (prefix/suffix)</td>
                     <td>
-                      Search on the
-                      <a href="https://docs.opensearch.org/docs/2.19/field-types/supported-field-types/keyword/"
-                        >keyword field type</a
-                      ><br />(exact matches & substring search)
-                    </td>
-                    <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('filename.keyword:malicious.exe')">
-                        <code>filename.keyword:malicious.exe</code> </a
-                      ><br />
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('message.keyword:*System32*')">
-                        <code>message.keyword:*System32*</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('event_action:password*')">
+                        <code>event_action:password*</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Search using regex (between <code>//</code>)</td>
+                    <td>Multiple terms (implicit AND)</td>
                     <td>
-                      <a
-                        href="#"
-                        @click.prevent="emitSetQueryAndFilter('url.keyword:/.*\\/sketch\\/[1-100]\\/.*/')"
-                      >
-                        <code>url.keyword:/.*\/sketch\/[1-100]\/.*/</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('log out')">
+                        <code>log out</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Combine searches with AND, OR, NOT</td>
+                    <td>Boolean OR search</td>
                     <td>
-                      <a
-                        href="#"
-                        @click.prevent="emitSetQueryAndFilter('event_identifier:(4624 OR 4625) AND LogonType:3')"
-                      >
-                        <code>event_identifier:(4624 OR 4625) AND NOT LogonType:3</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:login OR message:logout')">
+                        <code>message:login OR message:logout</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Search events that have an url field</td>
+                    <td>Boolean NOT search</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('_exists_:url')"> <code>_exists_:url</code> </a
-                      ><br />
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('url:*')">
-                        <code>url:*</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:login NOT message:attempt')">
+                        <code>message:login NOT message:attempt</code>
+                      </a>
+                      <br/>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('login -attempt')">
+                        <code>login -attempt</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Search for a range of numbers</td>
+                    <td>Grouped search with parentheses</td>
                     <td>
-                      <a
-                        href="#"
-                        @click.prevent="
-                          emitSetQueryAndFilter('http_status_code:[200 TO 204] AND bytes_transferred:>10000')
-                        "
-                      >
-                        <code>status_code:[200 TO 204] AND transferred:>10000</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('(reset OR changed) AND message:password*')">
+                        <code>(reset OR changed) AND message:password*</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Filter by a specific date/time range (UTC)</td>
+                    <td>Search across default fields <br/><span class="caption">(message, attributes, event_action, category, event_kind, platform)</span></td>
                     <td>
-                      <a
-                        href="#"
-                        @click.prevent="emitSetQueryAndFilter(`datetime:[${firstOfCurrentMonth} TO ${nowDateTimeUTC}]`)"
-                      >
-                        <code>datetime:[{{ firstOfCurrentMonth }} TO {{ nowDateTimeUTC }}]</code>
-                      </a>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Filter for events before or after a date (UTC)</td>
-                      <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter(`datetime:[${firstOfCurrentMonth} TO *]`)">
-                        <code>datetime:[{{ firstOfCurrentMonth }} TO *]</code> </a
-                      ><br />
-                      <a href="#" @click.prevent="emitSetQueryAndFilter(`datetime:[* TO ${firstOfCurrentMonth}]`)">
-                        <code>datetime:[* TO {{ firstOfCurrentMonth }}]</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('success')">
+                        <code>success</code>
                       </a>
                     </td>
                   </tr>
@@ -152,7 +121,7 @@ limitations under the License.
             <ts-tags-list></ts-tags-list>
           </div>
         </v-col>
-        <v-col v-if="showDataTypes" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
+        <v-col v-if="false && showDataTypes" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
           <div class="pa-4">
             <h5><v-icon left>mdi-database-outline</v-icon> Data Types</h5>
             <ts-data-types-list></ts-data-types-list>
@@ -170,10 +139,7 @@ limitations under the License.
     <!-- Actions Section -->
     <v-divider></v-divider>
     <v-card-actions>
-      <v-btn text color="primary" href="https://timesketch.org/guides/user/search-query-guide/" target="_blank">
-        Full Search Guide
-        <v-icon right>mdi-open-in-new</v-icon>
-      </v-btn>
+      <!-- Link removed: rules now documented in local examples -->
     </v-card-actions>
   </v-card>
 </template>

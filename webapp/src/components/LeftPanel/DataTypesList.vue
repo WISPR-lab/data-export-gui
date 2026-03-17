@@ -66,6 +66,7 @@ limitations under the License.
 
 <script>
 import EventBus from '../../event-bus.js'
+import DB from '@/database/index.js'
 
 export default {
   props: [],
@@ -73,11 +74,20 @@ export default {
     return {
       itemsPerPage: 10,
       search: '',
+      actions: [],
+    }
+  },
+  async mounted() {
+    try {
+      this.actions = await DB.getEventActions()
+    } catch (e) {
+      console.error('Error loading event actions:', e)
+      this.actions = []
     }
   },
   computed: {
     eventActions() {
-      return [...(this.$parent.eventActions || [])].sort((a, b) => a.action.localeCompare(b.action))
+      return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
     },
   },
   methods: {

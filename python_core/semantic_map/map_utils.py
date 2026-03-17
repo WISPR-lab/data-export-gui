@@ -50,11 +50,10 @@ def fields(record: dict, view: dict, default=""):
 
 
 def view_indexes_to_apply(record: dict, views: list):
-    # record: raw data dict
-    # view: list of views from manifest
     indexes = []
+    
     for i, view in enumerate(views):
-        where = view.get('where', {})
+        where = view.get('file', {}).get('where', {})
         if not where:
             indexes.append(i)
             continue
@@ -62,7 +61,6 @@ def view_indexes_to_apply(record: dict, views: list):
         if f(record):
             indexes.append(i)
     if not indexes:
-        # Debug: show what record didn't match
         action = record.get('action') or record.get('event')
         print(f"[MapUtils] Record with action/event '{action}' did not match any view filters")
     return indexes
