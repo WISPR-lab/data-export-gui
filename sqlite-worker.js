@@ -22,16 +22,22 @@ async function getSqlite() {
 async function ensureSchema(db, schemaPath) {
   if (hasInitialized) return;
   try {
-    const response = await fetch(schemaPath);
-    if (response.ok) {
-      const sql = await response.text();
-      db.exec(sql);
-      console.log('[Sqlite Worker] schema initialized');
+    const fetchPath = schemaPath.startsWith('/') ? `.${schemaPath}` : `./${schemaPath}`;
+    const response = await fetch(fetchPath);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch schema: ${response.status} ${response.statusText}`);
     }
+    const sql = await response.text();
+    if (!sql || sql.trim().length === 0) {
+      throw new Error('Schema file is empty');
+    }
+    db.exec(sql);
+    console.log('[Sqlite Worker] schema initialized');
+    hasInitialized = true;
   } catch (e) {
-    console.error('[sqlite Worker] error initializing schema', e);
+    console.error('[sqlite Worker] error initializing schema:', e);
+    throw e;
   }
-  hasInitialized = true;
 }
 
 self.onmessage = async (e) => {
