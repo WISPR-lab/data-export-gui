@@ -12,8 +12,18 @@ importScripts('https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js');
 let pyodide;
 let pyodideReadyPromise;
 let config = null;
+let baseUrl = null; // e.g. "https://.../data-export-gui/"
 let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
 const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+
+function getBaseUrl() {
+  const workerUrl = self.location.href;
+  return workerUrl.substring(0, workerUrl.lastIndexOf('/') + 1);
+}
+
+function buildResourceUrl(resourcePath) {
+  return baseUrl + resourcePath.replace(/^\//, '');
+}
 
 async function loadConfig() {
   const response = await fetch('./config.yaml');
@@ -146,8 +156,7 @@ async function installUAExtract(pyodide) {
   try {
     console.log(`[Pyodide Worker] installing local ua-extract wheel`);
     const micropip = pyodide.pyimport('micropip');
-    const wheelsDir = config.paths.wheels
-    const wheelsBaseUrl = wheelsDir.startsWith('/') ? `.${wheelsDir}` : `./${wheelsDir}`;
+    const wheelsBaseUrl = buildResourceUrl(config.paths.wheels);
     const pointerUrl = `${wheelsBaseUrl}/latest_wheel.txt?t=${Date.now()}`;
     const response = await fetch(pointerUrl);
       if (!response.ok) {
@@ -157,7 +166,7 @@ async function installUAExtract(pyodide) {
     if (!wheelFilename) throw new Error("latest_wheel.txt was empty");
     
     const wheelUrl = `${wheelsBaseUrl}/${wheelFilename}`;
-    console.log(`[Pyodide Worker] Installing from relative path: ${wheelUrl}`);
+    console.log(`[Pyodide Worker] Installing from absolute URL: ${wheelUrl}`);
     await micropip.install(wheelUrl);
 //   const vsfWheelPath = `/tmp/${wheelsPath.split('/').pop()}`;
 //   const wheelsResponse = await fetch(wheelsBaseUrl);
@@ -180,21 +189,14 @@ async function installUAExtract(pyodide) {
     self.postMessage({ type: 'packageInstallFailure', packages: ['ua-extract'] });
   }
   
-  // try {
-  //   console.log(`[Pyodide Worker] Loading ua-extract from: ${wheelsBaseUrl}`);
-  //   await micropip.install(wheelsBaseUrl);
-  //   console.log("[Pyodide Worker] ua-extract wheel installation finished.");
-  // } catch (error) {
-  //   console.error("[Pyodide Worker] ua-extract wheel installation failed:", error.message || String(error));
-  //   self.postMessage({ type: 'packageInstallFailure', packages: ['ua-extract'] });
-  // }
+
 }
 
 
 
 async function loadManifests(config, pyodide) {
   const manifestsPath = config.paths.manifests;
-  const manifestsBaseUrl = manifestsPath.startsWith('/') ? `.${manifestsPath}` : `./${manifestsPath}`;
+  const manifestsBaseUrl = buildResourceUrl(config.paths.manifests);
   pyodide.FS.mkdir(manifestsPath);
   const manifestFiles = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml'];
   
@@ -229,17 +231,21 @@ async function initPyodide() {
     console.log('[Pyodide Worker] Starting initialization...');
     
     config = await loadConfig();
+    baseUrl = getBaseUrl();
+    console.log(`[Pyodide Worker] Computed base URL: ${baseUrl}`);
+    
     pyodide = await loadPyodide();
     
     const pyCorePath = config.paths.python_core;
     await extractPythonCoreZip(pyodide, pyCorePath);
     
-    const schemaResponse = await fetch(config.paths.schema.startsWith('/') ? `.${config.paths.schema}` : `./${config.paths.schema}`);
+    const schemaUrl = buildResourceUrl(config.paths.schema);
+    const schemaResponse = await fetch(schemaUrl);
     if (schemaResponse.ok) {
       const content = await schemaResponse.text();
       pyodide.FS.writeFile(config.paths.schema, content);
     } else {
-      throw new Error(`Failed to fetch schema.sql: ${schemaResponse.statusText}`);
+      throw new Error(`Failed to fetch schema.sql from ${schemaUrl}: ${schemaResponse.statusText}`);
     }
 
     if (navigator.storage && navigator.storage.getDirectory) {
