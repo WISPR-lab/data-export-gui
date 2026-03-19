@@ -3,7 +3,8 @@ import json
 
 from db_session import DatabaseSession
 from device_grouping.hard_merge import hard_merge_single_upload, hard_merge_multi_upload, format_rows as format_hard_rows
-from device_grouping.soft_merge import soft_merge_single_upload, soft_merge_multi_upload_increment, format_rows as format_soft_rows
+from device_grouping.soft_merge import soft_merge_single_upload, soft_merge_multi_upload, format_rows as format_soft_rows
+from device_grouping.computed_fields import compute_device_profile_fields
 
 
 def _get_config_value(name):
@@ -62,64 +63,25 @@ def group(upload_id: str, db_path: str = None) -> None:
         atomic_devices_rows = conn.execute('SELECT * FROM atomic_devices').fetchall()
         
         if uploads_count > 1:
-            # Multi-upload: incremental soft merge
-            # New atomics are those from this upload
-            new_atomics = [r for r in atomic_devices_rows if upload_id in (r.get('upload_ids', []) or [])]
-            
-            # Get existing profiles and build atomic lookup
-            existing_profiles = conn.execute('SELECT * FROM device_profiles').fetchall()
-            all_atomics = {r['id']: r for r in atomic_devices_rows}
-            
-            # Run incremental soft merge
-            result = soft_merge_multi_upload_increment(new_atomics, existing_profiles, all_atomics)
-            
-            # Update existing profiles with new atomics
-            profiles_to_update = result['profiles_to_update']
-            for profile_id, new_atomic_ids_to_add in profiles_to_update.items():
-                existing_profile = next((p for p in existing_profiles if p['id'] == profile_id), None)
-                if existing_profile:
-                    current_ids = existing_profile.get('atomic_devices_ids', [])
-                    merged_ids = sorted(list(set(current_ids + new_atomic_ids_to_add)))
-                    conn.execute(
-                        '''UPDATE device_profiles SET atomic_devices_ids = :atomic_devices_ids, updated_at = :updated_at 
-                           WHERE id = :id''',
-                        {'id': profile_id, 'atomic_devices_ids': json.dumps(merged_ids), 'updated_at': datetime.now(timezone.utc).timestamp()}
-                    )
-            
-            # Insert new profiles
-            new_profiles = result['new_profiles']
-            device_group_rows = format_soft_rows(new_profiles)
-            ts = datetime.now(timezone.utc).timestamp()
-            for row in device_group_rows:
-                row['created_at'] = ts
-                row['updated_at'] = ts
-            
-            if device_group_rows:
-                conn.executemany(
-                    """INSERT INTO device_profiles
-                       (id, atomic_devices_ids, system_soft_merge, is_generic, user_label, notes, tags, labels, created_at, updated_at)
-                       VALUES (:id, :atomic_devices_ids, :system_soft_merge, :is_generic, :user_label, :notes, :tags, :labels, :created_at, :updated_at)""",
-                    device_group_rows
-                )
-                print(f"[DeviceGrouping] Pass 2: inserted {len(device_group_rows)} new profiles, updated {len(profiles_to_update)} existing profiles")
-            else:
-                print(f"[DeviceGrouping] Pass 2: updated {len(profiles_to_update)} existing profiles, no new profiles")
+            new_atomic_device_rows = [r for r in atomic_devices_rows if upload_id in (r.get('upload_ids', []) or [])]
+            existing_profile_rows = conn.execute('SELECT * FROM device_profiles').fetchall()
+            rows = soft_merge_multi_upload(new_atomic_device_rows, existing_profile_rows, atomic_devices_rows)
         else: 
-            # Single upload: standard soft merge
-            profiles = soft_merge_single_upload(atomic_devices_rows)
-            device_group_rows = format_soft_rows(profiles)
-            ts = datetime.now(timezone.utc).timestamp()
-            for row in device_group_rows:
-                row['created_at'] = ts
-                row['updated_at'] = ts
-            
-            conn.executemany(
-                """INSERT INTO device_profiles
-                   (id, atomic_devices_ids, system_soft_merge, is_generic, user_label, notes, tags, labels, created_at, updated_at)
-                   VALUES (:id, :atomic_devices_ids, :system_soft_merge, :is_generic, :user_label, :notes, :tags, :labels, :created_at, :updated_at)""",
-                device_group_rows
-            )
-            print(f"[DeviceGrouping] Pass 2: inserted {len(device_group_rows)} device_profiles")
+            rows = soft_merge_single_upload(atomic_devices_rows)
+
+        device_group_rows = format_soft_rows(rows)
+        ts = datetime.now(timezone.utc).timestamp()
+        for row in device_group_rows:
+            row['created_at'] = ts
+            row['updated_at'] = ts
+        
+        conn.executemany(
+            """INSERT OR REPLACE INTO device_profiles
+               (id, atomic_devices_ids, attributes, specificity, model, manufacturer, origins, system_soft_merge, is_generic, user_label, notes, tags, labels, created_at, updated_at)
+               VALUES (:id, :atomic_devices_ids, :attributes, :specificity, :model, :manufacturer, :origins, :system_soft_merge, :is_generic, :user_label, :notes, :tags, :labels, :created_at, :updated_at)""",
+            device_group_rows
+        )
+        print(f"[DeviceGrouping] Pass 2: upserted {len(device_group_rows)} device_profiles")
 
         conn.commit()
         print(f"[DeviceGrouping] Done for upload_id={upload_id}")

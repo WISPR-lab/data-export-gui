@@ -1,7 +1,4 @@
 from typing import Callable
-from utils.redaction_utils import get_unredacted_val
-from device_grouping.hard_merge import IS_HARD_KEY
-
 
 def find(parent: dict, x: str) -> str:
     while parent[x] != x:
@@ -25,25 +22,3 @@ def union_find(records: list[dict], match_fn: Callable[[dict, dict], bool]) -> d
         children[root].append(r.get("id"))
     
     return children
-
-
-def merge_attrs(attrs_list: list[dict], mode: str = 'soft') -> dict:
-    
-    if not attrs_list:
-        return {}
-    
-    attrs_new = attrs_list[0].copy()
-    for attrs in attrs_list[1:]:
-        for k in set(attrs_new) | set(attrs):
-            v_a, v_b = attrs_new.get(k), attrs.get(k)
-            
-            if mode == 'hard' and IS_HARD_KEY(k):
-                attrs_new[k] = get_unredacted_val(v_a, v_b)[0] or v_a or v_b
-            else:
-                attrs_new[k] = v_a if (v_a and v_a != '') else v_b
-    
-    return attrs_new
-
-
-def deduplicate_origins(origins_list: list[dict]) -> list[dict]:
-    return [dict(t) for t in set(tuple(sorted(d.items())) for d in origins_list)]

@@ -102,6 +102,12 @@ CREATE TABLE IF NOT EXISTS device_profiles (
     id TEXT PRIMARY KEY,
     atomic_devices_ids JSONTEXT NOT NULL,  -- JSON list of atomic_devices.id that are in this cluster
     --
+    attributes JSONTEXT,  -- merged attributes from all atomics
+    specificity INTEGER DEFAULT 1,  -- max specificity from atomics
+    model TEXT,  -- best model name from attributes
+    manufacturer TEXT,  -- best manufacturer from attributes
+    origins JSONTEXT,  -- merged origins from all atomics
+    --
     system_soft_merge BOOLEAN DEFAULT 0,  -- 1 if profile created by system soft-merge AND has 2+ atomics, else 0
     is_generic BOOLEAN DEFAULT 0,  -- 1 if specificity < 2 and Apple
     --

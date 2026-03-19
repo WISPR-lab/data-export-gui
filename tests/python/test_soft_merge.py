@@ -3,10 +3,11 @@ import pytest
 import device_grouping.worker
 from device_grouping.soft_merge import (
     soft_merge_single_upload,
-    soft_merge_multi_upload_increment,
+    soft_merge_multi_upload,
     _soft_match,
-    _compute_is_generic
 )
+
+from device_grouping.computed_fields import is_generic
 
 
 class TestSoftMatch:
@@ -70,7 +71,7 @@ class TestComputeIsGeneric:
             'specificity': 1,
             'attributes': {'device_manufacturer': 'Apple', 'device_model_name': 'iPhone'}
         }
-        assert _compute_is_generic(atomic) == 1
+        assert is_generic(atomic) == 1
     
     def test_apple_specific_not_generic(self):
         """Apple device with spec >= 2 → is_generic = 0"""
@@ -78,7 +79,7 @@ class TestComputeIsGeneric:
             'specificity': 2,
             'attributes': {'device_manufacturer': 'Apple', 'device_model_name': 'iPhone 13'}
         }
-        assert _compute_is_generic(atomic) == 0
+        assert is_generic(atomic) == 0
     
     def test_samsung_generic_not_generic(self):
         """Samsung generic device → is_generic = 0 (non-Apple)"""
@@ -86,7 +87,7 @@ class TestComputeIsGeneric:
             'specificity': 1,
             'attributes': {'device_manufacturer': 'Samsung', 'device_model_name': 'Galaxy'}
         }
-        assert _compute_is_generic(atomic) == 0
+        assert is_generic(atomic) == 0
 
 
 class TestSoftMergeSingleUpload:
@@ -193,11 +194,12 @@ class TestSoftMergeMultiUploadIncrement:
         
         new_atomics = [all_atomics['atomic_2']]
         
-        result = soft_merge_multi_upload_increment(new_atomics, existing_profiles, all_atomics)
+        result = soft_merge_multi_upload(new_atomics, existing_profiles, list(all_atomics.values()))
         
-        assert 'profile_1' in result['profiles_to_update']
-        assert 'atomic_2' in result['profiles_to_update']['profile_1']
-        assert len(result['new_profiles']) == 0
+        # Result should be 1 profile with both atomics merged
+        assert len(result) == 1
+        assert result[0]['id'] == 'profile_1'
+        assert set(result[0]['atomic_devices_ids']) == {'atomic_1', 'atomic_2'}
     
     def test_new_atomic_no_match(self):
         """New iPhone 7 with no matching profile → create new profile"""
@@ -225,11 +227,15 @@ class TestSoftMergeMultiUploadIncrement:
         
         new_atomics = [all_atomics['atomic_2']]
         
-        result = soft_merge_multi_upload_increment(new_atomics, existing_profiles, all_atomics)
+        result = soft_merge_multi_upload(new_atomics, existing_profiles, list(all_atomics.values()))
         
-        assert len(result['profiles_to_update']) == 0
-        assert len(result['new_profiles']) == 1
-        assert 'atomic_2' in result['new_profiles'][0]['atomic_devices_ids']
+        # Result should be 2 profiles: original + 1 new
+        assert len(result) == 2
+        profile_1 = next(p for p in result if p['id'] == 'profile_1')
+        assert profile_1['atomic_devices_ids'] == ['atomic_1']
+        new_prof = next((p for p in result if p['id'] != 'profile_1'), None)
+        assert new_prof is not None
+        assert 'atomic_2' in new_prof['atomic_devices_ids']
     
     def test_new_atomic_multiple_matches_deferred(self):
         """New iPhone 7 matches 2+ profiles → create new profile, user disambiguates"""
@@ -268,12 +274,14 @@ class TestSoftMergeMultiUploadIncrement:
         
         new_atomics = [all_atomics['atomic_3']]
         
-        result = soft_merge_multi_upload_increment(new_atomics, existing_profiles, all_atomics)
+        result = soft_merge_multi_upload(new_atomics, existing_profiles, list(all_atomics.values()))
         
-        # Should create new profile instead of auto-merging
-        assert len(result['profiles_to_update']) == 0
-        assert len(result['new_profiles']) == 1
-        assert 'atomic_3' in result['new_profiles'][0]['atomic_devices_ids']
+        # Should create new profile instead of auto-merging (no updates to existing)
+        assert len(result) == 3  # 2 originals + 1 new
+        assert result[0]['id'] == 'profile_1'
+        assert result[1]['id'] == 'profile_2'
+        new_prof = result[2]
+        assert 'atomic_3' in new_prof['atomic_devices_ids']
     
     def test_generic_device_creates_new_profile(self):
         """Generic iPhone → create new profile (no system-matched soft merge for generics)"""
@@ -301,12 +309,13 @@ class TestSoftMergeMultiUploadIncrement:
         
         new_atomics = [all_atomics['atomic_2']]
         
-        result = soft_merge_multi_upload_increment(new_atomics, existing_profiles, all_atomics)
+        result = soft_merge_multi_upload(new_atomics, existing_profiles, list(all_atomics.values()))
         
         # Generic iPhone should NOT merge with specific iPhone 13
-        assert len(result['profiles_to_update']) == 0
-        assert len(result['new_profiles']) == 1
-        assert result['new_profiles'][0]['is_generic'] == 1
+        assert len(result) == 2  # original + 1 new
+        new_prof = next((p for p in result if p['id'] != 'profile_1'), None)
+        assert new_prof is not None
+        assert new_prof['is_generic'] == 1
     
     def test_multiple_new_atomics(self):
         """Process multiple new atomics, some matching, some not"""
@@ -339,15 +348,16 @@ class TestSoftMergeMultiUploadIncrement:
         
         new_atomics = [all_atomics['iphone_2'], all_atomics['samsung_1']]
         
-        result = soft_merge_multi_upload_increment(new_atomics, existing_profiles, all_atomics)
+        result = soft_merge_multi_upload(new_atomics, existing_profiles, list(all_atomics.values()))
         
-        # iphone_2 matches → should be added to iphone_profile
-        assert 'iphone_profile' in result['profiles_to_update']
-        assert 'iphone_2' in result['profiles_to_update']['iphone_profile']
+        # Result should be 2 profiles: iphone_profile merged + 1 new samsung profile
+        assert len(result) == 2
+        iphone_prof = result[0]
+        assert iphone_prof['id'] == 'iphone_profile'
+        assert set(iphone_prof['atomic_devices_ids']) == {'iphone_1', 'iphone_2'}
         
-        # samsung_1 doesn't match → should create new profile
-        assert len(result['new_profiles']) == 1
-        assert 'samsung_1' in result['new_profiles'][0]['atomic_devices_ids']
+        samsung_prof = result[1]
+        assert 'samsung_1' in samsung_prof['atomic_devices_ids']
 
 
 if __name__ == '__main__':

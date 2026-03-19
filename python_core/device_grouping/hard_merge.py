@@ -15,8 +15,8 @@ IS_HARD_KEY = lambda k: any(k == hk or k.startswith(hk) for hk in HARD_KEYS)
 import uuid
 import json
 from utils.redaction_utils import compare_redacted_vals
-from device_grouping.specificity import specificity
-from device_grouping.shared_utils import union_find, merge_attrs, deduplicate_origins
+from device_grouping.shared_utils import union_find
+from device_grouping.computed_fields import merge_attrs, deduplicate_origins, specificity
 
 
 def hard_match(attrs_a: dict, attrs_b: dict) -> bool:

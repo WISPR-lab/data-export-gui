@@ -12,37 +12,14 @@
 import uuid
 import json
 from device_grouping.shared_utils import union_find
-from device_grouping.specificity import _get_best_model
+from device_grouping.computed_fields import best_model_attr, get_mfr, MFR_DO_NOT_MERGE_GENERIC, compute_device_profile_fields, merge_attrs
 
-
-MFR_DO_NOT_MERGE_GENERIC = {'apple'}
-
-
-def _get_model(attrs: dict) -> str:
-    # Use the same logic as specificity calculation - prefer non-generic model names
-    model = _get_best_model(attrs)
-    return model.strip().lower() if model else ''
-
-
-def get_mfr(attrs: dict) -> str:
-    # extract manufacturer from device or UA fields, return first non-empty field (lowercased)
-    for key in ['device_manufacturer', 'user_agent_device_manufacturer']:
-        val = attrs.get(key, '').strip().lower()
-        if val:
-            return val
-    return ''
-
-
-def _compute_is_generic(atomic_record: dict) -> int:
-    attrs = atomic_record.get('attributes', {})
-    mfr = get_mfr(attrs)
-    return 1 if (atomic_record.get('specificity', 1) < 2 and mfr in {'apple'}) else 0
 
 
 def _soft_match(attrs_a: dict, attrs_b: dict, spec_a: int, spec_b: int) -> bool:
     # Check if two atomics can be soft-merged based on model/mfr and specificity
-    model_a = _get_model(attrs_a)
-    model_b = _get_model(attrs_b)
+    model_a = best_model_attr(attrs_a)
+    model_b = best_model_attr(attrs_b)
     mfr_a = get_mfr(attrs_a)
     mfr_b = get_mfr(attrs_b)
     
@@ -77,74 +54,70 @@ def soft_merge_single_upload(records: list[dict]) -> list[dict]:
     rows = []
     
     for parent_id, child_id_list in children.items():
-        id_list = sorted(list(set([parent_id] + child_id_list)))
-        first_atomic = next((r for r in records if r['id'] == parent_id), None)
-        
-        
-        rows.append({
+        id_list = list(set([parent_id] + child_id_list))
+        profile_row = {
             'id': str(uuid.uuid4()),
             'atomic_devices_ids': id_list,
-            'system_soft_merge': 1 if len(id_list) > 1 else 0,
-            'is_generic': _compute_is_generic(first_atomic) if first_atomic else 0,
-        })
+            'system_soft_merge': 1 if len(id_list) > 1 else 0
+        }
+        computed = compute_device_profile_fields(profile_row, records)
+        profile_row.update(computed)
+        rows.append(profile_row)
     
     return rows
 
 
-def soft_merge_multi_upload_increment(new_atomics: list[dict], existing_profiles: list[dict], all_atomics: dict) -> list[dict]:
-    # For each new atomic, find soft-match candidates in existing profiles
-    # If exactly 1 match: add to that profile (system-matched soft-merge)
-    # If 0 matches: create new profile
-    # If >1 matches: create new profile (user will disambiguate via UI)
+def soft_merge_multi_upload(new_atomic_device_rows: list[dict], 
+                            old_device_profile_rows: list[dict], 
+                            atomic_devices_rows: list[dict]) -> list[dict]:
+    """Soft merge new atomics into existing profiles. Returns rows with computed fields."""
+    atomic_device_dict = {r['id']: r for r in atomic_devices_rows}
+    profiles_to_update = {}  # profile_id -> [atomic_ids_to_add]
+    new_device_profile_rows = []
     
-    profiles_to_update = {}  # profile_id -> new atomic_ids to add
-    new_profiles = []
-    
-    for new_atomic in new_atomics:
+    for new_row in new_atomic_device_rows:
         matching_profile_ids = []
-        for profile in existing_profiles:
-            for atomic_id in profile.get('atomic_devices_ids', []):
-                existing_atomic = all_atomics.get(atomic_id, {})
+        for pf in old_device_profile_rows:
+            for atomic_id in pf.get('atomic_devices_ids', []):
+                existing_atomic = atomic_device_dict.get(atomic_id, {})
                 if _soft_match(
-                    new_atomic.get('attributes', {}), 
+                    new_row.get('attributes', {}), 
                     existing_atomic.get('attributes', {}),
-                    new_atomic.get('specificity', 1), 
+                    new_row.get('specificity', 1), 
                     existing_atomic.get('specificity', 1)
                 ):
-                    matching_profile_ids.append(profile['id'])
+                    matching_profile_ids.append(pf['id'])
                     break
         
         if len(matching_profile_ids) == 1:
-            # System-matched: add to this profile
             profile_id = matching_profile_ids[0]
             if profile_id not in profiles_to_update:
                 profiles_to_update[profile_id] = []
-            profiles_to_update[profile_id].append(new_atomic['id'])
-        
-        elif len(matching_profile_ids) == 0:
-            # No match: create new single-atomic profile
-            is_generic = _compute_is_generic(new_atomic)
-            new_profiles.append({
-                'id': str(uuid.uuid4()),
-                'atomic_devices_ids': [new_atomic['id']],
-                'system_soft_merge': 0,  # Created as single-atomic
-                'is_generic': is_generic,
-            })
-        
+            profiles_to_update[profile_id].append(new_row['id'])
         else:
-            # >1 matches: create new single-atomic profile, user will merge manually
-            is_generic = _compute_is_generic(new_atomic)
-            new_profiles.append({
+            new_device_profile_rows.append({
                 'id': str(uuid.uuid4()),
-                'atomic_devices_ids': [new_atomic['id']],
+                'atomic_devices_ids': [new_row['id']],
                 'system_soft_merge': 0,
-                'is_generic': is_generic,
             })
     
-    return {
-        'profiles_to_update': profiles_to_update,  # {profile_id: [new_atomic_ids]}
-        'new_profiles': new_profiles
-    }
+    final_rows = []
+    for pf in old_device_profile_rows:
+        if pf['id'] in profiles_to_update:
+            merged_ids = list(set(pf.get('atomic_devices_ids', []) + profiles_to_update[pf['id']]))
+            row = {**pf, 'atomic_devices_ids': merged_ids}
+            row.update(compute_device_profile_fields(row, atomic_devices_rows))
+            final_rows.append(row)
+        else:
+            final_rows.append(pf)
+    
+    for nf in new_device_profile_rows:
+        nf.update(compute_device_profile_fields(nf, atomic_devices_rows))
+    final_rows.extend(new_device_profile_rows)
+    
+    return final_rows
+
+
 
 
 def format_rows(rows: list[dict]) -> list[dict]:
@@ -153,8 +126,13 @@ def format_rows(rows: list[dict]) -> list[dict]:
         formatted.append({
             'id': row['id'],
             'atomic_devices_ids': json.dumps(row['atomic_devices_ids']),
+            'attributes': json.dumps(row['attributes']),
+            'specificity': row['specificity'],
+            'model': row['model'],
+            'manufacturer': row['manufacturer'],
+            'origins': json.dumps(row['origins']),
             'system_soft_merge': row.get('system_soft_merge', 0),
-            'is_generic': row.get('is_generic', 0),
+            'is_generic': row['is_generic'],
             'user_label': None,
             'notes': None,
             'tags': json.dumps([]),

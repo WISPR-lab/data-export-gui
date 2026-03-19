@@ -36,13 +36,14 @@ export async function getDeviceGroups() {
     return {
       id: row.id,
       atomic_devices_ids: JSON.parse(row.atomic_devices_ids || '[]'),
+      best_model: row.best_model || '',
       is_generic: !!row.is_generic,
       user_label: row.user_label,
       notes: row.notes || '',
       // Origins from the first atomic_device in the group
       origins: origins,
       // Placeholder fields for future Python-calculated merged attributes
-      label: row.user_label || attrs.device_model_name || 'Unknown Device',
+      label: row.user_label || row.best_model || attrs.device_model_name || 'Unknown Device',
       manufacturer: attrs.device_manufacturer || 'TODO: Get from merged attributes',
       os: (attrs.os_name || '') + ' ' + (attrs.os_version || '') || 'TODO: Get from merged attributes',
       city: 'TODO: Calculate from geographic events',
