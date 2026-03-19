@@ -36,7 +36,7 @@ class TestDeviceGrouping:
                     'device_model_name': f'Device {i}',
                 }
                 conn.execute(
-                    'INSERT INTO auth_devices_initial (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
+                    'INSERT INTO devices_raw (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
                     (str(uuid.uuid4()), upload_id, file_id, json.dumps(attrs))
                 )
             conn.commit()
@@ -44,11 +44,11 @@ class TestDeviceGrouping:
         group(upload_id, db_path=test_db_path)
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
-            auth_devices = conn.execute(
-                'SELECT id, auth_devices_initial_ids FROM auth_devices WHERE 1=1'
+            atomic_devices = conn.execute(
+                'SELECT id, devices_raw_ids FROM atomic_devices WHERE 1=1'
             ).fetchall()
             
-            assert len(auth_devices) >= 1, f"Hard merge should create at least 1 auth_device, got {len(auth_devices)}"
+            assert len(atomic_devices) >= 1, f"Hard merge should create at least 1 auth_device, got {len(atomic_devices)}"
     
     def test_group_soft_merge_same_model_and_manufacturer(self, sample_upload_with_raw_data, test_db_path):
         """Test soft merge: similar devices are grouped."""
@@ -66,15 +66,15 @@ class TestDeviceGrouping:
         group(upload_id, db_path=test_db_path)
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
-            device_groups = conn.execute(
-                'SELECT id, auth_devices_ids, initial_soft_merge FROM device_groups'
+            device_profiles = conn.execute(
+                'SELECT id, atomic_devices_ids, initial_soft_merge FROM device_profiles'
             ).fetchall()
             
-            assert len(device_groups) > 0, "Should create at least one device_group"
+            assert len(device_profiles) > 0, "Should create at least one device_group"
             
-            for dg in device_groups:
-                ids = json.loads(dg['auth_devices_ids'])
-                assert isinstance(ids, list), f"auth_devices_ids should be list, got {type(ids)}"
+            for dg in device_profiles:
+                ids = json.loads(dg['atomic_devices_ids'])
+                assert isinstance(ids, list), f"atomic_devices_ids should be list, got {type(ids)}"
                 assert len(ids) > 0, "Each device_group should have at least one auth_device"
     
     def test_group_soft_merge_apple_blacklist(self, test_db_path):
@@ -88,7 +88,7 @@ class TestDeviceGrouping:
                 (upload_id, 'test', 'test-apple-blacklist')
             )
             
-            # Create two Apple auth_devices before grouping
+            # Create two Apple atomic_devices before grouping
             for i in range(2):
                 file_id = str(uuid.uuid4())
                 conn.execute(
@@ -112,7 +112,7 @@ class TestDeviceGrouping:
                     }
                 
                 conn.execute(
-                    'INSERT INTO auth_devices_initial (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
+                    'INSERT INTO devices_raw (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
                     (str(uuid.uuid4()), upload_id, file_id, json.dumps(attrs))
                 )
             conn.commit()
@@ -120,8 +120,8 @@ class TestDeviceGrouping:
         group(upload_id, db_path=test_db_path)
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
-            device_groups = conn.execute(
-                'SELECT COUNT(*) as count FROM device_groups WHERE 1=1'
+            device_profiles = conn.execute(
+                'SELECT COUNT(*) as count FROM device_profiles WHERE 1=1'
             ).fetchone()
             
-            assert device_groups['count'] > 0, "Apple blacklist test should create device_groups"
+            assert device_profiles['count'] > 0, "Apple blacklist test should create device_profiles"

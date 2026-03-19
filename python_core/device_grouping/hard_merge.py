@@ -18,6 +18,7 @@ HARD_KEYS = {
 IS_HARD_KEY = lambda k: any(k == hk or k.startswith(hk) for hk in HARD_KEYS)
 
 
+
 def hard_match(attrs_a: dict, attrs_b: dict) -> bool:
     keys_a = {k for k in attrs_a if IS_HARD_KEY(k)}
     keys_b = {k for k in attrs_b if IS_HARD_KEY(k)}
@@ -77,13 +78,16 @@ def hard_merge(records: list[dict]) -> list[dict]:
         id_list = sorted(list(set([parent_id] + child_id_list)))
         child_records = [record_map[id] for id in set(id_list)] 
         attrs = merge_attrs([r.get("attributes", {}) for r in child_records])
+        origins = [r.get("origin") for r in child_records if r.get("origin")]
+        origins = sorted(list(set(origins)))
 
         rows.append({
             'id': str(uuid.uuid4()),
             'upload_ids': json.dumps([r.get("upload_id") for r in child_records]),
             'file_ids': json.dumps([r.get("file_id") for r in child_records]),
-            'auth_devices_initial_ids': json.dumps(id_list),
+            'devices_raw_ids': json.dumps(id_list),
             'attributes': json.dumps(attrs),
+            'origins': json.dumps(origins),
         })
 
     return rows

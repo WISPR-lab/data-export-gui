@@ -55,7 +55,7 @@ export async function getDeviceMeta() {
         { returnValue: 'resultRows', rowMode: 'object'}
     );
   
-  const countResult = await db.exec('SELECT COUNT(*) as count FROM auth_devices_initial', 
+  const countResult = await db.exec('SELECT COUNT(*) as count FROM devices_raw', 
     {returnValue: 'resultRows', rowMode: 'object'}
   );
   const totalItems = (countResult[0] && countResult[0].count) || 0;

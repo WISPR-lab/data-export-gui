@@ -116,8 +116,8 @@
 import { getDB, closeDB } from '@/database/index.js';
 import { OPFSManager } from '@/storage/opfs_manager.js';
 
-var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'auth_devices_initial', 'auth_devices', 'device_groups', 'event_comments'];
-var DB_VIEWS = ['v_device_groups'];
+var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'devices_raw', 'atomic_devices', 'device_profiles', 'event_comments'];
+var DB_VIEWS = ['v_device_profiles'];
 
 var SECTIONS = [
   { path: 'opfs', label: 'OPFS' }

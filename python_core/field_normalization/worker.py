@@ -3,6 +3,7 @@ from db_session import DatabaseSession
 from field_normalization.user_agent import UserAgentParser
 from field_normalization.device import normalize_device_fields
 from field_normalization.geo import normalize_geo_fields
+from field_normalization.origin import determine_origin
 
 
 def normalize(upload_id: str, db_path: str = None) -> dict:
@@ -16,17 +17,25 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
     
     with DatabaseSession(db_path, use_dict_factory=True) as conn:
         print(f"[FieldNormalizeWorker] Starting normalization for upload_id={upload_id}")
+        
+        # Get platform from uploads table
+        upload = conn.execute(
+            "SELECT platform FROM uploads WHERE id = ?",
+            (upload_id,)
+        ).fetchone()
+        platform = upload['platform'] if upload else None
+        
         rows = conn.execute(
             """
             SELECT id, attributes
-            FROM auth_devices_initial
+            FROM devices_raw
             WHERE upload_id = ?
             """,
             (upload_id,)
         ).fetchall()
         
         if not rows:
-            print(f"[FieldNormalizeWorker] No auth_devices_initial rows for upload_id={upload_id}")
+            print(f"[FieldNormalizeWorker] No devices_raw rows for upload_id={upload_id}")
             return {'status': 'success', 'message': 'No records to normalize'}
         
         ua_parser = UserAgentParser()
@@ -39,15 +48,18 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             attrs = normalize_device_fields(attrs)
             attrs = normalize_geo_fields(attrs)
             
+            origin = determine_origin(platform, attrs)
+            
             updates.append({
                 'id': row['id'],
                 'attributes': json.dumps(attrs),
+                'origin': origin,
             })
         
         conn.executemany(
             """
-            UPDATE auth_devices_initial
-            SET attributes = :attributes
+            UPDATE devices_raw
+            SET attributes = :attributes, origin = :origin
             WHERE id = :id
             """,
             updates

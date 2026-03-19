@@ -13,8 +13,8 @@ export async function getDeviceGroups() {
     SELECT 
       dg.*,
       ad.attributes as raw_attributes
-    FROM device_groups dg
-    LEFT JOIN auth_devices ad ON json_extract(dg.auth_devices_ids, '$[0]') = ad.id
+    FROM device_profiles dg
+    LEFT JOIN atomic_devices ad ON json_extract(dg.atomic_devices_ids, '$[0]') = ad.id
   `;
   
   const rows = await db.exec(sql, {
@@ -32,7 +32,7 @@ export async function getDeviceGroups() {
 
     return {
       id: row.id,
-      auth_devices_ids: JSON.parse(row.auth_devices_ids || '[]'),
+      atomic_devices_ids: JSON.parse(row.atomic_devices_ids || '[]'),
       is_generic: !!row.is_generic,
       user_label: row.user_label,
       notes: row.notes || '',
@@ -60,7 +60,7 @@ export async function updateDeviceGroup(groupId, updates) {
   const setClause = keys.map(k => `${k} = ?`).join(', ');
   const params = [...keys.map(k => updates[k]), groupId];
   
-  const sql = `UPDATE device_groups SET ${setClause}, updated_at = ? WHERE id = ?`;
+  const sql = `UPDATE device_profiles SET ${setClause}, updated_at = ? WHERE id = ?`;
   params.splice(params.length - 1, 0, Date.now() / 1000);
 
   await db.exec(sql, { bind: params });

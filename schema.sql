@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS event_comments (
 
 
 
-CREATE TABLE IF NOT EXISTS auth_devices_initial ( -- filled during semantic map
+CREATE TABLE IF NOT EXISTS devices_raw ( -- filled during semantic map
     id TEXT PRIMARY KEY,
     upload_id TEXT,
     file_id TEXT,
@@ -77,7 +77,8 @@ CREATE TABLE IF NOT EXISTS auth_devices_initial ( -- filled during semantic map
     event_kind TEXT,
     event_category JSONTEXT DEFAULT '[]',
     --
-    attributes JSONTEXT,     
+    attributes JSONTEXT,
+    origin TEXT,  -- e.g., "facebook/web", "facebook/mobile_app", "apple/system", "unknown"
     --        
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE,
     FOREIGN KEY(file_id) REFERENCES uploaded_files(id) ON DELETE CASCADE,
@@ -85,24 +86,25 @@ CREATE TABLE IF NOT EXISTS auth_devices_initial ( -- filled during semantic map
 );
 
 
-CREATE TABLE IF NOT EXISTS auth_devices ( -- hard merge based on static device identifiers. user cannot edit this.
+CREATE TABLE IF NOT EXISTS atomic_devices ( -- hard merge based on static device identifiers. user cannot edit this.
     id TEXT PRIMARY KEY,
     upload_ids JSONTEXT NOT NULL,  -- JSON list of uploads that contributed to this merged device
     file_ids JSONTEXT NOT NULL,    -- ^^ for uploaded_files.id 
-    auth_devices_initial_ids JSONTEXT NOT NULL,  -- ^^ for auth_devices_initial.id
+    devices_raw_ids JSONTEXT NOT NULL,  -- ^^ for devices_raw.id
     --
-    attributes JSONTEXT    -- merged attributes
+    attributes JSONTEXT,    -- merged attributes
+    origins JSONTEXT,  -- JSON list of origin values (e.g., ["facebook/web", "facebook/mobile_app"])
+    specificity INTEGER DEFAULT 1  -- 1=generic, 2=model+version, 3=hard_id
 );
 
 
-CREATE TABLE IF NOT EXISTS device_groups (
+CREATE TABLE IF NOT EXISTS device_profiles (
     id TEXT PRIMARY KEY,
-    auth_devices_ids JSONTEXT NOT NULL,  -- JSON list of auth_devices.id that are in this cluster
+    atomic_devices_ids JSONTEXT NOT NULL,  -- JSON list of atomic_devices.id that are in this cluster
     --
     initial_soft_merge BOOLEAN DEFAULT 0,
     soft_merge_flag_status TEXT DEFAULT "na", -- "na" | "shown" | "user_confirmed" | "user_rejected"
     --
-    is_generic BOOLEAN DEFAULT 0,
     user_label TEXT,
     notes TEXT,
     --
@@ -113,43 +115,14 @@ CREATE TABLE IF NOT EXISTS device_groups (
     labels JSONTEXT DEFAULT "[]"
 );
 
-CREATE TABLE IF NOT EXISTS device_group_comments (
+CREATE TABLE IF NOT EXISTS device_profile_comments (
     id TEXT PRIMARY KEY,
-    device_group_id TEXT,
+    device_profile_id TEXT,
     comment TEXT,
     created_at REAL,
     updated_at REAL,
-    FOREIGN KEY(device_group_id) REFERENCES device_groups(id) ON DELETE CASCADE
+    FOREIGN KEY(device_profile_id) REFERENCES device_profiles(id) ON DELETE CASCADE
 );
-
-
--- CREATE TABLE IF NOT EXISTS device_group_history (
---     id TEXT PRIMARY KEY,
---     device_group_id TEXT NOT NULL,
---     timestamp REAL,
---     action TEXT, -- "added" | "removed" 
---     auth_device_ids JSONTEXT,  -- elements added/removed
---     origin TEXT, -- "initial_system_group" | "user"
--- ); 
-
-
-
-
--- CREATE TABLE IF NOT EXISTS device_clusters ( -- filled during device grouping
---     id TEXT PRIMARY KEY,
---     upload_id TEXT NOT NULL,
---     label TEXT,                              -- user-editable display name
---     source_ids JSONTEXT NOT NULL,            -- JSON list of auth_devices_initial.id
---     attributes JSONTEXT,                     -- merged best-guess attribute set
---     match_type TEXT NOT NULL,                -- "hard" | "soft_suggested" | "user_confirmed" | "user_split"
---     merged_into TEXT,                        -- self-ref: if this cluster was merged into another
---     created_at REAL,
---     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE,
---     FOREIGN KEY(merged_into) REFERENCES device_clusters(id)
--- );
-
-
-
 
 
 
@@ -192,8 +165,8 @@ UNION SELECT 'platform', 'text'
 UNION
 -- dynamic from JSON attributes
 SELECT DISTINCT key AS field, 'text' AS type
-FROM auth_devices_initial, json_each(auth_devices_initial.attributes)
-WHERE auth_devices_initial.attributes IS NOT NULL AND auth_devices_initial.attributes != '';
+FROM devices_raw, json_each(devices_raw.attributes)
+WHERE devices_raw.attributes IS NOT NULL AND devices_raw.attributes != '';
 
 
 
@@ -205,11 +178,15 @@ WHERE event_action IS NOT NULL AND event_action != '';
 
 
 
-DROP VIEW IF EXISTS v_device_groups;
-CREATE VIEW v_device_groups AS
+DROP VIEW IF EXISTS v_device_profiles;
+CREATE VIEW v_device_profiles AS
 SELECT 
-    dg.id AS group_id,
-    json_group_array(json(ad.attributes)) AS all_device_attributes
-FROM device_groups dg, json_each(dg.auth_devices_ids) as j
-JOIN auth_devices ad ON ad.id = j.value
+    dg.id AS profile_id,
+    json_profile_array(json(ad.attributes)) AS attributes,
+    json_profile_array(ad.specificity) AS specificity,
+    json(json_profile_array(DISTINCT j2.value)) AS origins
+FROM device_profiles dg
+JOIN json_each(dg.atomic_devices_ids) as j ON 1=1
+JOIN atomic_devices ad ON ad.id = j.value
+JOIN json_each(ad.origins) as j2 ON 1=1
 GROUP BY dg.id;

@@ -29,7 +29,7 @@ class TestFieldNormalization:
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
             rows = conn.execute(
-                'SELECT id, attributes FROM auth_devices_initial WHERE upload_id = ?',
+                'SELECT id, attributes FROM devices_raw WHERE upload_id = ?',
                 (upload_id,)
             ).fetchall()
             
@@ -64,7 +64,7 @@ class TestFieldNormalization:
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
             rows = conn.execute(
-                'SELECT id, attributes FROM auth_devices_initial WHERE upload_id = ?',
+                'SELECT id, attributes FROM devices_raw WHERE upload_id = ?',
                 (upload_id,)
             ).fetchall()
             
@@ -132,7 +132,7 @@ class TestFieldNormalization:
                 
                 attrs = {'user_agent_original': ua}
                 conn.execute(
-                    'INSERT INTO auth_devices_initial (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
+                    'INSERT INTO devices_raw (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
                     (str(uuid.uuid4()), upload_id, file_id, json.dumps(attrs))
                 )
             
@@ -146,7 +146,7 @@ class TestFieldNormalization:
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
             rows = conn.execute(
-                'SELECT attributes FROM auth_devices_initial WHERE upload_id = ?',
+                'SELECT attributes FROM devices_raw WHERE upload_id = ?',
                 (upload_id,)
             ).fetchall()
             
@@ -198,7 +198,7 @@ class TestFieldNormalization:
                 
                 attrs = {'user_agent_os_full': os_str}
                 conn.execute(
-                    'INSERT INTO auth_devices_initial (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
+                    'INSERT INTO devices_raw (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)',
                     (str(uuid.uuid4()), upload_id, file_id, json.dumps(attrs))
                 )
             
@@ -212,7 +212,7 @@ class TestFieldNormalization:
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
             rows = conn.execute(
-                'SELECT attributes FROM auth_devices_initial WHERE upload_id = ? ORDER BY id',
+                'SELECT attributes FROM devices_raw WHERE upload_id = ? ORDER BY id',
                 (upload_id,)
             ).fetchall()
             

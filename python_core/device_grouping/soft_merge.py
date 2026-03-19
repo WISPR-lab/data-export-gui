@@ -1,56 +1,41 @@
 #  SOFT MERGE
-#  Merge devices on manufacturer + model match, accounting for specificity levels.
-#  Model/manufacturer sourced from device_* or user_agent_device_* fields (picks most specific).
-#  Specificity: 0=generic (brand only), 1=specific (has version/variant).
-#  Rules: both specific→exact match; generic+specific→merge except Apple (UA masking); generic+generic→merge except Apple.
+#  Merge devices on manufacturer + model match, using pre-calculated specificity levels.
+#  Model/manufacturer sourced from device_* or user_agent_device_* fields.
+#  Rules: 
+#  -  both specificity >= 2  -->  exact match
+#  -  generic + specific  -->   no merge if either is Apple, else merge
+#  -  generic + generic   -->  no merge if either is Apple, else merge
 
 import re
-from utils.device_lookup import VARIANT_SUFFIXES
 from collections import defaultdict
 import uuid
 import json
 
 
-GENERIC = {'other', 'unknown', 'phone', 'smartphone', 'tablet', 'android', 'iphone', 'ipad', ''}
-UA_MASKING_BLACKLIST = {'apple'}
+MFR_DO_NOT_MERGE_GENERIC = {'apple'}
 
 
-def _specificity(name: str) -> int:
-    if not name:
-        return -1
-    name = name.strip()
-    if not name or name.lower() in GENERIC:
-        return 0
-    words = {w.lower().rstrip('.,') for w in name.split()}
-    if words & VARIANT_SUFFIXES:
-        return 1
-    if any(c.isdigit() for c in name):
-        return 1
-    return 0
-
-
-def _best_value(values: list[str]) -> str:
+def _get_model_or_mfr(values: list[str]) -> str:
+    # get first non-empty value from candidates
     candidates = [v.strip() for v in values if v and v.strip()]
-    if not candidates:
-        return ''
-    return max(candidates, key=_specificity)
+    return candidates[0] if candidates else ''
 
 
-def _soft_match(attrs_a: dict, attrs_b: dict) -> bool:
-    model_a = _best_value([
+def _soft_match(attrs_a: dict, attrs_b: dict, spec_a: int, spec_b: int) -> bool:
+    model_a = _get_model_or_mfr([
         attrs_a.get('device_model_name', ''),
         attrs_a.get('user_agent_device_model', ''),
     ])
-    model_b = _best_value([
+    model_b = _get_model_or_mfr([
         attrs_b.get('device_model_name', ''),
         attrs_b.get('user_agent_device_model', ''),
     ])
     
-    mfr_a = _best_value([
+    mfr_a = _get_model_or_mfr([
         attrs_a.get('device_manufacturer', ''),
         attrs_a.get('user_agent_device_manufacturer', ''),
     ])
-    mfr_b = _best_value([
+    mfr_b = _get_model_or_mfr([
         attrs_b.get('device_manufacturer', ''),
         attrs_b.get('user_agent_device_manufacturer', ''),
     ])
@@ -58,25 +43,15 @@ def _soft_match(attrs_a: dict, attrs_b: dict) -> bool:
     if not model_a or not model_b or not mfr_a or not mfr_b:
         return False
     
-
     if mfr_a.lower() != mfr_b.lower():
         return False
     
-    spec_a = _specificity(model_a)
-    spec_b = _specificity(model_b)
+    if spec_a >= 2 and spec_b >= 2:
+        return model_a.lower() == model_b.lower()
     
-    # print(f"[SOFT_MERGE] Comparing: '{model_a}' (spec={spec_a}) vs '{model_b}' (spec={spec_b}) | Mfr: {mfr_a}")
-    
-    if spec_a >= 1 and spec_b >= 1:
-        res = model_a.lower() == model_b.lower()
-        # print(f"[SOFT_MERGE] Both specific. Match: {res}")
-        return res
-    
-    if mfr_a.lower() in UA_MASKING_BLACKLIST or mfr_b.lower() in UA_MASKING_BLACKLIST:
-        # print(f"[SOFT_MERGE] Apple masking check... No merge for generic/specific mix.")
+    if mfr_a.lower() in MFR_DO_NOT_MERGE_GENERIC or mfr_b.lower() in MFR_DO_NOT_MERGE_GENERIC:
         return False
     
-    # print(f"[SOFT_MERGE] Generic fallback merge enabled.")
     return True
 
 
@@ -111,9 +86,11 @@ def soft_merge(records: list[dict]) -> list[dict]:
     
     for i, dct_a in enumerate(records):
         id_a, attrs_a = dct_a.get('id'), dct_a.get('attributes', {})
+        spec_a = dct_a.get('specificity', 1)
         for dct_b in records[i + 1:]:
             id_b, attrs_b = dct_b.get('id'), dct_b.get('attributes', {})
-            if _soft_match(attrs_a, attrs_b):
+            spec_b = dct_b.get('specificity', 1)
+            if _soft_match(attrs_a, attrs_b, spec_a, spec_b):
                 parent[_find(parent, id_a)] = _find(parent, id_b)
 
     children = defaultdict(list)
@@ -125,7 +102,7 @@ def soft_merge(records: list[dict]) -> list[dict]:
         id_list = sorted(list(set([parent_id] + child_id_list)))
         rows.append({
             'id': str(uuid.uuid4()),
-            'auth_devices_ids': json.dumps(id_list),
+            'atomic_devices_ids': json.dumps(id_list),
             'initial_soft_merge': 1 if len(id_list) > 1 else 0,
         })
 
