@@ -1,27 +1,47 @@
 import pytest
 import json
-import sqlite3
-import tempfile
+import uuid
 import os
-from pathlib import Path
+import tempfile
+import shutil
 
 from db_session import DatabaseSession
 from device_grouping.worker import group
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def temp_db():
-    fd, db_path = tempfile.mkstemp(suffix='.db')
-    os.close(fd)
+    """Create a fresh test database in tests/tmp_outputs."""
+    tmpdir = os.path.join(os.path.dirname(__file__), 'tmp_outputs')
+    os.makedirs(tmpdir, exist_ok=True)
     
-    schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'schema.sql')
+    db_path = os.path.join(tmpdir, f'test_multi_{uuid.uuid4()}.db')
+    schema_path = os.path.join(os.path.dirname(__file__), '..', '..', 'schema.sql')
+    
     with DatabaseSession(db_path, schema_path=schema_path) as conn:
         conn.commit()
     
     yield db_path
     
-    # Cleanup
-    Path(db_path).unlink(missing_ok=True)
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+
+def insert_upload_and_file(conn, upload_id, file_id=None):
+    """Helper to insert an upload and file."""
+    if file_id is None:
+        file_id = f'file_{upload_id}'
+    conn.execute("INSERT INTO uploads (id) VALUES (?)", (upload_id,))
+    conn.execute("INSERT INTO uploaded_files (id, upload_id) VALUES (?, ?)", (file_id, upload_id))
+    return file_id
+
+
+def insert_device_raw(conn, device_id, upload_id, file_id, origin, attrs):
+    """Helper to insert a raw device."""
+    conn.execute("""
+        INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
+        VALUES (?, ?, ?, ?, ?)
+    """, (device_id, upload_id, file_id, origin, json.dumps(attrs)))
 
 
 def test_multi_upload_same_imei_merges(temp_db):
@@ -33,47 +53,29 @@ def test_multi_upload_same_imei_merges(temp_db):
     
     Expected: One atomic_device with two origins
     """
+    # Setup: Insert first upload and device
     with DatabaseSession(temp_db, use_dict_factory=True) as conn:
-        # Upload 1: Insert raw device with IMEI
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_1',
-            'upload_1',
-            'file_1',
-            'apple/web',
-            json.dumps({
-                'device_imei': '123456',
-                'device_model_name': 'iPhone 7',
-                'device_manufacturer': 'Apple'
-            })
-        ))
-        
-        # Run grouping for upload 1
-        group('upload_1', temp_db)
-        
-        # Upload 2: Insert same device (same IMEI)
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_2',
-            'upload_2',
-            'file_2',
-            'google/web',
-            json.dumps({
-                'device_imei': '123456',
-                'device_model_name': 'iPhone 7',
-                'device_manufacturer': 'Apple'
-            })
-        ))
-        
-        # Run grouping for upload 2
-        group('upload_2', temp_db)
-        
-        # Check: Only one atomic (merged)
-        atomics = conn.execute('SELECT * FROM atomic_devices').fetchall()
+        insert_upload_and_file(conn, 'upload_1', 'file_1')
+        insert_device_raw(conn, 'raw_1', 'upload_1', 'file_1', 'apple/web',
+                         {'device_imei': '123456', 'device_model_name': 'iPhone 7'})
+        conn.commit()
+    
+    # Process first upload
+    group('upload_1', temp_db)
+    
+    # Setup: Insert second upload and device
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
+        insert_upload_and_file(conn, 'upload_2', 'file_2')
+        insert_device_raw(conn, 'raw_2', 'upload_2', 'file_2', 'google/web',
+                         {'device_imei': '123456', 'device_model_name': 'iPhone 7'})
+        conn.commit()
+    
+    # Process second upload
+    group('upload_2', temp_db)
+    
+    # Verify: Only one atomic (merged)
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
+        atomics = conn.execute('SELECT * FROM atomic_devices ORDER BY id').fetchall()
         assert len(atomics) == 1, f"Expected 1 atomic, got {len(atomics)}"
         
         atomic = atomics[0]
@@ -101,44 +103,26 @@ def test_multi_upload_different_devices(temp_db):
     
     Expected: Two atomic_devices
     """
+    # Upload 1
     with DatabaseSession(temp_db, use_dict_factory=True) as conn:
-        # Upload 1
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_1',
-            'upload_1',
-            'file_1',
-            'apple/web',
-            json.dumps({
-                'device_imei': '123456',
-                'device_model_name': 'iPhone 7',
-                'device_manufacturer': 'Apple'
-            })
-        ))
-        
-        group('upload_1', temp_db)
-        
-        # Upload 2: Different device
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_2',
-            'upload_2',
-            'file_2',
-            'google/web',
-            json.dumps({
-                'device_imei': '789012',
-                'device_model_name': 'iPhone 13',
-                'device_manufacturer': 'Apple'
-            })
-        ))
-        
-        group('upload_2', temp_db)
-        
-        # Check: Two atomics (no merge)
+        insert_upload_and_file(conn, 'upload_1', 'file_1')
+        insert_device_raw(conn, 'raw_1', 'upload_1', 'file_1', 'apple/web',
+                         {'device_imei': '123456', 'device_model_name': 'iPhone 7'})
+        conn.commit()
+    
+    group('upload_1', temp_db)
+    
+    # Upload 2: Different device
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
+        insert_upload_and_file(conn, 'upload_2', 'file_2')
+        insert_device_raw(conn, 'raw_2', 'upload_2', 'file_2', 'google/web',
+                         {'device_imei': '789012', 'device_model_name': 'iPhone 13'})
+        conn.commit()
+    
+    group('upload_2', temp_db)
+    
+    # Verify: Two atomics (no merge)
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
         atomics = conn.execute('SELECT * FROM atomic_devices').fetchall()
         assert len(atomics) == 2, f"Expected 2 atomics, got {len(atomics)}"
         
@@ -157,56 +141,30 @@ def test_multi_upload_mixed_devices(temp_db):
     
     Expected: 3 atomics total (A merged, B and C separate)
     """
+    # Upload 1: Two devices
     with DatabaseSession(temp_db, use_dict_factory=True) as conn:
-        # Upload 1: Two devices
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_1a',
-            'upload_1',
-            'file_1',
-            'apple/web',
-            json.dumps({'device_imei': '111', 'device_model_name': 'iPhone 7'})
-        ))
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_1b',
-            'upload_1',
-            'file_1',
-            'apple/web',
-            json.dumps({'device_imei': '222', 'device_model_name': 'iPhone 8'})
-        ))
-        
-        group('upload_1', temp_db)
-        
-        # Upload 2: Device A (matches 111) + Device C (new)
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_2a',
-            'upload_2',
-            'file_2',
-            'google/web',
-            json.dumps({'device_imei': '111', 'device_model_name': 'iPhone 7'})
-        ))
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_2c',
-            'upload_2',
-            'file_2',
-            'google/web',
-            json.dumps({'device_imei': '333', 'device_model_name': 'Pixel 6'})
-        ))
-        
-        group('upload_2', temp_db)
-        
-        # Check: 3 atomics
+        insert_upload_and_file(conn, 'upload_1', 'file_1')
+        insert_device_raw(conn, 'raw_1a', 'upload_1', 'file_1', 'apple/web',
+                         {'device_imei': '111', 'device_model_name': 'iPhone 7'})
+        insert_device_raw(conn, 'raw_1b', 'upload_1', 'file_1', 'apple/web',
+                         {'device_imei': '222', 'device_model_name': 'iPhone 8'})
+        conn.commit()
+    
+    group('upload_1', temp_db)
+    
+    # Upload 2: Device A (matches 111) + Device C (new)
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
+        insert_upload_and_file(conn, 'upload_2', 'file_2')
+        insert_device_raw(conn, 'raw_2a', 'upload_2', 'file_2', 'google/web',
+                         {'device_imei': '111', 'device_model_name': 'iPhone 7'})
+        insert_device_raw(conn, 'raw_2c', 'upload_2', 'file_2', 'google/web',
+                         {'device_imei': '333', 'device_model_name': 'Pixel 6'})
+        conn.commit()
+    
+    group('upload_2', temp_db)
+    
+    # Verify: 3 atomics
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
         atomics = conn.execute('SELECT * FROM atomic_devices ORDER BY id').fetchall()
         assert len(atomics) == 3, f"Expected 3 atomics, got {len(atomics)}"
         
@@ -228,36 +186,26 @@ def test_multi_upload_mixed_devices(temp_db):
 
 def test_origins_structure(temp_db):
     """Test that origins have correct structure {origin, upload_id}."""
+    # Upload 1
     with DatabaseSession(temp_db, use_dict_factory=True) as conn:
-        # Upload 1
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_1',
-            'upload_1',
-            'file_1',
-            'facebook/web',
-            json.dumps({'device_imei': '555', 'device_model_name': 'Samsung S20'})
-        ))
-        
-        group('upload_1', temp_db)
-        
-        # Upload 2: Same device
-        conn.execute("""
-            INSERT INTO devices_raw (id, upload_id, file_id, origin, attributes)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            'raw_2',
-            'upload_2',
-            'file_2',
-            'twitter/api',
-            json.dumps({'device_imei': '555', 'device_model_name': 'Samsung S20'})
-        ))
-        
-        group('upload_2', temp_db)
-        
-        # Check origin structure
+        insert_upload_and_file(conn, 'upload_1', 'file_1')
+        insert_device_raw(conn, 'raw_1', 'upload_1', 'file_1', 'facebook/web',
+                         {'device_imei': '555', 'device_model_name': 'Samsung S20'})
+        conn.commit()
+    
+    group('upload_1', temp_db)
+    
+    # Upload 2: Same device
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
+        insert_upload_and_file(conn, 'upload_2', 'file_2')
+        insert_device_raw(conn, 'raw_2', 'upload_2', 'file_2', 'twitter/api',
+                         {'device_imei': '555', 'device_model_name': 'Samsung S20'})
+        conn.commit()
+    
+    group('upload_2', temp_db)
+    
+    # Verify origin structure
+    with DatabaseSession(temp_db, use_dict_factory=True) as conn:
         atomic = conn.execute('SELECT origins FROM atomic_devices').fetchone()
         origins = json.loads(atomic['origins'])
         

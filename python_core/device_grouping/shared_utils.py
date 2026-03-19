@@ -1,5 +1,6 @@
 from typing import Callable
 from utils.redaction_utils import get_unredacted_val
+from device_grouping.hard_merge import IS_HARD_KEY
 
 
 def find(parent: dict, x: str) -> str:
@@ -7,15 +8,6 @@ def find(parent: dict, x: str) -> str:
         parent[x] = parent[parent[x]]
         x = parent[x]
     return x
-
-
-HARD_KEYS = {
-    "device_id",
-    "device_serial_number",
-    "device_imei",
-    "device_meid"
-}
-
 
 def union_find(records: list[dict], match_fn: Callable[[dict, dict], bool]) -> dict[str, list[str]]:
     parent = {r.get("id"): r.get("id") for r in records}
@@ -36,6 +28,7 @@ def union_find(records: list[dict], match_fn: Callable[[dict, dict], bool]) -> d
 
 
 def merge_attrs(attrs_list: list[dict], mode: str = 'soft') -> dict:
+    
     if not attrs_list:
         return {}
     
@@ -44,7 +37,7 @@ def merge_attrs(attrs_list: list[dict], mode: str = 'soft') -> dict:
         for k in set(attrs_new) | set(attrs):
             v_a, v_b = attrs_new.get(k), attrs.get(k)
             
-            if mode == 'hard' and k in HARD_KEYS:
+            if mode == 'hard' and IS_HARD_KEY(k):
                 attrs_new[k] = get_unredacted_val(v_a, v_b)[0] or v_a or v_b
             else:
                 attrs_new[k] = v_a if (v_a and v_a != '') else v_b

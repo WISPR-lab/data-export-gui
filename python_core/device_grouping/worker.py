@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from db_session import DatabaseSession
-from device_grouping.hard_merge import hard_merge, split
+from device_grouping.hard_merge import hard_merge_one_upload, hard_merge_with_db, format_rows
 from device_grouping.soft_merge import soft_merge
 from device_grouping.specificity import specificity
 
@@ -24,20 +24,15 @@ def group(upload_id: str, db_path: str = None) -> None:
         # ------------------------------------------------------------------ #
         # PASS 1: hard-merge devices_raw --> atomic_devices           #
         # ------------------------------------------------------------------ #
-        rows = conn.execute(
-            """
-            SELECT i.id, i.upload_id, i.file_id, i.attributes, i.origin
-            FROM devices_raw i
-            WHERE i.upload_id = ?
-            """,
-            (upload_id,)
+        devices_raw_rows = conn.execute(
+            'SELECT * FROM devices_raw'
         ).fetchall()
 
-        if not rows:
-            print(f"[DeviceGrouping] No devices_raw rows for upload_id={upload_id}")
+        if not devices_raw_rows:
+            print(f"[DeviceGrouping] No devices_raw rows in database")
             return
-        
-        for r in rows:
+
+        for r in devices_raw_rows:
             if not r['attributes']:
                 r['attributes'] = '{}'
             if isinstance(r['attributes'], str):
@@ -46,110 +41,63 @@ def group(upload_id: str, db_path: str = None) -> None:
                 except json.JSONDecodeError:
                     print(f"[DeviceGrouping] Warning: invalid JSON in attributes for id={r['id']}")
                     r['attributes'] = {}
-        # rows = [{"id": 123, "upload_id": 456, "file_id": 789, "attributes": {}}, ...]
-        
-        atomic_devices_rows = hard_merge(rows)   # lists already serialized
-        
-        existing_atomics = conn.execute(
-            'SELECT id, attributes FROM atomic_devices'
-        ).fetchall()
-        
-        to_insert, to_update = split(atomic_devices_rows, existing_atomics)
-        
-        for new in to_insert + [u['new'] for u in to_update]:
-            attrs = json.loads(new.get('attributes', '{}'))
-            new['specificity'] = specificity(attrs)
 
-        conn.executemany(
-            """
-            INSERT INTO atomic_devices (id, upload_ids, file_ids, devices_raw_ids, attributes, origins, specificity)
-            VALUES (:id, :upload_ids, :file_ids, :devices_raw_ids, :attributes, :origins, :specificity)
-            """,
-            to_insert
-        )
-        print(f"[DeviceGrouping] Pass 1: inserted {len(to_insert)} new atomic_devices")
-        
-        for update_info in to_update:
-            new = update_info['new']
-            existing = update_info['existing']
-            atomic_id = existing['id']
+
+
+        uploads_count = conn.execute('SELECT COUNT(*) as count FROM uploads').fetchone()['count']
+        print(f"[DeviceGrouping] Existing uploads: {uploads_count}") 
+
+        if uploads_count > 1:  # if we've already uploaded stuff
+            atomic_devices_rows = conn.execute(
+                'SELECT * FROM atomic_devices'
+            ).fetchall()
+            for a in atomic_devices_rows:
+                if isinstance(a['attributes'], str):
+                    a['attributes'] = json.loads(a['attributes'])
             
-            new_attrs = json.loads(new.get('attributes', '{}'))
-            new_specificity = specificity(new_attrs)
-            
-            existing_atomic = conn.execute(
-                'SELECT attributes, origins, specificity, upload_ids, file_ids, devices_raw_ids FROM atomic_devices WHERE id = ?',
-                (atomic_id,)
-            ).fetchone()
-            
-            existing_attrs = json.loads(existing_atomic['attributes'])
-            existing_origins = json.loads(existing_atomic['origins'])
-            
-            merged_attrs = _merge_attrs_pairwise(existing_attrs, new_attrs)
-            merged_origins = existing_origins + json.loads(new.get('origins', '[]'))
-            merged_origins = [dict(t) for t in set(tuple(sorted(d.items())) for d in merged_origins)]
-            merged_origins = sorted(merged_origins, key=lambda x: (x['origin'], x['upload_id']))
-            
-            merged_upload_ids = sorted(list(set(
-                json.loads(existing_atomic['upload_ids']) + 
-                json.loads(new.get('upload_ids', '[]'))
-            )))
-            merged_file_ids = sorted(list(set(
-                json.loads(existing_atomic['file_ids']) +
-                json.loads(new.get('file_ids', '[]'))
-            )))
-            merged_devices_raw_ids = sorted(list(set(
-                json.loads(existing_atomic['devices_raw_ids']) +
-                json.loads(new.get('devices_raw_ids', '[]'))
-            )))
-            
+            rows = hard_merge_with_db(devices_raw_rows, atomic_devices_rows)
+        else: # if this is the first upload
+            rows = hard_merge_one_upload(devices_raw_rows)
+
+        for row in format_rows(rows):
             conn.execute(
-                """
-                UPDATE atomic_devices SET
-                  attributes = ?,
-                  origins = ?,
-                  upload_ids = ?,
-                  file_ids = ?,
-                  devices_raw_ids = ?,
-                  specificity = ?
-                WHERE id = ?
-                """,
-                (
-                    json.dumps(merged_attrs),
-                    json.dumps(merged_origins),
-                    json.dumps(merged_upload_ids),
-                    json.dumps(merged_file_ids),
-                    json.dumps(merged_devices_raw_ids),
-                    max(existing_atomic['specificity'], new_specificity),
-                    atomic_id
-                )
+                '''INSERT OR REPLACE INTO atomic_devices 
+                   (id, attributes, origins, upload_ids, file_ids, devices_raw_ids, specificity)
+                   VALUES (:id, :attributes, :origins, :upload_ids, :file_ids, :devices_raw_ids, :specificity)''',
+                row
             )
-        if to_update:
-            print(f"[DeviceGrouping] Pass 1: updated {len(to_update)} existing atomic_devices with cross-upload matches")
+
+        print(f"[DeviceGrouping] Pass 1: upserted {len(rows)} atomic_devices")
 
 
         # ------------------------------------------------------------------ #
         # PASS 2: soft-merge atomic_devices --> device_profiles                  #
         # ------------------------------------------------------------------ #
 
-        atomic_devices_rows2 = []
-        ts = datetime.now(timezone.utc).timestamp()
+        atomic_devices_rows = conn.execute(
+            'SELECT * FROM atomic_devices'
+        ).fetchall()
+
+        atomic_devices_input = []
         for r in atomic_devices_rows:
-            try:
-                attrs = json.loads(r.get('attributes', '{}'))
-            except json.JSONDecodeError:
-                attrs = {}
-            atomic_devices_rows2.append({
+            attrs = r.get('attributes', {})
+            if isinstance(attrs, str):
+                try:
+                    attrs = json.loads(attrs)
+                except json.JSONDecodeError:
+                    attrs = {}
+            atomic_devices_input.append({
                 'id': r['id'],
                 'attributes': attrs,
                 'specificity': r.get('specificity', 1)
             })
-        
+
+        ts = datetime.now(timezone.utc).timestamp()
         device_group_rows = []
-        for r in soft_merge(atomic_devices_rows2):
+        for r in soft_merge(atomic_devices_input):
             device_group_rows.append({
                 'id': r['id'],
-                'atomic_devices_ids': r['atomic_devices_ids'],  # already stringified
+                'atomic_devices_ids': r['atomic_devices_ids'],
                 'initial_soft_merge': r['initial_soft_merge'],
                 'soft_merge_flag_status': 'na',
                 'user_label': None,

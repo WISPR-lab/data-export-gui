@@ -1,9 +1,7 @@
 import sqlite3
 import os
 import logging
-import json
 import python_core.utils.safe_file_utils as safefileutils
-import tempfile
 
 
 def dict_factory(cursor, row):

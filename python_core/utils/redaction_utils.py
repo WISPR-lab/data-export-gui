@@ -26,21 +26,26 @@ def compare_redacted_vals(*vals) -> bool:
         if v and not isinstance(v, str):
             raise ValueError(f"Expected string values, got {type(v).__name__}: {v!r}")
     
-    all_parts_lower = []
+    # Extract unmasked parts from all values
+    all_parts_lists = []
     for v in vals:
         parts = unmasked_segments(v)
         parts = [p.lower() for p in parts if p]
         if not parts:
             return False
-        all_parts_lower.extend(parts)
+        all_parts_lists.append(parts)
     
-    for v in vals:
-        parts = [p.lower() for p in unmasked_segments(v) if p]
-        if not any(p in all_parts_lower or any(p in ap or ap in p for ap in all_parts_lower) 
-                   for p in parts):
-            return False
+    # Check if at least one part from the first value is shared with ALL other values
+    for part1 in all_parts_lists[0]:
+        matches_all = True
+        for other_parts in all_parts_lists[1:]:
+            if not any(part1 in ap or ap in part1 for ap in other_parts):
+                matches_all = False
+                break
+        if matches_all:
+            return True
     
-    return True
+    return False
 
 
 def get_unredacted_val(*vals) -> tuple[str]:

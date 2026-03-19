@@ -2,12 +2,21 @@
 #  merge devices if they have the same deterministic, unique identifier
 #  this is done by the system, user cannot unmerge
 
-import uuid
-import json
-from utils.redaction_utils import compare_redacted_vals, get_unredacted_val
-from device_grouping.shared_utils import union_find, merge_attrs, deduplicate_origins, HARD_KEYS
+HARD_KEYS = {
+    "device_id",
+    "device_serial_number",
+    "device_imei",
+    "device_meid"
+}
 
 IS_HARD_KEY = lambda k: any(k == hk or k.startswith(hk) for hk in HARD_KEYS)
+
+
+import uuid
+import json
+from utils.redaction_utils import compare_redacted_vals
+from device_grouping.specificity import specificity
+from device_grouping.shared_utils import union_find, merge_attrs, deduplicate_origins
 
 
 def hard_match(attrs_a: dict, attrs_b: dict) -> bool:
@@ -20,65 +29,88 @@ def hard_match(attrs_a: dict, attrs_b: dict) -> bool:
 
 
 
-def hard_merge_one_upload(records: list[dict]) -> list[dict]:
+def hard_merge_one_upload(rows: list[dict]) -> list[dict]:
     def match(a: dict, b: dict) -> bool:
         return hard_match(a.get('attributes', {}), b.get('attributes', {}))
     
-    children = union_find(records, match)
+    children = union_find(rows, match)
 
-    rows = []
-    record_map = {r.get("id"): r for r in records}
+    new_rows = []
+    record_map = {r.get("id"): r for r in rows}
     for parent_id, child_id_list in children.items():
         id_list = sorted(list(set([parent_id] + child_id_list)))
-        child_records = [record_map[id] for id in set(id_list)] 
-        attrs = merge_attrs([r.get("attributes", {}) for r in child_records], mode='hard')
+        child_rows = [record_map[id] for id in set(id_list)]
+        attrs = merge_attrs([r.get("attributes", {}) for r in child_rows], mode='hard')
         
         origins = [{
             "origin": r.get("origin"),
             "upload_id": r.get("upload_id")
-        } for r in child_records if r.get("origin")]
+        } for r in child_rows if r.get("origin")]
         origins = deduplicate_origins(origins)
-        origins = sorted(origins, key=lambda x: (x["origin"], x["upload_id"]))
 
-        rows.append({
+        new_rows.append({
             'id': str(uuid.uuid4()),
-            'upload_ids': json.dumps([r.get("upload_id") for r in child_records]),
-            'file_ids': json.dumps([r.get("file_id") for r in child_records]),
-            'devices_raw_ids': json.dumps(id_list),
-            'attributes': json.dumps(attrs),
-            'origins': json.dumps(origins),
+            'attributes': attrs,
+            'origins': origins,
+            'upload_ids': sorted(list(set(r.get("upload_id") for r in child_rows))),
+            'file_ids': sorted(list(set(r.get("file_id") for r in child_rows))),
+            'devices_raw_ids': id_list,
         })
 
-    return rows
+    return new_rows
 
 
-def _find_match(attrs: dict, existing_atomics: list[dict]) -> dict | None:
-    hard_values = {k: v for k, v in attrs.items() if IS_HARD_KEY(k) and v}
-    
-    if not hard_values:
-        return None
-    
-    for existing in existing_atomics:
-        existing_attrs = json.loads(existing.get('attributes', '{}'))
-        for hard_key, hard_value in hard_values.items():
-            existing_hard_value = existing_attrs.get(hard_key)
-            if existing_hard_value and compare_redacted_vals(hard_value, existing_hard_value):
-                return existing
-    
-    return None
 
-
-def split(new_atomics: list[dict], existing_atomics: list[dict]) -> tuple[list[dict], list[dict]]:
-    to_insert = []
-    to_update = []
+def hard_merge_with_db(devices_raw_rows: list[dict], atomic_devices_rows: list[dict]) -> list[dict]:
+    new_rows = hard_merge_one_upload(devices_raw_rows)
     
-    for new in new_atomics:
-        attrs = json.loads(new.get('attributes', '{}'))
-        match = _find_match(attrs, existing_atomics)
+    for row in new_rows:
+        attrs = row['attributes']
+        matching_atomic = None
+        for atomic in atomic_devices_rows:
+            atomic_attrs = atomic.get('attributes', {})
+            if hard_match(attrs, atomic_attrs):
+                matching_atomic = atomic
+                break
         
-        if match:
-            to_update.append({'new': new, 'existing': match})
-        else:
-            to_insert.append(new)
+        if matching_atomic:
+            row['id'] = matching_atomic['id'] or str(uuid.uuid4())
+            row['attributes'] = merge_attrs([attrs, matching_atomic.get('attributes', {})], mode='hard')
+
+            existing_origins = matching_atomic.get('origins', [])
+            if isinstance(existing_origins, str):
+                existing_origins = json.loads(existing_origins)
+            row['origins']  = deduplicate_origins(existing_origins + row['origins'])
+
+            existing_upload_ids = matching_atomic.get('upload_ids', [])
+            if isinstance(existing_upload_ids, str):
+                existing_upload_ids = json.loads(existing_upload_ids)
+            row['upload_ids'] = list(set(existing_upload_ids + row['upload_ids']))
+
+            existing_file_ids = matching_atomic.get('file_ids', [])
+            if isinstance(existing_file_ids, str):
+                existing_file_ids = json.loads(existing_file_ids)
+            row['file_ids'] = list(set(existing_file_ids + row['file_ids']))
+
+            existing_devices_raw_ids = matching_atomic.get('devices_raw_ids', [])
+            if isinstance(existing_devices_raw_ids, str):
+                existing_devices_raw_ids = json.loads(existing_devices_raw_ids)
+            row['devices_raw_ids'] = list(set(existing_devices_raw_ids + row['devices_raw_ids']))
     
-    return to_insert, to_update
+    return new_rows
+
+
+
+def format_rows(rows: list[dict]) -> list[dict]:
+    rows_for_db = []
+    for row in rows:
+        rows_for_db.append({
+            'id': row['id'],
+            'attributes': json.dumps(row['attributes']),
+            'origins': json.dumps(row['origins']),
+            'upload_ids': json.dumps(row['upload_ids']),
+            'file_ids': json.dumps(row['file_ids']),
+            'devices_raw_ids': json.dumps(row['devices_raw_ids']),
+            'specificity': specificity(row['attributes']),
+        })
+    return rows_for_db
