@@ -29,7 +29,7 @@ def hard_match(attrs_a: dict, attrs_b: dict) -> bool:
 
 
 
-def hard_merge_one_upload(rows: list[dict]) -> list[dict]:
+def hard_merge_single_upload(rows: list[dict]) -> list[dict]:
     def match(a: dict, b: dict) -> bool:
         return hard_match(a.get('attributes', {}), b.get('attributes', {}))
     
@@ -61,8 +61,8 @@ def hard_merge_one_upload(rows: list[dict]) -> list[dict]:
 
 
 
-def hard_merge_with_db(devices_raw_rows: list[dict], atomic_devices_rows: list[dict]) -> list[dict]:
-    new_rows = hard_merge_one_upload(devices_raw_rows)
+def hard_merge_multi_upload(devices_raw_rows: list[dict], atomic_devices_rows: list[dict]) -> list[dict]:
+    new_rows = hard_merge_single_upload(devices_raw_rows)
     
     for row in new_rows:
         attrs = row['attributes']
@@ -76,26 +76,10 @@ def hard_merge_with_db(devices_raw_rows: list[dict], atomic_devices_rows: list[d
         if matching_atomic:
             row['id'] = matching_atomic['id'] or str(uuid.uuid4())
             row['attributes'] = merge_attrs([attrs, matching_atomic.get('attributes', {})], mode='hard')
-
-            existing_origins = matching_atomic.get('origins', [])
-            if isinstance(existing_origins, str):
-                existing_origins = json.loads(existing_origins)
-            row['origins']  = deduplicate_origins(existing_origins + row['origins'])
-
-            existing_upload_ids = matching_atomic.get('upload_ids', [])
-            if isinstance(existing_upload_ids, str):
-                existing_upload_ids = json.loads(existing_upload_ids)
-            row['upload_ids'] = list(set(existing_upload_ids + row['upload_ids']))
-
-            existing_file_ids = matching_atomic.get('file_ids', [])
-            if isinstance(existing_file_ids, str):
-                existing_file_ids = json.loads(existing_file_ids)
-            row['file_ids'] = list(set(existing_file_ids + row['file_ids']))
-
-            existing_devices_raw_ids = matching_atomic.get('devices_raw_ids', [])
-            if isinstance(existing_devices_raw_ids, str):
-                existing_devices_raw_ids = json.loads(existing_devices_raw_ids)
-            row['devices_raw_ids'] = list(set(existing_devices_raw_ids + row['devices_raw_ids']))
+            row['origins']  = deduplicate_origins(matching_atomic.get('origins', []) + row['origins'])
+            row['upload_ids'] = list(set(matching_atomic.get('upload_ids', []) + row['upload_ids']))
+            row['file_ids'] = list(set(matching_atomic.get('file_ids', []) + row['file_ids']))
+            row['devices_raw_ids'] = list(set(matching_atomic.get('devices_raw_ids', []) + row['devices_raw_ids']))
     
     return new_rows
 

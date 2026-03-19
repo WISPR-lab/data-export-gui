@@ -102,8 +102,8 @@ CREATE TABLE IF NOT EXISTS device_profiles (
     id TEXT PRIMARY KEY,
     atomic_devices_ids JSONTEXT NOT NULL,  -- JSON list of atomic_devices.id that are in this cluster
     --
-    initial_soft_merge BOOLEAN DEFAULT 0,
-    soft_merge_flag_status TEXT DEFAULT "na", -- "na" | "shown" | "user_confirmed" | "user_rejected"
+    system_soft_merge BOOLEAN DEFAULT 0,  -- 1 if profile created by system soft-merge AND has 2+ atomics, else 0
+    is_generic BOOLEAN DEFAULT 0,  -- 1 if specificity < 2 and Apple
     --
     user_label TEXT,
     notes TEXT,

@@ -67,7 +67,7 @@ class TestDeviceGrouping:
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
             device_profiles = conn.execute(
-                'SELECT id, atomic_devices_ids, initial_soft_merge FROM device_profiles'
+                'SELECT id, atomic_devices_ids, system_soft_merge FROM device_profiles'
             ).fetchall()
             
             assert len(device_profiles) > 0, "Should create at least one device_group"

@@ -12,7 +12,8 @@ export async function getDeviceGroups() {
   const sql = `
     SELECT 
       dg.*,
-      ad.attributes as raw_attributes
+      ad.attributes as raw_attributes,
+      ad.origins as raw_origins
     FROM device_profiles dg
     LEFT JOIN atomic_devices ad ON json_extract(dg.atomic_devices_ids, '$[0]') = ad.id
   `;
@@ -24,8 +25,10 @@ export async function getDeviceGroups() {
 
   return rows.map(row => {
     let attrs = {};
+    let origins = [];
     try {
       attrs = JSON.parse(row.raw_attributes || '{}');
+      origins = JSON.parse(row.raw_origins || '[]');
     } catch (e) {
       console.warn('Failed to parse attributes for device group', row.id);
     }
@@ -36,6 +39,8 @@ export async function getDeviceGroups() {
       is_generic: !!row.is_generic,
       user_label: row.user_label,
       notes: row.notes || '',
+      // Origins from the first atomic_device in the group
+      origins: origins,
       // Placeholder fields for future Python-calculated merged attributes
       label: row.user_label || attrs.device_model_name || 'Unknown Device',
       manufacturer: attrs.device_manufacturer || 'TODO: Get from merged attributes',
@@ -43,8 +48,8 @@ export async function getDeviceGroups() {
       city: 'TODO: Calculate from geographic events',
       notes: row.labels ? JSON.parse(row.labels).join(', ') : '',
       // Metadata for UI
-      initial_soft_merge: row.initial_soft_merge,
-      soft_merge_flag_status: row.soft_merge_flag_status
+      system_soft_merge: !!row.system_soft_merge,
+      is_generic: !!row.is_generic
     };
   });
 }
@@ -52,7 +57,7 @@ export async function getDeviceGroups() {
 export async function updateDeviceGroup(groupId, updates) {
   const db = await getDB();
   
-  const allowed = ['user_label', 'notes', 'soft_merge_flag_status'];
+  const allowed = ['user_label', 'notes'];
   const keys = Object.keys(updates).filter(k => allowed.includes(k));
   
   if (keys.length === 0) return;

@@ -15,7 +15,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
     
     db_path = db_path or _get_config_value('DB_PATH')
     
-    with DatabaseSession(db_path, use_dict_factory=True) as conn:
+    with DatabaseSession(db_path, use_dict_factory=True, json_columns=['attributes']) as conn:
         print(f"[FieldNormalizeWorker] Starting normalization for upload_id={upload_id}")
         
         # Get platform from uploads table
@@ -42,7 +42,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
         updates = []
         
         for row in rows:
-            attrs = json.loads(row['attributes'] or '{}')
+            attrs = row['attributes'] or {}
             attrs.update(ua_parser.parse(attrs))
             
             attrs = normalize_device_fields(attrs)
