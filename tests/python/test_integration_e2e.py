@@ -78,8 +78,8 @@ class TestE2EPipeline:
         # Device profiles should exist and be reasonable in count
         assert device_profiles_count >= 1, \
             f"Soft merge should create at least 1 device_group, got {device_profiles_count}"
-        assert device_profiles_count <= 5, \
-            f"Device profiles should be reasonable (<=5) for this test data, got {device_profiles_count}."
+        assert device_profiles_count == 4, \
+            f"Device profiles should be 4 for the facebook test data, got {device_profiles_count}."
         
         print(f"\n[E2E Test] Device Profiles ({device_profiles_count}):")
         print(json.dumps(device_profiles_all, indent=2))

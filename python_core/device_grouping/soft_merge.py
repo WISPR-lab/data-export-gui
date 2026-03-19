@@ -12,24 +12,22 @@
 import uuid
 import json
 from device_grouping.shared_utils import union_find
+from device_grouping.specificity import _get_best_model
 
 
 MFR_DO_NOT_MERGE_GENERIC = {'apple'}
 
 
-def _extract_model(attrs: dict) -> str:
-    # extract model name from device or UA fields, return first non-empty
-    for key in ['device_model_name', 'user_agent_device_model']:
-        val = attrs.get(key, '').strip()
-        if val:
-            return val
-    return ''
+def _get_model(attrs: dict) -> str:
+    # Use the same logic as specificity calculation - prefer non-generic model names
+    model = _get_best_model(attrs)
+    return model.strip().lower() if model else ''
 
 
-def _extract_manufacturer(attrs: dict) -> str:
-    # extract manufacturer from device or UA fields, return first non-empty field
+def get_mfr(attrs: dict) -> str:
+    # extract manufacturer from device or UA fields, return first non-empty field (lowercased)
     for key in ['device_manufacturer', 'user_agent_device_manufacturer']:
-        val = attrs.get(key, '').strip()
+        val = attrs.get(key, '').strip().lower()
         if val:
             return val
     return ''
@@ -37,31 +35,31 @@ def _extract_manufacturer(attrs: dict) -> str:
 
 def _compute_is_generic(atomic_record: dict) -> int:
     attrs = atomic_record.get('attributes', {})
-    mfr = attrs.get('device_manufacturer', '').lower()
+    mfr = get_mfr(attrs)
     return 1 if (atomic_record.get('specificity', 1) < 2 and mfr in {'apple'}) else 0
 
 
 def _soft_match(attrs_a: dict, attrs_b: dict, spec_a: int, spec_b: int) -> bool:
     # Check if two atomics can be soft-merged based on model/mfr and specificity
-    model_a = _extract_model(attrs_a)
-    model_b = _extract_model(attrs_b)
-    mfr_a = _extract_manufacturer(attrs_a)
-    mfr_b = _extract_manufacturer(attrs_b)
+    model_a = _get_model(attrs_a)
+    model_b = _get_model(attrs_b)
+    mfr_a = get_mfr(attrs_a)
+    mfr_b = get_mfr(attrs_b)
     
     # missing fields, can't match
     if not model_a or not model_b or not mfr_a or not mfr_b:
         return False
     
-    # different manufacturers,  can't match
-    if mfr_a.lower() != mfr_b.lower():
+    # different manufacturers, can't match
+    if mfr_a != mfr_b:
         return False
     
-    # both specific,  exact model match required
+    # both specific, exact model match required
     if spec_a >= 2 and spec_b >= 2:
-        return model_a.lower() == model_b.lower()
+        return model_a == model_b
     
-    # at least one generic,  Apple - no merge, others - merge
-    if mfr_a.lower() in MFR_DO_NOT_MERGE_GENERIC or mfr_b.lower() in MFR_DO_NOT_MERGE_GENERIC:
+    # at least one generic, Apple - no merge, others - merge
+    if mfr_a in MFR_DO_NOT_MERGE_GENERIC or mfr_b in MFR_DO_NOT_MERGE_GENERIC:
         return False
     
     return True
