@@ -182,9 +182,9 @@ DROP VIEW IF EXISTS v_device_profiles;
 CREATE VIEW v_device_profiles AS
 SELECT 
     dg.id AS profile_id,
-    json_profile_array(json(ad.attributes)) AS attributes,
-    json_profile_array(ad.specificity) AS specificity,
-    json(json_profile_array(DISTINCT j2.value)) AS origins
+    json_group_array(json(ad.attributes)) AS attributes,
+    json_group_array(ad.specificity) AS specificity,
+    json(json_group_array(DISTINCT j2.value)) AS origins
 FROM device_profiles dg
 JOIN json_each(dg.atomic_devices_ids) as j ON 1=1
 JOIN atomic_devices ad ON ad.id = j.value

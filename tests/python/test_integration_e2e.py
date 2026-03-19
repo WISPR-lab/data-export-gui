@@ -69,7 +69,7 @@ class TestE2EPipeline:
                 'SELECT * FROM v_device_profiles'
             ).fetchall()
 
-            device_profiles_all = [{k: json.loads(v) if k in ('attributes', 'origins', 'specificitys') and isinstance(v, str) else v for k, v in p.items()} for p in device_profiles_all]
+            device_profiles_all = [{k: json.loads(v) if k in ('attributes', 'origins', 'specificity') and isinstance(v, str) else v for k, v in p.items()} for p in device_profiles_all]
             device_profiles_count = len(device_profiles_all)
 
         

@@ -2,21 +2,12 @@
 #  merge devices if they have the same deterministic, unique identifier
 #  this is done by the system, user cannot unmerge
 
-import re
-from utils.redaction_utils import compare_redacted_vals, get_unredacted_val
-from collections import defaultdict
 import uuid
 import json
-
-HARD_KEYS = {
-    "device_id", # anything in this family
-    "device_serial_number",
-    "device_imei",
-    "device_meid"
-}
+from utils.redaction_utils import compare_redacted_vals, get_unredacted_val
+from device_grouping.shared_utils import union_find, merge_attrs, deduplicate_origins, HARD_KEYS
 
 IS_HARD_KEY = lambda k: any(k == hk or k.startswith(hk) for hk in HARD_KEYS)
-
 
 
 def hard_match(attrs_a: dict, attrs_b: dict) -> bool:
@@ -28,58 +19,26 @@ def hard_match(attrs_a: dict, attrs_b: dict) -> bool:
     return False
 
 
-def _merge_attrs_pairwise(attrs_a: dict, attrs_b: dict) -> dict:
-    merged = {}
-    for k in set(attrs_a) | set(attrs_b):
-        v_a, v_b = attrs_a.get(k), attrs_b.get(k)
-        if k in HARD_KEYS:
-            merged[k] = get_unredacted_val(v_a, v_b)[0] or v_a or v_b
-        else:
-            merged[k] = v_a if (v_a and v_a != '') else v_b
-        # TODO add more granularity
-    return merged
 
-def merge_attrs(attrs_list: list[dict]) -> dict:
-    if not attrs_list:
-        return {}
-    merged = attrs_list[0].copy()
-    for attrs in attrs_list[1:]:
-        merged = _merge_attrs_pairwise(merged, attrs)
-    return merged
-
-
-def _find(parent: dict, x: str) -> str:
-    while parent[x] != x:
-        parent[x] = parent[parent[x]]
-        x = parent[x]
-    return x
-
-
-def hard_merge(records: list[dict]) -> list[dict]:
-    parent = {r.get("id"): r.get("id") for r in records}
+def hard_merge_one_upload(records: list[dict]) -> list[dict]:
+    def match(a: dict, b: dict) -> bool:
+        return hard_match(a.get('attributes', {}), b.get('attributes', {}))
     
-    for i, dct_a in enumerate(records):
-        id_a, attrs_a = dct_a.get('id'), dct_a.get('attributes', {})
-        for dct_b in records[i + 1:]:
-            id_b, attrs_b = dct_b.get('id'), dct_b.get('attributes', {})
-            # TODO have some kind of guardrail here to make sure not merging records
-            # with obviously different attributes (i.e. different OS types)
-            if hard_match(attrs_a, attrs_b):
-                parent[_find(parent, id_a)] = _find(parent, id_b)
-
-    children = defaultdict(list)
-    for r in records:
-        children[_find(parent, r.get("id"))].append(r.get("id"))
-    # children[parent] = [list, of, child, ids]
+    children = union_find(records, match)
 
     rows = []
     record_map = {r.get("id"): r for r in records}
     for parent_id, child_id_list in children.items():
         id_list = sorted(list(set([parent_id] + child_id_list)))
         child_records = [record_map[id] for id in set(id_list)] 
-        attrs = merge_attrs([r.get("attributes", {}) for r in child_records])
-        origins = [r.get("origin") for r in child_records if r.get("origin")]
-        origins = sorted(list(set(origins)))
+        attrs = merge_attrs([r.get("attributes", {}) for r in child_records], mode='hard')
+        
+        origins = [{
+            "origin": r.get("origin"),
+            "upload_id": r.get("upload_id")
+        } for r in child_records if r.get("origin")]
+        origins = deduplicate_origins(origins)
+        origins = sorted(origins, key=lambda x: (x["origin"], x["upload_id"]))
 
         rows.append({
             'id': str(uuid.uuid4()),
@@ -91,3 +50,35 @@ def hard_merge(records: list[dict]) -> list[dict]:
         })
 
     return rows
+
+
+def _find_match(attrs: dict, existing_atomics: list[dict]) -> dict | None:
+    hard_values = {k: v for k, v in attrs.items() if IS_HARD_KEY(k) and v}
+    
+    if not hard_values:
+        return None
+    
+    for existing in existing_atomics:
+        existing_attrs = json.loads(existing.get('attributes', '{}'))
+        for hard_key, hard_value in hard_values.items():
+            existing_hard_value = existing_attrs.get(hard_key)
+            if existing_hard_value and compare_redacted_vals(hard_value, existing_hard_value):
+                return existing
+    
+    return None
+
+
+def split(new_atomics: list[dict], existing_atomics: list[dict]) -> tuple[list[dict], list[dict]]:
+    to_insert = []
+    to_update = []
+    
+    for new in new_atomics:
+        attrs = json.loads(new.get('attributes', '{}'))
+        match = _find_match(attrs, existing_atomics)
+        
+        if match:
+            to_update.append({'new': new, 'existing': match})
+        else:
+            to_insert.append(new)
+    
+    return to_insert, to_update

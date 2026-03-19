@@ -1,14 +1,11 @@
-import re
 import json
 import uuid
-from collections import defaultdict
 from datetime import datetime, timezone
 
 from db_session import DatabaseSession
-from utils.redaction_utils import compare_redacted_vals
-from device_grouping.hard_merge import hard_merge
-from device_grouping.soft_merge import soft_merge, merge_attrs
-from python_core.device_grouping.specificity import specificity
+from device_grouping.hard_merge import hard_merge, split
+from device_grouping.soft_merge import soft_merge
+from device_grouping.specificity import specificity
 
 
 def _get_config_value(name):
@@ -53,18 +50,82 @@ def group(upload_id: str, db_path: str = None) -> None:
         
         atomic_devices_rows = hard_merge(rows)   # lists already serialized
         
-        for row in atomic_devices_rows:
-            attrs = json.loads(row.get('attributes', '{}'))
-            row['specificity'] = specificity(attrs)
+        existing_atomics = conn.execute(
+            'SELECT id, attributes FROM atomic_devices'
+        ).fetchall()
+        
+        to_insert, to_update = split(atomic_devices_rows, existing_atomics)
+        
+        for new in to_insert + [u['new'] for u in to_update]:
+            attrs = json.loads(new.get('attributes', '{}'))
+            new['specificity'] = specificity(attrs)
 
         conn.executemany(
             """
             INSERT INTO atomic_devices (id, upload_ids, file_ids, devices_raw_ids, attributes, origins, specificity)
             VALUES (:id, :upload_ids, :file_ids, :devices_raw_ids, :attributes, :origins, :specificity)
             """,
-            atomic_devices_rows
+            to_insert
         )
-        print(f"[DeviceGrouping] Pass 1: inserted {len(atomic_devices_rows)} atomic_devices")
+        print(f"[DeviceGrouping] Pass 1: inserted {len(to_insert)} new atomic_devices")
+        
+        for update_info in to_update:
+            new = update_info['new']
+            existing = update_info['existing']
+            atomic_id = existing['id']
+            
+            new_attrs = json.loads(new.get('attributes', '{}'))
+            new_specificity = specificity(new_attrs)
+            
+            existing_atomic = conn.execute(
+                'SELECT attributes, origins, specificity, upload_ids, file_ids, devices_raw_ids FROM atomic_devices WHERE id = ?',
+                (atomic_id,)
+            ).fetchone()
+            
+            existing_attrs = json.loads(existing_atomic['attributes'])
+            existing_origins = json.loads(existing_atomic['origins'])
+            
+            merged_attrs = _merge_attrs_pairwise(existing_attrs, new_attrs)
+            merged_origins = existing_origins + json.loads(new.get('origins', '[]'))
+            merged_origins = [dict(t) for t in set(tuple(sorted(d.items())) for d in merged_origins)]
+            merged_origins = sorted(merged_origins, key=lambda x: (x['origin'], x['upload_id']))
+            
+            merged_upload_ids = sorted(list(set(
+                json.loads(existing_atomic['upload_ids']) + 
+                json.loads(new.get('upload_ids', '[]'))
+            )))
+            merged_file_ids = sorted(list(set(
+                json.loads(existing_atomic['file_ids']) +
+                json.loads(new.get('file_ids', '[]'))
+            )))
+            merged_devices_raw_ids = sorted(list(set(
+                json.loads(existing_atomic['devices_raw_ids']) +
+                json.loads(new.get('devices_raw_ids', '[]'))
+            )))
+            
+            conn.execute(
+                """
+                UPDATE atomic_devices SET
+                  attributes = ?,
+                  origins = ?,
+                  upload_ids = ?,
+                  file_ids = ?,
+                  devices_raw_ids = ?,
+                  specificity = ?
+                WHERE id = ?
+                """,
+                (
+                    json.dumps(merged_attrs),
+                    json.dumps(merged_origins),
+                    json.dumps(merged_upload_ids),
+                    json.dumps(merged_file_ids),
+                    json.dumps(merged_devices_raw_ids),
+                    max(existing_atomic['specificity'], new_specificity),
+                    atomic_id
+                )
+            )
+        if to_update:
+            print(f"[DeviceGrouping] Pass 1: updated {len(to_update)} existing atomic_devices with cross-upload matches")
 
 
         # ------------------------------------------------------------------ #
