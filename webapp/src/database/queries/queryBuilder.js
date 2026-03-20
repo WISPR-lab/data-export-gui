@@ -181,6 +181,29 @@ export function buildWhereClause(filter = {}, queryString = '', availableFields 
         conditions.push('(' + timeConditions.join(' OR ') + ')');
       }
     }
+
+    // Handle tag and label chips
+    const tagAndLabelChips = filter.chips.filter(
+      chip => chip && chip.active !== false && (chip.type === 'term' || chip.type === 'label')
+    );
+    if (tagAndLabelChips.length > 0) {
+      tagAndLabelChips.forEach(chip => {
+        const escapedValue = escapeLikePattern(chip.value);
+        const jsonPattern = `%"${escapedValue}"%`;
+        
+        if (chip.type === 'term') {
+          // Search in tags JSON array
+          const operator = chip.operator === 'must_not' ? 'NOT ' : '';
+          conditions.push(`${operator}json_extract(e.tags, '$') LIKE ?`);
+          params.push(jsonPattern);
+        } else if (chip.type === 'label') {
+          // Search in labels JSON array
+          const operator = chip.operator === 'must_not' ? 'NOT ' : '';
+          conditions.push(`${operator}json_extract(e.labels, '$') LIKE ?`);
+          params.push(jsonPattern);
+        }
+      });
+    }
   }
 
 

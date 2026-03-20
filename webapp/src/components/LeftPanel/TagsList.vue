@@ -129,7 +129,7 @@ export default {
     applyFilterChip(term, termField='', termType='label') {
       let eventData = {}
       eventData.doSearch = true
-      eventData.queryString = '*'
+      // Don't set queryString for chip-based filters - the chip does the filtering
       let chip = {
         field: termField,
         value: term,
