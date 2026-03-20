@@ -25,7 +25,7 @@
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" />
+          <device-detail-dropdown :device="dev" :software="getSoftware(dev)" @change="saveDeviceChanges(dev)" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -58,7 +58,7 @@
           </v-expansion-panel-header>
 
           <v-expansion-panel-content class="grey lighten-5 border-top">
-            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" />
+            <device-detail-dropdown :device="item" :software="getSoftware(item)" is-generic @change="saveDeviceChanges(item)" />
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -121,6 +121,20 @@ export default {
       } catch (err) {
         console.error('Failed to fetch devices:', err);
       }
+    },
+    getSoftware(device) {
+      if (!device.attributes) return null;
+      const osName = device.attributes['device_os_name'] || device.attributes['user_agent_os_name'];
+      const osVersion = device.attributes['device_os_version'] || device.attributes['user_agent_os_version'];
+      
+      if (osName && osVersion) {
+        return `${osName} ${osVersion}`;
+      } else if (osName) {
+        return osName;
+      } else if (osVersion) {
+        return osVersion;
+      }
+      return null;
     },
     async saveDeviceChanges(device) {
       try {

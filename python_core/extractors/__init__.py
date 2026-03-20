@@ -4,6 +4,7 @@ from .csv_ import CSVParser
 from .csv_multi import CSVMultiParser
 from .json_label_values import JSONLabelValuesParser
 from .html_table import HTMLTableParser
+from .html_ggl_myactivity import HTMLMyActvityParser
 
 REGISTRY = {
     'json': JSONParser,
@@ -13,7 +14,7 @@ REGISTRY = {
     'json_label_values': JSONLabelValuesParser,
     'html': HTMLTableParser,
     'html_table': HTMLTableParser,
-    'html_ggl_myactivity': HTMLTableParser,
+    'html_ggl_myactivity': HTMLMyActvityParser,
 }
 
 def get_parser(fmt: str):

@@ -38,7 +38,8 @@
         </v-col>
         <v-col cols="12" sm="4" class="mb-2">
           <div class="body-2 grey--text text--darken-1">Software</div>
-          <div class="body-1">{{ device.os || 'Unknown' }}</div>
+          <div v-if="software" class="body-1">{{ software }}</div>
+          <div v-else class="body-1 text-italic grey--text">Unknown</div>
         </v-col>
       </v-row>
     </div>
@@ -98,6 +99,10 @@ export default {
     isGeneric: {
       type: Boolean,
       default: false
+    },
+    software: {
+      type: String,
+      default: null
     }
   }
 }

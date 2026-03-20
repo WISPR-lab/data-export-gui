@@ -7,13 +7,13 @@ last_updated: "2025-03-20"
 files:
   # Security & Account Data
   - id: "ggl_subscriber_info"
-    path: "Google Account/*.SubscriberInfo.html"
+    path: "Google Account/bob.researcher24.SubscriberInfo.html"
     parser:
       format: "html_table"
 
 
   - id: "ggl_change_history"
-    path: "Google Account/*.ChangeHistory.html"
+    path: "Google Account/bob.researcher24.ChangeHistory.html"
     parser:
       format: "html_table"
 
@@ -42,16 +42,16 @@ files:
       format: "html_ggl_myactivity"
 
 
-  - id: "ggl_access_log_activity"
-    path: "Access Log Activity/Activities - A list of Google services accessed by.csv"
-    parser:
-      format: "csv"
-      parse_dates: ["Last Activity Time"]
+  # - id: "ggl_access_log_activity"
+  #   path: "Access Log Activity/Activities - A list of Google services*"
+  #   parser:
+  #     format: "csv"
+  #     parse_dates: ["Last Activity Time"]
 
 
   # Devices & Sessions
   - id: "ggl_access_log_devices"
-    path: "Access Log Activity/Devices - A list of devices that have accessed your account.csv"
+    path: "Access Log Activity/Devices - A list of devices (i.e. Nest, Pixel, iPh.csv"
     parser:
       format: "csv"
       parse_dates: ["Last Activity Time"]
@@ -97,8 +97,7 @@ views:
       - {target: "@timestamp", source: "Timestamp", type: "datetime"}
       - {target: "client.ip", source: "IP Address", type: "string"}
       - {target: "client.geo.name", source: "Geo", type: "string"}
-      - {target: "user_agent.original", source: "Raw User Agent", type: "string"}
-      # TODO need to parse challenges
+      - {target: "user_agent.original", source: "Raw User Agents", type: "string"}
 
   # ------------------------ PASSWORD/EMAIL EVENTS ------------------------
   - file:
@@ -111,15 +110,14 @@ views:
       event.category: ["configuration"]
       event.type: ["change"]
     fields:
-      - {target: "@timestamp", source: "timestamp", type: "datetime"}
-      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "@timestamp", source: "Timestamp", type: "datetime"}
+      - {target: "client.ip", source: "IP Address", type: "string"}
 
   - file:
       id: "ggl_change_history"
       where:
         logic: "any"
         conditions:
-        # - {source: "Change Type", op: "==", value: "RECOVERY_EMAIL_VERIFIED"}
         - {source: "Change Type", op: "==", value: "SECONDARY_EMAIL_ADDED"}
     static:
       event.action: "email_addition"
@@ -127,8 +125,8 @@ views:
       event.category: ["configuration"]
       event.type: ["change"]
     fields:
-      - {target: "@timestamp", source: "timestamp", type: "datetime"}
-      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "@timestamp", source: "Timestamp", type: "datetime"}
+      - {target: "client.ip", source: "IP Address", type: "string"}
       - {target: "user.email.old", source: "Old Value", type: "string"}
       - {target: "user.email.new", source: "New Value", type: "string"}
 
