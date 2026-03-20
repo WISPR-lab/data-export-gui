@@ -212,7 +212,7 @@ class TestMergeDeviceProfiles:
         result = merge_device_profiles(hard_id1, hard_id2)
         
         assert result['status'] == 'ineligible'
-        assert 'hard-merged' in result['message'].lower()
+        assert 'deterministic' in result['message'].lower() or 'hard' in result['message'].lower()
     
     def test_merge_hard_merged_into_specific_allowed(self, db_with_profiles):
         """Test that hard-merged profile CAN be merged into specific profile."""

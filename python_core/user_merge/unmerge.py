@@ -120,6 +120,18 @@ def unmerge_device_profiles(profile_id: str, atomic_id: str) -> dict:
             
             conn.commit()
             
+            # Verify unmerge actually happened
+            new_check = conn.execute('SELECT * FROM device_profiles WHERE id = ?', (new_profile_id,)).fetchone()
+            if not new_check:
+                return {'status': 'error', 'message': f'Unmerge failed: new profile {new_profile_id} not found after insert'}
+            
+            updated_check = conn.execute('SELECT * FROM device_profiles WHERE id = ?', (profile_id,)).fetchone()
+            if not updated_check:
+                return {'status': 'error', 'message': f'Unmerge failed: updated profile {profile_id} not found after update'}
+            
+            if atomic_id in updated_check.get('atomic_devices_ids', []):
+                return {'status': 'error', 'message': f'Unmerge failed: atomic {atomic_id} still in profile {profile_id}'}
+            
             return {
                 'status': 'ok',
                 'message': f'Extracted {atomic_id} from {profile_id}',

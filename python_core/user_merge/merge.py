@@ -83,6 +83,15 @@ def merge_device_profiles(src_profile_id: str, tgt_profile_id: str) -> dict:
             conn.execute('DELETE FROM device_profiles WHERE id = ?', (src_profile_id,))
             conn.commit()
             
+            # Verify merge actually happened
+            src_check = conn.execute('SELECT * FROM device_profiles WHERE id = ?', (src_profile_id,)).fetchone()
+            if src_check:
+                return {'status': 'error', 'message': f'Merge failed: source profile {src_profile_id} still exists after delete'}
+            
+            tgt_check = conn.execute('SELECT * FROM device_profiles WHERE id = ?', (tgt_profile_id,)).fetchone()
+            if not tgt_check:
+                return {'status': 'error', 'message': f'Merge failed: target profile {tgt_profile_id} not found after update'}
+            
             return {
                 'status': 'ok',
                 'message': f'Merged {src_profile_id} into {tgt_profile_id}',

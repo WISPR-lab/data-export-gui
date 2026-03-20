@@ -565,6 +565,8 @@ result
           console.error('[worker] Python merge error:', pyError);
           result = { status: 'error', message: 'Python merge failed: ' + (pyError.message || String(pyError)) };
         }
+        
+        await flushOPFSDatabase();
         break;
       }
 
@@ -577,6 +579,8 @@ result = unmerge_device_profiles('${profileId}', '${atomicId}')
 result
 `);
         result = result.toJs({ dict_converter: Object.fromEntries });
+        
+        await flushOPFSDatabase();
         break;
       }
 

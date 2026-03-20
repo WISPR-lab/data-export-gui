@@ -71,7 +71,9 @@
       :target="staging ? staging.target : null"
       :is-loading="mergeLoading"
       :error="mergeError"
+      :success="mergeSuccess"
       @confirm="confirmGroup"
+      @closed="onModalClosed"
     />
 
   </v-container>
@@ -98,6 +100,7 @@ export default {
       groupDialog: false,
       mergeLoading: false,
       mergeError: null,
+      mergeSuccess: false,
       selectedRecord: null,
       staging: null,
       devices: [],
@@ -160,14 +163,11 @@ export default {
         console.log('[confirmGroup] Worker returned:', result);
         
         if (result && result.status === 'ok') {
+          this.mergeSuccess = true;
           const idx = this.unassigned.indexOf(this.staging.source);
           if (idx > -1) this.unassigned.splice(idx, 1);
           
           await this.fetchDevices();
-          
-          this.groupDialog = false;
-          this.staging = null;
-          this.selectedRecord = null;
         } else if (result && result.status === 'ineligible') {
           this.mergeError = result.message;
         } else if (result) {
@@ -188,6 +188,9 @@ export default {
       this.selectedRecord = null;
       this.mergeLoading = false;
       this.mergeError = null;
+    },
+    onModalClosed() {
+      this.mergeSuccess = false;
     }
   }
 };
