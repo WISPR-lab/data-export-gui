@@ -38,7 +38,7 @@ limitations under the License.
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
       <!-- <span> <v-icon left>mdi-database-outline</v-icon> Data Types </span> -->
-       <span> <v-icon left>mdi-filter-multiple-outline</v-icon>Event Types</span>
+       <span> <v-icon left>mdi-filter-multiple-outline</v-icon>Event Types (TODO readable category names)</span>
       <span class="float-right" style="margin-right: 10px">
         <small v-if="eventActions"
           ><strong>{{ eventActions.length }}</strong></small

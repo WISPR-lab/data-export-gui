@@ -1,27 +1,28 @@
 <template>
-  <v-dialog v-model="internalValue" max-width="500px">
+  <v-dialog v-model="internalValue" max-width="500px" @input="onDialogInput">
     <v-card v-if="source && target">
       <v-toolbar flat dense color="grey lighten-4" height="64">
-        <v-toolbar-title class="text-h6 font-weight-bold ml-2">Is this the same device?</v-toolbar-title>
+        <v-toolbar-title class="text-h6 font-weight-bold ml-2">{{ success ? 'Merge successful!' : 'Is this the same device?' }}</v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn icon @click="cancel">
+        <v-btn icon @click="cancel" :disabled="isLoading">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
 
       <v-card-text class="pa-6">
-        <div class="body-1 mb-4">
-          Are you sure you want to combine the activity from <strong>{{ source.label }}</strong> into the <strong>{{ target.customLabel || target.model }}</strong> profile?
+        <v-alert v-if="error" type="error" outlined dense class="mb-4">
+          <div class="body-2">{{ error }}</div>
+        </v-alert>
+
+        <v-alert v-if="success" type="success" outlined dense class="mb-4">
+          <div class="body-2">{{ source.label }} has been merged into {{ target.user_label || target.model }}</div>
+        </v-alert>
+
+        <div v-if="!success" class="body-1 mb-4">
+          Are you sure you want to combine the activity from <strong>{{ source.label }}</strong> into the <strong>{{ target.user_label || target.model }}</strong> profile?
         </div>
         
-        <v-sheet rounded="lg" color="blue lighten-5" class="pa-4 mb-4 d-flex align-center border-blue">
-          <v-icon color="blue" class="mr-4">mdi-map-marker-distance</v-icon>
-          <div>
-            <div class="body-2 blue--text text--darken-2">TODO WHY THEY MATCH.</div>
-          </div>
-        </v-sheet>
-
-        <div class="body-2 grey--text text--darken-1 italic">
+        <div v-if="!success" class="body-2 grey--text text--darken-1 italic">
           <v-icon small class="mr-1">mdi-information-outline</v-icon>
           You can undo this later.
         </div>
@@ -31,11 +32,14 @@
 
       <v-card-actions class="pa-4">
         <v-spacer></v-spacer>
-        <v-btn text @click="cancel" class="text-none">
+        <v-btn v-if="!success" text @click="cancel" class="text-none" :disabled="isLoading">
           Cancel
         </v-btn>
-        <v-btn color="primary" @click="confirm" class="text-none px-6">
-          Merge device data
+        <v-btn v-if="!success" color="primary" @click="confirm" class="text-none px-6" :loading="isLoading" :disabled="isLoading">
+          {{ isLoading ? 'Merging...' : 'Merge device data' }}
+        </v-btn>
+        <v-btn v-if="success" color="primary" @click="cancel" class="text-none px-6">
+          Close
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -57,6 +61,18 @@ export default {
     target: {
       type: Object,
       default: () => null
+    },
+    isLoading: {
+      type: Boolean,
+      default: false
+    },
+    error: {
+      type: String,
+      default: null
+    },
+    success: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
@@ -71,6 +87,11 @@ export default {
     },
     cancel() {
       this.$emit('input', false);
+    },
+    onDialogInput(val) {
+      if (!val) {
+        this.$emit('closed');
+      }
     }
   }
 }

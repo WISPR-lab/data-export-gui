@@ -8,8 +8,8 @@ from semantic_map.worker import map as semantic_map
 class TestSemanticMap:
     """Test semantic_map.worker.map() on real facebook.zip data."""
 
-    def test_map_extracts_auth_devices_from_facebook_zip(self, sample_upload_with_raw_data, test_db_path):
-        """Verify that semantic mapping populates auth_devices_initial table."""
+    def test_map_extracts_atomic_devices_from_facebook_zip(self, sample_upload_with_raw_data, test_db_path):
+        """Verify that semantic mapping populates devices_raw table."""
         upload_id, raw_data_count = sample_upload_with_raw_data
         
         assert raw_data_count > 0, "Sample data fixture should load at least one raw_data row"
@@ -24,15 +24,15 @@ class TestSemanticMap:
         from db_session import DatabaseSession
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
-            auth_devices = conn.execute(
-                'SELECT COUNT(*) as count FROM auth_devices_initial WHERE upload_id = ?',
+            atomic_devices = conn.execute(
+                'SELECT COUNT(*) as count FROM devices_raw WHERE upload_id = ?',
                 (upload_id,)
             ).fetchone()
             
-            assert auth_devices['count'] > 0, f"Expected auth_devices_initial rows, got {auth_devices['count']}"
+            assert atomic_devices['count'] > 0, f"Expected devices_raw rows, got {atomic_devices['count']}"
     
     def test_map_populates_attributes_field(self, sample_upload_with_raw_data, test_db_path):
-        """Verify that auth_devices_initial has non-empty attributes."""
+        """Verify that devices_raw has non-empty attributes."""
         upload_id, _ = sample_upload_with_raw_data
         
         semantic_map(
@@ -46,7 +46,7 @@ class TestSemanticMap:
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
             rows = conn.execute(
-                'SELECT id, attributes FROM auth_devices_initial WHERE upload_id = ?',
+                'SELECT id, attributes FROM devices_raw WHERE upload_id = ?',
                 (upload_id,)
             ).fetchall()
             

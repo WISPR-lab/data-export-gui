@@ -31,7 +31,7 @@ limitations under the License.
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="saveSearchMenu" v-if="!disableSaveSearch" width="500">
+    <!-- <v-dialog v-model="saveSearchMenu" v-if="!disableSaveSearch" width="500">
       <v-card class="pa-4">
         <h3>Save Search</h3>
         <br />
@@ -60,7 +60,7 @@ limitations under the License.
           </v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
 
     <div v-if="!eventList.objects.length && !searchInProgress && !currentQueryString">
       <ts-explore-welcome-card></ts-explore-welcome-card>
@@ -216,10 +216,10 @@ limitations under the License.
                     </v-card-actions>
                   </v-card>
                 </v-dialog>
-
+<!-- 
                 <v-btn icon @click="exportSearchResult()">
                   <v-icon title="Download current view as CSV">mdi-download</v-icon>
-                </v-btn>
+                </v-btn> TODO --> 
 
                 <v-menu v-if="!disableSettings" offset-y :close-on-content-click="false">
                   <template v-slot:activator="{ on, attrs }">
@@ -588,7 +588,7 @@ export default {
     },
     disableSaveSearch: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     disableHistogram: {
       type: Boolean,

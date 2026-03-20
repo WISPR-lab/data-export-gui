@@ -69,7 +69,11 @@
       v-model="groupDialog" 
       :source="staging ? staging.source : null" 
       :target="staging ? staging.target : null"
+      :is-loading="mergeLoading"
+      :error="mergeError"
+      :success="mergeSuccess"
       @confirm="confirmGroup"
+      @closed="onModalClosed"
     />
 
   </v-container>
@@ -80,6 +84,7 @@ import DeviceDetailDropdown from '@/components/Devices/DeviceDetailDropdown.vue'
 import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
 import { getDeviceGroups, updateDeviceGroup } from '@/database/queries/devices.js';
+import { callPyodideWorker } from '@/pyodide/pyodide-client';
 
 export default {
   name: 'Devices',
@@ -93,6 +98,9 @@ export default {
       isDragging: false,
       activeDropId: null,
       groupDialog: false,
+      mergeLoading: false,
+      mergeError: null,
+      mergeSuccess: false,
       selectedRecord: null,
       staging: null,
       devices: [],
@@ -138,24 +146,51 @@ export default {
     onDrop(event, targetDevice, index) {
       if (!this.selectedRecord) return;
       this.staging = { source: this.selectedRecord, target: targetDevice, index };
+      this.mergeError = null;  // Clear previous error when starting new merge
       this.groupDialog = true;
       this.activeDropId = null;
     },
     async confirmGroup() {
-      // TODO: Implement database move
-      console.log('Confirming group merge:', this.staging);
-      
-      const idx = this.unassigned.indexOf(this.staging.source);
-      if (idx > -1) this.unassigned.splice(idx, 1);
-      
-      this.groupDialog = false;
-      this.staging = null;
-      this.selectedRecord = null;
+      try {
+        this.mergeLoading = true;
+        this.mergeError = null;
+        
+        console.log('[confirmGroup] Starting merge with:', { src: this.staging.source.id, tgt: this.staging.target.id });
+        const result = await callPyodideWorker('merge', {
+          srcProfileId: this.staging.source.id,
+          tgtProfileId: this.staging.target.id
+        });
+        console.log('[confirmGroup] Worker returned:', result);
+        
+        if (result && result.status === 'ok') {
+          this.mergeSuccess = true;
+          const idx = this.unassigned.indexOf(this.staging.source);
+          if (idx > -1) this.unassigned.splice(idx, 1);
+          
+          await this.fetchDevices();
+        } else if (result && result.status === 'ineligible') {
+          this.mergeError = result.message;
+        } else if (result) {
+          this.mergeError = result.message || 'Merge failed';
+        } else {
+          this.mergeError = 'Merge failed: no response from worker';
+        }
+      } catch (error) {
+        this.mergeError = (error && error.message) || 'Merge failed';
+        console.log('[confirmGroup] Merge error:', error);
+      } finally {
+        this.mergeLoading = false;
+      }
     },
     cancelGroup() {
       this.groupDialog = false;
       this.staging = null;
       this.selectedRecord = null;
+      this.mergeLoading = false;
+      this.mergeError = null;
+    },
+    onModalClosed() {
+      this.mergeSuccess = false;
     }
   }
 };

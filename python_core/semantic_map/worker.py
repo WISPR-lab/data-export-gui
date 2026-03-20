@@ -185,7 +185,7 @@ def map(platform,
                 print(f"[SemanticMapWorker] Inserting {len(auth_device_rows)} auth devices...")
                 conn.executemany(
                     """
-                    INSERT INTO auth_devices_initial (id, upload_id, file_id, raw_data_id, entity_type, event_kind, attributes)
+                    INSERT INTO devices_raw (id, upload_id, file_id, raw_data_id, entity_type, event_kind, attributes)
                     VALUES (:id, :upload_id, :file_id, :raw_data_id, :entity_type, :event_kind, :attributes)
                     """,
                     auth_device_rows
@@ -212,7 +212,7 @@ def get_counts(upload_id):
         ).fetchone()['count']
         
         devices_count = conn.execute(
-            'SELECT COUNT(*) as count FROM auth_devices_initial WHERE upload_id = ?', 
+            'SELECT COUNT(*) as count FROM devices_raw WHERE upload_id = ?', 
             (upload_id,)
         ).fetchone()['count']
         

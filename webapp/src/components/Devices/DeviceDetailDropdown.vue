@@ -29,18 +29,16 @@
       <v-row no-gutters>
         <v-col cols="12" sm="4" class="mb-2">
           <div class="body-2 grey--text text--darken-1">Manufacturer</div>
-          <div v-if="device.manufacturer" class="body-1">{{ device.manufacturer }}</div>
+          <div v-if="device.manufacturer && device.manufacturer !== 'Unknown'" class="body-1">{{ device.manufacturer }}</div>
           <div v-else class="body-1 text-italic grey--text">Unknown</div>
         </v-col>
         <v-col cols="12" sm="4" class="mb-2">
           <div class="body-2 grey--text text--darken-1">Model</div>
-          <div class="body-1">{{ isGeneric ? device.label : device.model }}</div>
+          <div class="body-1">{{ device.model || (isGeneric ? device.label : 'Unknown') }}</div>
         </v-col>
         <v-col cols="12" sm="4" class="mb-2">
           <div class="body-2 grey--text text--darken-1">Software</div>
-          <div class="body-1">
-            {{ Array.isArray(device.osHistory) ? device.osHistory.join(', ') : (device.os || 'Unknown') }}
-          </div>
+          <div class="body-1">{{ device.os || 'Unknown' }}</div>
         </v-col>
       </v-row>
     </div>
@@ -48,7 +46,8 @@
     <v-divider class="mb-6"></v-divider>
 
     <!-- 3. Sign-in activity -->
-    <div class="mb-6">
+     <!-- TODO BRING THIS BACK -->
+    <!-- <div class="mb-6">
       <div class="overline mb-2">Sign-in activity</div>
       <div class="body-1 mb-2">
         <span v-if="!isGeneric">Last seen: March 10, 2024 at 10:45 AM &bull; {{ device.location }}</span>
@@ -60,7 +59,7 @@
       </v-btn>
     </div>
 
-    <v-divider class="mb-6"></v-divider>
+    <v-divider class="mb-6"></v-divider> -->
 
     <!-- 4. Notes -->
     <div>

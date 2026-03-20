@@ -382,6 +382,7 @@ async function showPackages(pyodide) {
 
 self.onmessage = async (event) => {
   const { id, command, args } = event.data;
+  console.log(`[PyodideWorker] Received message: command='${command}', id=${id}`);
   
   try {
     // Wait for Pyodide to be ready
@@ -544,6 +545,42 @@ paths = m.file_paths()
 paths
 `);
         result = result.toJs();
+        break;
+      }
+
+      case 'merge': {
+        console.log('[worker] merge case called with args:', args);
+        const { srcProfileId, tgtProfileId } = args;
+        
+        try {
+          result = await pyodide.runPythonAsync(`
+from user_merge.merge import merge_device_profiles
+result = merge_device_profiles('${srcProfileId}', '${tgtProfileId}')
+result
+`);
+          console.log('[worker] Python returned:', result);
+          result = result.toJs({ dict_converter: Object.fromEntries });
+          console.log('[worker] After .toJs():', result);
+        } catch (pyError) {
+          console.error('[worker] Python merge error:', pyError);
+          result = { status: 'error', message: 'Python merge failed: ' + (pyError.message || String(pyError)) };
+        }
+        
+        await flushOPFSDatabase();
+        break;
+      }
+
+      case 'unmerge': {
+        const { profileId, atomicId } = args;
+        
+        result = await pyodide.runPythonAsync(`
+from user_merge.unmerge import unmerge_device_profiles
+result = unmerge_device_profiles('${profileId}', '${atomicId}')
+result
+`);
+        result = result.toJs({ dict_converter: Object.fromEntries });
+        
+        await flushOPFSDatabase();
         break;
       }
 

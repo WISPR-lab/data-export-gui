@@ -27,8 +27,8 @@ class TestE2EPipeline:
         )
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
-            auth_devices_initial_count = conn.execute(
-                'SELECT COUNT(*) as count FROM auth_devices_initial WHERE upload_id = ?',
+            devices_raw_count = conn.execute(
+                'SELECT COUNT(*) as count FROM devices_raw WHERE upload_id = ?',
                 (upload_id,)
             ).fetchone()['count']
             
@@ -39,8 +39,8 @@ class TestE2EPipeline:
             ).fetchall()
             event_actions = [e['event_action'] for e in event_actions if e['event_action']]
         
-        assert auth_devices_initial_count > 0, \
-            f"semantic_map should create auth_devices_initial rows, got {auth_devices_initial_count}"
+        assert devices_raw_count > 0, \
+            f"semantic_map should create devices_raw rows, got {devices_raw_count}"
         
         # Verify we extracted multiple event action types from the data
         assert len(event_actions) >= 2, \
@@ -50,26 +50,36 @@ class TestE2EPipeline:
         norm_result = normalize(upload_id, db_path=test_db_path)
         
         assert norm_result['status'] == 'success'
-        assert norm_result['records_normalized'] == auth_devices_initial_count
+        assert norm_result['records_normalized'] == devices_raw_count
         
         # STAGE 3: device_grouping
         group(upload_id, db_path=test_db_path)
         
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
-            auth_devices_count = conn.execute(
-                'SELECT COUNT(*) as count FROM auth_devices WHERE EXISTS '
-                '(SELECT 1 FROM auth_devices_initial WHERE upload_id = ? AND 1=1)',
+            atomic_devices_count = conn.execute(
+                'SELECT COUNT(*) as count FROM atomic_devices WHERE EXISTS '
+                '(SELECT 1 FROM devices_raw WHERE upload_id = ? AND 1=1)',
                 (upload_id,)
             ).fetchone()['count']
             
-            device_groups_count = conn.execute(
-                'SELECT COUNT(*) as count FROM device_groups'
-            ).fetchone()['count']
+            # device_profiles_count = conn.execute(
+            #     'SELECT COUNT(*) as count FROM device_profiles'
+            # ).fetchone()['count']
+            device_profiles_all = conn.execute(
+                'SELECT * FROM v_device_profiles'
+            ).fetchall()
+
+            device_profiles_all = [{k: json.loads(v) if k in ('attributes', 'origins', 'specificity') and isinstance(v, str) else v for k, v in p.items()} for p in device_profiles_all]
+            device_profiles_count = len(device_profiles_all)
+
         
-        assert auth_devices_count >= 1, \
-            f"Hard merge should create at least 1 auth_device, got {auth_devices_count}"
-        # Device groups should exist and be reasonable in count
-        assert device_groups_count >= 1, \
-            f"Soft merge should create at least 1 device_group, got {device_groups_count}"
-        assert device_groups_count <= 5, \
-            f"Device groups should be reasonable (<=5) for this test data, got {device_groups_count}"
+        assert atomic_devices_count >= 1, \
+            f"Hard merge should create at least 1 atomic device, got {atomic_devices_count}"
+        # Device profiles should exist and be reasonable in count
+        assert device_profiles_count >= 1, \
+            f"Soft merge should create at least 1 device_group, got {device_profiles_count}"
+        assert device_profiles_count == 4, \
+            f"Device profiles should be 4 for the facebook test data, got {device_profiles_count}."
+        
+        print(f"\n[E2E Test] Device Profiles ({device_profiles_count}):")
+        print(json.dumps(device_profiles_all, indent=2))

@@ -138,7 +138,7 @@ limitations under the License.
           </v-btn>
           <span class="timeline-header">
             <ts-upload-timeline-form-button btn-type="small"></ts-upload-timeline-form-button>
-            <v-dialog v-model="addManualEvent" width="600">
+            <!-- <v-dialog v-model="addManualEvent" width="600">
               <template v-slot:activator="{ on, attrs }">
                 <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
                   <v-icon left small> mdi-plus </v-icon>
@@ -150,7 +150,7 @@ limitations under the License.
                 @cancel="addManualEvent = false"
                 :datetimeProp="datetimeManualEvent"
               ></ts-add-manual-event>
-            </v-dialog>
+            </v-dialog> -->
             <v-btn small text rounded color="primary" @click.stop="enableAllTimelines()">
               <v-icon left small>mdi-eye</v-icon>
               <span>Select all</span>

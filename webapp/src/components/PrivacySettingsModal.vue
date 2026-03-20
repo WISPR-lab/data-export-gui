@@ -4,7 +4,7 @@
       <!-- Header -->
       <v-toolbar flat dense color="grey lighten-4" height="70">
         <v-icon left large class="text--primary">mdi-shield-account</v-icon>
-        <v-toolbar-title class="text-h6 ma-4">Privacy & Visibility Settings</v-toolbar-title>
+        <v-toolbar-title class="text-h6 ma-4">Privacy & Visibility Settings TODO</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="handleClose">
           <v-icon>mdi-close</v-icon>

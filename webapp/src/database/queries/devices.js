@@ -7,15 +7,7 @@ import { getDB } from '../index.js';
 export async function getDeviceGroups() {
   const db = await getDB();
   
-  // Note: Since we haven't decided on cross-device attribute merging yet,
-  // we pick attributes from the first auth_device in the group.
-  const sql = `
-    SELECT 
-      dg.*,
-      ad.attributes as raw_attributes
-    FROM device_groups dg
-    LEFT JOIN auth_devices ad ON json_extract(dg.auth_devices_ids, '$[0]') = ad.id
-  `;
+  const sql = `SELECT * FROM device_profiles`;
   
   const rows = await db.exec(sql, {
     returnValue: 'resultRows',
@@ -24,35 +16,36 @@ export async function getDeviceGroups() {
 
   return rows.map(row => {
     let attrs = {};
+    let origins = [];
     try {
-      attrs = JSON.parse(row.raw_attributes || '{}');
+      attrs = row.attributes ? JSON.parse(row.attributes) : {};
+      origins = row.origins ? JSON.parse(row.origins) : [];
     } catch (e) {
       console.warn('Failed to parse attributes for device group', row.id);
     }
 
     return {
       id: row.id,
-      auth_devices_ids: JSON.parse(row.auth_devices_ids || '[]'),
+      atomic_devices_ids: row.atomic_devices_ids ? JSON.parse(row.atomic_devices_ids) : [],
+      model: row.model || '',
       is_generic: !!row.is_generic,
       user_label: row.user_label,
       notes: row.notes || '',
-      // Placeholder fields for future Python-calculated merged attributes
-      label: row.user_label || attrs.device_model_name || 'Unknown Device',
+      origins: origins,
+      label: row.user_label || row.model || attrs.device_model_name || 'Unknown Device',
       manufacturer: attrs.device_manufacturer || 'TODO: Get from merged attributes',
       os: (attrs.os_name || '') + ' ' + (attrs.os_version || '') || 'TODO: Get from merged attributes',
       city: 'TODO: Calculate from geographic events',
-      notes: row.labels ? JSON.parse(row.labels).join(', ') : '',
       // Metadata for UI
-      initial_soft_merge: row.initial_soft_merge,
-      soft_merge_flag_status: row.soft_merge_flag_status
+      system_soft_merge: !!row.system_soft_merge
     };
   });
-}
+} // TODO merge bttons on device;  need OS infroamtion, history, geolocation, etc. to make this useful
 
 export async function updateDeviceGroup(groupId, updates) {
   const db = await getDB();
   
-  const allowed = ['user_label', 'notes', 'soft_merge_flag_status'];
+  const allowed = ['user_label', 'notes'];
   const keys = Object.keys(updates).filter(k => allowed.includes(k));
   
   if (keys.length === 0) return;
@@ -60,7 +53,7 @@ export async function updateDeviceGroup(groupId, updates) {
   const setClause = keys.map(k => `${k} = ?`).join(', ');
   const params = [...keys.map(k => updates[k]), groupId];
   
-  const sql = `UPDATE device_groups SET ${setClause}, updated_at = ? WHERE id = ?`;
+  const sql = `UPDATE device_profiles SET ${setClause}, updated_at = ? WHERE id = ?`;
   params.splice(params.length - 1, 0, Date.now() / 1000);
 
   await db.exec(sql, { bind: params });

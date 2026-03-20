@@ -32,7 +32,7 @@ class UserAgentParser:
             self._cache[ua_string] = {}
             return {}
         
-        if dd.client_name():
+        if dd.client_name() and not attrs.get('user_agent_name'):
             attrs['user_agent_name'] = dd.client_name()
         if dd.client_version():
             attrs['user_agent_version'] = dd.client_version()
