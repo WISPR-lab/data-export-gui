@@ -2,21 +2,12 @@
 #  merge devices if they have the same deterministic, unique identifier
 #  this is done by the system, user cannot unmerge
 
-HARD_KEYS = {
-    "device_id",
-    "device_serial_number",
-    "device_imei",
-    "device_meid"
-}
-
-IS_HARD_KEY = lambda k: any(k == hk or k.startswith(hk) for hk in HARD_KEYS)
-
 
 import uuid
 import json
 from utils.redaction_utils import compare_redacted_vals
-from device_grouping.shared_utils import union_find
-from device_grouping.computed_fields import merge_attrs, deduplicate_origins, specificity
+from device_grouping.shared_utils import union_find, IS_HARD_KEY
+from device_grouping.computed_fields import specificity, merge_attrs, deduplicate_origins
 
 
 def hard_match(attrs_a: dict, attrs_b: dict) -> bool:

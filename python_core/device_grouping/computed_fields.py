@@ -1,7 +1,6 @@
 from utils.redaction_utils import get_unredacted_val
 from utils.device_lookup import VARIANT_SUFFIXES
-from device_grouping.hard_merge import IS_HARD_KEY
-
+from device_grouping.shared_utils import IS_HARD_KEY
 
 GENERIC = {'other', 'unknown', 'phone', 'smartphone', 'tablet', 'android', 'iphone', 'ipad', ''}
 MFR_DO_NOT_MERGE_GENERIC = {'apple'}

@@ -69,6 +69,8 @@
       v-model="groupDialog" 
       :source="staging ? staging.source : null" 
       :target="staging ? staging.target : null"
+      :is-loading="mergeLoading"
+      :error="mergeError"
       @confirm="confirmGroup"
     />
 
@@ -94,6 +96,8 @@ export default {
       isDragging: false,
       activeDropId: null,
       groupDialog: false,
+      mergeLoading: false,
+      mergeError: null,
       selectedRecord: null,
       staging: null,
       devices: [],
@@ -139,40 +143,51 @@ export default {
     onDrop(event, targetDevice, index) {
       if (!this.selectedRecord) return;
       this.staging = { source: this.selectedRecord, target: targetDevice, index };
+      this.mergeError = null;  // Clear previous error when starting new merge
       this.groupDialog = true;
       this.activeDropId = null;
     },
     async confirmGroup() {
-      // TODO: Check eligibility before showing modal, disable merge button if ineligible
       try {
+        this.mergeLoading = true;
+        this.mergeError = null;
+        
+        console.log('[confirmGroup] Starting merge with:', { src: this.staging.source.id, tgt: this.staging.target.id });
         const result = await callPyodideWorker('merge', {
           srcProfileId: this.staging.source.id,
           tgtProfileId: this.staging.target.id
         });
+        console.log('[confirmGroup] Worker returned:', result);
         
-        if (result.status === 'ok') {
+        if (result && result.status === 'ok') {
           const idx = this.unassigned.indexOf(this.staging.source);
           if (idx > -1) this.unassigned.splice(idx, 1);
           
           await this.fetchDevices();
           
-          this.$toast.success('Devices merged');
           this.groupDialog = false;
           this.staging = null;
           this.selectedRecord = null;
-        } else if (result.status === 'ineligible') {
-          this.$toast.warning(result.message);
+        } else if (result && result.status === 'ineligible') {
+          this.mergeError = result.message;
+        } else if (result) {
+          this.mergeError = result.message || 'Merge failed';
         } else {
-          this.$toast.error(result.message);
+          this.mergeError = 'Merge failed: no response from worker';
         }
       } catch (error) {
-        this.$toast.error(error.message || 'Merge failed');
+        this.mergeError = (error && error.message) || 'Merge failed';
+        console.log('[confirmGroup] Merge error:', error);
+      } finally {
+        this.mergeLoading = false;
       }
     },
     cancelGroup() {
       this.groupDialog = false;
       this.staging = null;
       this.selectedRecord = null;
+      this.mergeLoading = false;
+      this.mergeError = null;
     }
   }
 };

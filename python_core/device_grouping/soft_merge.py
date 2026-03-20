@@ -12,7 +12,7 @@
 import uuid
 import json
 from device_grouping.shared_utils import union_find
-from device_grouping.computed_fields import best_model_attr, get_mfr, MFR_DO_NOT_MERGE_GENERIC, compute_device_profile_fields, merge_attrs
+from device_grouping.computed_fields import best_model_attr, get_mfr, MFR_DO_NOT_MERGE_GENERIC, compute_device_profile_fields
 
 
 

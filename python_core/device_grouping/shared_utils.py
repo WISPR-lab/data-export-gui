@@ -1,5 +1,15 @@
 from typing import Callable
 
+HARD_KEYS = {
+    "device_id",
+    "device_serial_number",
+    "device_imei",
+    "device_meid"
+}
+
+IS_HARD_KEY = lambda k: any(k == hk or k.startswith(hk) for hk in HARD_KEYS)
+
+
 def find(parent: dict, x: str) -> str:
     while parent[x] != x:
         parent[x] = parent[parent[x]]
