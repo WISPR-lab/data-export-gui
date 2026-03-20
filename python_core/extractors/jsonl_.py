@@ -7,7 +7,7 @@ from utils.filter_builder import make_filter
 class JSONLParser(JSONParser):
 
     @classmethod
-    def extract(cls, content: str, config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    def extract(cls, content: str, config: Optional[Dict] = None,  filepath: str = None) -> List[Dict[str, Any]]:
         res = []
         if "where" in config:
             filter_callable = make_filter(config["where"])

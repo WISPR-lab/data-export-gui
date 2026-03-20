@@ -16,7 +16,7 @@ class BaseParser(ABC):
     
     
     @abstractmethod
-    def extract(self, content: str, config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    def extract(self, content: str, config: Optional[Dict] = None, filepath: str = None) -> List[Dict[str, Any]]:
         """
         Parses content into a flat list of dicts.
         config: The 'parser' section from the YAML manifest (e.g., {'json_root': '...'})
