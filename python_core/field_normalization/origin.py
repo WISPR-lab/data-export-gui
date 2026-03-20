@@ -22,4 +22,7 @@ def determine_origin(platform: str, attrs: dict) -> str:
     if client_type == 'browser':
         return f"{platform}/web"
     
+    elif client_type is not None and client_type != '':
+        return f"{platform}/{client_type.replace(' ', '_')}"
+    
     return f"{platform}/unknown"

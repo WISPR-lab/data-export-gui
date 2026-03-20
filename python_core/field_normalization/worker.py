@@ -6,6 +6,27 @@ from field_normalization.geo import normalize_geo_fields
 from field_normalization.origin import determine_origin
 
 
+
+
+def _normalize(rows, platform, ua_parser):
+    updates = []
+    for row in rows:
+            attrs = row['attributes'] or {}
+            origin = ''
+            if (attrs.get('user_agent_original') or attrs.get('user_agent_os_full')):
+                attrs.update(ua_parser.parse(attrs))
+                origin = determine_origin(platform, attrs)
+            attrs = normalize_geo_fields(attrs)
+            
+            updates.append({
+                'id': row['id'],
+                'attributes': json.dumps(attrs),
+                'origin': origin,
+            })
+    return updates
+
+
+
 def normalize(upload_id: str, db_path: str = None) -> dict:
     def _get_config_value(name):
         import builtins
@@ -24,6 +45,12 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             (upload_id,)
         ).fetchone()
         platform = upload['platform'] if upload else None
+
+
+                
+        ua_parser = UserAgentParser()
+        
+        # ----- devices raw normalization -------
         
         rows = conn.execute(
             """
@@ -38,23 +65,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             print(f"[FieldNormalizeWorker] No devices_raw rows for upload_id={upload_id}")
             return {'status': 'success', 'message': 'No records to normalize'}
         
-        ua_parser = UserAgentParser()
-        updates = []
-        
-        for row in rows:
-            attrs = row['attributes'] or {}
-            attrs.update(ua_parser.parse(attrs))
-            
-            attrs = normalize_device_fields(attrs)
-            attrs = normalize_geo_fields(attrs)
-            
-            origin = determine_origin(platform, attrs)
-            
-            updates.append({
-                'id': row['id'],
-                'attributes': json.dumps(attrs),
-                'origin': origin,
-            })
+        updates = _normalize(rows, platform, ua_parser)
         
         conn.executemany(
             """
@@ -64,7 +75,37 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             """,
             updates
         )
+
+
+        # ----- events normalization -------
+
+        rows = conn.execute(
+            """
+            SELECT id, attributes
+            FROM events
+            WHERE upload_id = ?
+            """,
+            (upload_id,)
+        ).fetchall()
+
+        if not rows:
+            print(f"[FieldNormalizeWorker] No events rows for upload_id={upload_id}")
+            return {'status': 'success', 'message': 'No records to normalize'}
+        
+        updates = _normalize(rows, platform, ua_parser)
+
+        conn.executemany(
+            """
+            UPDATE events 
+            SET attributes = :attributes, origin = :origin
+            WHERE id = :id
+            """,
+            updates
+        )
         conn.commit()
+
+
+
         print(f"[FieldNormalizationWorker] Normalization Complete")
         
         print(f"[normalize] Normalized {len(updates)} records")
@@ -74,3 +115,4 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             'records_normalized': len(updates),
             'unique_uas_parsed': len(ua_parser._cache),
         }
+
