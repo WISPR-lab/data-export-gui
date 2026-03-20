@@ -11,7 +11,7 @@
 
       <v-card-text class="pa-6">
         <div class="body-1 mb-4">
-          Are you sure you want to combine the activity from <strong>{{ source.label }}</strong> into the <strong>{{ target.customLabel || target.model }}</strong> profile?
+          Are you sure you want to combine the activity from <strong>{{ source.label }}</strong> into the <strong>{{ target.user_label || target.model }}</strong> profile?
         </div>
         
         <v-sheet rounded="lg" color="blue lighten-5" class="pa-4 mb-4 d-flex align-center border-blue">

@@ -547,6 +547,38 @@ paths
         break;
       }
 
+      case 'merge': {
+        const { srcProfileId, tgtProfileId } = args;
+        pyodide.globals.set('src_id', srcProfileId);
+        pyodide.globals.set('tgt_id', tgtProfileId);
+        
+        result = await pyodide.runPythonAsync(`
+from user_merge.merge import merge_device_profiles
+from db_session import DatabaseSession
+conn = DatabaseSession(DB_PATH)
+result = merge_device_profiles(conn, src_id, tgt_id)
+result
+`);
+        result = result.toJs({ dict_converter: Object.fromEntries });
+        break;
+      }
+
+      case 'unmerge': {
+        const { profileId, atomicId } = args;
+        pyodide.globals.set('profile_id', profileId);
+        pyodide.globals.set('atomic_id', atomicId);
+        
+        result = await pyodide.runPythonAsync(`
+from user_merge.unmerge import unmerge_device_profiles
+from db_session import DatabaseSession
+conn = DatabaseSession(DB_PATH)
+result = unmerge_device_profiles(conn, profile_id, atomic_id)
+result
+`);
+        result = result.toJs({ dict_converter: Object.fromEntries });
+        break;
+      }
+
       default:
         throw new Error(`Unknown command: ${command}`);
     }

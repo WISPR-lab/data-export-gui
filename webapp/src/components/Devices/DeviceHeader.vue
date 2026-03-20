@@ -11,8 +11,8 @@
     <!-- Text Labels -->
     <v-col class="mr-4">
       <div v-if="!isGeneric" class="subtitle-1 font-weight-bold">
-        {{ device.customLabel || device.model }}
-        <span v-if="device.customLabel" class="grey--text text--darken-2 body-2 font-weight-regular ml-1">
+        {{ device.user_label || device.model }}
+        <span v-if="device.user_label && device.model" class="grey--text text--darken-2 body-2 font-weight-regular ml-1">
           ({{ device.model }})
         </span>
       </div>
@@ -20,9 +20,7 @@
         {{ device.label }}
       </div>
       <div class="body-2 grey--text text--darken-2">
-        <!-- <span v-if="!isGeneric">{{ device.manufacturer }} &bull; Last seen in {{ device.location }}</span> -->
-        <span>{{ device.manufacturer }} <span v-if="device.location">&bull; Last seen in {{ device.location }}</span></span>
-        <!-- <span v-else>{{ device.os }} &bull; Seen in {{ device.city }}</span> -->
+        <span>{{ device.manufacturer || 'Unknown' }} <span v-if="device.location">&bull; Last seen in {{ device.location }}</span></span>
       </div>
     </v-col>
 

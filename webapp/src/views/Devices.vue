@@ -80,6 +80,7 @@ import DeviceDetailDropdown from '@/components/Devices/DeviceDetailDropdown.vue'
 import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
 import { getDeviceGroups, updateDeviceGroup } from '@/database/queries/devices.js';
+import { callPyodideWorker } from '@/pyodide/pyodide-client';
 
 export default {
   name: 'Devices',
@@ -142,15 +143,31 @@ export default {
       this.activeDropId = null;
     },
     async confirmGroup() {
-      // TODO: Implement database move
-      console.log('Confirming group merge:', this.staging);
-      
-      const idx = this.unassigned.indexOf(this.staging.source);
-      if (idx > -1) this.unassigned.splice(idx, 1);
-      
-      this.groupDialog = false;
-      this.staging = null;
-      this.selectedRecord = null;
+      // TODO: Check eligibility before showing modal, disable merge button if ineligible
+      try {
+        const result = await callPyodideWorker('merge', {
+          srcProfileId: this.staging.source.id,
+          tgtProfileId: this.staging.target.id
+        });
+        
+        if (result.status === 'ok') {
+          const idx = this.unassigned.indexOf(this.staging.source);
+          if (idx > -1) this.unassigned.splice(idx, 1);
+          
+          await this.fetchDevices();
+          
+          this.$toast.success('Devices merged');
+          this.groupDialog = false;
+          this.staging = null;
+          this.selectedRecord = null;
+        } else if (result.status === 'ineligible') {
+          this.$toast.warning(result.message);
+        } else {
+          this.$toast.error(result.message);
+        }
+      } catch (error) {
+        this.$toast.error(error.message || 'Merge failed');
+      }
     },
     cancelGroup() {
       this.groupDialog = false;
