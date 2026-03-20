@@ -198,7 +198,7 @@ async function loadManifests(config, pyodide) {
   const manifestsPath = config.paths.manifests;
   const manifestsBaseUrl = buildResourceUrl(config.paths.manifests);
   pyodide.FS.mkdir(manifestsPath);
-  const manifestFiles = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml'];
+  const manifestFiles = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml', 'google.yaml', 'google.yaml'];
   
 //   const manifestFiles = await pyodide.runPythonAsync(`
 // import sys
