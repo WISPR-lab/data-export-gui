@@ -1,0 +1,229 @@
+manifest_version: 2
+id: google
+ecs_version: "9.4.0-dev"
+target: "Google"
+last_updated: "2025-03-20"
+
+files:
+  # Security & Account Data
+  - id: "ggl_subscriber_info"
+    path: "Google Account/bob.researcher24.SubscriberInfo.html"
+    parser:
+      format: "html_table"
+
+
+  - id: "ggl_change_history"
+    path: "Google Account/bob.researcher24.ChangeHistory.html"
+    parser:
+      format: "html_table"
+
+  # - id: "ggl_search_activity"
+  #   path: "My Activity/Search/MyActivity.html"
+  #   parser:
+  #     format: "html"
+  # - id: "ggl_gmail_activity"
+  #   path: "My Activity/Gmail/MyActivity.html"
+  #   parser:
+  #     format: "html"
+
+  # - id: "ggl_drive_activity"
+  #   path: "My Activity/Drive/MyActivity.html"
+  #   parser:
+  #     format: "html"
+
+  # - id: "ggl_discover_activity"
+  #   path: "My Activity/Discover/MyActivity.html"
+  #   parser:
+  #     format: "html"
+
+  - id: "ggl_takeout_activity"
+    path: "My Activity/Takeout/MyActivity.html"
+    parser:
+      format: "html_ggl_myactivity"
+
+
+  # - id: "ggl_access_log_activity"
+  #   path: "Access Log Activity/Activities - A list of Google services*"
+  #   parser:
+  #     format: "csv"
+  #     parse_dates: ["Last Activity Time"]
+
+
+  # Devices & Sessions
+  - id: "ggl_access_log_devices"
+    path: "Access Log Activity/Devices - A list of devices (i.e. Nest, Pixel, iPh.csv"
+    parser:
+      format: "csv"
+      parse_dates: ["Last Activity Time"]
+
+  # - id: "ggl_timeline_settings"
+  #   path: "Timeline/Settings.json"
+  #   parser:
+  #     format: "json"
+  #     json_root: "deviceSettings[]"
+
+  # - id: "ggl_profile"
+    # path: "Profile/Profile.json"
+    # parser:
+    #   format: "json"
+
+views:
+
+#  -------------------------- ACCOUNT PROFILE --------------------------
+#   - file:
+#       id: "ggl_subscriber_info"
+#     static:
+#       event.kind: "asset"
+#       entity.type: "user_profile"
+#     fields:
+#       - {target: "user.full_name", source: "name", type: "string"}
+#       - {target: "user.email", source: "email", type: "string"}
+#       - {target: "user.profile.created_date", source: "created_on", type: "datetime"}
+#       - {target: "user.profile.status", source: "status", type: "string"}
+
+  # ------------------------ AUTH EVENTS ------------------------
+
+  - file:
+      id: "ggl_subscriber_info"
+      where:
+        {source: "Activity Type", op: "==", value: "Login"}
+    static:
+      event.action: "user_login_success"
+      event.kind: "event"
+      event.category: ["authentication", "session"]
+      event.type: ["start"]
+      event.outcome: "success"
+    fields:
+      - {target: "@timestamp", source: "Timestamp", type: "datetime"}
+      - {target: "client.ip", source: "IP Address", type: "string"}
+      - {target: "client.geo.name", source: "Geo", type: "string"}
+      - {target: "user_agent.original", source: "Raw User Agents", type: "string"}
+
+  # ------------------------ PASSWORD/EMAIL EVENTS ------------------------
+  - file:
+      id: "ggl_change_history"
+      where:
+        {source: "Change Type", op: "==", value: "PASSWORD"}
+    static:
+      event.action: "user_password_change"
+      event.kind: "event"
+      event.category: ["configuration"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "Timestamp", type: "datetime"}
+      - {target: "client.ip", source: "IP Address", type: "string"}
+
+  - file:
+      id: "ggl_change_history"
+      where:
+        logic: "any"
+        conditions:
+        - {source: "Change Type", op: "==", value: "SECONDARY_EMAIL_ADDED"}
+    static:
+      event.action: "email_addition"
+      event.kind: "event"
+      event.category: ["configuration"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "Timestamp", type: "datetime"}
+      - {target: "client.ip", source: "IP Address", type: "string"}
+      - {target: "user.email.old", source: "Old Value", type: "string"}
+      - {target: "user.email.new", source: "New Value", type: "string"}
+
+  
+  # ------------------------ ACCESS ACTIVITY ------------------------
+  
+
+  # ------------------------ SEARCH ACTIVITY ------------------------
+  # - file:
+  #     id: "ggl_search_activity"
+  #   static:
+  #     event.action: "web_search"
+  #     event.kind: "event"
+  #     event.category: ["web"]
+  #     event.type: ["access"]
+  #   fields: "" # TODO parser
+
+  # # ------------------------ GMAIL ACTIVITY ------------------------
+  # - file:
+  #     id: "ggl_gmail_activity"
+  #   static:
+  #     event.action: "email_send"
+  #     event.kind: "event"
+  #     event.category: ["email"]
+  #     event.type: ["info"]
+  #   fields:
+  #     - {target: "@timestamp", source: "timestamp", type: "datetime"}
+  #     - {target: "email.sender", source: "from", type: "string"}
+  #     - {target: "email.to", source: "to", type: "string"}
+  #     - {target: "email.subject", source: "subject", type: "string"}
+
+  # # ------------------------ DRIVE ACTIVITY ------------------------
+  # - file:
+  #     id: "ggl_drive_activity"
+  #   static:
+  #     event.action: "cloud_storage_access"
+  #     event.kind: "event"
+  #     event.category: ["web"]
+  #     event.type: ["access"]
+  #   fields:
+  #     - {target: "@timestamp", source: "timestamp", type: "datetime"}
+  #     - {target: "file.name", source: "file_name", type: "string"}
+  #     - {target: "event.action_type", source: "activity_type", type: "string"}
+
+  # ------------------------ AUTH DEVIES ------------------------
+  - file:
+      id: "ggl_access_log_devices"
+    static:
+      event.kind: "asset"
+      event.category: ["authentication", "session"]
+      event.type: ["info"]
+      entity.type: "authenticated_device"
+    fields:
+      # - {target: "entity.last_seen_timestamp", source: "Last Activity Time", type: "datetime"} # TODO
+      - {target: "device.manufacturer", source: "Brand Name", type: "string"}
+      - {target: "device.model.name", source: "Marketing Name", type: "string"}
+      - {target: "device.model.identifier", source: "Device Model", type: "string"}
+      - {target: "user_agent.os.name", source: "OS", type: "string"}
+      - {target: "user_agent.os.version", source: "OS Version", type: "string"}
+
+  # - file:
+  #     id: "ggl_timeline_settings"
+  #   static:
+  #     event.kind: "asset"
+  #     event.category: ["authentication", "session"]
+  #     event.type: ["info"]
+  #     entity.type: "authenticated_device"
+  #   fields:
+  #     - {target: "entity.first_seen_timestamp", source: "deviceCreationTime", type: "datetime"}
+  #     - {target: "device.model.identifier", source: "device", type: "string"}
+  #     - {target: "user_agent.os.name", source: "platformType", type: "string"}
+  #     - {target: "user_agent.os.version", source: "iosVersion", type: "string"}
+  #     - {target: "device.name", source: "devicePrettyName", type: "string"}
+  #     - {target: "device.id.google", source: "deviceTag", type: "string"}
+
+  # ------------------------ USER PROFILE ------------------------
+  # - file:
+  #     id: "ggl_profile"
+  #   static:
+  #     event.kind: "asset"
+  #     entity.type: "user_profile"
+  #   fields:
+  #     - {target: "user.full_name", source: "displayName", type: "string"}
+  #     - {target: "user.first_name", source: "name.givenName", type: "string"}
+  #     - {target: "user.email", source: "emails[0].value", type: "string"}
+  #     - {target: "user.profile.birthday", source: "birthday", type: "date"}
+  #     - {target: "user.profile.gender", source: "gender.type", type: "string"}
+
+  # # ------------------------ SECURITY ALERTS ------------------------
+  # - file:
+  #     id: "ggl_alerts"
+  #   static:
+  #     event.kind: "event"
+  #     event.category: ["security"]
+  #     event.type: ["info"]
+  #   fields:
+  #     - {target: "@timestamp", source: "timestamp", type: "datetime"}
+  #     - {target: "event.reason", source: "alert_type", type: "string"}
+  #     - {target: "message", source: "alert_message", type: "string"}
+

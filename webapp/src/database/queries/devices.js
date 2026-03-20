@@ -7,22 +7,47 @@ import { getDB } from '../index.js';
 export async function getDeviceGroups() {
   const db = await getDB();
   
-  const sql = `SELECT * FROM device_profiles`;
+  const deviceSql = `SELECT * FROM device_profiles`;
+  const uploadSql = `SELECT id, color FROM uploads`;
   
-  const rows = await db.exec(sql, {
+  const deviceRows = await db.exec(deviceSql, {
     returnValue: 'resultRows',
     rowMode: 'object'
   });
 
-  return rows.map(row => {
+  const uploadRows = await db.exec(uploadSql, {
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+
+  // Create map of upload_id -> color for quick lookup
+  const uploadColorMap = {};
+  uploadRows.forEach(row => {
+    uploadColorMap[row.id] = row.color;
+  });
+
+  return deviceRows.map(row => {
     let attrs = {};
     let origins = [];
     try {
       attrs = row.attributes ? JSON.parse(row.attributes) : {};
       origins = row.origins ? JSON.parse(row.origins) : [];
     } catch (e) {
-      console.warn('Failed to parse attributes for device group', row.id);
+      console.warn('Failed to parse attributes/origins for device group', row.id);
     }
+
+    // Enrich origins with color information
+    const enrichedOrigins = Array.isArray(origins) ? origins.map(origin => {
+      if (typeof origin === 'string') {
+        // If origins is just strings, we don't have upload_id mapping
+        return { origin, upload_id: null, color: null };
+      }
+      // If origins already has upload_id, look up the color
+      return {
+        ...origin,
+        color: origin.upload_id ? uploadColorMap[origin.upload_id] : null
+      };
+    }) : [];
 
     return {
       id: row.id,
@@ -31,7 +56,8 @@ export async function getDeviceGroups() {
       is_generic: !!row.is_generic,
       user_label: row.user_label,
       notes: row.notes || '',
-      origins: origins,
+      origins: enrichedOrigins,
+      attributes: attrs,
       label: row.user_label || row.model || attrs.device_model_name || 'Unknown Device',
       manufacturer: attrs.device_manufacturer || 'TODO: Get from merged attributes',
       os: (attrs.os_name || '') + ' ' + (attrs.os_version || '') || 'TODO: Get from merged attributes',

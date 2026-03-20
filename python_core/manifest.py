@@ -3,6 +3,7 @@ import re
 import os
 import logging
 import builtins
+import fnmatch
 
 class Manifest:
 
@@ -58,9 +59,15 @@ class Manifest:
         # Matches a filename to a file_source definition.
         clean_name = raw_filename.replace('\\', '/').replace('___', '/') # handling flattened OPFS names too
         
+        # Remove platform prefix: OPFS filenames are flattened as platform___path___filename
+        # After replace: platform/path/filename, so remove the first path segment (platform/)
+        parts = clean_name.split('/', 1)
+        if len(parts) > 1:
+            clean_name = parts[1]  # Everything after the platform prefix
+        
         for fs in self.config.get('files', []):
             path = fs.get('path')
-            if path and clean_name.lower().endswith(path.lower()):
+            if path and fnmatch.fnmatch(clean_name.lower(), path.lower()):
                 return fs
         return {}
     

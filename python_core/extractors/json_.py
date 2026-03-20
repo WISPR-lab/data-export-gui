@@ -17,7 +17,7 @@ except ImportError:
 class JSONParser(BaseParser):  
 
     @classmethod      
-    def extract(cls, content: str, config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    def extract(cls, content: str, config: Optional[Dict] = None,  filepath: str = None) -> List[Dict[str, Any]]:
         config = config or {}
         try:
             data = cls.basic_str_to_json(content)

@@ -7,3 +7,6 @@ tenacity
 rich
 exrex
 typer
+beautifulsoup4
+pandas
+pytz

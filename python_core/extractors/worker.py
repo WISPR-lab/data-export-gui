@@ -131,7 +131,7 @@ def extract(platform,
                     
                     content = _file_read(opfs_filepath, is_firefox)
                     
-                    records = parser.extract(content, parser_cfg)
+                    records = parser.extract(content, parser_cfg, opfs_filename)
                     if not records:
                         print(f"  -> No records extracted from {opfs_filename}")
                         success = False

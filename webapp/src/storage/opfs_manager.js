@@ -63,14 +63,15 @@ export class OPFSManager {
     if (platform) {
       try {
         const paths = await callPyodideWorker('get_whitelist', { platform });
+        console.log(`[WHITELIST] Received paths from Python:`, paths);
         this.whitelistPatterns = (paths || []).map((p) => {
-          // Escape regex-special chars then build a suffix-match pattern so
-          // ZIP entries like "facebook-JohnDoe/security/file.json" still match
-          // the manifest path "security/file.json".
-          const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          return new RegExp(`(^|/)${escaped}$`, 'i');
+          // Escape special chars first, then convert glob * to regex .*
+          const escaped = p.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+          const withWildcard = escaped.replace(/\\\*/g, '.*');
+          const regex = new RegExp(`(^|/)${withWildcard}$`, 'i');
+          console.log(`[WHITELIST] Pattern: "${p}" -> Regex: ${regex}`);
+          return regex;
         });
-        // [OPFSManager] Loaded whitelist
       } catch (err) {
         console.warn('[OPFSManager] Failed to load whitelist – accepting all files:', err);
         this.whitelistPatterns = [];
@@ -105,6 +106,7 @@ export class OPFSManager {
       let totalAccepted = 0;
       let writeSuccesses = 0;
       let writeFailures = 0;
+      const rejectedFiles = [];
 
       const unzipStream = new Unzip((file) => {
         // Guard: skip directory entries – they carry no data and cause
@@ -114,8 +116,8 @@ export class OPFSManager {
         totalSeen++;
         if (this.isWhitelisted(file.name)) {
           totalAccepted++;
+          console.log(`[WHITELIST ACCEPTED] ${file.name}`);
           const safeName = this.flattenPath(file.name);
-          // [OPFSManager] File accepted
           const p = this._saveFileEntry(safeName, file)
             .then(() => { writeSuccesses++; })
             .catch((err) => {
@@ -124,7 +126,8 @@ export class OPFSManager {
             });
           savedPromises.push(p);
         } else {
-          // console.debug(`[OPFSManager] Skipped (not in manifest): ${file.name}`);
+          console.log(`[WHITELIST REJECTED] ${file.name}`);
+          rejectedFiles.push(file.name);
         }
         // Files whose .start() is never called are automatically skipped by fflate
       });

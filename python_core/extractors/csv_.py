@@ -8,7 +8,7 @@ from python_core.errors import FileLevelError
 class CSVParser(BaseParser):
 
     @classmethod
-    def extract(cls, content: str, config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    def extract(cls, content: str, config: Optional[Dict] = None,  filepath: str = None) -> List[Dict[str, Any]]:
         config = config or {}
         if not content or not content.strip():
             raise FileLevelError("Empty CSV input")

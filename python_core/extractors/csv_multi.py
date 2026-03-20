@@ -1,6 +1,10 @@
+import pandas as pd
+import io
+import csv
+import re
+from typing import List, Dict, Any, Optional
 from .base import BaseParser
 from python_core.errors import FileLevelError
-import re
 
 
 
@@ -15,14 +19,43 @@ contains multiple sections separated by titles and newlines.
 class CSVMultiParser(BaseParser):
 
     @classmethod
-    def parse(cls, s: str, filename: str, cfg, default="", **kwargs):
-        """Placeholder: CSV multi-section parser not yet implemented"""
-        result = ParseResult()
-        result.add_error(FileLevelError(
-            "CSV multi-section parser not yet implemented", 
-            context={'filename': filename}
-        ))
-        return result
+    def extract(cls, content: str, config: Optional[Dict] = None,  filepath: str = None) -> List[Dict[str, Any]]:
+        config = config or {}
+        if not content or not content.strip():
+            raise FileLevelError("Empty CSV input")
+        try:
+            
+            if cls._is_concatenated(content, filepath):
+                
+                segments = re.split("\n\n\n", content)
+                header_records_map = {}
+                for segment in segments:
+                    lines = [line.strip() for line in segment.split("\n") if len(line.strip()) > 0]
+                    if len(lines) >= 2:
+                        header = lines[0]
+                        csvstring = "\n".join(lines[1:])
+                        df, bad_lines = cls.str_to_df(csvstring)[0]
+                        if df.empty:
+                            header_records_map[header] = []
+                            continue
+                        content = df.fillna('').to_dict(orient='records')
+                        header_records_map[header] = content
+                return header_records_map
+            
+            else: # if not concatenated, parse as a single CSV
+                print("[CSVMultiParser] No concatenated sections detected. Parsing as single CSV.")
+                df, bad_lines = cls.str_to_df(content)
+                if df.empty:
+                    return []
+                return df.to_dict(orient='records')
+                
+            # TODO deal with error handling
+        except FileLevelError:
+            raise
+        except Exception as e:
+            raise FileLevelError(f"CSV extraction failed: {e}", context={'error_type': type(e).__name__})
+
+
 
     @classmethod
     def _is_concatenated(cls, s: str, path: str):
@@ -31,10 +64,8 @@ class CSVMultiParser(BaseParser):
         match = pattern.search(s)
         if match:
             return True
-        if path is not None:
-            if "iCloudUsageData" in path:
+        if path is not None and isinstance(path, str):
+            if "iCloudUsageData" in path: # match did not pick up on file, but likely has concatenated contents
                 return True
-        return False
+        return False    
 
-        
-""" TODO: Implement multi-section CSV parsing """

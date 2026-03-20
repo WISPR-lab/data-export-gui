@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 class JSONLabelValuesParser(JSONParser):
 
     @classmethod
-    def extract(cls, content: str, config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    def extract(cls, content: str, config: Optional[Dict] = None,  filepath: str = None) -> List[Dict[str, Any]]:
         config = config or {}
         try:
             
