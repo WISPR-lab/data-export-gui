@@ -18,6 +18,7 @@ import builtins
 from db_session import DatabaseSession
 from user_merge.merge import merge_device_profiles
 from user_merge.unmerge import unmerge_device_profiles
+from device_grouping.computed_fields import merge_attrs, pick_most_specific
 
 
 @pytest.fixture
@@ -272,6 +273,79 @@ class TestMergeDeviceProfiles:
         assert result['status'] == 'ineligible'
         assert 'generic' in result['message'].lower()
 
+    def test_merge_generic_into_specific_preserves_specificity(self, db_with_profiles):
+        """Test that merging generic 'iPhone' into 'iPhone XR' preserves 'iPhone XR' as the model."""
+        db_path, profile_ids, atomic_ids = db_with_profiles
+        
+        json_cols = {'attributes', 'origins', 'tags', 'labels', 'atomic_devices_ids'}
+        
+        # Create a generic iPhone atomic (just "iPhone")
+        with DatabaseSession(db_path, use_dict_factory=True, json_columns=json_cols) as conn:
+            ts = datetime.now(timezone.utc).timestamp()
+            generic_atomic_id = str(uuid.uuid4())
+            
+            conn.execute(
+                '''INSERT INTO atomic_devices 
+                   (id, attributes, origins, upload_ids, file_ids, devices_raw_ids, specificity)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (generic_atomic_id, json.dumps({'device_manufacturer': 'Apple', 'device_model_name': 'iPhone'}),
+                 json.dumps([{'origin': 'test_file.json', 'upload_id': 'upload1'}]),
+                 json.dumps(['upload1']), json.dumps(['file1']), json.dumps(['raw_generic']), 1)
+            )
+            
+            # Create a specific iPhone XR atomic
+            iphone_xr_atomic_id = str(uuid.uuid4())
+            conn.execute(
+                '''INSERT INTO atomic_devices 
+                   (id, attributes, origins, upload_ids, file_ids, devices_raw_ids, specificity)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (iphone_xr_atomic_id, json.dumps({'device_manufacturer': 'Apple', 'device_model_name': 'iPhone XR'}),
+                 json.dumps([{'origin': 'test_file.json', 'upload_id': 'upload2'}]),
+                 json.dumps(['upload2']), json.dumps(['file2']), json.dumps(['raw_xr']), 2)
+            )
+            
+            # Create a generic profile with just the generic iPhone atomic
+            generic_profile_id = str(uuid.uuid4())
+            conn.execute(
+                '''INSERT INTO device_profiles 
+                   (id, atomic_devices_ids, attributes, specificity, model, manufacturer, origins, 
+                    system_soft_merge, is_generic, user_label, notes, tags, labels, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (generic_profile_id, json.dumps([generic_atomic_id]),
+                 json.dumps({'device_manufacturer': 'Apple', 'device_model_name': 'iPhone'}),
+                 1, 'iPhone', 'Apple', json.dumps([{'origin': 'test_file.json', 'upload_id': 'upload1'}]),
+                 0, 1, None, None, '[]', '[]', ts, ts)
+            )
+            
+            # Create a specific profile with the iPhone XR atomic
+            specific_profile_id = str(uuid.uuid4())
+            conn.execute(
+                '''INSERT INTO device_profiles 
+                   (id, atomic_devices_ids, attributes, specificity, model, manufacturer, origins, 
+                    system_soft_merge, is_generic, user_label, notes, tags, labels, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (specific_profile_id, json.dumps([iphone_xr_atomic_id]),
+                 json.dumps({'device_manufacturer': 'Apple', 'device_model_name': 'iPhone XR'}),
+                 2, 'iPhone XR', 'Apple', json.dumps([{'origin': 'test_file.json', 'upload_id': 'upload2'}]),
+                 0, 0, None, None, '[]', '[]', ts, ts)
+            )
+            conn.commit()
+        
+        # Merge generic iPhone into specific iPhone XR
+        result = merge_device_profiles(generic_profile_id, specific_profile_id)
+        
+        assert result['status'] == 'ok'
+        
+        # Verify the merged profile has "iPhone XR" as the model, not "iPhone"
+        with DatabaseSession(db_path, use_dict_factory=True, json_columns=json_cols) as conn:
+            merged = conn.execute('SELECT * FROM device_profiles WHERE id = ?', (specific_profile_id,)).fetchone()
+            assert merged is not None
+            assert merged['model'] == 'iPhone XR', f"Expected model to be 'iPhone XR', got '{merged['model']}'"
+            assert len(merged['atomic_devices_ids']) == 2
+            # Verify both atomics are present
+            assert generic_atomic_id in merged['atomic_devices_ids']
+            assert iphone_xr_atomic_id in merged['atomic_devices_ids']
+
 
 class TestUnmergeDeviceProfiles:
     
@@ -426,3 +500,80 @@ class TestMergeUnmergeIntegration:
                 (unmerge_result['new_profile_id'],)
             ).fetchone()
             assert new_profile['atomic_devices_ids'] == [src_atomic]
+
+
+class TestMergeAttrsWithMixedTypes:
+    """Test merge_attrs and pick_most_specific with various data types."""
+    
+    def test_pick_most_specific_strings_only(self):
+        """Test pick_most_specific with only string values."""
+        result = pick_most_specific(['iPhone', 'iPhone XR', 'iPhone'])
+        assert result == 'iPhone XR', "Should pick the most specific (with variant)"
+    
+    def test_pick_most_specific_with_generic(self):
+        """Test pick_most_specific filters out generic names."""
+        result = pick_most_specific(['iPhone', 'iPhone 13', 'phone'])
+        assert result == 'iPhone 13', "Should pick the specific model over generic"
+    
+    def test_pick_most_specific_empty_strings(self):
+        """Test pick_most_specific with empty strings."""
+        result = pick_most_specific(['', 'iPhone XR', ''])
+        assert result == 'iPhone XR', "Should ignore empty strings"
+    
+    def test_pick_most_specific_non_strings(self):
+        """Test pick_most_specific with non-string values filters them out."""
+        result = pick_most_specific([123, 456, 'iPhone XR'])
+        assert result == 'iPhone XR', "Should ignore non-string values"
+    
+    def test_pick_most_specific_all_non_strings(self):
+        """Test pick_most_specific with only non-string values returns empty string."""
+        result = pick_most_specific([123, 456, True])
+        assert result == '', "Should return empty string when no strings found"
+    
+    def test_merge_attrs_with_strings(self):
+        """Test merge_attrs with string values only."""
+        attrs_list = [
+            {'model': 'iPhone', 'manufacturer': 'Apple'},
+            {'model': 'iPhone XR', 'manufacturer': 'Apple'}
+        ]
+        result = merge_attrs(attrs_list, mode='soft')
+        assert result['model'] == 'iPhone XR', "Should pick most specific model"
+        assert result['manufacturer'] == 'Apple', "Should keep common values"
+    
+    def test_merge_attrs_with_mixed_types(self):
+        """Test merge_attrs with mixed string and integer types."""
+        attrs_list = [
+            {'model': 'iPhone', 'api_level': 14, 'os_version': '14.5'},
+            {'model': 'iPhone XR', 'api_level': 15, 'os_version': '15.0'}
+        ]
+        result = merge_attrs(attrs_list, mode='soft')
+        # Strings should use pick_most_specific
+        assert result['model'] == 'iPhone XR', "Should pick most specific model"
+        assert result['os_version'] == '14.5', "Should use first non-empty string value for mixed types"
+        # Integers should use first-non-empty
+        assert result['api_level'] == 14, "Should use first non-empty value for integers"
+    
+    def test_merge_attrs_with_integers_only(self):
+        """Test merge_attrs with integer values only."""
+        attrs_list = [
+            {'api_level': 14, 'build_number': 1},
+            {'api_level': 15, 'build_number': 2}
+        ]
+        result = merge_attrs(attrs_list, mode='soft')
+        # Non-string types should use first-non-empty logic
+        assert result['api_level'] == 14, "Should use first non-empty value for integers"
+        assert result['build_number'] == 1, "Should use first non-empty value for integers"
+    
+    def test_merge_attrs_sparse_fields(self):
+        """Test merge_attrs when fields are missing in some dicts."""
+        attrs_list = [
+            {'model': 'iPhone', 'manufacturer': 'Apple'},
+            {'model': None, 'os': 'iOS'},  # model is None/empty
+            {'model': 'iPhone 13', 'manufacturer': None}
+        ]
+        result = merge_attrs(attrs_list, mode='soft')
+        # Should skip None/falsy values and pick the best non-empty one
+        assert result['model'] == 'iPhone 13', "Should skip None and pick specific model"
+        assert result['manufacturer'] == 'Apple', "Should use first non-empty value"
+        assert result['os'] == 'iOS', "Should preserve unique fields"
+

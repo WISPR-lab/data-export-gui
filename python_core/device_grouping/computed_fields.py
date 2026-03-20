@@ -20,12 +20,20 @@ def is_generic_name(name: str) -> bool:
     return not name or name.strip().lower() in GENERIC
 
 
-def pick_most_specific(values: list[str]) -> str:
-    """Pick the most specific/descriptive value from a list"""
-    values = [v.strip() for v in values if v and v.strip()]
-    if not values:
+def pick_most_specific(values: list) -> str:
+    """Pick the most specific/descriptive value from a list of values.
+    Only works with string values. Non-strings are filtered out.
+    Returns first non-empty string or empty string if none found."""
+    string_values = []
+    for v in values:
+        if isinstance(v, str):
+            v = v.strip()
+            if v:
+                string_values.append(v)
+    
+    if not string_values:
         return ''
-    return max(values, key=lambda x: (not is_generic_name(x), has_version_or_variant(x)))
+    return max(string_values, key=lambda x: (not is_generic_name(x), has_version_or_variant(x)))
 
 
 def best_model_attr(attrs: dict) -> str:
@@ -87,16 +95,28 @@ def merge_attrs(attrs_list: list[dict], mode: str = 'soft') -> dict:
     if not attrs_list:
         return {}
     
-    attrs_new = attrs_list[0].copy()
-    for attrs in attrs_list[1:]:
-        for k in set(attrs_new) | set(attrs):
-            v_a, v_b = attrs_new.get(k), attrs.get(k)
-            
-            if mode == 'hard' and IS_HARD_KEY(k):
-                attrs_new[k] = get_unredacted_val(v_a, v_b)[0] or v_a or v_b
+    if len(attrs_list) == 1:
+        return attrs_list[0].copy()
+    
+    # Collect all unique keys and their values
+    all_keys = set()
+    for attrs in attrs_list:
+        all_keys.update(attrs.keys())
+    
+    attrs_new = {}
+    for k in all_keys:
+        values = [attrs.get(k) for attrs in attrs_list if k in attrs and attrs.get(k)]
+        
+        if not values:
+            attrs_new[k] = ''
+        elif mode == 'hard' and IS_HARD_KEY(k):
+            attrs_new[k] = get_unredacted_val(values[0], values[1] if len(values) > 1 else None)[0] or values[0]
+        else:
+            if all(isinstance(v, str) for v in values):
+                attrs_new[k] = pick_most_specific(values)
             else:
-                attrs_new[k] = v_a if (v_a and v_a != '') else v_b
-                # TODO BETTER CONDITIONS
+                attrs_new[k] = next((v for v in values if v), '')
+    
     return attrs_new
 
 
