@@ -5,6 +5,7 @@ from db_session import DatabaseSession
 from device_grouping.hard_merge import hard_merge_single_upload, hard_merge_multi_upload, format_rows as format_hard_rows
 from device_grouping.soft_merge import soft_merge_single_upload, soft_merge_multi_upload, format_rows as format_soft_rows
 from device_grouping.computed_fields import compute_device_profile_fields
+from device_grouping.event_assoc import associate_events_to_devices
 
 
 def _get_config_value(name):
@@ -82,6 +83,32 @@ def group(upload_id: str, db_path: str = None) -> None:
             device_group_rows
         )
         print(f"[DeviceGrouping] Pass 2: upserted {len(device_group_rows)} device_profiles")
+
+
+        # ------------------------------------------------------------------ #
+        # PASS 3: associate events to atomic devices                         #
+        # ------------------------------------------------------------------ #
+
+        events_rows = conn.execute(
+            'SELECT id, upload_id, attributes FROM events WHERE upload_id = ?',
+            (upload_id,)
+        ).fetchall()
+
+        if events_rows and atomic_devices_rows:
+            associations = associate_events_to_devices(events_rows, atomic_devices_rows)
+            
+            if associations:
+                conn.executemany(
+                    """INSERT OR REPLACE INTO events_assoc
+                       (event_id, atomic_device_id, match_reason, event_specificity)
+                       VALUES (:event_id, :atomic_device_id, :match_reason, :event_specificity)""",
+                    associations
+                )
+                print(f"[DeviceGrouping] Pass 3: created {len(associations)} event associations")
+            else:
+                print(f"[DeviceGrouping] Pass 3: no events matched to devices")
+        else:
+            print(f"[DeviceGrouping] Pass 3: skipped (no events or no devices)")
 
         conn.commit()
         print(f"[DeviceGrouping] Done for upload_id={upload_id}")

@@ -133,6 +133,18 @@ CREATE TABLE IF NOT EXISTS device_profile_comments (
 
 
 
+CREATE TABLE IF NOT EXISTS events_assoc (
+    event_id TEXT,
+    atomic_device_id TEXT,
+    event_specificity INTEGER,  -- 1=generic, 2=model+version, 3=hard_id
+    match_reason TEXT, 
+    PRIMARY KEY (event_id, atomic_device_id),
+    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY(atomic_device_id) REFERENCES atomic_devices(id) ON DELETE CASCADE
+);
+
+
+
 
 
 
@@ -197,3 +209,15 @@ JOIN json_each(dg.atomic_devices_ids) as j ON 1=1
 JOIN atomic_devices ad ON ad.id = j.value
 JOIN json_each(ad.origins) as j2 ON 1=1
 GROUP BY dg.id;
+
+
+DROP VIEW IF EXISTS v_events2profile;
+CREATE VIEW v_events2profile AS
+SELECT 
+    ea.event_id,
+    dp.id AS device_profile_id,
+    ea.match_reason,
+    ea.event_specificity
+FROM events_assoc ea
+JOIN device_profiles dp ON 1=1
+JOIN json_each(dp.atomic_devices_ids) as j ON j.value = ea.atomic_device_id;
