@@ -29,10 +29,12 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.id, e.upload_id, e.timestamp, e.message, e.attributes, e.tags, e.labels,
       e.event_category, e.event_type, e.event_action, e.event_kind,
       f.opfs_filename as source_file, 
-      u.given_name as timeline_name, u.platform
+      u.given_name as timeline_name, u.platform,
+      COALESCE(ei.device_profiles_data, '[]') as device_profiles_data
     FROM events e
     LEFT JOIN uploaded_files f ON json_extract(e.file_ids, '$[0]') = f.id
     LEFT JOIN uploads u ON e.upload_id = u.id
+    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
     ${whereClause}
     ${orderClause}
     ${paginationClause}
@@ -52,7 +54,7 @@ export async function searchEvents(queryString = '', filter = {}) {
     
     const objects = rows.map(row => _formatEventObject(row));
     
-    console.log(`[Search] "${queryString}" → ${totalCount} results`);
+    console.log(`[Search] "${queryString}" --> ${totalCount} results`);
     return {
       objects,
       meta: {
@@ -189,6 +191,7 @@ function _formatEventObject(row) {
   let labels = [];
   let eventCategory = [];
   let eventType = [];
+  let deviceProfilesData = [];
   
   try {
     attributes = row.attributes ? JSON.parse(row.attributes) : {};
@@ -220,6 +223,12 @@ function _formatEventObject(row) {
     console.warn('Failed to parse event_type:', e);
   }
   
+  try {
+    deviceProfilesData = row.device_profiles_data ? JSON.parse(row.device_profiles_data) : [];
+  } catch (e) {
+    console.warn('Failed to parse device_profiles_data:', e);
+  }
+  
   const source = {
     ...attributes,
     primary_timestamp: row.timestamp,
@@ -235,6 +244,7 @@ function _formatEventObject(row) {
     timeline_id: row.upload_id,
     platform: row.platform,
     filename: row.source_file,
+    device_profiles_data: deviceProfilesData,
   };
   
   return {

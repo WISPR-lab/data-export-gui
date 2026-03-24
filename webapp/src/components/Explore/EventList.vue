@@ -495,10 +495,37 @@ limitations under the License.
 
           <template v-slot:item.source_file="{ item }">
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-if="item._source.filename">
-              <span class="timeline-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">{{
-                item._source.filename
-              }}</span>
+              <span class="timeline-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">
+                {{ item._source.filename }}
+              </span>
             </v-chip>
+          </template>
+
+          <!-- Old device chip (replaced with origin chip pattern)
+          <template v-slot:item._source.device_profiles_data="{ item }">
+            <v-chip 
+              v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0"
+              :style="getTimeBubbleColor()"
+              class="pr-1 timeline-chip"
+            >
+              <div class="chip-content">
+                <span class="timeline-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
+              </div>
+            </v-chip>
+            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 timeline-chip">
+              <div class="chip-content">
+                <span class="timeline-name-ellipsis"></span>
+              </div>
+            </v-chip>
+          </template>
+          -->
+
+          <template v-slot:item._source.device_profiles_data="{ item }">
+            <div v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0">
+              <v-chip :style="getTimeBubbleColor()">
+                {{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}
+              </v-chip>
+            </div>
           </template>
 
           <!-- Comment field -->
@@ -757,6 +784,14 @@ export default {
       // Extend the column headers from position 3 (after the actions column)
       baseHeaders.splice(3, 0, ...extraHeaders)
 
+      // Add Device column first
+      baseHeaders.push({
+        value: '_source.device_profiles_data',
+        text: 'Device',
+        align: 'center',
+        width: '200',
+        sortable: false,
+      })
       // Add timeline name based on configuration
       if (this.displayOptions.showTimelineName) {
         baseHeaders.push({
@@ -917,6 +952,13 @@ export default {
       return {
         'background-color': backgroundColor,
       }
+    },
+    getDeviceProfileLabel(profile) {
+      if (!profile) return ''
+      if (profile.user_label && profile.user_label.trim()) {
+        return `${profile.user_label} (${profile.model})`
+      }
+      return profile.model || ''
     },
     getAllIndices: function () {
       // Browser model: return timeline IDs directly
@@ -1243,7 +1285,9 @@ export default {
 }
 </script>
 
+
 <style lang="scss">
+
 .ts-event-field-container {
   position: relative;
   max-width: 100%;

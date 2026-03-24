@@ -221,3 +221,20 @@ SELECT
 FROM events_assoc ea
 JOIN device_profiles dp ON 1=1
 JOIN json_each(dp.atomic_devices_ids) as j ON j.value = ea.atomic_device_id;
+
+
+DROP VIEW IF EXISTS v_events2profile_indexed;
+CREATE VIEW v_events2profile_indexed AS
+SELECT 
+    ea.event_id,
+    json_group_array(
+        json_object(
+            'id', dp.id,
+            'model', COALESCE(dp.model, ''),
+            'user_label', COALESCE(dp.user_label, '')
+        )
+    ) AS device_profiles_data
+FROM events_assoc ea
+JOIN device_profiles dp ON 1=1
+JOIN json_each(dp.atomic_devices_ids) as j ON j.value = ea.atomic_device_id
+GROUP BY ea.event_id;
