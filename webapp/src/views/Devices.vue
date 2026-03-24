@@ -123,18 +123,11 @@ export default {
       }
     },
     getSoftware(device) {
-      if (!device.attributes) return null;
-      const osName = device.attributes['device_os_name'] || device.attributes['user_agent_os_name'];
-      const osVersion = device.attributes['device_os_version'] || device.attributes['user_agent_os_version'];
-      
-      if (osName && osVersion) {
-        return `${osName} ${osVersion}`;
-      } else if (osName) {
-        return osName;
-      } else if (osVersion) {
-        return osVersion;
-      }
-      return null;
+      if (!device.os_name && !device.os_version) return null;
+      const parts = [];
+      if (device.os_name) parts.push(String(device.os_name));
+      if (device.os_version) parts.push(String(device.os_version));
+      return parts.length ? parts.join(' ') : null;
     },
     async saveDeviceChanges(device) {
       try {

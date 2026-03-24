@@ -195,7 +195,7 @@ limitations under the License.
                       <v-data-table
                         v-model="selectedFields"
                         :headers="columnHeaders"
-                        :items="meta.mappings"
+                        :items="availableColumns"
                         :search="searchColumns"
                         :hide-default-footer="true"
                         item-key="field"
@@ -390,7 +390,7 @@ limitations under the License.
             <td :colspan="headers.length">
               <!-- Details -->
               <v-container v-if="item.showDetails" fluid class="mt-4">
-                <ts-event-detail :event="item"></ts-event-detail>
+                <ts-event-detail :event="item" :availableColumns="availableColumns"></ts-event-detail>
               </v-container>
 
               <!-- Time bubble -->
@@ -791,6 +791,11 @@ export default {
     },
     filterChips: function () {
       return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term'))
+    },
+    availableColumns() {
+      if (!this.meta || !this.meta.mappings) return [];
+      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'timeline_id'];
+      return this.meta.mappings.filter(m => !excluded.includes(m.field));
     },
   },
   methods: {

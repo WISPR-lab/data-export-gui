@@ -17,6 +17,7 @@ def _normalize(rows, platform, ua_parser):
                 attrs.update(ua_parser.parse(attrs))
                 origin = determine_origin(platform, attrs)
             attrs = normalize_geo_fields(attrs)
+            attrs = normalize_device_fields(attrs)
             
             updates.append({
                 'id': row['id'],
