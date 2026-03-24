@@ -775,6 +775,7 @@ export default {
         }
         if (field.field === 'message') {
           header.width = '100%'
+          // header.text = 'Event Type'
           extraHeaders.unshift(header)
         } else {
           extraHeaders.push(header)

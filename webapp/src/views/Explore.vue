@@ -67,17 +67,6 @@ limitations under the License.
             @setQueryAndFilter="setQueryAndFilter"
           >
           </ts-search-dropdown> -->
-          <ts-search-dropdown
-            v-click-outside="onClickOutside"
-            :selected-labels="selectedLabels"
-            :query-string="currentQueryString"
-            @addChip="addChip"
-            @updateLabelChips="updateLabelChips()"
-            @close-on-click="showSearchDropdown = false"
-            @node-click="jumpInHistory"
-            @setQueryAndFilter="setQueryAndFilter"
-          >
-          </ts-search-dropdown>
         </v-menu>
       </v-card>
 
@@ -315,7 +304,7 @@ import { dragscroll } from 'vue-dragscroll'
 
 import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
 import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
-import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
+// import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
 import TsTimelinePicker from '../components/Explore/TimelinePicker.vue'
 import TsFilterMenu from '../components/Explore/FilterMenu.vue'
 import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButton.vue'
@@ -343,7 +332,7 @@ export default {
   components: {
     TsSearchHistoryTree,
     TsSearchHistoryButtons,
-    TsSearchDropdown,
+    // TsSearchDropdown,
     TsTimelinePicker,
     TsFilterMenu,
     TsUploadTimelineFormButton,

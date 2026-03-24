@@ -19,12 +19,12 @@ limitations under the License.
 <template>
   <div>
     <v-data-iterator
-      :items="eventActions"
+      :items="eventMessages"
       :items-per-page.sync="itemsPerPage"
       :search="search"
-      :hide-default-footer="eventActions.length <= itemsPerPage"
+      :hide-default-footer="eventMessages.length <= itemsPerPage"
     >
-      <template v-slot:header v-if="eventActions.length > itemsPerPage">
+      <template v-slot:header v-if="eventMessages.length > itemsPerPage">
         <v-toolbar flat>
           <v-text-field
             v-model="search"
@@ -46,15 +46,15 @@ limitations under the License.
           style="cursor: pointer; font-size: 0.9em"
         > -->
         <div
-          v-for="action in props.items"
-          :key="action.action"
-          @click="setQueryAndFilter(action.action)"
+          v-for="msg in props.items"
+          :key="msg.message"
+          @click="setQueryAndFilter(msg.message)"
           style="cursor: pointer; font-size: 0.9em"
         >
           <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
             <span
-              >{{ action.action }} (<small
-                ><strong>{{ action.count | compactNumber }}</strong></small
+              >{{ msg.message }} (<small
+                ><strong>{{ msg.count | compactNumber }}</strong></small
               >)</span
             >
           </v-row>
@@ -74,27 +74,34 @@ export default {
     return {
       itemsPerPage: 10,
       search: '',
-      actions: [],
+      // actions: [],
+      messages: [],
     }
   },
   async mounted() {
     try {
-      this.actions = await DB.getEventActions()
+      // this.actions = await DB.getEventActions()
+      this.messages = await DB.getEventMessages()
     } catch (e) {
       console.error('Error loading event actions:', e)
-      this.actions = []
+      // this.actions = []
+      this.messages = []
     }
   },
   computed: {
-    eventActions() {
-      return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
+    // eventActions() {
+    //   return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
+    // },
+    eventMessages() {
+      return [...this.messages].sort((a, b) => a.message.localeCompare(b.message))
     },
   },
   methods: {
     setQueryAndFilter(action) {
       let eventData = {}
       eventData.doSearch = true
-      eventData.queryString = 'event_action:' + '"' + action + '"'
+      // eventData.queryString = 'event_action:' + '"' + action + '"'
+      eventData.queryString = 'message:' + '"' + action + '"'
       EventBus.$emit('setQueryAndFilter', eventData)
     },
   },

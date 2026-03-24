@@ -115,6 +115,31 @@ export async function getEventActions() {
   }));
 }
 
+
+export async function getEventMessages() {
+  const db = await getDB();
+  const sql = `
+    SELECT message, COUNT(*) as count 
+    FROM events 
+    WHERE message IS NOT NULL AND message != ''
+    GROUP BY message 
+    ORDER BY count DESC
+  `;
+  
+  const rows = await db.exec(sql, {
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  if (rows.length === 0) {
+      console.warn('[getEventMessages] No event messages found in the database.');
+  }
+
+  return rows.map(row => ({
+    message: row.message,
+    count: row.count
+  }));
+}
+
 export async function getEventTags() {
   const db = await getDB();
   // Get all events with tags, parse the JSON, and aggregate

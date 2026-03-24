@@ -161,6 +161,7 @@ export default {
   getEventCount: events.getEventCount,
   // Note: Frontend uses getEventActions (event_action field), not getCategories (event_category field)
   getEventActions: events.getEventActions,
+  getEventMessages: events.getEventMessages,
   getEventTags: events.getEventTags,
   deleteEvents: events.deleteEvents,
   addLabelEvent: events.addLabelEvent,

@@ -12,10 +12,9 @@ def _normalize(rows, platform, ua_parser):
     updates = []
     for row in rows:
             attrs = row['attributes'] or {}
-            origin = ''
             if (attrs.get('user_agent_original') or attrs.get('user_agent_os_full')):
                 attrs.update(ua_parser.parse(attrs))
-                origin = determine_origin(platform, attrs)
+            origin = determine_origin(platform, attrs)    
             attrs = normalize_geo_fields(attrs)
             attrs = normalize_device_fields(attrs)
             

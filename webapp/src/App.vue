@@ -56,6 +56,44 @@ export default {
       }
       this.$store.dispatch('setSnackBar', snackbar)
     },
+    _initShutdownDetection() {
+      const shutdownChannel = new BroadcastChannel('shutdown-detection')
+      
+      if (!sessionStorage.getItem('isRefresh')) {
+        let responseReceived = false   // ping other tabs to see if any are running
+        const timeout = setTimeout(async () => {
+          if (!responseReceived) {
+            try {
+              console.log('[Shutdown] No other tabs detected. Clearing OPFS and localStorage...')
+              localStorage.clear()
+              const opfsManager = new OPFSManager()
+              await opfsManager.nukeAll()
+              this.$store.commit('RESET_STATE')
+
+              console.log('[Shutdown] Cleanup complete')
+            } catch (e) {
+              console.error('[Shutdown] Error during cleanup:', e)
+            }
+          }
+        }, 500)
+        
+        shutdownChannel.postMessage('ping')
+        shutdownChannel.onmessage = (event) => {
+          if (event.data === 'ping-response') {
+            responseReceived = true
+            clearTimeout(timeout)
+          }
+        }
+      } else {
+        shutdownChannel.onmessage = (event) => { //  respond to pings from new tabs
+          if (event.data === 'ping') {
+            shutdownChannel.postMessage('ping-response')
+          }
+        }
+      }
+      
+      sessionStorage.setItem('isRefresh', 'true')
+    },
   },
   mounted() {
     // Listen on errors from REST API calls
@@ -73,45 +111,6 @@ export default {
     element.dataset.theme = this.$vuetify.theme.dark ? 'dark' : 'light'
 
     this._initShutdownDetection()
-  },
-
-  _initShutdownDetection() {
-    const shutdownChannel = new BroadcastChannel('shutdown-detection')
-    
-    if (!sessionStorage.getItem('isRefresh')) {
-      let responseReceived = false   // ping other tabs to see if any are running
-      const timeout = setTimeout(async () => {
-        if (!responseReceived) {
-          try {
-            console.log('[Shutdown] No other tabs detected. Clearing OPFS and localStorage...')
-            localStorage.clear()
-            const opfsManager = new OPFSManager()
-            await opfsManager.nukeAll()
-            this.$store.commit('RESET_STATE')
-            await this.refreshOPFS();
-            console.log('[Shutdown] Cleanup complete')
-          } catch (e) {
-            console.error('[Shutdown] Error during cleanup:', e)
-          }
-        }
-      }, 500)
-      
-      shutdownChannel.postMessage('ping')
-      shutdownChannel.onmessage = (event) => {
-        if (event.data === 'ping-response') {
-          responseReceived = true
-          clearTimeout(timeout)
-        }
-      }
-    } else {
-      shutdownChannel.onmessage = (event) => { //  respond to pings from new tabs
-        if (event.data === 'ping') {
-          shutdownChannel.postMessage('ping-response')
-        }
-      }
-    }
-    
-    sessionStorage.setItem('isRefresh', 'true')
   },
   beforeDestroy() {
     EventBus.$off('errorSnackBar')
