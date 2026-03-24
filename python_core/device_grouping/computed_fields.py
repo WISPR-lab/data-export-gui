@@ -1,9 +1,21 @@
 from utils.redaction_utils import get_unredacted_val
 from utils.device_lookup import VARIANT_SUFFIXES
-from device_grouping.shared_utils import IS_HARD_KEY
+from device_grouping.shared_utils import IS_HARD_KEY, flatten
 
 GENERIC = {'other', 'unknown', 'phone', 'smartphone', 'tablet', 'android', 'iphone', 'ipad', ''}
 MFR_DO_NOT_MERGE_GENERIC = {'apple'}
+
+
+SINGLETON_KEYS = (
+    'device_model_name', 
+    'user_agent_device_model', 
+    'device_manufacturer', 
+    'user_agent_device_manufacturer', 
+    'device_model_identifier',
+    'user_agent_os_type',
+    'user_agent_os_name',
+    'user_agent_device_type',
+)
 
 
 # ------------- HELPER FUNCTIONS -------------
@@ -22,6 +34,7 @@ def is_generic_name(name: str) -> bool:
 
 def pick_most_specific(values: list) -> str:
     # return most specific/descriptive value from a list of values. totally heuristic
+
     string_values = []
     for v in values:
         if isinstance(v, str):
@@ -35,16 +48,23 @@ def pick_most_specific(values: list) -> str:
 
 
 def best_model_attr(attrs: dict) -> str:
-    return pick_most_specific([
-        attrs.get('device_model_name', ''),
-        attrs.get('user_agent_device_model', '')
-    ])
+    values = []
+    for key in ['device_model_name', 'user_agent_device_model']:
+        val = attrs.get(key, '')
+        if isinstance(val, list):
+            val = pick_most_specific(list(flatten(val)))
+        if val:
+            values.append(val)
+    return pick_most_specific(values)
 
 
 def get_mfr(attrs: dict, lower=True) -> str:
     # extract manufacturer from device or UA fields, return first non-empty field (lowercased)
     for key in ['device_manufacturer', 'user_agent_device_manufacturer']:
-        val = attrs.get(key, '').strip()
+        val = attrs.get(key, '')
+        if isinstance(val, list):
+            val = pick_most_specific(list(flatten(val)))
+        val = val.strip() if isinstance(val, str) else str(val) if val else ''
         if lower:
             val = val.lower()
         if val:
@@ -65,10 +85,7 @@ def specificity(attrs: dict) -> int:
     if any(IS_HARD_KEY(k) and attrs[k] for k in attrs):
         return 3
     
-    model = pick_most_specific([
-        attrs.get('device_model_name', ''),
-        attrs.get('user_agent_device_model', '')
-    ])
+    model = best_model_attr(attrs)
     if model and not is_generic_name(model) and has_version_or_variant(model):
         return 2
     
@@ -104,16 +121,19 @@ def merge_attrs(attrs_list: list[dict], mode: str = 'soft') -> dict:
     attrs_new = {}
     for k in all_keys:
         values = [attrs.get(k) for attrs in attrs_list if k in attrs and attrs.get(k)]
+        values = flatten(values)
+        values = list(set([v for v in values if v is not None and v != ''])) 
         
         if not values:
             attrs_new[k] = ''
+        elif len(values) == 1:
+            attrs_new[k] = values[0]    
         elif mode == 'hard' and IS_HARD_KEY(k):
-            attrs_new[k] = get_unredacted_val(values[0], values[1] if len(values) > 1 else None)[0] or values[0]
+            attrs_new[k] = get_unredacted_val(values)[0] or values[0]
+        elif k in SINGLETON_KEYS:
+            attrs_new[k] = pick_most_specific(values)
         else:
-            if all(isinstance(v, str) for v in values):
-                attrs_new[k] = pick_most_specific(values)
-            else:
-                attrs_new[k] = next((v for v in values if v), '')
+            attrs_new[k] = values
     
     return attrs_new
 

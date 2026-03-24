@@ -41,7 +41,7 @@ class UserAgentParser:
         if dd.client_application_id():
             attrs['user_agent_client_application_id'] = dd.client_application_id()
         if dd.secondary_client_name():
-            attrs['user_agent_secondary.name'] = dd.secondary_client_name()
+            attrs['user_agent_secondary_name'] = dd.secondary_client_name()
         if dd.secondary_client_version():
             attrs['user_agent_secondary_version'] = dd.secondary_client_version()
         if dd.secondary_client_type():
