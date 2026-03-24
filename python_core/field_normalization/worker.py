@@ -79,6 +79,8 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
 
         # ----- events normalization -------
 
+
+        print(f"[FieldNormalizeWorker] Normalizing events for upload_id={upload_id}")
         rows = conn.execute(
             """
             SELECT id, attributes

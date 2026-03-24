@@ -21,9 +21,7 @@ def is_generic_name(name: str) -> bool:
 
 
 def pick_most_specific(values: list) -> str:
-    """Pick the most specific/descriptive value from a list of values.
-    Only works with string values. Non-strings are filtered out.
-    Returns first non-empty string or empty string if none found."""
+    # return most specific/descriptive value from a list of values. totally heuristic
     string_values = []
     for v in values:
         if isinstance(v, str):

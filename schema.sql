@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS events ( -- filled during semantic map
     --
     message TEXT,
     attributes JSONTEXT,    --
+    origin TEXT,  -- e.g., "facebook/web", "facebook/mobile_app", "apple/system", "unknown"
     tags JSONTEXT DEFAULT "[]",
     labels JSONTEXT DEFAULT "[]",
     --
