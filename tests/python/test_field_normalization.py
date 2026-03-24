@@ -41,7 +41,7 @@ class TestFieldNormalization:
                 if attrs.get('user_agent_original') or attrs.get('user_agent_os_full'):
                     rows_with_ua += 1
                     # Verify specific fields were parsed
-                    if ('user_agent_os.name' in attrs or 'user_agent_os_type' in attrs or 
+                    if ('user_agent_os_name' in attrs or 'user_agent_os_type' in attrs or 
                         'user_agent_device_model' in attrs or 'user_agent_name' in attrs):
                         rows_with_parsed += 1
             
@@ -158,8 +158,8 @@ class TestFieldNormalization:
             device_models = set()
             for row in rows:
                 attrs = json.loads(row['attributes'])
-                if attrs.get('user_agent_os.name'):
-                    os_names.add(attrs['user_agent_os.name'])
+                if attrs.get('user_agent_os_name'):
+                    os_names.add(attrs['user_agent_os_name'])
                 if attrs.get('user_agent_os_type'):
                     os_types.add(attrs['user_agent_os_type'])
                 if attrs.get('user_agent_device_model'):
@@ -224,8 +224,8 @@ class TestFieldNormalization:
             for i, row in enumerate(rows):
                 attrs = json.loads(row['attributes'])
                 assert 'user_agent_os_type' in attrs, f"Row {i} should have os_type"
-                assert 'user_agent_os.name' in attrs, f"Row {i} should have os.name"
-                os_names.add(attrs['user_agent_os.name'])
+                assert 'user_agent_os_name' in attrs, f"Row {i} should have os_name"
+                os_names.add(attrs['user_agent_os_name'])
             
             # Verify we got all three OS types from partial strings
             assert os_names == {'iOS', 'Android'} or 'iOS' in os_names and 'Android' in os_names, \

@@ -25,7 +25,7 @@
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-detail-dropdown :device="dev" :software="getSoftware(dev)" @change="saveDeviceChanges(dev)" />
+          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -58,7 +58,7 @@
           </v-expansion-panel-header>
 
           <v-expansion-panel-content class="grey lighten-5 border-top">
-            <device-detail-dropdown :device="item" :software="getSoftware(item)" is-generic @change="saveDeviceChanges(item)" />
+            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" />
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>

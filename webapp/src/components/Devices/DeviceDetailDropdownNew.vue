@@ -20,11 +20,11 @@
     <!-- 2. Device Attributes Grid -->
     <div v-if="filteredAttributes.length > 0" class="mb-6">
       <div class="overline mb-3">Device details</div>
-      <v-simple-table dense class="grey lighten-5">
+      <v-simple-table dense>
         <template v-slot:default>
           <tbody>
             <tr v-for="(value, key) in deviceAttributesObject" :key="key">
-              <td style="font-weight: 500; min-width: 280px;">{{ key }}</td>
+              <td style="font-weight: 500; max-width: 200px;">{{ key }}</td>
               <td style="word-break: break-word;">{{ formatAttributeValue(value) }}</td>
             </tr>
           </tbody>
@@ -61,7 +61,7 @@
 
 <script>
 export default {
-  name: 'DeviceDetailDropdown',
+  name: 'DeviceDetailDropdownNew',
   props: {
     device: {
       type: Object,
@@ -78,18 +78,10 @@ export default {
       if (!this.device.attributes) return {}
       
       try {
-        let attrs = {}
-        const parsed = typeof this.device.attributes === 'string'
-          ? JSON.parse(this.device.attributes)
-          : this.device.attributes
-        
-        // Filter out null/undefined/empty string values
-        for (const [key, value] of Object.entries(parsed)) {
-          if (value !== null && value !== undefined && value !== '') {
-            attrs[key] = value
-          }
+        if (typeof this.device.attributes === 'string') {
+          return JSON.parse(this.device.attributes)
         }
-        return attrs
+        return this.device.attributes
       } catch (e) {
         console.warn('Failed to parse device attributes:', e)
         return {}
@@ -113,3 +105,6 @@ export default {
 }
 </script>
 
+<style scoped>
+/* Optional styling */
+</style>
