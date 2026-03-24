@@ -39,7 +39,7 @@
         >
           <span v-if="node.kind === 'directory'">{{ node.name }}/</span>
           <span v-else style="color: #1a73e8; text-decoration: underline;">
-            📄 {{ node.name }} <span style="color: #888; font-size: 11px;">({{ node.size }})</span>
+            {{ node.name }} <span style="color: #888; font-size: 11px;">({{ node.size }})</span>
           </span>
         </div>
       </div>
@@ -116,8 +116,8 @@
 import { getDB, closeDB } from '@/database/index.js';
 import { OPFSManager } from '@/storage/opfs_manager.js';
 
-var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'devices_raw', 'atomic_devices', 'device_profiles', 'event_comments'];
-var DB_VIEWS = ['v_device_profiles'];
+var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'devices_raw', 'atomic_devices', 'device_profiles', 'event_assoc'];
+var DB_VIEWS = ['v_device_profiles', 'v_events2profile'];
 
 var SECTIONS = [
   { path: 'opfs', label: 'OPFS' }
@@ -226,6 +226,7 @@ export default {
         this.opfsStatus = 'nuking OPFS...';
         const opfsManager = new OPFSManager();
         await opfsManager.nukeAll();
+        localStorage.clear();
         
         this.opfsStatus = 'Nuked.';
         await this.refreshOPFS();

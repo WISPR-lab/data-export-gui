@@ -38,6 +38,7 @@ export default {
         terminatePyodideWorker();
         const opfsManager = new OPFSManager();
         await opfsManager.nukeAll();
+        localStorage.clear();
         console.log('[SafeExit] Storage cleared')
         
         this.$store.commit('RESET_STATE')
