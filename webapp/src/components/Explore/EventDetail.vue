@@ -190,7 +190,7 @@ export default {
     TsComments,
     TsUnfurlDialog,
   },
-  props: ['event'],
+  props: ['event', 'availableColumns'],
   data() {
     return {
       aggregatorDialog: false,
@@ -232,10 +232,9 @@ export default {
       return this.$store.state.currentSearchNode
     },
     fullEventFiltered() {
-      // Use _source instead of this.fullEvent/this.event
       const source = this.event._source || {}
       
-      const filters = [
+      const internalFilters = [
         'label',
         '__ts_star', 
         '__ts_comment',
@@ -245,9 +244,15 @@ export default {
         'tag'
       ]
       
-      // Filter out internal fields
+      const availableFieldNames = this.availableColumns ? this.availableColumns.map(col => col.field) : null
+      
       return Object.keys(source)
-        .filter(key => !filters.includes(key) && !key.startsWith('__ts'))
+        .filter(key => {
+          if (internalFilters.includes(key) || key.startsWith('__ts')) return false
+          if (availableFieldNames && !availableFieldNames.includes(key)) return false
+          if (source[key] === '') return false
+          return true
+        })
         .reduce((obj, key) => {
           obj[key] = source[key]
           return obj

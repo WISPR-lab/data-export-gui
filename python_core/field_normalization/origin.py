@@ -8,18 +8,30 @@ def determine_origin(platform: str, attrs: dict) -> str:
     if platform == "apple":
         return "apple/system"
     
-    client_type = attrs.get('user_agent_type', '').strip().lower() if attrs.get('user_agent_type') else ''
-    client_name = attrs.get('user_agent.name', '').strip() if attrs.get('user_agent.name') else ''
-    secondary_name = attrs.get('user_agent_secondary.name', '').strip() if attrs.get('user_agent_secondary.name') else ''
+    try:
+        client_type = attrs.get('user_agent_type', '').strip().lower() if attrs.get('user_agent_type') else ''
+        client_name = attrs.get('user_agent_name', '').strip().lower() if attrs.get('user_agent_name') else ''
+        secondary_name = attrs.get('user_agent_secondary_name', '').strip().lower() if attrs.get('user_agent_secondary_name') else ''
+        client_session_type = attrs.get('client_session_type', '').strip().lower() if attrs.get('client_session_type') else ''
+    except Exception:
+        return f"{platform}/unknown"
+
+    valid = [v for v in [client_type, client_name, client_session_type] if v and v != '']
+    
+    if len(valid) == 0:
+        return f"{platform}/unknown"
     
     if client_type == 'browser' and secondary_name \
         or 'webview' in client_name.lower() or 'webview' in secondary_name.lower():
         return f"{platform}/app_webview"
     
-    if client_type == 'mobile app':
-        return f"{platform}/mobile_app"
-    
-    if client_type == 'browser':
+    if client_type == 'browser' or  {'chrome', 'chromium', 'firefox', 'safari', 'edge'}.intersection({client_name, secondary_name, client_session_type}):
         return f"{platform}/web"
     
-    return f"{platform}/unknown"
+    if client_type == 'mobile app' or {'mobile', 'app'}.intersection({client_name, secondary_name, client_session_type}):
+        return f"{platform}/mobile_app"
+    
+    elif client_type is not None and client_type != '':
+        return f"{platform}/{client_type.replace(' ', '_')}"
+    
+    return ""

@@ -58,9 +58,10 @@ export async function getDeviceGroups() {
       notes: row.notes || '',
       origins: enrichedOrigins,
       attributes: attrs,
+      os_name: attrs.device_os_name || attrs.user_agent_os_name || attrs.device_os_type || attrs.user_agent_os_type || '',
+      os_version: attrs.device_os_version || attrs.user_agent_os_version || '',
       label: row.user_label || row.model || attrs.device_model_name || 'Unknown Device',
       manufacturer: attrs.device_manufacturer || 'TODO: Get from merged attributes',
-      os: (attrs.os_name || '') + ' ' + (attrs.os_version || '') || 'TODO: Get from merged attributes',
       city: 'TODO: Calculate from geographic events',
       // Metadata for UI
       system_soft_merge: !!row.system_soft_merge
