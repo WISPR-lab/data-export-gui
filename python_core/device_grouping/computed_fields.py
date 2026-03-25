@@ -122,6 +122,8 @@ def merge_attrs(attrs_list: list[dict], mode: str = 'soft') -> dict:
     for k in all_keys:
         values = [attrs.get(k) for attrs in attrs_list if k in attrs and attrs.get(k)]
         values = flatten(values)
+        if k == "user_agent_os_version":
+            values = [str(v) for v in values] 
         values = list(set([v for v in values if v is not None and v != ''])) 
         
         if not values:

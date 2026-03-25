@@ -96,8 +96,11 @@ export default {
     showEventActions() {
       return this.$store.state.eventActions.length > 0
     },
+    showDataTypes() {
+      return false
+    },
     showSavedSearches() {
-      return this.$store.state.meta.views.length > 0
+      return this.$store.state.meta.views && this.$store.state.meta.views.length > 0
     },
   },
 }

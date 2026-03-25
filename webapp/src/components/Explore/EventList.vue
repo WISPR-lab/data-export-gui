@@ -575,7 +575,7 @@ const defaultQueryFilter = () => {
     from: 0,
     terminate_after: 40,
     size: 40,
-    indices: ['_all'],
+    uploadIds: ['_all'],
     order: 'desc',
     chips: [],
   }
@@ -830,7 +830,7 @@ export default {
     },
     availableColumns() {
       if (!this.meta || !this.meta.mappings) return [];
-      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'timeline_id'];
+      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'timeline_id', 'event_outcome'];
       return this.meta.mappings.filter(m => !excluded.includes(m.field));
     },
   },
@@ -961,25 +961,25 @@ export default {
       }
       return profile.model || ''
     },
-    getAllIndices: function () {
+    getAllUploadIds: function () {
       // Browser model: return timeline IDs directly
       return this.sketch.timelines.map((tl) => tl.id)
     },
     search: async function (resetPagination = true, incognito = false, parent = false) {
-      // Exit early if there are no indices selected
-      if (this.currentQueryFilter.indices && !this.currentQueryFilter.indices.length) {
+      // Exit early if there are no uploadIds selected
+      if (this.currentQueryFilter.uploadIds && !this.currentQueryFilter.uploadIds.length) {
         this.eventList = emptyEventList()
         return
       }
 
       // Expand '_all' to all timeline IDs (handle both array ['_all'] and string '_all')
-      const indices = this.currentQueryFilter.indices;
+      const uploadIds = this.currentQueryFilter.uploadIds;
       if (
-        indices === '_all' || 
-        (Array.isArray(indices) && (indices.length === 0 || indices[0] === '_all'))
+        uploadIds === '_all' || 
+        (Array.isArray(uploadIds) && (uploadIds.length === 0 || uploadIds[0] === '_all'))
       ) {
-        const allIndices = this.getAllIndices();
-        this.currentQueryFilter.indices = allIndices;
+        const allUploadIds = this.getAllUploadIds();
+        this.currentQueryFilter.uploadIds = allUploadIds;
       }
 
       // Allow searches with empty query string (shows all events from selected timelines)

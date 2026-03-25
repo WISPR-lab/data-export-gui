@@ -1,36 +1,51 @@
 // custom to WISPR-lab/data-export-gui
 
 import { getDB } from '../index.js';
-import { buildWhereClause, buildOrderClause, buildPaginationClause } from './queryBuilder.js';
-import { getEventMeta } from './metadata.js';
+import { buildWhereClause, buildOrderClause, buildPaginationClause } from './eventQueryBuilder.js';
+
+/*
+example of 'filter' object
+  {
+    from: 0,
+    terminate_after: 40,
+    size: 40,
+    order: 'asc',
+    uploadIds: [],
+    chips: [
+      { type: 'tag', value: 'archived', active: true },
+      { type: 'term', field: 'user_agent_os_name', value: 'Windows' },
+      { type: 'label', value: 'verified' },
+      { type: 'datetime:range', value: '2024-01-15T00:00:00Z,2024-01-20T23:59:59Z' }
+    ]
+  }
+*/
 
 export async function searchEvents(queryString = '', filter = {}) {
   const db = await getDB();
   
-  // Get available fields from metadata for validation
-  let meta = {};
-  try {
-    meta = await getEventMeta();
-  } catch (e) {
-    console.warn('[searchEvents] Could not fetch metadata, will search without field validation:', e);
-  }
-  
-  const { clause: whereClause, params: whereParams } = buildWhereClause(
-    filter,
-    queryString,
-    meta.mappings || []
-  );
+  const stringCols = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
+  const { clause: whereClause, params: whereParams } = buildWhereClause(filter, queryString, stringCols);
   
   const sql = `
     SELECT 
-      e.id, e.upload_id, e.timestamp, e.message, e.attributes, e.tags, e.labels,
-      e.event_category, e.event_type, e.event_action, e.event_kind,
-      f.opfs_filename as source_file, 
-      u.given_name as timeline_name, u.platform,
-      COALESCE(ei.device_profiles_data, '[]') as device_profiles_data
+      e.id, 
+      e.upload_id, 
+      e.timestamp, 
+      e.message, 
+      e.attributes, 
+      e.tags, 
+      e.labels,
+      e.event_category, 
+      e.event_type, 
+      e.event_action, 
+      e.event_kind,
+      f.opfs_filename AS source_file, 
+      u.given_name AS timeline_name, 
+      u.platform AS platform,
+      COALESCE(ei.device_profiles_data, '[]') AS device_profiles_data
     FROM events e
     LEFT JOIN uploaded_files f ON json_extract(e.file_ids, '$[0]') = f.id
     LEFT JOIN uploads u ON e.upload_id = u.id
@@ -48,6 +63,8 @@ export async function searchEvents(queryString = '', filter = {}) {
       returnValue: 'resultRows',
       rowMode: 'object'
     });
+    console.log(`[searchEvents] Executed SQL: ${sql}`);
+    console.log(`[searchEvents] With params: ${JSON.stringify(allParams)}`);
     
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
     const countPerTimeline = await _getEventsCountPerTimeline(db, whereClause, whereParams);
@@ -181,7 +198,7 @@ export async function getEventTags() {
 }
 
 async function _getEventsTotalCount(db, whereClause, whereParams) {
-  const sql = `SELECT COUNT(*) as count FROM events e ${whereClause}`;
+  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id ${whereClause}`;
   const result = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
@@ -194,6 +211,7 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
   const sql = `
     SELECT e.upload_id, COUNT(*) as count 
     FROM events e 
+    LEFT JOIN uploads u ON e.upload_id = u.id
     ${whereClause} 
     GROUP BY e.upload_id
   `;
@@ -351,3 +369,4 @@ export async function updateEventTags(eventId, tags) {
     { bind: [JSON.stringify(tags || []), eventId] }
   );
 }
+

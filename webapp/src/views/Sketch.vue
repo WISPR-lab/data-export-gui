@@ -499,7 +499,7 @@ export default {
         from: 0,
         terminate_after: 40,
         size: 40,
-        indices: ['_all'],
+        uploadIds: ['_all'],
         order: 'asc',
         chips: [startChip],
       }

@@ -113,7 +113,7 @@ export async function getDB() {
   
   db = await initPromise;
   return db;
-}*/
+} */
 
 export async function closeDB() {
   if (worker) {

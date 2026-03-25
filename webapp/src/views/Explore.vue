@@ -319,7 +319,7 @@ const defaultQueryFilter = () => {
     from: 0,
     terminate_after: 40,
     size: 40,
-    indices: '_all',
+    uploadIds: ['_all'],
     order: 'asc',
     chips: [],
   }
@@ -547,10 +547,10 @@ export default {
 
       this.currentQueryFilter.chips = [startChip, endChip]
 
-      // Use timeline_id from event source (browser model doesn't have indices_metadata)
+      // Use timeline_id from event source (browser model doesn't have upload_ids_metadata)
       const timelineId = this.contextEvent._source.timeline_id || this.contextEvent._source.__ts_timeline_id
       if (timelineId) {
-        this.currentQueryFilter.indices = [timelineId]
+        this.currentQueryFilter.uploadIds = [timelineId]
       }
       this.currentQueryFilter.size = numContextEvents
       this.search()
@@ -562,7 +562,7 @@ export default {
       this.search()
     },
     updateEnabledTimelines: function (timelineIds) {
-      this.currentQueryFilter.indices = timelineIds
+      this.currentQueryFilter.uploadIds = timelineIds
       this.search()
     },
     toggleChip: function (chip) {
@@ -720,10 +720,10 @@ export default {
         this.currentQueryFilter.fields = [{ field: 'message', type: 'text' }]
       }
       this.selectedFields = this.currentQueryFilter.fields
-      if (this.currentQueryFilter.indices[0] === '_all' || this.currentQueryFilter.indices === '_all') {
+      if (this.currentQueryFilter.uploadIds && (this.currentQueryFilter.uploadIds[0] === '_all' || this.currentQueryFilter.uploadIds === '_all')) {
         // Dexie-native: just use timeline IDs
         let allIds = this.sketch.timelines.map(timeline => timeline.id)
-        this.currentQueryFilter.indices = allIds
+        this.currentQueryFilter.uploadIds = allIds
       }
       let chips = this.currentQueryFilter.chips
       if (chips) {
@@ -807,18 +807,18 @@ export default {
         return timeline.id === parseInt(this.params.indexName, 10)
       })
       if (timeline) {
-        this.currentQueryFilter.indices = [timeline.id]
+        this.currentQueryFilter.uploadIds = [timeline.id]
       }
       doSearch = true
     }
 
     if (!this.currentQueryString) {
-      this.currentQueryFilter.indices = ['_all']
+      this.currentQueryFilter.uploadIds = []
     }
 
     if (doSearch) {
-      if (!this.currentQueryFilter.indices.length) {
-        this.currentQueryFilter.indices = ['_all']
+      if (!this.currentQueryFilter.uploadIds.length) {
+        this.currentQueryFilter.uploadIds = []
       }
       this.search()
     }
