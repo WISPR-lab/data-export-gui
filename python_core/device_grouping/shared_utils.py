@@ -32,3 +32,13 @@ def union_find(records: list[dict], match_fn: Callable[[dict, dict], bool]) -> d
         children[root].append(r.get("id"))
     
     return children
+
+
+def flatten(nested_list):
+    if not isinstance(nested_list, list):
+        return [nested_list]
+    for item in nested_list:
+        if isinstance(item, list):
+            yield from flatten(item)
+        else:
+            yield item

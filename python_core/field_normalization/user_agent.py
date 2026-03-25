@@ -41,7 +41,7 @@ class UserAgentParser:
         if dd.client_application_id():
             attrs['user_agent_client_application_id'] = dd.client_application_id()
         if dd.secondary_client_name():
-            attrs['user_agent_secondary.name'] = dd.secondary_client_name()
+            attrs['user_agent_secondary_name'] = dd.secondary_client_name()
         if dd.secondary_client_version():
             attrs['user_agent_secondary_version'] = dd.secondary_client_version()
         if dd.secondary_client_type():
@@ -55,7 +55,7 @@ class UserAgentParser:
         if dd.uses_mobile_browser():
             attrs['user_agent_uses_mobile_browser'] = True
         if dd.os_name():
-            attrs['user_agent_os.name'] = dd.os_name()
+            attrs['user_agent_os_name'] = dd.os_name()
             attrs['user_agent_os_type'] = OS_TYPE_MAP.get(dd.os_name().lower(), '')
         if dd.os_version():
             attrs['user_agent_os_version'] = dd.os_version()

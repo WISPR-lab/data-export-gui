@@ -32,22 +32,25 @@ limitations under the License.
   </div>
   <div v-else>
     <div
-      :style="eventActions && eventActions.length ? 'cursor: pointer' : ''"
+      :style="eventMessages && eventMessages.length ? 'cursor: pointer' : ''"
       class="pa-4"
       @click="expanded = !expanded"
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
       <!-- <span> <v-icon left>mdi-database-outline</v-icon> Data Types </span> -->
-       <span> <v-icon left>mdi-filter-multiple-outline</v-icon>Event Types (TODO readable category names)</span>
+       <span> <v-icon left>mdi-filter-multiple-outline</v-icon>Event Types</span>
       <span class="float-right" style="margin-right: 10px">
-        <small v-if="eventActions"
+        <!-- <small v-if="eventActions"
           ><strong>{{ eventActions.length }}</strong></small
+        > -->
+        <small v-if="eventMessages"
+          ><strong>{{ eventMessages.length }}</strong></small
         >
       </span>
     </div>
 
     <v-expand-transition>
-      <div v-show="expanded && eventActions.length">
+      <div v-show="expanded && eventMessages.length" class="pl-8 pr-4 pb-4">
         <ts-data-types-list></ts-data-types-list>
       </div>
     </v-expand-transition>
@@ -69,7 +72,8 @@ export default {
   data: function () {
     return {
       expanded: false,
-      eventActions: [],
+      // eventActions: [],
+      eventMessages: [],
     }
   },
   computed: {
@@ -79,10 +83,12 @@ export default {
   },
   async mounted() {
     try {
-      this.eventActions = await DB.getEventActions()
+      // this.eventActions = await DB.getEventActions();
+      this.eventMessages = await DB.getEventMessages();
     } catch (e) {
-      console.error('Error loading event actions:', e)
-      this.eventActions = []
+      console.error('Error loading event messages:', e)
+      // this.eventActions = []
+      this.eventMessages = []
     }
   },
 }

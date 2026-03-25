@@ -113,7 +113,7 @@ export async function getDB() {
   
   db = await initPromise;
   return db;
-}*/
+} */
 
 export async function closeDB() {
   if (worker) {
@@ -161,6 +161,7 @@ export default {
   getEventCount: events.getEventCount,
   // Note: Frontend uses getEventActions (event_action field), not getCategories (event_category field)
   getEventActions: events.getEventActions,
+  getEventMessages: events.getEventMessages,
   getEventTags: events.getEventTags,
   deleteEvents: events.deleteEvents,
   addLabelEvent: events.addLabelEvent,

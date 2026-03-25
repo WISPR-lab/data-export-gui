@@ -13,12 +13,13 @@ function wildcardToLike(term) {
   return escaped.replace(/\*/g, '%').replace(/\?/g, '_');
 }
 
-function astToConditions(ast, availableFields) {
+const flatColumns = ['id', 'timestamp', 'message', 'event_category', 'event_action', 'event_kind', 'platform'];
+
+function astToConditions(ast) {
   if (!ast) return { conditions: [], params: [] };
 
-  // Unwrap single-node wrapper (when only left exists, no operator)
   if (ast.left && !ast.operator_type) {
-    return astToConditions(ast.left, availableFields);
+    return astToConditions(ast.left);
   }
 
   if (ast.term !== undefined) {
@@ -28,24 +29,29 @@ function astToConditions(ast, availableFields) {
     const likeValue = isWildcard ? value : `%${value}%`;
     const lowerLikeValue = likeValue.toLowerCase();
 
-    if (field && availableFields.includes(field)) {
+    if (field && flatColumns.includes(field)) {
       return {
         conditions: [`LOWER(e.${field}) LIKE ? ESCAPE '|'`],
         params: [lowerLikeValue]
       };
+    } else if (field) {
+      return {
+        conditions: [`json_extract(e.attributes, '$.${field}') LIKE ?`],
+        params: [`%${value}%`]
+      };
     } else {
-      const defaultFields = ['message', 'attributes', 'event_action', 'event_category', 'event_kind'];
-      const fieldConditions = defaultFields.map(f => `LOWER(e.${f}) LIKE ? ESCAPE '|'`);
+      const searchFields = ['message', 'attributes', 'event_action', 'event_category', 'event_kind'];
+      const fieldConditions = searchFields.map(f => `LOWER(e.${f}) LIKE ? ESCAPE '|'`);
       return {
         conditions: [`(${fieldConditions.join(' OR ')})`],
-        params: Array(defaultFields.length).fill(lowerLikeValue)
+        params: Array(searchFields.length).fill(lowerLikeValue)
       };
     }
   }
 
   if (ast.operator_type === 'OR') {
-    const left = astToConditions(ast.left, availableFields);
-    const right = astToConditions(ast.right, availableFields);
+    const left = astToConditions(ast.left);
+    const right = astToConditions(ast.right);
     return {
       conditions: [`(${left.conditions.join(' OR ')} OR ${right.conditions.join(' OR ')})`],
       params: [...left.params, ...right.params]
@@ -53,8 +59,8 @@ function astToConditions(ast, availableFields) {
   }
 
   if (ast.operator_type === 'AND') {
-    const left = astToConditions(ast.left, availableFields);
-    const right = astToConditions(ast.right, availableFields);
+    const left = astToConditions(ast.left);
+    const right = astToConditions(ast.right);
     return {
       conditions: [`(${left.conditions.join(' AND ')} AND ${right.conditions.join(' AND ')})`],
       params: [...left.params, ...right.params]
@@ -62,7 +68,7 @@ function astToConditions(ast, availableFields) {
   }
 
   if (ast.operator_type === 'NOT') {
-    const inner = astToConditions(ast.term, availableFields);
+    const inner = astToConditions(ast.term);
     return {
       conditions: [`NOT (${inner.conditions.join(' AND ')})`],
       params: inner.params
@@ -72,51 +78,45 @@ function astToConditions(ast, availableFields) {
   return { conditions: [], params: [] };
 }
 
-export function parseQueryString(queryString, availableFields = []) {
+export function parseQueryString(queryString) {
   if (!queryString || !queryString.trim()) {
     return { conditions: [], params: [] };
   }
 
   try {
     const ast = parseLucene(queryString);
-    return astToConditions(ast, availableFields);
+    return astToConditions(ast);
   } catch (error) {
     console.warn('[parseQueryString] Parse error, falling back to literal search:', error);
     const escaped = escapeLikePattern(queryString);
+    const searchFields = ['message', 'attributes', 'event_action', 'event_category', 'event_kind'];
+    const fieldConditions = searchFields.map(f => `LOWER(e.${f}) LIKE ? ESCAPE '|'`);
     return {
-      conditions: [`(e.message LIKE ? OR e.attributes LIKE ?)`],
-      params: [`%${escaped}%`, `%${escaped}%`]
+      conditions: [`(${fieldConditions.join(' OR ')})`],
+      params: Array(searchFields.length).fill(`%${escaped}%`.toLowerCase())
     };
   }
 }
 
-export function buildWhereClause(filter = {}, queryString = '', availableFields = []) {
+export function buildWhereClause(filter = {}, queryString = '') {
   const conditions = [];
   const params = [];
 
-  const fieldNames = Array.isArray(availableFields)
-    ? availableFields.map(f => typeof f === 'string' ? f : f.field).filter(Boolean)
-    : [];
-
   if (queryString && queryString.trim()) {
-    const { conditions: queryConditions, params: queryParams } = parseQueryString(queryString, fieldNames);
+    const { conditions: queryConditions, params: queryParams } = parseQueryString(queryString);
     conditions.push(...queryConditions);
     params.push(...queryParams);
   }
 
-  let uploadIds = filter.upload_id || filter.indices;
-  if (uploadIds) {
-    if (Array.isArray(uploadIds)) {
-      uploadIds = uploadIds.filter(id => typeof id === 'string');
-    } else if (typeof uploadIds === 'object' && uploadIds.__ob__) {
-      uploadIds = null; 
-    }
-    
-    if (uploadIds && Array.isArray(uploadIds) && uploadIds.length > 0) {
-      const placeholders = uploadIds.map(() => '?').join(',');
-      conditions.push(`e.upload_id IN (${placeholders})`);
-      params.push(...uploadIds);
-    }
+  let uploadIds = filter.uploadIds || [];
+  if (Array.isArray(uploadIds)) {
+    uploadIds = uploadIds.filter(id => typeof id === 'string' && id !== '_all');
+  }
+  
+  if (uploadIds.length > 0) {
+    const placeholders = uploadIds.map(() => '?').join(',');
+    conditions.push(`e.upload_id IN (${placeholders})`);
+    params.push(...uploadIds);
   }
 
 
@@ -182,28 +182,30 @@ export function buildWhereClause(filter = {}, queryString = '', availableFields 
       }
     }
 
-    // Handle tag and label chips
-    const tagAndLabelChips = filter.chips.filter(
-      chip => chip && chip.active !== false && (chip.type === 'term' || chip.type === 'label')
+
+    
+    const filterChips = filter.chips.filter(
+      chip => chip && chip.active !== false && (chip.type === 'tag' || chip.type === 'term' || chip.type === 'label')
     );
-    if (tagAndLabelChips.length > 0) {
-      tagAndLabelChips.forEach(chip => {
-        const escapedValue = escapeLikePattern(chip.value);
-        const jsonPattern = `%"${escapedValue}"%`;
-        
-        if (chip.type === 'term') {
-          // Search in tags JSON array
-          const operator = chip.operator === 'must_not' ? 'NOT ' : '';
-          conditions.push(`${operator}json_extract(e.tags, '$') LIKE ?`);
-          params.push(jsonPattern);
-        } else if (chip.type === 'label') {
-          // Search in labels JSON array
-          const operator = chip.operator === 'must_not' ? 'NOT ' : '';
-          conditions.push(`${operator}json_extract(e.labels, '$') LIKE ?`);
-          params.push(jsonPattern);
+    
+    filterChips.forEach(chip => {
+      const escapedValue = escapeLikePattern(chip.value);
+      const operator = chip.operator === 'must_not' ? 'NOT ' : '';
+      
+      if (chip.type === 'tag' || chip.type === 'label') {
+        const field = chip.type === 'tag' ? 'tags' : 'labels';
+        conditions.push(`${operator}json_extract(e.${field}, '$') LIKE ?`);
+        params.push(`%"${escapedValue}"%`);
+      } else if (chip.type === 'term' && chip.field) {
+        if (flatColumns.includes(chip.field)) {
+          conditions.push(`${operator}LOWER(e.${chip.field}) LIKE ? ESCAPE '|'`);
+          params.push(`%${escapedValue}%`.toLowerCase());
+        } else {
+          conditions.push(`${operator}json_extract(e.attributes, '$.${chip.field}') LIKE ?`);
+          params.push(`%"${escapedValue}"%`);
         }
-      });
-    }
+      }
+    });
   }
 
 

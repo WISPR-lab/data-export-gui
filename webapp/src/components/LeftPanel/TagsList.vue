@@ -42,7 +42,7 @@ limitations under the License.
           <div
             v-for="item in props.items"
             :key="item.tag || item.label"
-            @click="applyFilterChip(item.tag || item.label, item.tag ? 'tag' : '', item.tag ? 'term' : 'label')"
+            @click="applyFilterChip(item.tag || item.label, item.tag ? 'tag' : '', item.tag ? 'tag' : 'label')"
             style="cursor: pointer; font-size: 0.9em"
           >
             <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">

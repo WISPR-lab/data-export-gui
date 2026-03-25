@@ -59,13 +59,16 @@ export default {
   data() {
     return {
       eventActions: [],
+      eventMessages: [],
     }
   },
   async mounted() {
     try {
       this.eventActions = await DB.getEventActions()
+      this.eventMessages = await DB.getEventMessages()
     } catch (e) {
-      console.error('Error loading event actions:', e)
+      console.error('Error loading event messages:', e)
+      this.eventMessages = []
       this.eventActions = []
     }
   },
@@ -79,7 +82,8 @@ export default {
       return [...this.$store.state.tags, ...filteredLabels].length > 0
     },
     showDataTypes() {
-      return this.eventActions.length > 0
+      // return this.eventActions.length > 0
+      return this.eventMessages.length > 0
     },
     showSavedSearches() {
       return (this.$store.state.meta.views || []).length > 0

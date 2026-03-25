@@ -143,15 +143,15 @@ export default {
       this.isDarkTheme = !this.isDarkTheme
     },
     syncSelectedTimelines() {
-      if (this.currentQueryFilter.indices.includes('_all')) {
+      if (this.currentQueryFilter.uploadIds.includes('_all')) {
         this.updateEnabledTimelinesIfChanged(this.activeTimelines.map((tl) => tl.id))
         return
       }
       let newArray = []
-      this.currentQueryFilter.indices.forEach((index) => {
-        // In browser version, indices are timeline IDs (strings or numbers)
+      this.currentQueryFilter.uploadIds.forEach((uploadId) => {
+        // In browser version, uploadIds are timeline IDs (strings or numbers)
         let timeline = this.activeTimelines.find((t) => {
-          return String(t.id) === String(index)
+          return String(t.id) === String(uploadId)
         })
         if (timeline) {
           newArray.push(timeline)
@@ -169,7 +169,7 @@ export default {
     EventBus.$on('isDarkTheme', this.toggleTheme)
   },
   watch: {
-    'currentQueryFilter.indices'(val) {
+    'currentQueryFilter.uploadIds'(val) {
       this.syncSelectedTimelines()
     },
     deep: true,

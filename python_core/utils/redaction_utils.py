@@ -48,7 +48,7 @@ def compare_redacted_vals(*vals) -> bool:
     return False
 
 
-def get_unredacted_val(*vals) -> tuple[str]:
+def get_unredacted_val(vals) -> tuple[str]:
     if not compare_redacted_vals(vals):
         return '', 'error: values do not match'
     for v in vals:

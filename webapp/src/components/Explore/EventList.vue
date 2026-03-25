@@ -495,10 +495,37 @@ limitations under the License.
 
           <template v-slot:item.source_file="{ item }">
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-if="item._source.filename">
-              <span class="timeline-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">{{
-                item._source.filename
-              }}</span>
+              <span class="timeline-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">
+                {{ item._source.filename }}
+              </span>
             </v-chip>
+          </template>
+
+          <!-- Old device chip (replaced with origin chip pattern)
+          <template v-slot:item._source.device_profiles_data="{ item }">
+            <v-chip 
+              v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0"
+              :style="getTimeBubbleColor()"
+              class="pr-1 timeline-chip"
+            >
+              <div class="chip-content">
+                <span class="timeline-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
+              </div>
+            </v-chip>
+            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 timeline-chip">
+              <div class="chip-content">
+                <span class="timeline-name-ellipsis"></span>
+              </div>
+            </v-chip>
+          </template>
+          -->
+
+          <template v-slot:item._source.device_profiles_data="{ item }">
+            <div v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0">
+              <v-chip :style="getTimeBubbleColor()">
+                {{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}
+              </v-chip>
+            </div>
           </template>
 
           <!-- Comment field -->
@@ -548,7 +575,7 @@ const defaultQueryFilter = () => {
     from: 0,
     terminate_after: 40,
     size: 40,
-    indices: ['_all'],
+    uploadIds: ['_all'],
     order: 'desc',
     chips: [],
   }
@@ -748,6 +775,7 @@ export default {
         }
         if (field.field === 'message') {
           header.width = '100%'
+          // header.text = 'Event Type'
           extraHeaders.unshift(header)
         } else {
           extraHeaders.push(header)
@@ -757,6 +785,14 @@ export default {
       // Extend the column headers from position 3 (after the actions column)
       baseHeaders.splice(3, 0, ...extraHeaders)
 
+      // Add Device column first
+      baseHeaders.push({
+        value: '_source.device_profiles_data',
+        text: 'Device',
+        align: 'center',
+        width: '200',
+        sortable: false,
+      })
       // Add timeline name based on configuration
       if (this.displayOptions.showTimelineName) {
         baseHeaders.push({
@@ -794,7 +830,7 @@ export default {
     },
     availableColumns() {
       if (!this.meta || !this.meta.mappings) return [];
-      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'timeline_id'];
+      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'timeline_id', 'event_outcome'];
       return this.meta.mappings.filter(m => !excluded.includes(m.field));
     },
   },
@@ -918,25 +954,32 @@ export default {
         'background-color': backgroundColor,
       }
     },
-    getAllIndices: function () {
+    getDeviceProfileLabel(profile) {
+      if (!profile) return ''
+      if (profile.user_label && profile.user_label.trim()) {
+        return `${profile.user_label} (${profile.model})`
+      }
+      return profile.model || ''
+    },
+    getAllUploadIds: function () {
       // Browser model: return timeline IDs directly
       return this.sketch.timelines.map((tl) => tl.id)
     },
     search: async function (resetPagination = true, incognito = false, parent = false) {
-      // Exit early if there are no indices selected
-      if (this.currentQueryFilter.indices && !this.currentQueryFilter.indices.length) {
+      // Exit early if there are no uploadIds selected
+      if (this.currentQueryFilter.uploadIds && !this.currentQueryFilter.uploadIds.length) {
         this.eventList = emptyEventList()
         return
       }
 
       // Expand '_all' to all timeline IDs (handle both array ['_all'] and string '_all')
-      const indices = this.currentQueryFilter.indices;
+      const uploadIds = this.currentQueryFilter.uploadIds;
       if (
-        indices === '_all' || 
-        (Array.isArray(indices) && (indices.length === 0 || indices[0] === '_all'))
+        uploadIds === '_all' || 
+        (Array.isArray(uploadIds) && (uploadIds.length === 0 || uploadIds[0] === '_all'))
       ) {
-        const allIndices = this.getAllIndices();
-        this.currentQueryFilter.indices = allIndices;
+        const allUploadIds = this.getAllUploadIds();
+        this.currentQueryFilter.uploadIds = allUploadIds;
       }
 
       // Allow searches with empty query string (shows all events from selected timelines)
@@ -1243,7 +1286,9 @@ export default {
 }
 </script>
 
+
 <style lang="scss">
+
 .ts-event-field-container {
   position: relative;
   max-width: 100%;
