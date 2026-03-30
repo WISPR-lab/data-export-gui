@@ -63,7 +63,7 @@
               to="/how-to-request"
             >
               <v-icon left>mdi-information-outline</v-icon>
-              Learn how to request
+              How to request your data
             </v-btn>
           </div>
         </v-card>
