@@ -4,6 +4,16 @@
       <h1 class="text-h4 font-weight-bold mb-2">Your devices</h1>
       <p class="body-1 grey--text text--darken-2">
         We found activity from these devices in your data export(s). You can label devices as malicious or give them custom names to keep track of them.
+        <v-btn
+          text
+          small
+          color="primary"
+          @click="showDeviceHelpDialog = true"
+          class="pa-0 ml-1"
+        >
+          Learn more
+          <v-icon small class="ml-1">mdi-help-circle-outline</v-icon>
+        </v-btn>
       </p>
     </div>
 
@@ -76,6 +86,8 @@
       @closed="onModalClosed"
     />
 
+    <device-detection-help-modal v-model="showDeviceHelpDialog" />
+
   </v-container>
 </template>
 
@@ -83,6 +95,7 @@
 import DeviceDetailDropdown from '@/components/Devices/DeviceDetailDropdown.vue';
 import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
+import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
 import { getDeviceGroups, updateDeviceGroup } from '@/database/queries/devices.js';
 import { callPyodideWorker } from '@/pyodide/pyodide-client';
 
@@ -91,7 +104,8 @@ export default {
   components: {
     DeviceDetailDropdown,
     DeviceHeader,
-    DeviceGroupModal
+    DeviceGroupModal,
+    DeviceDetectionHelpModal
   },
   data() {
     return {
@@ -105,6 +119,7 @@ export default {
       staging: null,
       devices: [],
       unassigned: [],
+      showDeviceHelpDialog: false,
     }
   },
   async mounted() {

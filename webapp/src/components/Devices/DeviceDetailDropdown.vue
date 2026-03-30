@@ -1,7 +1,8 @@
 <template>
   <div class="pa-6">
     <!-- 1. Custom Name (Only for confirmed devices) + See All Events -->
-    <div v-if="!isGeneric" class="mb-6">
+    <!-- <div v-if="!isGeneric" class="mb-6"> -->
+    <div class="mb-6">
       <div class="d-flex align-center gap-3">
         <v-text-field
           v-model="device.user_label"
@@ -26,7 +27,7 @@
       </div>
     </div>
 
-    <!-- See All Events button for generic records -->
+    <!-- See All Events button for generic records
     <div v-else class="mb-6">
       <v-btn
         small
@@ -37,12 +38,12 @@
         See all events
         <v-icon small class="ml-2">mdi-arrow-right</v-icon>
       </v-btn>
-    </div>
+    </div> -->
 
     <v-divider class="mb-6"></v-divider>
 
     <!-- 2. Device Attributes Grid -->
-    <div v-if="!isGeneric && filteredAttributes.length > 0" class="mb-6">
+    <div v-if="filteredAttributes.length > 0" class="mb-6">
       <div class="overline mb-3">Device details</div>
       <v-simple-table dense class="grey lighten-5">
         <template v-slot:default>
