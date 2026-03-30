@@ -258,6 +258,7 @@ limitations under the License.
           @toggleDrawer="toggleDrawer()"
         ></ts-saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
+        <ts-i-p-addresses :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-i-p-addresses>
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
         <!-- <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates> -->
         
@@ -359,6 +360,7 @@ import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
+import TsIPAddresses from '../components/LeftPanel/IPAddresses.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
 import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
@@ -379,6 +381,7 @@ export default {
     PageHeaderMobileMenu,
     TsSavedSearches,
     TsDataTypes,
+    TsIPAddresses,
     TsTags,
     TsSearchTemplates,
     TsUploadTimelineFormButton,
