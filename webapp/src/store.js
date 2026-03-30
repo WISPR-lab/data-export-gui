@@ -83,6 +83,10 @@ const defaultState = () => {
       timeout: -1,
     },
     
+    // Tour state
+    tour: {
+    },
+
     // Upload processing state
     uploadState: {
       isProcessing: false,
@@ -247,6 +251,8 @@ export default new Vuex.Store({
         success: false,
       })
     },
+
+    // Tour mutations removed - tours now self-manage via BaseTour
   },
   actions: {
     async updateSketch(context, sketchId) {
@@ -298,6 +304,7 @@ export default new Vuex.Store({
       allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)
     },
+    // Tour actions removed - tours now self-initialize via BaseTour
     setSnackBar(context, snackbar) {
       context.commit('SET_SNACKBAR', {
         active: true,

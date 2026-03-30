@@ -19,6 +19,9 @@ limitations under the License.
 
 <template>
   <v-container fluid>
+    <main-views-tour />
+    <search-tour />
+
     <!-- Right side menu -->
     <!-- Placeholder at the moment. Keeping it here for quick developement later. -->
 
@@ -42,6 +45,7 @@ limitations under the License.
               solo
               class="pa-2"
               id="tsSearchInput"
+              data-tour="explore-search"
               @keyup.enter="search()"
               @click="showSearchDropdown = true"
               ref="searchInput"
@@ -313,6 +317,8 @@ import TsEventList from '../components/Explore/EventList.vue'
 import TsSearchHelpCard from '../components/Explore/SearchHelpCard.vue'
 import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
 import DeleteAllDataDialog from '../components/Delete/DeleteAllDataDialog.vue'
+import MainViewsTour from '../components/Tours/MainViewsTour.vue'
+import SearchTour from '../components/Tours/SearchTour.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -341,6 +347,8 @@ export default {
     TsSearchHelpCard,
     DeleteAllDataButton,
     DeleteAllDataDialog,
+    MainViewsTour,
+    SearchTour,
   },
   props: ['sketchId'],
   data() {

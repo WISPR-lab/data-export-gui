@@ -239,10 +239,12 @@ limitations under the License.
         hide-overlay
         :width="navigationDrawer.width"
       >
-        <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Views</div>
-        
-        <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
-        <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
+        <div id="tsMainViewsSection">
+          <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Views</div>
+          
+          <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
+          <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
+        </div>
 
         <v-divider v-if="!isMiniDrawer" class="mb-2"></v-divider>
 
