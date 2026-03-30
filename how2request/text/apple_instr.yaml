@@ -9,10 +9,9 @@ steps:
       url: https://privacy.apple.com
       text: Apple Data & Privacy
     alert:
-      type: info
-      text: You will need your Apple ID password and a **Two-Factor Authentication (2FA)** code from a trusted device or phone number. 
-    description: |
-      FYI ALSO THIS MAY NOTIFY OTHER DEVICES ON YOUR ICLOUD ACCOUNT !!! TODO
+      type: warning
+      text: This action may notify other devices on your iCloud account. You may need your Apple ID password and a **Two-Factor Authentication (2FA)** code from a trusted device or phone number.
+  
 
   - title: Start the request
     image: how2request/images/apple_menu.jpg
