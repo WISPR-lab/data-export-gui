@@ -23,7 +23,12 @@
       <v-divider class="mb-10"></v-divider>
 
       <!-- Steps -->
-      <div class="steps-container">
+      <div v-if="selectedPlatform.comingSoon" class="text-center pa-8">
+        <h2 class="text-h5 font-weight-light">Coming Soon</h2>
+        <p class="text-body1 text-disabled mt-2">Instructions for {{ selectedPlatform.name }} are not yet available.</p>
+      </div>
+
+      <div v-else class="steps-container">
         <div
           v-for="(step, index) in displayedSteps"
           :key="index"
@@ -81,7 +86,7 @@
   </div>
 </template>
 
-<<script>
+<script>
 import PageHeader from '../components/Navigation/PageHeader.vue'
 import yaml from 'js-yaml';
 import { marked } from 'marked';
@@ -125,13 +130,20 @@ export default {
     async loadPlatformData(id) {
       try {
         // Fetch from public/how2request/[id].yaml
-        const response = await fetch(`/how2request/text/${id}_instr.yaml`);
-        if (!response.ok) throw new Error('File not found');
+        const filename = `${process.env.BASE_URL}how2request/text/${id}_instr.yaml`
+        const response = await fetch(filename);
+        if (!response.ok) throw new Error('File not found: ' + filename);
         
         const text = await response.text();
         
         // Prevent loading HTML 404 pages
-        if (text.trim().startsWith('<!DOCTYPE')) return;
+        if (text.trim().startsWith('<!DOCTYPE')) {
+          this.selectedPlatform = {
+            ...this.platforms.find(p => p.id === id),
+            comingSoon: true
+          };
+          return;
+        }
 
         // Parse YAML and merge with ID/Name
         const data = yaml.load(text);
@@ -143,6 +155,10 @@ export default {
         };
       } catch (e) {
         console.error(`Error loading ${id}:`, e);
+        this.selectedPlatform = {
+          ...this.platforms.find(p => p.id === id),
+          comingSoon: true
+        };
       }
     },
     renderMarkdown(text) {
