@@ -129,10 +129,10 @@ limitations under the License.
             <ts-upload-timeline-form-button btn-type="small"></ts-upload-timeline-form-button>
             <v-dialog v-model="addManualEvent" width="600">
               <template v-slot:activator="{ on, attrs }">
-                <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
+                <!-- <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
                   <v-icon left small> mdi-plus </v-icon>
                   Add manual event
-                </v-btn>
+                </v-btn> -->
               </template>
               <ts-add-manual-event
                 app

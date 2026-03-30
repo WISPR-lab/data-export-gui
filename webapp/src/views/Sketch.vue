@@ -259,11 +259,11 @@ limitations under the License.
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
         <!-- <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates> -->
         
-        <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item>
+        <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
       </v-navigation-drawer>
 
       <!-- Privacy Settings Modal -->
-      <privacy-settings-modal v-model="showPrivacySettings"></privacy-settings-modal>
+      <!-- <privacy-settings-modal v-model="showPrivacySettings"></privacy-settings-modal> -->
 
       <!-- Right panel -->
       <v-navigation-drawer v-if="showRightSidePanel" fixed right width="600" style="box-shadow: 0 10px 15px -3px #888">

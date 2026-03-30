@@ -86,10 +86,10 @@ proceeds to the file upload dialog
     </v-card>
 
     <!-- Privacy Settings Modal (shown after upload completes) -->
-    <PrivacySettingsModal
+    <!-- <PrivacySettingsModal
       v-model="showPrivacySettings"
       @close="finalizeUpload"
-    />
+    /> -->
   </v-dialog>
 </template>
 
