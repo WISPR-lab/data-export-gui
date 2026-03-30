@@ -19,9 +19,6 @@ limitations under the License.
 
 <template>
   <v-container fluid>
-    <main-views-tour />
-    <search-tour />
-
     <!-- Right side menu -->
     <!-- Placeholder at the moment. Keeping it here for quick developement later. -->
 
@@ -45,7 +42,6 @@ limitations under the License.
               solo
               class="pa-2"
               id="tsSearchInput"
-              data-tour="explore-search"
               @keyup.enter="search()"
               @click="showSearchDropdown = true"
               ref="searchInput"
@@ -159,6 +155,7 @@ limitations under the License.
         <v-expand-transition>
           <div v-show="showTimelines">
             <ts-timeline-picker
+              id="tsTimelinePicker"
               :current-query-filter="currentQueryFilter"
               :count-per-index="countPerIndex"
               :count-per-timeline="countPerTimeline"
@@ -293,6 +290,7 @@ limitations under the License.
     <!-- Eventlist -->
     <v-card flat class="mt-5 mx-3" color="transparent">
       <ts-event-list
+        id="tsEventList"
         :query-request="activeQueryRequest"
         @countPerIndex="updateCountPerIndex($event)"
         @countPerTimeline="updateCountPerTimeline($event)"
@@ -305,6 +303,8 @@ limitations under the License.
 import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
+import tourManager from '../utils/tourManager.js'
+import { getCombinedTourSteps } from '../utils/toursConfig.js'
 
 import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
 import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
@@ -317,8 +317,6 @@ import TsEventList from '../components/Explore/EventList.vue'
 import TsSearchHelpCard from '../components/Explore/SearchHelpCard.vue'
 import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
 import DeleteAllDataDialog from '../components/Delete/DeleteAllDataDialog.vue'
-import MainViewsTour from '../components/Tours/MainViewsTour.vue'
-import SearchTour from '../components/Tours/SearchTour.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -347,8 +345,6 @@ export default {
     TsSearchHelpCard,
     DeleteAllDataButton,
     DeleteAllDataDialog,
-    MainViewsTour,
-    SearchTour,
   },
   props: ['sketchId'],
   data() {
@@ -418,15 +414,41 @@ export default {
         return a.name.localeCompare(b.name)
       })
     },
+    uploadState() {
+      return this.$store.state.uploadState
+    },
   },
   watch: {
     enabledTimelines: function () {
       this.updateEnabledTimelines(this.enabledTimelines)
     },
+    'uploadState.isProcessing': function (isProcessing) {
+      if (!isProcessing && this.uploadState.status === 'complete') {
+        const currentTourState = tourManager.getTourState()
+
+        if (currentTourState === 'no_data_uploaded') {
+          tourManager.setTourState('first_data_uploaded')
+        }
+
+        const hasTourParam = this.$route.query.tour === 'true'
+        const tourState = tourManager.getTourState()
+        const shouldShowTour = hasTourParam || tourState === 'first_data_uploaded'
+
+        if (shouldShowTour) {
+          this.startTour()
+        }
+      }
+    },
   },
   methods: {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
+    },
+    startTour() {
+      const steps = getCombinedTourSteps()
+      if (steps && steps.length > 0) {
+        tourManager.startTour(steps)
+      }
     },
     updateCountPerIndex: function (count) {
       this.countPerIndex = count
@@ -781,6 +803,13 @@ export default {
   mounted() {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
+
+    const hasTourParam = this.$route.query.tour === 'true'
+    const hasData = this.sketch.timelines && this.sketch.timelines.length > 0
+
+    if (hasTourParam && hasData) {
+      this.startTour()
+    }
   },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')

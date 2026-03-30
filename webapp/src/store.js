@@ -82,10 +82,6 @@ const defaultState = () => {
       message: '',
       timeout: -1,
     },
-    
-    // Tour state
-    tour: {
-    },
 
     // Upload processing state
     uploadState: {

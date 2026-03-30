@@ -175,7 +175,7 @@ limitations under the License.
 
                 <v-dialog v-model="columnDialog" v-if="!disableColumns" max-width="500px" scrollable>
                   <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon v-bind="attrs" v-on="on">
+                    <v-btn id="tsModifyColumnsBtn" icon v-bind="attrs" v-on="on">
                       <v-icon title="Modify columns">mdi-view-column-outline</v-icon>
                     </v-btn>
                   </template>
@@ -415,15 +415,17 @@ limitations under the License.
 
           <!-- Actions field -->
           <template v-slot:item.actions="{ item }">
-            <v-btn small icon @click="toggleStar(item)">
-              <v-icon title="Toggle star status" v-if="item._source.labels && item._source.labels.includes('__ts_star')" color="amber"
-                >mdi-star</v-icon
-              >
-              <v-icon title="Toggle star status" v-else>mdi-star-outline</v-icon>
-            </v-btn>
+            <div id="tsAnnotateActions" style="display: inline-flex; gap: 4px; align-items: center;">
+              <v-btn id="tsEventActions" small icon @click="toggleStar(item)">
+                <v-icon title="Toggle star status" v-if="item._source.labels && item._source.labels.includes('__ts_star')" color="amber"
+                  >mdi-star</v-icon
+                >
+                <v-icon title="Toggle star status" v-else>mdi-star-outline</v-icon>
+              </v-btn>
 
-            <!-- Tag menu -->
-            <ts-event-tag-menu :event="item"></ts-event-tag-menu>
+              <!-- Tag menu -->
+              <ts-event-tag-menu :event="item"></ts-event-tag-menu>
+            </div>
 
             <!-- Action sub-menu -->
             <ts-event-action-menu :event="item" @showContextWindow="showContextWindow($event)"></ts-event-action-menu>
