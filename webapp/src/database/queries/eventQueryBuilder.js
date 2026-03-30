@@ -56,7 +56,10 @@ function stringLeaf(field, value, stringCols) {
   const likeValue = isWildcard ? value : `%${value}%`;
   
   if (field) {
-    const matchedCol = stringCols.find(col => col.split('.')[1] === field);
+    const matchedCol = stringCols.find(col => {
+      const colName = col.includes('.') ? col.split('.')[1] : col;
+      return colName === field;
+    });
     if (matchedCol) {
       const lowerLikeValue = likeValue.toLowerCase();
       return {

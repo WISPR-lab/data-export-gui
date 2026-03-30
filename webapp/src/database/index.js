@@ -163,6 +163,7 @@ export default {
   getEventActions: events.getEventActions,
   getEventMessages: events.getEventMessages,
   getEventTags: events.getEventTags,
+  getIPAddresses: events.getIPAddresses,
   deleteEvents: events.deleteEvents,
   addLabelEvent: events.addLabelEvent,
   removeLabelEvent: events.removeLabelEvent,

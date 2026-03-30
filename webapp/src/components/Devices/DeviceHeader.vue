@@ -1,5 +1,5 @@
 <template>
-  <v-row no-gutters align="center">
+  <v-row no-gutters align="start">
     <!-- Drag Handle and Icon -->
     <v-icon v-if="isGeneric" color="grey darken-1" class="mr-4">mdi-drag-vertical</v-icon>
     <v-avatar size="40" color="grey lighten-4" class="mr-4" :class="{'white border': isGeneric}">
@@ -25,11 +25,10 @@
     </v-col>
 
     <!-- Origin Chips (horizontal) -->
-    <div v-if="device.origins && device.origins.length > 0" class="d-flex align-center mr-4">
+    <div v-if="device.origins && device.origins.length > 0" class="d-flex flex-wrap align-start mr-4" style="max-width: 400px; gap: 8px;">
       <v-chip
         v-for="(origin, idx) in device.origins"
         :key="idx"
-        class="mr-2"
       >
         <v-icon :color="getChipColor(origin)" left>mdi-circle</v-icon>
         {{ formatOriginText(origin) }}

@@ -67,7 +67,7 @@ limitations under the License.
             <span v-if="!slotProps.timelineFailed" class="events-count" x-small>
               {{ eventsCount | compactNumber }}
             </span>
-            <v-btn class="ma-1" x-small icon v-on="slotProps.events.menuOn">
+            <v-btn id="tsTimelineChipMenu" class="ma-1" x-small icon v-on="slotProps.events.menuOn">
               <v-icon title="Manage Timeline"> mdi-dots-vertical </v-icon>
             </v-btn>
           </span>

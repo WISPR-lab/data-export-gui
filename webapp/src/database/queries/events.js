@@ -23,7 +23,7 @@ example of 'filter' object
 export async function searchEvents(queryString = '', filter = {}) {
   const db = await getDB();
   
-  const stringCols = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind'];
+  const stringCols = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
@@ -197,8 +197,41 @@ export async function getEventTags() {
     .sort((a, b) => b.count - a.count);
 }
 
+export async function getIPAddresses() {
+  const db = await getDB();
+  const sql = `
+    SELECT attributes 
+    FROM events 
+    WHERE attributes IS NOT NULL AND attributes != ''
+  `;
+  
+  const rows = await db.exec(sql, {
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  
+  const ipCounts = {};
+  rows.forEach(row => {
+    try {
+      const attrs = JSON.parse(row.attributes);
+      if (attrs.client_ip) {
+        ipCounts[attrs.client_ip] = (ipCounts[attrs.client_ip] || 0) + 1;
+      }
+    } catch (e) {
+      console.warn('Failed to parse attributes for IP extraction:', e);
+    }
+  });
+  
+  return Object.entries(ipCounts)
+    .map(([ip_address, count]) => ({
+      ip_address,
+      count
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
 async function _getEventsTotalCount(db, whereClause, whereParams) {
-  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id ${whereClause}`;
+  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id ${whereClause}`;
   const result = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
@@ -212,6 +245,7 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
     SELECT e.upload_id, COUNT(*) as count 
     FROM events e 
     LEFT JOIN uploads u ON e.upload_id = u.id
+    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
     ${whereClause} 
     GROUP BY e.upload_id
   `;

@@ -20,12 +20,12 @@ limitations under the License.
         <v-icon title="Event Action Menu" v-bind="attrs" v-on="on" class="ml-1">mdi-dots-vertical</v-icon>
       </template>
       <v-list dense class="mx-auto">
-        <v-list-item style="cursor: pointer" @click="copyEventUrlToClipboard()">
+        <!-- <v-list-item style="cursor: pointer" @click="copyEventUrlToClipboard()">
           <v-list-item-icon>
             <v-icon small>mdi-link-variant</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Copy link to event</v-list-item-title>
-        </v-list-item>
+        </v-list-item> -->
         <v-list-item style="cursor: pointer" @click="copyEventAsJSON()">
           <v-list-item-icon>
             <v-icon small>mdi-code-json</v-icon>

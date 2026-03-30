@@ -34,7 +34,7 @@ limitations under the License.
         isActive ? 'active-view' : ''
       ]"
     >
-      <span> <v-icon left :color="isActive ? 'primary' : ''">mdi-magnify</v-icon> Explore </span>
+      <span> <v-icon left :color="isActive ? 'primary' : ''">mdi-magnify</v-icon> Events </span>
     </div>
   </div>
 </template>

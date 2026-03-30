@@ -3,8 +3,8 @@
     <PageHeader />
     <v-divider></v-divider>
 
-    <v-container max-width="900px" class="pa-8">
-      <h1 class="text-h3 mb-8 font-weight-light">How to Request Your Data Exports</h1>
+    <v-container class="pa-8" style="max-width: 1400px;">
+      <h1 class="text-h3 mb-8 mt-8 font-weight-light">How to Request Your Data Exports</h1>
 
       <div class="d-flex flex-wrap gap-3 mb-12">
         <v-btn
@@ -164,7 +164,7 @@ export default {
 }
 
 .step-content {
-  flex: 1;
+  flex: 1.5;
   min-width: 0;
   margin-right: 60px;
 }

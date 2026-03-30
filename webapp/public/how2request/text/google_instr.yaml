@@ -8,8 +8,10 @@ steps:
     link:
       url: https://takeout.google.com
       text: Google Takeout
-    description: |
-      FYI ALSO THIS MAY NOTIFY OTHER DEVICES ON YOUR ACCOUNT !!! AND NEED 2FA !!! TODO
+    alert:
+      type: warning
+      text: This action may notify other devices on your account. Two-Factor Authentication (2FA) may be required.
+  
 
   - title: Select data categories
     image: how2request/images/google_json.jpg

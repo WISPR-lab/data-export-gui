@@ -239,10 +239,12 @@ limitations under the License.
         hide-overlay
         :width="navigationDrawer.width"
       >
-        <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Views</div>
-        
-        <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
-        <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
+        <div id="tsMainViewsSection">
+          <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Views</div>
+          
+          <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
+          <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
+        </div>
 
         <v-divider v-if="!isMiniDrawer" class="mb-2"></v-divider>
 
@@ -256,14 +258,15 @@ limitations under the License.
           @toggleDrawer="toggleDrawer()"
         ></ts-saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
+        <ts-i-p-addresses :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-i-p-addresses>
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
         <!-- <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates> -->
         
-        <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item>
+        <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
       </v-navigation-drawer>
 
       <!-- Privacy Settings Modal -->
-      <privacy-settings-modal v-model="showPrivacySettings"></privacy-settings-modal>
+      <!-- <privacy-settings-modal v-model="showPrivacySettings"></privacy-settings-modal> -->
 
       <!-- Right panel -->
       <v-navigation-drawer v-if="showRightSidePanel" fixed right width="600" style="box-shadow: 0 10px 15px -3px #888">
@@ -357,6 +360,7 @@ import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
+import TsIPAddresses from '../components/LeftPanel/IPAddresses.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
 import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
@@ -377,6 +381,7 @@ export default {
     PageHeaderMobileMenu,
     TsSavedSearches,
     TsDataTypes,
+    TsIPAddresses,
     TsTags,
     TsSearchTemplates,
     TsUploadTimelineFormButton,

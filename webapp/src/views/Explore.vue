@@ -127,19 +127,19 @@ limitations under the License.
           </v-btn>
           <span class="timeline-header">
             <ts-upload-timeline-form-button btn-type="small"></ts-upload-timeline-form-button>
-            <!-- <v-dialog v-model="addManualEvent" width="600">
+            <v-dialog v-model="addManualEvent" width="600">
               <template v-slot:activator="{ on, attrs }">
-                <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
+                <!-- <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
                   <v-icon left small> mdi-plus </v-icon>
                   Add manual event
-                </v-btn>
+                </v-btn> -->
               </template>
               <ts-add-manual-event
                 app
                 @cancel="addManualEvent = false"
                 :datetimeProp="datetimeManualEvent"
               ></ts-add-manual-event>
-            </v-dialog> -->
+            </v-dialog>
             <v-btn small text rounded color="primary" @click.stop="enableAllTimelines()">
               <v-icon left small>mdi-eye</v-icon>
               <span>Select all</span>
@@ -155,6 +155,7 @@ limitations under the License.
         <v-expand-transition>
           <div v-show="showTimelines">
             <ts-timeline-picker
+              id="tsTimelinePicker"
               :current-query-filter="currentQueryFilter"
               :count-per-index="countPerIndex"
               :count-per-timeline="countPerTimeline"
@@ -289,6 +290,7 @@ limitations under the License.
     <!-- Eventlist -->
     <v-card flat class="mt-5 mx-3" color="transparent">
       <ts-event-list
+        id="tsEventList"
         :query-request="activeQueryRequest"
         @countPerIndex="updateCountPerIndex($event)"
         @countPerTimeline="updateCountPerTimeline($event)"
@@ -301,10 +303,12 @@ limitations under the License.
 import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
+import tourManager from '../utils/tourManager.js'
+import { getCombinedTourSteps } from '../utils/toursConfig.js'
 
 import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
 import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
-// import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
+import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
 import TsTimelinePicker from '../components/Explore/TimelinePicker.vue'
 import TsFilterMenu from '../components/Explore/FilterMenu.vue'
 import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButton.vue'
@@ -319,7 +323,7 @@ const defaultQueryFilter = () => {
     from: 0,
     terminate_after: 40,
     size: 40,
-    uploadIds: ['_all'],
+    indices: '_all',
     order: 'asc',
     chips: [],
   }
@@ -332,7 +336,7 @@ export default {
   components: {
     TsSearchHistoryTree,
     TsSearchHistoryButtons,
-    // TsSearchDropdown,
+    TsSearchDropdown,
     TsTimelinePicker,
     TsFilterMenu,
     TsUploadTimelineFormButton,
@@ -410,15 +414,41 @@ export default {
         return a.name.localeCompare(b.name)
       })
     },
+    uploadState() {
+      return this.$store.state.uploadState
+    },
   },
   watch: {
     enabledTimelines: function () {
       this.updateEnabledTimelines(this.enabledTimelines)
     },
+    'uploadState.isProcessing': function (isProcessing) {
+      if (!isProcessing && this.uploadState.status === 'complete') {
+        const currentTourState = tourManager.getTourState()
+
+        if (currentTourState === 'no_data_uploaded') {
+          tourManager.setTourState('first_data_uploaded')
+        }
+
+        const hasTourParam = this.$route.query.tour === 'true'
+        const tourState = tourManager.getTourState()
+        const shouldShowTour = hasTourParam || tourState === 'first_data_uploaded'
+
+        if (shouldShowTour) {
+          this.startTour()
+        }
+      }
+    },
   },
   methods: {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
+    },
+    startTour() {
+      const steps = getCombinedTourSteps()
+      if (steps && steps.length > 0) {
+        tourManager.startTour(steps)
+      }
     },
     updateCountPerIndex: function (count) {
       this.countPerIndex = count
@@ -547,10 +577,10 @@ export default {
 
       this.currentQueryFilter.chips = [startChip, endChip]
 
-      // Use timeline_id from event source (browser model doesn't have upload_ids_metadata)
+      // Use timeline_id from event source (browser model doesn't have indices_metadata)
       const timelineId = this.contextEvent._source.timeline_id || this.contextEvent._source.__ts_timeline_id
       if (timelineId) {
-        this.currentQueryFilter.uploadIds = [timelineId]
+        this.currentQueryFilter.indices = [timelineId]
       }
       this.currentQueryFilter.size = numContextEvents
       this.search()
@@ -562,7 +592,7 @@ export default {
       this.search()
     },
     updateEnabledTimelines: function (timelineIds) {
-      this.currentQueryFilter.uploadIds = timelineIds
+      this.currentQueryFilter.indices = timelineIds
       this.search()
     },
     toggleChip: function (chip) {
@@ -720,10 +750,10 @@ export default {
         this.currentQueryFilter.fields = [{ field: 'message', type: 'text' }]
       }
       this.selectedFields = this.currentQueryFilter.fields
-      if (this.currentQueryFilter.uploadIds && (this.currentQueryFilter.uploadIds[0] === '_all' || this.currentQueryFilter.uploadIds === '_all')) {
+      if (this.currentQueryFilter.indices[0] === '_all' || this.currentQueryFilter.indices === '_all') {
         // Dexie-native: just use timeline IDs
         let allIds = this.sketch.timelines.map(timeline => timeline.id)
-        this.currentQueryFilter.uploadIds = allIds
+        this.currentQueryFilter.indices = allIds
       }
       let chips = this.currentQueryFilter.chips
       if (chips) {
@@ -773,6 +803,13 @@ export default {
   mounted() {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
+
+    const hasTourParam = this.$route.query.tour === 'true'
+    const hasData = this.sketch.timelines && this.sketch.timelines.length > 0
+
+    if (hasTourParam && hasData) {
+      this.startTour()
+    }
   },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')
@@ -807,18 +844,18 @@ export default {
         return timeline.id === parseInt(this.params.indexName, 10)
       })
       if (timeline) {
-        this.currentQueryFilter.uploadIds = [timeline.id]
+        this.currentQueryFilter.indices = [timeline.id]
       }
       doSearch = true
     }
 
     if (!this.currentQueryString) {
-      this.currentQueryFilter.uploadIds = []
+      this.currentQueryFilter.indices = ['_all']
     }
 
     if (doSearch) {
-      if (!this.currentQueryFilter.uploadIds.length) {
-        this.currentQueryFilter.uploadIds = []
+      if (!this.currentQueryFilter.indices.length) {
+        this.currentQueryFilter.indices = ['_all']
       }
       this.search()
     }

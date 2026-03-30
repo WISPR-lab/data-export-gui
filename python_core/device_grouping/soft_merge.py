@@ -133,8 +133,8 @@ def format_rows(rows: list[dict]) -> list[dict]:
             'origins': json.dumps(row['origins']),
             'system_soft_merge': row.get('system_soft_merge', 0),
             'is_generic': row['is_generic'],
-            'user_label': None,
-            'notes': None,
+            'user_label': row.get('user_label'),
+            'notes': row.get('notes'),
             'tags': json.dumps([]),
             'labels': json.dumps([]),
         })
