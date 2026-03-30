@@ -25,7 +25,7 @@
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" />
+          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -58,7 +58,7 @@
           </v-expansion-panel-header>
 
           <v-expansion-panel-content class="grey lighten-5 border-top">
-            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" />
+            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" @see-all-events="goToExplore(item)" />
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -198,6 +198,13 @@ export default {
     },
     onModalClosed() {
       this.mergeSuccess = false;
+    },
+    goToExplore(device) {
+      const queryString = `device_profiles_data:${device.id}`;
+      this.$router.push({
+        name: 'Explore',
+        query: { q: queryString }
+      });
     }
   }
 };
