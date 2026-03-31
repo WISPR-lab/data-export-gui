@@ -294,6 +294,7 @@ limitations under the License.
         :query-request="activeQueryRequest"
         @countPerIndex="updateCountPerIndex($event)"
         @countPerTimeline="updateCountPerTimeline($event)"
+        @initialSearchComplete="startTour"
       ></ts-event-list>
     </v-card>
   </v-container>
@@ -303,8 +304,7 @@ limitations under the License.
 import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
-import tourManager from '../utils/tourManager.js'
-import { getCombinedTourSteps } from '../utils/toursConfig.js'
+import { tourManager, getCombinedTourSteps } from '../utils/tour.js'
 
 import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
 import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
@@ -422,29 +422,18 @@ export default {
     enabledTimelines: function () {
       this.updateEnabledTimelines(this.enabledTimelines)
     },
-    'uploadState.isProcessing': function (isProcessing) {
-      if (!isProcessing && this.uploadState.status === 'complete') {
-        const currentTourState = tourManager.getTourState()
-
-        if (currentTourState === 'no_data_uploaded') {
-          tourManager.setTourState('first_data_uploaded')
-        }
-
-        const hasTourParam = this.$route.query.tour === 'true'
-        const tourState = tourManager.getTourState()
-        const shouldShowTour = hasTourParam || tourState === 'first_data_uploaded'
-
-        if (shouldShowTour) {
-          this.startTour()
-        }
-      }
-    },
   },
   methods: {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
     },
     startTour() {
+      const hasTourParam = this.$route.query.tour === 'true'
+      const hasData = this.sketch.timelines && this.sketch.timelines.length == 0
+      
+      if (!hasTourParam && !hasData) return
+      
+      console.log('[Explore] Starting tour')
       const steps = getCombinedTourSteps()
       if (steps && steps.length > 0) {
         tourManager.startTour(steps)
@@ -803,13 +792,6 @@ export default {
   mounted() {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
-
-    const hasTourParam = this.$route.query.tour === 'true'
-    const hasData = this.sketch.timelines && this.sketch.timelines.length > 0
-
-    if (hasTourParam && hasData) {
-      this.startTour()
-    }
   },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')

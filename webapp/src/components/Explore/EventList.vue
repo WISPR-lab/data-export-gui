@@ -692,6 +692,7 @@ export default {
       showBanner: false,
       // DEBUG: Temporary hide functionality
       DEBUG_hiddenEventIds: new Set(),
+      isFirstSearch: true,
     }
   },
   computed: {
@@ -1017,12 +1018,16 @@ export default {
         this.eventList.meta.has_next_page = (currentFrom + this.eventList.objects.length) < this.eventList.meta.total_count
         this.eventList.meta.query_time_ms = Date.now() - startTime
 
-        console.log(`[EventList] Displaying ${this.eventList.objects.length} / ${this.eventList.meta.total_count} events`);
         this.updateShowBanner()
         this.$emit('countPerTimeline', this.eventList.meta.count_per_timeline)
         EventBus.$emit('updateCountPerTimeline', this.eventList.meta.count_per_timeline)
         
         this.addTimeBubbles()
+        
+        if (this.isFirstSearch) {
+          this.isFirstSearch = false
+          this.$emit('initialSearchComplete')
+        }
       } catch (error) {
         console.error('[EventList] Error searching:', error)
         this.errorSnackBar('Error fetching search results: ' + error.message)
@@ -1259,31 +1264,21 @@ export default {
     },
   },
   created() {
-    console.log('[EventList.created] queryRequest:', this.queryRequest)
-    console.log('[EventList.created] queryRequest.queryString:', this.queryRequest && this.queryRequest.queryString)
+    const storedState = localStorage.getItem('aiSummaryCollapsed');
+    if (storedState === 'true') {
+      this.summaryCollapsed = true;
+    }
     
-    // Check if queryRequest has actual content (not just empty observer)
     if (this.queryRequest && this.queryRequest.queryString) {
       this.currentQueryString = this.queryRequest.queryString
       this.currentQueryFilter = { ...this.queryRequest.queryFilter } || defaultQueryFilter()
       this.currentQueryDsl = { ...this.queryRequest.queryDsl }
-      // Set additional fields when loading filter from a saved search.
       if (this.currentQueryFilter.fields) {
         this.selectedFields = this.currentQueryFilter.fields
       }
-      const storedState = localStorage.getItem('aiSummaryCollapsed');
-      if (storedState === 'true') {
-        this.summaryCollapsed = true;
-      }
-      this.search()
-    } else {
-      // No queryString provided - perform initial load with all events
-      const storedState = localStorage.getItem('aiSummaryCollapsed');
-      if (storedState === 'true') {
-        this.summaryCollapsed = true;
-      }
-      this.search()
     }
+    
+    this.search()
   },
 }
 </script>
