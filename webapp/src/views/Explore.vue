@@ -148,8 +148,8 @@ limitations under the License.
               <v-icon left small>mdi-eye-off</v-icon>
               <span>Unselect all</span>
             </v-btn>
-            <delete-all-data-button @click="showDeleteDialog = true"></delete-all-data-button>
-            <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog>
+            <!-- <delete-all-data-button @click="showDeleteDialog = true"></delete-all-data-button>
+            <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog> -->
           </span>
         </v-toolbar>
         <v-expand-transition>
@@ -429,8 +429,9 @@ export default {
     },
     startTour() {
       const hasTourParam = this.$route.query.tour === 'true'
-      const hasData = this.sketch.timelines && this.sketch.timelines.length == 0
+      const hasData = this.sketch.timelines && this.sketch.timelines.length > 0
       
+      console.log('[Explore] hasTourParam:', hasTourParam, 'hasData:', hasData)
       if (!hasTourParam && !hasData) return
       
       console.log('[Explore] Starting tour')

@@ -262,6 +262,11 @@ limitations under the License.
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
         <!-- <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates> -->
         
+        
+        <div class="pa-4">
+          <delete-all-data-button @click="showDeleteDialog = true" style="width: 100%; height:2rem"></delete-all-data-button>
+        </div>
+        
         <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
       </v-navigation-drawer>
 
