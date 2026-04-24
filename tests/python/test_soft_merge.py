@@ -4,10 +4,13 @@ import device_grouping.worker
 from device_grouping.soft_merge import (
     soft_merge_single_upload,
     soft_merge_multi_upload,
-    _soft_match,
+    soft_match,
 )
 
 from device_grouping.computed_fields import is_generic
+
+def _soft_match(attrs_a:dict, attrs_b:dict, spec_a:int, spec_b:int) -> bool:
+    return soft_match({'attributes': attrs_a, 'specificity': spec_a}, {'attributes': attrs_b, 'specificity': spec_b})
 
 
 class TestSoftMatch:
