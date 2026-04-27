@@ -3,6 +3,7 @@ import json
 import builtins
 from device_grouping.computed_fields import compute_device_profile_fields
 from db_session import DatabaseSession
+from utils.merge_history import log_merge_event
 
 
 def _get_config_value(name):
@@ -11,7 +12,7 @@ def _get_config_value(name):
     return getattr(builtins, name)
 
 
-def unmerge_device_profiles(profile_id: str, atomic_id: str) -> dict:
+def unmerge_device_profiles(profile_id: str, atomic_id: str, user_reason: str = "") -> dict:
     db_path = _get_config_value('DB_PATH')
     json_cols = {'attributes', 'origins', 'tags', 'labels', 'atomic_devices_ids'}
     
@@ -75,52 +76,53 @@ def unmerge_device_profiles(profile_id: str, atomic_id: str) -> dict:
             updated_profile['notes'] = profile.get('notes')
             updated_profile['tags'] = profile.get('tags', '[]')
             updated_profile['labels'] = profile.get('labels', '[]')
-            updated_profile['system_soft_merge'] = profile.get('system_soft_merge', 0)
+            updated_profile['system_soft_merge'] = 1 if len(remaining_atomics) > 1 else 0
             
             conn.execute(
                 '''INSERT INTO device_profiles
                    (id, atomic_devices_ids, attributes, specificity, model, manufacturer, 
                     origins, system_soft_merge, is_generic, user_label, notes, tags, labels, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (
-                    new_profile['id'],
-                    json.dumps(new_profile['atomic_devices_ids']),
-                    json.dumps(new_profile['attributes']),
-                    new_profile['specificity'],
-                    new_profile['model'],
-                    new_profile['manufacturer'],
-                    json.dumps(new_profile['origins']),
-                    new_profile['system_soft_merge'],
-                    new_profile['is_generic'],
-                    new_profile['user_label'],
-                    new_profile['notes'],
-                    new_profile['tags'],
-                    new_profile['labels'],
-                    new_profile['created_at'],
-                    new_profile['updated_at'],
-                )
+                   VALUES (:id, :atomic_devices_ids, :attributes, :specificity, :model, :manufacturer, 
+                           :origins, :system_soft_merge, :is_generic, :user_label, :notes, :tags, :labels, :created_at, :updated_at)''',
+                {
+                    'id': new_profile['id'],
+                    'atomic_devices_ids': json.dumps(new_profile['atomic_devices_ids']),
+                    'attributes': json.dumps(new_profile['attributes']),
+                    'specificity': new_profile['specificity'],
+                    'model': new_profile['model'],
+                    'manufacturer': new_profile['manufacturer'],
+                    'origins': json.dumps(new_profile['origins']),
+                    'system_soft_merge': new_profile['system_soft_merge'],
+                    'is_generic': new_profile['is_generic'],
+                    'user_label': new_profile['user_label'],
+                    'notes': new_profile['notes'],
+                    'tags': new_profile['tags'],
+                    'labels': new_profile['labels'],
+                    'created_at': new_profile['created_at'],
+                    'updated_at': new_profile['updated_at'],
+                }
             )
             
             conn.execute(
                 '''UPDATE device_profiles 
-                   SET atomic_devices_ids = ?, attributes = ?, specificity = ?, 
-                       model = ?, manufacturer = ?, origins = ?, is_generic = ?
-                   WHERE id = ?''',
-                (
-                    json.dumps(updated_profile['atomic_devices_ids']),
-                    json.dumps(updated_profile['attributes']),
-                    updated_profile['specificity'],
-                    updated_profile['model'],
-                    updated_profile['manufacturer'],
-                    json.dumps(updated_profile['origins']),
-                    updated_profile['is_generic'],
-                    profile_id
-                )
+                   SET atomic_devices_ids = :atomic_devices_ids, attributes = :attributes, specificity = :specificity, 
+                       model = :model, manufacturer = :manufacturer, origins = :origins, is_generic = :is_generic
+                   WHERE id = :id''',
+                {
+                    'atomic_devices_ids': json.dumps(updated_profile['atomic_devices_ids']),
+                    'attributes': json.dumps(updated_profile['attributes']),
+                    'specificity': updated_profile['specificity'],
+                    'model': updated_profile['model'],
+                    'manufacturer': updated_profile['manufacturer'],
+                    'origins': json.dumps(updated_profile['origins']),
+                    'is_generic': updated_profile['is_generic'],
+                    'id': profile_id
+                }
             )
             
             conn.commit()
             
-            # Verify unmerge actually happened
+            # verify unmerge actually happened
             new_check = conn.execute('SELECT * FROM device_profiles WHERE id = ?', (new_profile_id,)).fetchone()
             if not new_check:
                 return {'status': 'error', 'message': f'Unmerge failed: new profile {new_profile_id} not found after insert'}
@@ -131,6 +133,14 @@ def unmerge_device_profiles(profile_id: str, atomic_id: str) -> dict:
             
             if atomic_id in updated_check.get('atomic_devices_ids', []):
                 return {'status': 'error', 'message': f'Unmerge failed: atomic {atomic_id} still in profile {profile_id}'}
+            
+            log_merge_event(
+                profile_id=profile_id,
+                action='unmerge',
+                atomic_ids=[atomic_id],
+                user_initiated=True,
+                user_reason=user_reason
+            )
             
             return {
                 'status': 'ok',

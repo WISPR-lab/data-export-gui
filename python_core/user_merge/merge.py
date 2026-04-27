@@ -2,6 +2,7 @@ import json
 import builtins
 from device_grouping.computed_fields import compute_device_profile_fields
 from db_session import DatabaseSession
+from utils.merge_history import log_merge_event
 
 
 def _get_config_value(name):
@@ -91,6 +92,14 @@ def merge_device_profiles(src_profile_id: str, tgt_profile_id: str) -> dict:
             tgt_check = conn.execute('SELECT * FROM device_profiles WHERE id = ?', (tgt_profile_id,)).fetchone()
             if not tgt_check:
                 return {'status': 'error', 'message': f'Merge failed: target profile {tgt_profile_id} not found after update'}
+            
+            log_merge_event(
+                profile_id=tgt_profile_id,
+                action='merge',
+                atomic_ids=src_atomics,
+                user_initiated=True,
+                user_reason='User merge'
+            )
             
             return {
                 'status': 'ok',
