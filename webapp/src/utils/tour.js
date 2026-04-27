@@ -11,7 +11,8 @@ class TourManager {
     if (!hasData) return;
 
     let tourVisits = 0;
-    if (store) tourVisits = store.state.tourVisits || 0;
+    if (page === "explore") tourVisits = store ? store.state.exploreTourVisits || 0 : 0;
+    if (page === "devices") tourVisits = store ? store.state.deviceTourVisits || 0 : 0;
     if (!forceTour && tourVisits > 0) return;
 
     let steps = []
