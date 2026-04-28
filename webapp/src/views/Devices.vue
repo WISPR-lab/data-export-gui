@@ -30,12 +30,12 @@
       >
         <v-expansion-panel-header class="pa-4">
           <template v-slot:default="{ open }">
-            <device-header :device="dev" :open="open" />
+            <device-header :device="dev" :open="open" @showJSON="showDeviceJSON" />
           </template>
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" />
+          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" @unmerge="handleUnmerge(dev, $event)" @showJSON="showDeviceJSON" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -63,12 +63,12 @@
         >
           <v-expansion-panel-header class="pa-4">
             <template v-slot:default="{ open }">
-              <device-header :device="item" is-generic :open="open" />
+              <device-header :device="item" is-generic :open="open" @showJSON="showDeviceJSON" />
             </template>
           </v-expansion-panel-header>
 
           <v-expansion-panel-content class="grey lighten-5 border-top">
-            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" @see-all-events="goToExplore(item)" />
+            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" @see-all-events="goToExplore(item)" @unmerge="handleUnmerge(item, $event)" @showJSON="showDeviceJSON" />
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -88,6 +88,13 @@
 
     <device-detection-help-modal v-model="showDeviceHelpDialog" />
 
+    <!-- Device JSON Modal -->
+    <json-modal
+      v-model="showJSONModal"
+      :title="selectedDeviceForJSON ? ('Raw Data: ' + (selectedDeviceForJSON.user_label || selectedDeviceForJSON.model || selectedDeviceForJSON.label || 'Record')) : 'Data'"
+      :data="selectedDeviceForJSON || {}"
+      max-width="800"
+    />
   </v-container>
 </template>
 
@@ -96,7 +103,8 @@ import DeviceDetailDropdown from '@/components/Devices/DeviceDetailDropdown.vue'
 import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
 import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
-import { getDeviceGroups, updateDeviceGroup } from '@/database/queries/devices.js';
+import JSONModal from '@/components/Devices/JSONModal.vue';
+import { getDevices, updateDeviceGroup } from '@/database/queries/devices.js';
 import { callPyodideWorker } from '@/pyodide/pyodide-client';
 
 export default {
@@ -105,7 +113,8 @@ export default {
     DeviceDetailDropdown,
     DeviceHeader,
     DeviceGroupModal,
-    DeviceDetectionHelpModal
+    DeviceDetectionHelpModal,
+    'json-modal': JSONModal
   },
   data() {
     return {
@@ -120,6 +129,8 @@ export default {
       devices: [],
       unassigned: [],
       showDeviceHelpDialog: false,
+      showJSONModal: false,
+      selectedDeviceForJSON: null,
     }
   },
   async mounted() {
@@ -128,9 +139,7 @@ export default {
   methods: {
     async fetchDevices() {
       try {
-        const allGroups = await getDeviceGroups();
-        // Categorize based on the logic:
-        // Everything in devices except the generic singletons
+        const allGroups = await getDevices();
         this.devices = allGroups.filter(g => !g.is_generic);
         this.unassigned = allGroups.filter(g => g.is_generic);
       } catch (err) {
@@ -154,6 +163,26 @@ export default {
       } catch (err) {
         console.error('Failed to save device changes:', err);
       }
+    },
+    async handleUnmerge(device, atomicId) {
+      try {
+        const result = await callPyodideWorker('unmerge', {
+          profileId: device.id,
+          atomicId: atomicId
+        });
+        
+        if (result && result.status === 'ok') {
+          await this.fetchDevices();
+        } else {
+          console.error('Unmerge failed:', result);
+        }
+      } catch (error) {
+        console.error('Unmerge error:', error);
+      }
+    },
+    showDeviceJSON(data) {
+      this.selectedDeviceForJSON = data.attributes || data
+      this.showJSONModal = true
     },
     onDragStart(event, item) {
       this.isDragging = true;
