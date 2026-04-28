@@ -148,8 +148,8 @@ limitations under the License.
               <v-icon left small>mdi-eye-off</v-icon>
               <span>Unselect all</span>
             </v-btn>
-            <delete-all-data-button @click="showDeleteDialog = true"></delete-all-data-button>
-            <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog>
+            <!-- <delete-all-data-button @click="showDeleteDialog = true"></delete-all-data-button>
+            <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog> -->
           </span>
         </v-toolbar>
         <v-expand-transition>
@@ -304,7 +304,7 @@ limitations under the License.
 import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
-import { tourManager, getCombinedTourSteps } from '../utils/tour.js'
+import { tourManager } from '../utils/tour.js'
 
 import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
 import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
@@ -428,16 +428,13 @@ export default {
       return this.quickTags.find((el) => el.tag === tag)
     },
     startTour() {
-      const hasTourParam = this.$route.query.tour === 'true'
-      const hasData = this.sketch.timelines && this.sketch.timelines.length == 0
-      
-      if (!hasTourParam && !hasData) return
-      
-      console.log('[Explore] Starting tour')
-      const steps = getCombinedTourSteps()
-      if (steps && steps.length > 0) {
-        tourManager.startTour(steps)
-      }
+      const forceTour = this.$route.query.tour === 'true';
+      tourManager.startTour(
+        'explore',
+        forceTour,
+        this.sketch.timelines && this.sketch.timelines.length > 0,
+        this.$store
+      )
     },
     updateCountPerIndex: function (count) {
       this.countPerIndex = count

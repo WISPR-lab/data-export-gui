@@ -6,23 +6,26 @@ class TourManager {
     this.driverInstance = null
   }
 
-  getTourState() {
-    try {
-      return localStorage.getItem('tour_state') || 'no_data_uploaded'
-    } catch {
-      return 'no_data_uploaded'
-    }
-  }
 
-  setTourState(state) {
-    try {
-      localStorage.setItem('tour_state', state)
-    } catch (e) {
-      console.warn('Could not save tour state to localStorage:', e)
-    }
-  }
+  startTour(page = "explore", forceTour, hasData, store) {
+    if (!hasData) return;
 
-  startTour(steps) {
+    let tourVisits = 0;
+    if (page === "explore") tourVisits = store ? store.state.exploreTourVisits || 0 : 0;
+    if (page === "devices") tourVisits = store ? store.state.deviceTourVisits || 0 : 0;
+    if (!forceTour && tourVisits > 0) return;
+
+    let steps = []
+    if (page === "explore"){
+      if (store) store.commit('INCREMENT_EXPLORE_TOUR_VISITS');
+      steps = getExploreTourSteps()
+    }
+    if (page === "devices") {
+      if (store) store.commit('INCREMENT_DEVICE_TOUR_VISITS');
+      // steps = getDeviceTourSteps() --- IGNORE ---
+    }
+    if (!steps || steps.length === 0) return
+
     this.driverInstance = driver({
       showProgress: true,
       steps: steps.map((step) => ({
@@ -44,15 +47,6 @@ class TourManager {
   closeTour() {
     if (this.driverInstance) {
       this.driverInstance.destroy()
-    }
-    this.setTourState('tour_completed')
-  }
-
-  resetTourState() {
-    try {
-      localStorage.removeItem('tour_state')
-    } catch (e) {
-      console.warn('Could not reset tour state:', e)
     }
   }
 }
@@ -129,7 +123,7 @@ function getFlagsAndStarsTourSteps() {
   ]
 }
 
-function getCombinedTourSteps() {
+function getExploreTourSteps() {
   return [
     ...getMainViewsTourSteps(),
     ...getTimelineSelectionTourSteps(),
@@ -143,7 +137,7 @@ function getCombinedTourSteps() {
 
 export {
   tourManager,
-  getCombinedTourSteps,
+  getExploreTourSteps,
   getMainViewsTourSteps,
   getTimelineSelectionTourSteps,
   getTimelineCustomizationTourSteps,

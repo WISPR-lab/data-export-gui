@@ -95,6 +95,8 @@ const defaultState = () => {
       warnings: [],
       success: false,
     },
+    exploreTourVisits: 0,
+    deviceTourVisits: 0,
   }
 }
 
@@ -247,8 +249,12 @@ export default new Vuex.Store({
         success: false,
       })
     },
-
-    // Tour mutations removed - tours now self-manage via BaseTour
+    INCREMENT_EXPLORE_TOUR_VISITS(state) {
+      state.exploreTourVisits++
+    },
+    INCREMENT_DEVICE_TOUR_VISITS(state) {
+      state.deviceTourVisits++
+    },
   },
   actions: {
     async updateSketch(context, sketchId) {

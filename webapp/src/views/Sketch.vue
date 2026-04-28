@@ -115,6 +115,19 @@ limitations under the License.
           <span class="white--text">{{ currentUser | initialLetter }}</span>
         </v-avatar> -->
 
+        <v-btn 
+          v-if="hasTimelines && !loadingSketch" 
+          small
+          outlined
+          color="grey"
+          @click="startTourManual"
+          title="Start guided tour"
+          class="mr-2"
+        >
+          <v-icon small left>mdi-lightbulb-on</v-icon>
+          TOUR
+        </v-btn>
+
         <PageHeaderMobileMenu visibilityClass="" />
         <!-- <v-menu offset-y>
           <template v-slot:activator="{ on, attrs }">
@@ -262,6 +275,11 @@ limitations under the License.
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
         <!-- <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates> -->
         
+        
+        <div class="pa-4">
+          <delete-all-data-button @click="showDeleteDialog = true" style="width: 100%; height:2rem"></delete-all-data-button>
+        </div>
+        
         <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
       </v-navigation-drawer>
 
@@ -356,6 +374,7 @@ limitations under the License.
 <script>
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
+import { tourManager } from '../utils/tour.js'
 import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.vue'
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
@@ -478,6 +497,10 @@ export default {
     },
   },
   methods: {
+    startTourManual() {
+      const page = this.$route.name === 'Explore' ? 'explore' : 'devices'
+      tourManager.startTour(page, true, true, this.$store)
+    },
     deleteSketch: async function () {
       if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
         try {
