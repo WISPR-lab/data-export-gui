@@ -95,7 +95,8 @@ const defaultState = () => {
       warnings: [],
       success: false,
     },
-    tourVisits: 0,
+    exploreTourVisits: 0,
+    deviceTourVisits: 0,
   }
 }
 
