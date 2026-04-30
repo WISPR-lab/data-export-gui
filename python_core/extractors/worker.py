@@ -152,12 +152,18 @@ def extract(platform,
                         file_info
                     )
                     
-                    raw_data_rows = [
-                        (str(uuid.uuid4()), upload_id, file_id, json.dumps(r))
-                        for r in records
-                    ]
+                    raw_data_rows = []
+                    for r in records:
+                        line_numbers = r.pop("__line_numbers", [1])
+                        raw_data_rows.append((
+                            str(uuid.uuid4()), 
+                            upload_id, 
+                            file_id, 
+                            json.dumps(r),
+                            json.dumps(line_numbers)
+                        ))
                     conn.executemany(
-                        'INSERT INTO raw_data (id, upload_id, file_id, data) VALUES (?, ?, ?, ?)',
+                        'INSERT INTO raw_data (id, upload_id, file_id, data, line_numbers) VALUES (?, ?, ?, ?, ?)',
                         raw_data_rows
                     )
                     conn.commit()

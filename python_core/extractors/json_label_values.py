@@ -13,11 +13,19 @@ class JSONLabelValuesParser(JSONParser):
             flat_json = cls._flatten_lv(raw_json)
             data = cls._resolve_root(flat_json, config)
             
+            total_lines = len(content.splitlines())
+            line_range = [1, max(1, total_lines)]
+            
             if isinstance(data, list):
-                return [x for x in data if isinstance(x, dict)]
+                records = [x for x in data if isinstance(x, dict)]
             elif isinstance(data, dict):
-                return [data]
-            return []
+                records = [data]
+            else:
+                return []
+            
+            for record in records:
+                record["__line_numbers"] = line_range
+            return records
         except FileLevelError:
             raise
         except Exception as e:

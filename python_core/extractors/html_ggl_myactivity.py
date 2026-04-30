@@ -19,9 +19,16 @@ class HTMLMyActvityParser(BaseParser):
         if not content or not content.strip():
             raise FileLevelError("Empty HTML input")
         try:
-
+            total_lines = len(content.splitlines())
+            line_range = [1, max(1, total_lines)]
+            
             soup = BeautifulSoup(content, 'html.parser')
-            return cls._parse_google_myactivity(soup) 
+            records = cls._parse_google_myactivity(soup)
+            
+            for record in records:
+                record["__line_numbers"] = line_range
+            
+            return records
             
         except FileLevelError:
             raise

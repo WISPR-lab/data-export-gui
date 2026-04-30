@@ -52,13 +52,23 @@ class HTMLTableParser(CSVParser):
             if not tables:
                 raise FileLevelError("No tables found in HTML")
             
+            total_lines = len(content.splitlines())
+            all_rows = []
+            
             if len(tables) > 1:
                 print(f"[HTMLTableParser] Warning: Multiple tables found in HTML. Extracting {len(tables)} tables.")
-                res = {f"table_{i}": cls._extract_table(table) for i, table in enumerate(tables)}
+                for i, table in enumerate(tables):
+                    rows = cls._extract_table(table)
+                    for row in rows:
+                        row["__line_numbers"] = [1, total_lines]
+                    all_rows.extend(rows)
             else:
-                res = cls._extract_table(tables[0])
+                rows = cls._extract_table(tables[0])
+                for row in rows:
+                    row["__line_numbers"] = [1, total_lines]
+                all_rows.extend(rows)
             
-            return res
+            return all_rows
             
         except FileLevelError:
             raise

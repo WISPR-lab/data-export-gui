@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS raw_data ( -- filled during extraction step
     upload_id TEXT,
     file_id TEXT,             
     data JSONTEXT,
+    line_numbers JSONTEXT,  -- JSON list of line numbers where this record appears in the source file (1-indexed)
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE,
     FOREIGN KEY(file_id) REFERENCES uploaded_files(id) ON DELETE CASCADE
 );
@@ -49,6 +50,8 @@ CREATE TABLE IF NOT EXISTS events ( -- filled during semantic map
     origin TEXT,  -- e.g., "facebook/web", "facebook/mobile_app", "apple/system", "unknown"
     tags JSONTEXT DEFAULT "[]",
     labels JSONTEXT DEFAULT "[]",
+    --
+    treat_as_auth_device BOOLEAN DEFAULT 0, 
     --
     deduplicated BOOLEAN DEFAULT 0,
     extra_timestamps JSONTEXT DEFAULT "[]",
@@ -85,7 +88,6 @@ CREATE TABLE IF NOT EXISTS devices_raw ( -- filled during semantic map
     FOREIGN KEY(file_id) REFERENCES uploaded_files(id) ON DELETE CASCADE,
     FOREIGN KEY(raw_data_id) REFERENCES raw_data(id) ON DELETE CASCADE
 );
-
 
 CREATE TABLE IF NOT EXISTS atomic_devices ( -- hard merge based on static device identifiers. user cannot edit this.
     id TEXT PRIMARY KEY,
@@ -133,7 +135,7 @@ CREATE TABLE IF NOT EXISTS device_profile_comments (
 
 
 
-CREATE TABLE IF NOT EXISTS events_assoc (
+CREATE TABLE IF NOT EXISTS event_assoc (
     event_id TEXT,
     atomic_device_id TEXT,
     event_specificity INTEGER,  -- 1=generic, 2=model+version, 3=hard_id
@@ -154,6 +156,7 @@ CREATE TABLE IF NOT EXISTS events_assoc (
 
 
 -- view for Events Mappings
+DROP VIEW IF EXISTS v_event_field_mappings;
 CREATE VIEW IF NOT EXISTS v_event_field_mappings AS
 -- static columns
 SELECT 'id' AS field, 'text' AS type
@@ -174,6 +177,7 @@ WHERE events.attributes IS NOT NULL AND events.attributes != '';
 
 
 -- view for Auth Devices Mappings
+DROP VIEW IF EXISTS v_device_field_mappings;
 CREATE VIEW IF NOT EXISTS v_device_field_mappings AS
 -- static columns
 SELECT 'id' AS field, 'text' AS type
@@ -218,7 +222,7 @@ SELECT
     dp.id AS device_profile_id,
     ea.match_reason,
     ea.event_specificity
-FROM events_assoc ea
+FROM event_assoc ea
 JOIN device_profiles dp ON 1=1
 JOIN json_each(dp.atomic_devices_ids) as j ON j.value = ea.atomic_device_id;
 
@@ -234,7 +238,9 @@ SELECT
             'user_label', COALESCE(dp.user_label, '')
         )
     ) AS device_profiles_data
-FROM events_assoc ea
+FROM event_assoc ea
 JOIN device_profiles dp ON 1=1
 JOIN json_each(dp.atomic_devices_ids) as j ON j.value = ea.atomic_device_id
 GROUP BY ea.event_id;
+
+
