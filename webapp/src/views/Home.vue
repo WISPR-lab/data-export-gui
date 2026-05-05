@@ -125,7 +125,7 @@
 <script>
 import PageHeader from '../components/Navigation/PageHeader.vue'
 import DiscordIcon from '../components/DiscordIcon.vue'
-import heroScreenshot from '@/assets/hero_screenshot.png'
+import heroScreenshot from '@/assets/images/hero_screenshot.png'
 
 export default {
   name: 'Home',

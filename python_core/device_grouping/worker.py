@@ -99,7 +99,7 @@ def group(upload_id: str, db_path: str = None) -> None:
             
             if associations:
                 conn.executemany(
-                    """INSERT OR REPLACE INTO events_assoc
+                    """INSERT OR REPLACE INTO event_assoc
                        (event_id, atomic_device_id, match_reason, event_specificity)
                        VALUES (:event_id, :atomic_device_id, :match_reason, :event_specificity)""",
                     associations
