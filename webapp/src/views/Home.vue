@@ -9,7 +9,7 @@
         </h1>
         <p class="text-h5 secondary--text mb-8 font-weight-regular">
           Online platforms let you download data exports containing your personal data. <br/>
-          <strong>LEStraDE</strong> shows you what's actually in it, privately in your browser.
+          <strong>LEStrADE</strong> can show you what's in it, privately in your browser.
         </p>
         <div class="d-flex justify-center gap-3">
           <v-btn
@@ -39,10 +39,10 @@
 
       <div class="mb-20">
         <v-card class="card-shadow pa-8 mb-4">
-          <h3 class="text-h5 font-weight-medium secondary--text mb-4 text-center">What LEStraDE Does</h3>
+          <h3 class="text-h5 font-weight-medium secondary--text mb-4 text-center">What LEStrADE Does</h3>
           <p class="text-body1 secondary--text text-center">
             When you're trying to understand if an account has been compromised, standard security settings often don't provide enough information. 
-            <span class="font-weight-bold">LEStraDE</span> lets you access and analyze the security data these platforms already collect about you.
+            <span class="font-weight-bold">LEStrADE</span> lets you access and analyze the security data these platforms already collect about you.
           </p>
         </v-card>
 
@@ -53,7 +53,7 @@
         <v-card class="card-shadow pa-8 mb-4">
           <h3 class="text-h5 font-weight-medium secondary--text mb-4 text-center">Import Your Data</h3>
           <p class="text-body1 secondary--text mb-4 text-center">
-            Request a data export from any supported platform—a file containing your account's complete security history. LEStraDE processes it <strong>locally</strong> in your browser, never uploading or storing your data elsewhere.
+            Request a data export from any supported platform—a file containing your account's complete security history. LEStrADE processes it <strong>locally</strong> in your browser, never uploading or storing your data elsewhere.
           </p>
           <div class="d-flex justify-center">
             <v-btn
