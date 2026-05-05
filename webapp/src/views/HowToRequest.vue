@@ -12,7 +12,7 @@
           :key="platform.id"
           :outlined="selectedPlatform.id !== platform.id"
           :color="selectedPlatform.id === platform.id ? 'primary' : ''"
-          @click="selectedPlatform = platform"
+          @click="selectPlatform(platform.id)"
           class="platform-btn"
           large
         >
@@ -64,7 +64,7 @@
 
             <div v-if="step.image" class="step-image-col">
               <img 
-                :src="`/${step.image}`" 
+                :src="step.image" 
                 :alt="step.title" 
                 class="step-image"
               />
@@ -88,82 +88,34 @@
 
 <script>
 import PageHeader from '../components/Navigation/PageHeader.vue'
-import yaml from 'js-yaml';
-import { marked } from 'marked';
+import { marked } from 'marked'
+import { instructionRegistry } from '@/data/request_instructions'
 
 export default {
   name: 'HowToRequest',
   components: { PageHeader },
   data() {
     return {
-      selectedPlatform: null,
-      // Metadata only - Content is loaded from YAML
-      platforms: [
-        { id: 'google', name: 'Google' },
-        { id: 'discord', name: 'Discord' },
-        { id: 'apple', name: 'Apple' },
-        { id: 'facebook', name: 'Facebook / Instagram' },
-        { id: 'snapchat', name: 'Snapchat' }
-      ]
+      instructionRegistry,
+      selectedPlatform: instructionRegistry.google,
+      platforms: Object.values(instructionRegistry).map(p => ({
+        id: p.id,
+        name: p.name
+      }))
     }
   },
   computed: {
     displayedSteps() {
-      // Returns the steps from the loaded data
       return this.selectedPlatform && this.selectedPlatform.steps ? this.selectedPlatform.steps : []
-    },
-  },
-  watch: {
-    // Watch for tab clicks to load data
-    'selectedPlatform.id': {
-      immediate: true,
-      handler(newId) {
-        if (newId) this.loadPlatformData(newId);
-      }
     }
   },
-  mounted() {
-    // Initialize with Google
-    this.selectedPlatform = this.platforms[0];
-  },
   methods: {
-    async loadPlatformData(id) {
-      try {
-        // Fetch from public/how2request/[id].yaml
-        const filename = `${process.env.BASE_URL}how2request/text/${id}_instr.yaml`
-        const response = await fetch(filename);
-        if (!response.ok) throw new Error('File not found: ' + filename);
-        
-        const text = await response.text();
-        
-        // Prevent loading HTML 404 pages
-        if (text.trim().startsWith('<!DOCTYPE')) {
-          this.selectedPlatform = {
-            ...this.platforms.find(p => p.id === id),
-            comingSoon: true
-          };
-          return;
-        }
-
-        // Parse YAML and merge with ID/Name
-        const data = yaml.load(text);
-        
-        // Update selectedPlatform with the full data (steps, icons, etc.)
-        this.selectedPlatform = {
-          ...this.platforms.find(p => p.id === id),
-          ...data
-        };
-      } catch (e) {
-        console.error(`Error loading ${id}:`, e);
-        this.selectedPlatform = {
-          ...this.platforms.find(p => p.id === id),
-          comingSoon: true
-        };
-      }
+    selectPlatform(platformId) {
+      this.selectedPlatform = this.instructionRegistry[platformId]
     },
     renderMarkdown(text) {
-      if (!text) return '';
-      return marked.parse(text);
+      if (!text) return ''
+      return marked.parse(text)
     }
   }
 }
