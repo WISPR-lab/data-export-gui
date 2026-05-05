@@ -4,12 +4,16 @@
 
     <div class="main-container">
       <div class="text-center mb-12 hero-spacing">
-        <h1 class="text-h4 font-weight-bold secondary--text mb-4">
-          Visualize your account security status in one timeline.
+        <img :src="LestradeLogo" alt="LEStrADE Logo" height="80" class="mr-2" />
+        <h1 class="text-h4 secondary--text mb-4">
+          <!-- <span class="font-weight-black">L</span>ocal <span class="font-weight-black">E</span>ngine for <span class="font-weight-black">Str</span>uctured <span class="font-weight-black">A</span>nalysis of <span class="font-weight-black">D</span>ata <span class="font-weight-black">E</span>xports -->
+          <!-- Visualize your account security status in one timeline. -->
         </h1>
         <p class="text-h5 secondary--text mb-8 font-weight-regular">
-          Online platforms let you download data exports containing your personal data. <br/>
-          <strong>LEStrADE</strong> can show you what's in it, privately in your browser.
+          <strong>L</strong>ocal <strong>E</strong>ngine for <strong>Str</strong>uctured <strong>A</strong>nalysis of <strong>D</strong>ata <strong>E</strong>xports
+          (LEStrADE) is an open-source visualization tool that helps users understand their account's security history by analyzing <strong>data exports</strong> from online platforms.
+          <!-- Online platforms let you download data expor, usually containing your personal data. <br/>
+          <strong>LEStrADE</strong> can show you what's in it, privately in your browser. -->
         </p>
         <div class="d-flex justify-center gap-3">
           <v-btn
@@ -33,37 +37,35 @@
         </div>
       </div>
 
+
       <div class="mb-20">
         <img :src="heroScreenshot" alt="Dashboard screenshot" class="screenshot card-shadow" />
       </div>
+      <v-alert type="primary" dense class="font-weight-medium mt-10 mb-10 text-center"><span>
+        LEStrADE is an academic tool in early beta. We welcome feedback to help us improve the tool on GitHub!
+      </span></v-alert>
 
       <div class="mb-20">
-        <v-card class="card-shadow pa-8 mb-4">
-          <h3 class="text-h5 font-weight-medium secondary--text mb-4 text-center">What LEStrADE Does</h3>
-          <p class="text-body1 secondary--text text-center">
-            When you're trying to understand if an account has been compromised, standard security settings often don't provide enough information. 
-            <span class="font-weight-bold">LEStrADE</span> lets you access and analyze the security data these platforms already collect about you.
-          </p>
-        </v-card>
+        <v-card class="card-shadow pa-10 pl-16 pr-16 mb-4">
+          <h3 class="text-h5 font-weight-medium secondary--text mb-8 text-center">What are <i>data exports</i>?</h3>
+          <v-row >
+            <v-col cols="12" sm="7" class="d-flex flex-column justify-center align-center">
+              <p class="text-body1 secondary--text mb-4 text-left">
+                Due to privacy laws in the <a href="https://gdpr.eu/what-is-gdpr/" target="_blank">EU</a> and many US states, users can account data from online platforms.
+              </p><p class="text-body1 secondary--text mb-4 text-left">
+                This <strong>data export</strong>, usually a ZIP file, often includes a detailed history of security-related events like logins, password changes, and connected devices.
+              </p>
+            </v-col>
+            <v-col cols="12" sm="5" class="d-flex flex-column justify-center align-end">
+              <!-- todo add image --> 
+               <img :src="GoogleTakeout" alt="Google Takeout screenshot" style="max-width: 70%;"/>
 
-        <div class="arrow-container mb-4">
-          <v-icon color="secondary" size="32">mdi-arrow-down</v-icon>
-        </div>
-
-        <v-card class="card-shadow pa-8 mb-4">
-          <h3 class="text-h5 font-weight-medium secondary--text mb-4 text-center">Import Your Data</h3>
-          <p class="text-body1 secondary--text mb-4 text-center">
-            Request a data export from any supported platform—a file containing your account's complete security history. LEStrADE processes it <strong>locally</strong> in your browser, never uploading or storing your data elsewhere.
-          </p>
-          <div class="d-flex justify-center">
-            <v-btn
-              large
-              outlined
-              color="primary"
-              to="/how-to-request"
-            >
+            </v-col>
+          </v-row>
+          <div class="d-flex justify-center mt-5">
+            <v-btn large outlined color="primary" to="/how-to-request">
               <v-icon left>mdi-information-outline</v-icon>
-              How to request your data
+              How to request your data export
             </v-btn>
           </div>
         </v-card>
@@ -72,7 +74,38 @@
           <v-icon color="secondary" size="32">mdi-arrow-down</v-icon>
         </div>
 
-        <v-card class="card-shadow pa-8 mb-4">
+        <v-card class="card-shadow pa-10 pl-16 pr-16 mb-4">
+          <h3 class="text-h5 font-weight-medium secondary--text mb-4 text-center">Features</h3>
+          <p class="text-body1 secondary--text mb-4 text-left">
+            LEStrADE is designed do "consensual digital forensics" with data exports for the purpose of helping users identify suspicious activity by <strong>someone malicious accessing their account</strong>, i.e., logging in or changing passwords. 
+            <br/>Features include:
+            <!-- It is not meant to be a comprehensive, proactive security tool, but rather a way to make the security data in these exports more accessible and understandable for users. -->
+          </p>
+          <v-row>
+            <v-col cols="12" sm="6" class="d-flex flex-column justify-center align-start">
+              <ul class="text-body1 secondary--text mb-0"> <!-- style="list-style-type: disc; padding-left: 1.5rem;">-->
+                <li>Extract security-related data from complex files.</li>
+                <li>Display events in a searchable timeline.</li>
+                <li>Isolate logged-in devices and IP addresses.</li>
+                <li>Flag and annotate suspicious events and devices.</li>
+                <li>Compare data from multiple platforms.</li>
+              </ul>
+            </v-col>
+            <v-col cols="12" sm="6" class="d-flex flex-column justify-center align-center">
+              <v-alert type="success" icon="$info" prominent class="font-weight-medium">
+                <span class="text-h6 font-weight-bold">Privacy</span><br/>
+                All data processing is done locally in the browser. Your data export file is never uploaded to any server.
+              </v-alert>
+            </v-col>
+          </v-row>
+
+        </v-card>
+<!-- 
+        <div class="arrow-container mb-4">
+          <v-icon color="secondary" size="32">mdi-arrow-down</v-icon>
+        </div> -->
+
+        <!-- <v-card class="card-shadow pa-8 mb-4">
           <h3 class="text-h5 font-weight-medium secondary--text mb-6 text-center">Explore &amp; Analyze</h3>
           <v-container style="max-width: 80%; padding: 0; margin: auto;">
             <v-row justify-center no-gutters>
@@ -84,7 +117,7 @@
               </v-col>
             </v-row>
           </v-container>
-        </v-card>
+        </v-card> -->
       </div>
 
       <div class="mt-16 mb-20">
@@ -126,6 +159,8 @@
 import PageHeader from '../components/Navigation/PageHeader.vue'
 import DiscordIcon from '../components/DiscordIcon.vue'
 import heroScreenshot from '@/assets/images/hero_screenshot.png'
+import LestradeLogo from '@/assets/images/lestrade_logo.svg'
+import GoogleTakeout from '@/assets/images/google-takeout.png'
 
 export default {
   name: 'Home',
@@ -136,6 +171,8 @@ export default {
   data() {
     return {
       heroScreenshot,
+      LestradeLogo,
+      GoogleTakeout,
       features: [
         { text: 'Search events and patterns', icon: 'mdi-magnify' },
         { text: 'Flag suspicious activity', icon: 'mdi-flag' },
