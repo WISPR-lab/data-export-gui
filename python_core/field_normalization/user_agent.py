@@ -78,7 +78,7 @@ class UserAgentParser:
         Facebook/Instagram embed FBDV (Apple hardware model ID) in UA strings, e.g.:
         [FBAN/FBIOS;FBDV/iPhone11,8;...]
         DeviceDetector resolves FBDV into display name ("iPhone XR") but discards
-        the raw identifier. We preserve it in user_agent_device_model.identifier
+        the raw identifier. We preserve it in user_agent_device_model_identifier
         for use as a hard clustering key in device grouping.
         """
         if '[FBAN/' not in ua_string:
