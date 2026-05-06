@@ -9,7 +9,7 @@ def determine_origin(platform: str, attrs: dict) -> str:
         return "apple/system"
     
     try:
-        client_type = attrs.get('user_agent_type', '').strip().lower() if attrs.get('user_agent_type') else ''
+        client_type = attrs.get('user_agent_client_type', '').strip().lower() if attrs.get('user_agent_client_type') else ''
         client_name = attrs.get('user_agent_name', '').strip().lower() if attrs.get('user_agent_name') else ''
         secondary_name = attrs.get('user_agent_secondary_name', '').strip().lower() if attrs.get('user_agent_secondary_name') else ''
         client_session_type = attrs.get('client_session_type', '').strip().lower() if attrs.get('client_session_type') else ''

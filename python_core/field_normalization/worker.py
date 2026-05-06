@@ -4,25 +4,30 @@ from field_normalization.user_agent import UserAgentParser
 from field_normalization.device import normalize_device_fields
 from field_normalization.geo import normalize_geo_fields
 from field_normalization.origin import determine_origin
+from field_normalization.auth_related_events import treat_event_as_auth_device
 
 
 
 
-def _normalize(rows, platform, ua_parser):
+def _normalize(rows, platform, ua_parser, table=''):
     updates = []
     for row in rows:
-            attrs = row['attributes'] or {}
-            if (attrs.get('user_agent_original') or attrs.get('user_agent_os_full')):
-                attrs.update(ua_parser.parse(attrs))
-            origin = determine_origin(platform, attrs)    
-            attrs = normalize_geo_fields(attrs)
-            attrs = normalize_device_fields(attrs)
-            
-            updates.append({
-                'id': row['id'],
-                'attributes': json.dumps(attrs),
-                'origin': origin,
-            })
+        attrs = row['attributes'] or {}
+        if (attrs.get('user_agent_original') or attrs.get('user_agent_os_full')):
+            attrs.update(ua_parser.parse(attrs))
+        origin = determine_origin(platform, attrs)    
+        attrs = normalize_geo_fields(attrs)
+        attrs = normalize_device_fields(attrs)
+
+        dct = {
+            'id': row['id'],
+            'attributes': json.dumps(attrs),
+            'origin': origin,
+        }
+        if table == 'events':
+            dct['treat_as_auth_device'] = treat_event_as_auth_device(row)
+        
+        updates.append(dct)        
     return updates
 
 
@@ -36,7 +41,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
     
     db_path = db_path or _get_config_value('DB_PATH')
     
-    with DatabaseSession(db_path, use_dict_factory=True, json_columns=['attributes']) as conn:
+    with DatabaseSession(db_path, use_dict_factory=True, json_columns=['attributes', 'events_category']) as conn:
         print(f"[FieldNormalizeWorker] Starting normalization for upload_id={upload_id}")
         
         # Get platform from uploads table
@@ -65,7 +70,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             print(f"[FieldNormalizeWorker] No devices_raw rows for upload_id={upload_id}")
             return {'status': 'success', 'message': 'No records to normalize'}
         
-        updates = _normalize(rows, platform, ua_parser)
+        updates = _normalize(rows, platform, ua_parser, table='devices')
         
         conn.executemany(
             """
@@ -94,7 +99,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             print(f"[FieldNormalizeWorker] No events rows for upload_id={upload_id}")
             return {'status': 'success', 'message': 'No records to normalize'}
         
-        updates = _normalize(rows, platform, ua_parser)
+        updates = _normalize(rows, platform, ua_parser, table='events')
 
         conn.executemany(
             """

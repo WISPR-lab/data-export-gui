@@ -35,17 +35,17 @@ class UserAgentParser:
         if dd.client_name() and not attrs.get('user_agent_name'):
             attrs['user_agent_name'] = dd.client_name()
         if dd.client_version():
-            attrs['user_agent_version'] = dd.client_version()
+            attrs['user_agent_client_version'] = dd.client_version()
         if dd.client_type():
-            attrs['user_agent_type'] = dd.client_type()
+            attrs['user_agent_client_type'] = dd.client_type()
         if dd.client_application_id():
             attrs['user_agent_client_application_id'] = dd.client_application_id()
         if dd.secondary_client_name():
-            attrs['user_agent_secondary_name'] = dd.secondary_client_name()
+            attrs['user_agent_secondary_client_name'] = dd.secondary_client_name()
         if dd.secondary_client_version():
-            attrs['user_agent_secondary_version'] = dd.secondary_client_version()
+            attrs['user_agent_secondary_client_version'] = dd.secondary_client_version()
         if dd.secondary_client_type():
-            attrs['user_agent_secondary_type'] = dd.secondary_client_type()
+            attrs['user_agent_secondary_client_type'] = dd.secondary_client_type()
         if dd.is_mobile():
             attrs['user_agent_is_mobile'] = True
         if dd.is_desktop():
@@ -78,7 +78,7 @@ class UserAgentParser:
         Facebook/Instagram embed FBDV (Apple hardware model ID) in UA strings, e.g.:
         [FBAN/FBIOS;FBDV/iPhone11,8;...]
         DeviceDetector resolves FBDV into display name ("iPhone XR") but discards
-        the raw identifier. We preserve it in user_agent_device_model.identifier
+        the raw identifier. We preserve it in user_agent_device_model_identifier
         for use as a hard clustering key in device grouping.
         """
         if '[FBAN/' not in ua_string:
