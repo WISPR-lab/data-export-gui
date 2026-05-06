@@ -13,7 +13,7 @@ import uuid
 import json
 from device_grouping.shared_utils import union_find
 from device_grouping.computed_fields import best_model_attr, get_mfr, MFR_DO_NOT_MERGE_GENERIC, compute_device_profile_fields
-
+DEBUG = False
 
 def soft_match(a: dict, b: dict) -> bool:  
 # check if two atomics match for soft merge based on rules above
@@ -68,7 +68,10 @@ def soft_merge_multi_upload(new_atomic_device_rows: list[dict],
                             atomic_devices_rows: list[dict]) -> list[dict]:
     """Soft merge new atomics into existing profiles. Returns rows with computed fields."""
     
+    if DEBUG: print(f"[SoftMerge] soft_merge_multi_upload: new_atomic_device_rows={len(new_atomic_device_rows)}, existing profiles={len(old_device_profile_rows)}")
+    
     new_profiles = soft_merge_single_upload(new_atomic_device_rows) # group new atomics in themselves
+    if DEBUG: print(f"[SoftMerge] Created {len(new_profiles)} new profiles from new atomics")
     
     atomic_device_dict = {r['id']: r for r in atomic_devices_rows}  # then match atomics to existing profiles
     profiles_to_update = {}  # profile_id -> [atomic_ids_to_add]
@@ -77,19 +80,24 @@ def soft_merge_multi_upload(new_atomic_device_rows: list[dict],
     for new_pf in new_profiles:
         # new_pf: dict with 'id', 'atomic_devices_ids', 'system_soft_merge' (and computed fields)
         matching_profile_ids = []
+        
+        if DEBUG: print(f"[SoftMerge] Processing new profile {new_pf['id'][:8]}... with atomics: {new_pf.get('atomic_devices_ids', [])}")
 
         for new_atomic_id in new_pf.get('atomic_devices_ids', []):
             new_atomic = atomic_device_dict.get(new_atomic_id, {})
+            if DEBUG: print(f"[SoftMerge]   Checking new atomic {new_atomic_id[:8]}...")
             # check if any atomic in the new profile matches an existing profile
             for old_pf in old_device_profile_rows:
                 for old_atomic_id in old_pf.get('atomic_devices_ids', []):
                     existing_atomic = atomic_device_dict.get(old_atomic_id, {})
                     if soft_match(new_atomic, existing_atomic):
+                        if DEBUG: print(f"[SoftMerge]     MATCH FOUND: new atomic {new_atomic_id[:8]}... matches existing atomic {old_atomic_id[:8]}... in profile {old_pf['id'][:8]}...")
                         matching_profile_ids.append(old_pf['id'])
                         break
 
-            if matching_profile_ids: break  # match found
-        if matching_profile_ids: break
+            if matching_profile_ids: 
+                if DEBUG: print(f"[SoftMerge]   Found match, exiting atomic check loop")
+                break
 
         if len(matching_profile_ids) > 1:
             #  TODO: if more than one profile matches
@@ -97,27 +105,64 @@ def soft_merge_multi_upload(new_atomic_device_rows: list[dict],
         
         if len(matching_profile_ids) > 0:
             old_pf_id = matching_profile_ids[0]
+            new_atomic_ids_list = new_pf.get('atomic_devices_ids', [])
+            if DEBUG: print(f"[SoftMerge] ADDING to profiles_to_update: profile {old_pf_id[:8]}... gets atomics {new_atomic_ids_list}")
             if old_pf_id not in profiles_to_update:
                 profiles_to_update[old_pf_id] = []
-            profiles_to_update[old_pf_id].append(new_pf.get('atomic_devices_ids', []))
+            profiles_to_update[old_pf_id].extend(new_atomic_ids_list)
+            if DEBUG: print(f"[SoftMerge]   profiles_to_update[{old_pf_id[:8]}...] is now: {profiles_to_update[old_pf_id]}")
         else:
+            if DEBUG: print(f"[SoftMerge] No match found, adding as new profile: {new_pf['id'][:8]}...")
             new_device_profile_rows.append(new_pf)
 
     
     final_rows = []
+    if DEBUG: 
+        print(f"[SoftMerge] ===== FINAL MERGE PHASE =====")
+        print(f"[SoftMerge] profiles_to_update contains {len(profiles_to_update)} profiles:")
+        for pf_id, atomic_ids in profiles_to_update.items():
+            print(f"[SoftMerge]   {pf_id[:8]}... -> {atomic_ids}")
+        print(f"[SoftMerge] old_device_profile_rows has {len(old_device_profile_rows)} profiles")
+    
     for old_pf in old_device_profile_rows:
+        if DEBUG: print(f"[SoftMerge] Checking old profile {old_pf['id'][:8]}...")
         if old_pf['id'] in profiles_to_update:
-            merged_ids = list(set(old_pf.get('atomic_devices_ids', []) + profiles_to_update[old_pf['id']]))
-            row = {**old_pf, 'atomic_devices_ids': merged_ids}
-            row.update(compute_device_profile_fields(row, atomic_devices_rows))
+            if DEBUG: print(f"[SoftMerge]   FOUND in profiles_to_update")
+            old_ids = old_pf.get('atomic_devices_ids', [])
+            # Safety: dict_factory might deserialize empty JSON as {}
+            if isinstance(old_ids, dict):
+                old_ids = []
+            new_ids_to_add = profiles_to_update[old_pf['id']]
+            merged_ids = list(set(old_ids + new_ids_to_add))
+            if DEBUG: 
+                print(f"[SoftMerge]   Old atomics: {old_ids}")
+                print(f"[SoftMerge]   New atomics to add: {new_ids_to_add}")
+                print(f"[SoftMerge]   Merged atomics: {merged_ids}")
+            
+            # Build fresh row with only essential fields to avoid stale cached data
+            row = {
+                'id': old_pf['id'],
+                'atomic_devices_ids': merged_ids,
+                'system_soft_merge': 1 if len(merged_ids) > 1 else old_pf.get('system_soft_merge', 0),
+                'user_label': old_pf.get('user_label'),
+                'notes': old_pf.get('notes'),
+            }
+            if DEBUG: print(f"[SoftMerge]   Built row with atomic_devices_ids: {row['atomic_devices_ids']}")
+            
+            computed = compute_device_profile_fields(row, atomic_devices_rows)
+            if DEBUG: print(f"[SoftMerge]   Computed: origins={computed.get('origins')}, specificity={computed.get('specificity')}")
+            row.update(computed)
+            if DEBUG: print(f"[SoftMerge]   AFTER update: atomic_devices_ids={row.get('atomic_devices_ids')}, origins={row.get('origins')}")
             final_rows.append(row)
         else:
+            if DEBUG: print(f"[SoftMerge]   NOT in profiles_to_update, keeping original")
             final_rows.append(old_pf)
     
     for nf in new_device_profile_rows:
         nf.update(compute_device_profile_fields(nf, atomic_devices_rows))
     final_rows.extend(new_device_profile_rows)
     
+    if DEBUG: print(f"[SoftMerge] soft_merge_multi_upload returning {len(final_rows)} profiles")
     return final_rows
 
 

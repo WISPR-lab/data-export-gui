@@ -76,6 +76,10 @@ def group(upload_id: str, db_path: str = None) -> None:
             row['created_at'] = ts
             row['updated_at'] = ts
         
+        print(f"[DeviceGroupingWorker] About to write {len(device_group_rows)} device_profiles:")
+        for row in device_group_rows:
+            print(f"[DeviceGroupingWorker]   ID: {row['id'][:8]}... atomic_devices_ids={row['atomic_devices_ids'][:80]}... origins={row['origins'][:80]}")
+        
         conn.executemany(
             """INSERT OR REPLACE INTO device_profiles
                (id, atomic_devices_ids, attributes, specificity, model, manufacturer, origins, system_soft_merge, is_generic, user_label, notes, tags, labels, created_at, updated_at)
