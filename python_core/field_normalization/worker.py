@@ -9,19 +9,20 @@ from field_normalization.auth_related_events import treat_event_as_auth_device
 
 
 
-def _normalize(rows, platform, ua_parser, table=''):
+def _normalize(rows, platform, ua_parser, file_map, table=''):
     updates = []
     for row in rows:
         attrs = row['attributes'] or {}
+        file_info = file_map.get(attrs.get('file_id'))
         if (attrs.get('user_agent_original') or attrs.get('user_agent_os_full')):
-            attrs.update(ua_parser.parse(attrs))
-        origin = determine_origin(platform, attrs)    
+            attrs.update(ua_parser.parse(attrs, file_info=file_info))
+        origin = determine_origin(platform, attrs, file_info=file_info)    
         attrs = normalize_geo_fields(attrs)
         attrs = normalize_device_fields(attrs)
 
         dct = {
             'id': row['id'],
-            'attributes': json.dumps(attrs),
+            'attributes': json.dumps(attrs, sort_keys=True),
             'origin': origin,
         }
         if table == 'events':
@@ -51,6 +52,12 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
         ).fetchone()
         platform = upload['platform'] if upload else None
 
+        uploaded_files = conn.execute(
+            "SELECT id, manifest_file_id, manifest_filename FROM uploaded_files WHERE upload_id = ?",
+            (upload_id,)
+        ).fetchall()
+        file_map = {uf['id']: uf for uf in uploaded_files}
+
 
                 
         ua_parser = UserAgentParser()
@@ -70,7 +77,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             print(f"[FieldNormalizeWorker] No devices_raw rows for upload_id={upload_id}")
             return {'status': 'success', 'message': 'No records to normalize'}
         
-        updates = _normalize(rows, platform, ua_parser, table='devices')
+        updates = _normalize(rows, platform, ua_parser, file_map, table='devices')
         
         conn.executemany(
             """
@@ -99,7 +106,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             print(f"[FieldNormalizeWorker] No events rows for upload_id={upload_id}")
             return {'status': 'success', 'message': 'No records to normalize'}
         
-        updates = _normalize(rows, platform, ua_parser, table='events')
+        updates = _normalize(rows, platform, ua_parser, file_map, table='events')
 
         conn.executemany(
             """
@@ -107,7 +114,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             SET attributes = :attributes, origin = :origin
             WHERE id = :id
             """,
-            updates
+            updates 
         )
         conn.commit()
 

@@ -1,4 +1,4 @@
-def determine_origin(platform: str, attrs: dict) -> str:
+def determine_origin(platform: str, attrs: dict, file_info=None) -> str:
     if not platform:
         return ""
     
@@ -13,10 +13,14 @@ def determine_origin(platform: str, attrs: dict) -> str:
         client_name = attrs.get('user_agent_name', '').strip().lower() if attrs.get('user_agent_name') else ''
         secondary_name = attrs.get('user_agent_secondary_name', '').strip().lower() if attrs.get('user_agent_secondary_name') else ''
         client_session_type = attrs.get('client_session_type', '').strip().lower() if attrs.get('client_session_type') else ''
+        is_mobile_app = ''
+        if file_info:
+            is_mobile_app = any(['mobile' in str(v).lower().strip() for v in file_info.values()])
+
     except Exception:
         return f"{platform}/unknown"
 
-    valid = [v for v in [client_type, client_name, client_session_type] if v and v != '']
+    valid = [v for v in [client_type, client_name, client_session_type, is_mobile_app] if v and v != '']
     
     if len(valid) == 0:
         return f"{platform}/unknown"

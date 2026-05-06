@@ -9,8 +9,16 @@ class UserAgentParser:
         self.FBAN_RE = re.compile(r'FB([A-Z]+)/([^;\]]+)')
 
 
-    def parse(self, attrs: dict) -> dict:
+    def parse(self, attrs: dict, file_info=None) -> dict:
         ua_string = attrs.get('user_agent_original', '') or attrs.get('user_agent_os_full', '')
+        if file_info:
+            mfst_id = file_info.get('manifest_file_id', '').lower()
+            mfst_fname = file_info.get('manifest_filename', '').lower()
+            if mfst_id == "ggl_access_log_activity" or \
+               (mfst_id.startswith('google') or mfst_id.startswith('ggl') \
+                and 'activities' in mfst_fname):
+                ua_string = self._synthesize_google_ua(ua_string)
+
         if ua_string:
             return self._parse(ua_string)
         return {}
@@ -66,14 +74,16 @@ class UserAgentParser:
         if dd.device_type():
             attrs['user_agent_device_type'] = dd.device_type()
 
-        attrs = self.parse_fban(ua_string, attrs)
-        
+        attrs = self._parse_fban(ua_string, attrs)
+        for k in ['user_agent_client_name', 'user_agent_secondary_client_name']:
+            if attrs.get(k) == "GGLUnknown": 
+                attrs.pop(k)
         
         self._cache[ua_string] = attrs
         return attrs
     
 
-    def parse_fban(self, ua_string: str, attrs: dict) -> dict:
+    def _parse_fban(self, ua_string: str, attrs: dict) -> dict:
         """
         Facebook/Instagram embed FBDV (Apple hardware model ID) in UA strings, e.g.:
         [FBAN/FBIOS;FBDV/iPhone11,8;...]
@@ -89,3 +99,45 @@ class UserAgentParser:
 
         return attrs
 
+
+    def _synthesize_google_ua(self, ua_string: str) -> dict:
+        """
+        Google activity UAs have a different format and often include a JSON blob with more structured info. 
+        This attempts to extract that info.
+        Example UA:
+        "App : GMM_APP. App Version : 24.47.3. Os : IOS_OS. Os Version : 17.7.1. Device Type : MOBILE."
+        """
+        pattern = r'\s*([^:]+?)\s*:\s*(.*?)\.(?:\s+|$)'
+        matches = dict(re.findall(pattern, ua_string))
+        app = matches.get('App', 'GGLUnknown')
+        app_ver = matches.get('App Version', '')
+        os_raw = matches.get('Os', '')
+        os_ver = matches.get('Os Version', '')
+        
+        os_map = {
+            'IOS_OS': f'iPhone; iOS {os_ver}',
+            'ANDROID_OS': f'Linux; Android {os_ver}',
+            'WINDOWS_OS': f'Windows NT {os_ver}',
+            'MAC_OS': f'Macintosh; Intel Mac OS X {os_ver.replace(".", "_")}',
+            'CHROME_OS': f'X11; CrOS x86_64 {os_ver}'
+        }
+        os_fragment = os_map.get(os_raw, f'{os_raw} {os_ver}')
+
+        app_map = {
+            "GMAIL": "com.google.Gmail",
+            "GSA": "com.google.android.googlequicksearchbox",
+            "GMM": "com.google.maps",
+            "PLAY": "com.android.vending",
+            "DRIVE": "com.google.android.apps.docs",
+            "PHOTO": "com.google.android.apps.photos",
+            "CAL": "com.google.android.calendar",
+            "CHROME": "com.android.chrome"
+        }
+        
+        for key, bundle_id in app_map.items():
+            if key.lower() in app.lower():
+                app = bundle_id
+                break
+        UA = f"{app}/{app_ver} ({os_fragment})"
+        print(f"[UA Parser] Synthesized Google UA: {UA}")
+        return UA
