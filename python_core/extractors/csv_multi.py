@@ -3,7 +3,7 @@ import io
 import csv
 import re
 from typing import List, Dict, Any, Optional
-from .base import BaseParser
+from .csv_ import CSVParser
 from python_core.errors import FileLevelError
 
 
@@ -16,7 +16,7 @@ contains multiple sections separated by titles and newlines.
 """       
 
 
-class CSVMultiParser(BaseParser):
+class CSVMultiParser(CSVParser):
 
     @classmethod
     def extract(cls, content: str, config: Optional[Dict] = None,  filepath: str = None) -> List[Dict[str, Any]]:
@@ -28,26 +28,43 @@ class CSVMultiParser(BaseParser):
             if cls._is_concatenated(content, filepath):
                 
                 segments = re.split("\n\n\n", content)
-                header_records_map = {}
+                all_records = []
+                current_line = 1
+                
                 for segment in segments:
+                    segment_start_line = current_line
                     lines = [line.strip() for line in segment.split("\n") if len(line.strip()) > 0]
                     if len(lines) >= 2:
                         header = lines[0]
                         csvstring = "\n".join(lines[1:])
-                        df, bad_lines = cls.str_to_df(csvstring)[0]
+                        df, bad_lines, line_map = cls.str_to_df(csvstring)
                         if df.empty:
-                            header_records_map[header] = []
+                            current_line += len(segment.split("\n"))
                             continue
-                        content = df.fillna('').to_dict(orient='records')
-                        header_records_map[header] = content
-                return header_records_map
+                        records = df.fillna('').to_dict(orient='records')
+                        for i, record in enumerate(records):
+                            if i in line_map:
+                                start, end = line_map[i]
+                                record["__line_numbers"] = [segment_start_line + start - 2, segment_start_line + end - 2]
+                            else:
+                                record["__line_numbers"] = [segment_start_line]
+                            record["__segment_header"] = header
+                            all_records.append(record)
+                    current_line += len(segment.split("\n"))
+                return all_records
             
             else: # if not concatenated, parse as a single CSV
                 print("[CSVMultiParser] No concatenated sections detected. Parsing as single CSV.")
-                df, bad_lines = cls.str_to_df(content)
+                df, bad_lines, line_map = cls.str_to_df(content)
                 if df.empty:
                     return []
-                return df.to_dict(orient='records')
+                records = df.to_dict(orient='records')
+                for i, record in enumerate(records):
+                    if i in line_map:
+                        record["__line_numbers"] = line_map[i]
+                    else:
+                        record["__line_numbers"] = [i + 2]
+                return records
                 
             # TODO deal with error handling
         except FileLevelError:

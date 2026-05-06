@@ -3,8 +3,10 @@
     <div class="header-content">
       <!-- Left side: Logo + Tool Name -->
       <div class="header-left">
-        <v-icon size="24">mdi-database-search</v-icon>
-        <span class="tool-name ml-2">LEStrADE</span>
+        <!-- <v-icon size="24">mdi-database-search</v-icon>
+        <span class="tool-name ml-2">LEStrADE</span> -->
+        <img :src="LestradeLogo" alt="LEStrADE Logo" height="32" class="mr-2" />
+        <!-- <span class="tool-name">LEStrADE</span> -->
       </div>
 
       <!-- Desktop Navigation (shown on md and up) -->
@@ -27,11 +29,17 @@
 
 <script>
 import PageHeaderMobileMenu from './PageHeaderMobileMenu.vue'
+import LestradeLogo from '@/assets/images/lestrade_logo.svg'
 
 export default {
   name: 'PageHeader',
   components: {
     PageHeaderMobileMenu,
+  },
+  data() {
+    return {
+      LestradeLogo,
+    }
   },
 }
 </script>
