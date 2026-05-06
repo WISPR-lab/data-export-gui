@@ -11,9 +11,12 @@
         </h1>
         <p class="text-h5 secondary--text mb-8 font-weight-regular">
           <strong>L</strong>ocal <strong>E</strong>ngine for <strong>Str</strong>uctured <strong>A</strong>nalysis of <strong>D</strong>ata <strong>E</strong>xports
-          (LEStrADE) is an open-source visualization tool that helps users understand their account's security history by analyzing <strong>data exports</strong> from online platforms.
+          (LEStrADE<sup>*</sup>) is an open-source visualization tool that helps users understand their account security history using <strong>data exports</strong> from online platforms.
           <!-- Online platforms let you download data expor, usually containing your personal data. <br/>
           <strong>LEStrADE</strong> can show you what's in it, privately in your browser. -->
+        </p>
+        <p class="text-body1 secondary--text mb-8 font-weight-regular">
+          * Named after the minor Sherlock Holmes character, <a href="https://en.wikipedia.org/wiki/Inspector_Lestrade" target="_blank">Inspector Lestrade</a>
         </p>
         <div class="d-flex justify-center gap-3">
           <v-btn
