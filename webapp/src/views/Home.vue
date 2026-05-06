@@ -54,7 +54,7 @@
           <v-row >
             <v-col cols="12" sm="7" class="d-flex flex-column justify-center align-center">
               <p class="text-body1 secondary--text mb-4 text-left">
-                Due to privacy laws in the <a href="https://gdpr.eu/what-is-gdpr/" target="_blank">EU</a> and many US states, users can account data from online platforms.
+                Due to privacy laws in the <a href="https://gdpr.eu/what-is-gdpr/" target="_blank">EU</a> and many US states, request their personal data from online platforms.
               </p><p class="text-body1 secondary--text mb-4 text-left">
                 This <strong>data export</strong>, usually a ZIP file, often includes a detailed history of security-related events like logins, password changes, and connected devices.
               </p>
