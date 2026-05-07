@@ -14,10 +14,12 @@ parser = UserAgentParser()
 test_cases = [
     "App : GMAIL_APP. App Version : 6.0.241126. Os : IOS_OS. Os Version : 17.7.1. Device Type : MOBILE.",
     "App : GMM_APP. App Version : 24.47.3. Os : IOS_OS. Os Version : 17.7.1. Device Type : MOBILE.",
-    "App : SAFARI. App Version : 15.6. Os : IOS_OS. Os Version : 15.7. Device Type : MOBILE.",
     "Os : IOS_OS. Os Version : 12.1.3. Device Type : MOBILE.",
     "App : OTHER_APP. Os : UNKNOWN_OS. Os Version : . Device Type : UNKNOWN.",
     "App : SAFARI. App Version : 17.8. Os : MAC_OS. Os Version : 10.15.7. Device Type : PC.",
+    "App : YOUTUBE_APP. App Version : 21.17.3. Os : IOS_OS. Os Version : 26.4.2. Device Type : MOBILE.",
+    "App : SAFARI_WEBVIEW_APP. Os : IOS_OS. Os Version : 18.7. Device Type : MOBILE.",
+    "App : ASSISTANT_APP. App Version : 1.2026.1710205. Os : IOS_OS. Os Version : 26.4.2. Device Type : MOBILE.",
     # "com.google.Gmail/6.0.241126 iSL/3.4 iPhone/17.7.1 hw/iPhone11_8 (gzip),gzip(gfe)",
 ]
 

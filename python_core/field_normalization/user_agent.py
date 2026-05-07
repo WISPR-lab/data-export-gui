@@ -124,19 +124,29 @@ class UserAgentParser:
         os_fragment = os_map.get(os_raw, f'{os_raw} {os_ver}')
 
         app_map = {
-            "GMAIL": "com.google.Gmail",
-            "GSA": "com.google.android.googlequicksearchbox",
-            "GMM": "com.google.maps",
-            "PLAY": "com.android.vending",
-            "DRIVE": "com.google.android.apps.docs",
-            "PHOTO": "com.google.android.apps.photos",
-            "CAL": "com.google.android.calendar",
-            "CHROME": "com.android.chrome"
+            # [android version, ios version]
+            "GMAIL": ["com.google.android.gm", "com.google.gmail"],
+            "GSA": ["com.google.android.googlequicksearchbox", "com.google.googlemobile"],
+            "GMM": ["com.google.android.apps.maps", "com.google.maps"],
+            "PLAY": ["com.android.vending",  ""],
+            "DOCS": ["com.google.android.apps.docs.editors.docs", "com.google.docs"],
+            "SLIDES": ["com.google.android.apps.docs.editors.slides", "com.google.slides"],
+            "SAFARI_WEBVIEW": ["", "Mobile Safari"],
+            "DRIVE": ["com.google.android.apps.docs", "com.google.drive"],
+            "ASSISTANT": ["com.google.android.apps.bard","com.google.gemini"],
+            "SHEETS_APP": ["com.google.android.apps.docs.editors.sheets", "com.google.sheets"],
+            "PHOTOS": ["com.google.android.apps.photos", "com.google.photos"],
+            "CALENDAR": ["com.google.android.calendar", "com.google.calendar"],
+            "YOUTUBE": ["com.google.android.youtube", "com.google.ios.youtube"],
+            "CHROME": ["com.android.chrome", "com.google.chrome.ios"]
         }
         
         for key, bundle_id in app_map.items():
             if key.lower() in app.lower():
-                app = bundle_id
+                if "android" in os_raw.lower():
+                    app = bundle_id[0]
+                elif "ios" in os_raw.lower():
+                    app = bundle_id[1]
                 break
         UA = f"{app}/{app_ver} ({os_fragment})"
         print(f"[UA Parser] Synthesized Google UA: {UA}")
