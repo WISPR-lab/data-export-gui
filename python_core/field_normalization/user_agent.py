@@ -1,6 +1,6 @@
 import re
 from ua_extract import DeviceDetector
-from utils.device_lookup import OS_TYPE_MAP
+from python_core.field_normalization.device_lookup import OS_TYPE_MAP
 
 
 class UserAgentParser:
@@ -40,8 +40,8 @@ class UserAgentParser:
             self._cache[ua_string] = {}
             return {}
         
-        if dd.client_name() and not attrs.get('user_agent_name'):
-            attrs['user_agent_name'] = dd.client_name()
+        if dd.client_name() and not attrs.get('user_agent_client_name'):
+            attrs['user_agent_client_name'] = dd.client_name()
         if dd.client_version():
             attrs['user_agent_client_version'] = dd.client_version()
         if dd.client_type():
@@ -102,7 +102,7 @@ class UserAgentParser:
 
     def _synthesize_google_ua(self, ua_string: str) -> dict:
         """
-        Google activity UAs have a different format and often include a JSON blob with more structured info. 
+        Google activity headers have a different format and often include a JSON blob with more structured info. 
         This attempts to extract that info.
         Example UA:
         "App : GMM_APP. App Version : 24.47.3. Os : IOS_OS. Os Version : 17.7.1. Device Type : MOBILE."

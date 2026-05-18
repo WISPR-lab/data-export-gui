@@ -12,14 +12,20 @@ AUTH_EVENT_CATEGORIES = {
     "authentication", "session"
 }
 AUTH_DEVICE_ATTR_KEYS = {
-    "device_model_identifier", 
-    "device_model_name",
-    "device_manufacturer",
-    "user_agent_device_model",
-    "user_agent_device_manufacturer",
-    "user_agent_device_model_identifier",
-    "user_agent_os_name",
-    "user_agent_os_type",
+    "norm__model_identifier",
+    "norm__model_name",
+    "norm__manufacturer",
+    "norm__os_name",
+    "norm__os_type",
+    # "norm__client_name",
+    # "device_model_identifier", 
+    # "device_model_name",
+    # "device_manufacturer",
+    # "user_agent_device_model",
+    # "user_agent_device_manufacturer",
+    # "user_agent_device_model_identifier",
+    # "user_agent_os_name",
+    # "user_agent_os_type",
     "user_agent_device_type"
 }
 

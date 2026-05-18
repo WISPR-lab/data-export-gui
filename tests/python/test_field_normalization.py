@@ -42,7 +42,7 @@ class TestFieldNormalization:
                     rows_with_ua += 1
                     # Verify specific fields were parsed
                     if ('user_agent_os_name' in attrs or 'user_agent_os_type' in attrs or 
-                        'user_agent_device_model' in attrs or 'user_agent_name' in attrs):
+                        'user_agent_device_model' in attrs or 'user_agent_client_name' in attrs):
                         rows_with_parsed += 1
             
             # If we had rows with UA data, verify they were parsed
