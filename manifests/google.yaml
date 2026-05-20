@@ -54,7 +54,7 @@ files:
     path: "Access Log Activity/Devices - A list of devices (i.e. Nest, Pixel, iPh.csv"
     parser:
       format: "csv"
-      parse_dates: ["Last Activity Time"]
+      #parse_dates: ["Last Activity Time"]
 
   # - id: "ggl_timeline_settings"
   #   path: "Timeline/Settings.json"
@@ -180,7 +180,7 @@ views:
       event.type: ["info"]
       entity.type: "authenticated_device"
     fields:
-      # - {target: "entity.last_seen_timestamp", source: "Last Activity Time", type: "datetime"} # TODO
+      - {target: "entity.last_seen_timestamp", source: "Last Activity Time", type: "datetime"} # TODO
       - {target: "device.manufacturer", source: "Brand Name", type: "string"}
       - {target: "device.model.name", source: "Marketing Name", type: "string"}
       - {target: "device.model.identifier", source: "Device Model", type: "string"}

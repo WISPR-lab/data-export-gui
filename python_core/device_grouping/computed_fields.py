@@ -1,5 +1,5 @@
 from utils.redaction_utils import get_unredacted_val
-from utils.device_lookup import VARIANT_SUFFIXES
+from python_core.field_normalization.device_lookup import VARIANT_SUFFIXES
 from device_grouping.shared_utils import IS_HARD_KEY, flatten
 
 GENERIC = {'other', 'unknown', 'phone', 'smartphone', 'tablet', 'android', 'iphone', 'ipad', ''}
