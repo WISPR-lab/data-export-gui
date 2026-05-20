@@ -878,6 +878,9 @@ export default {
           row['showDetails'] = true
           this.expandedRows.splice(index, 1)
           this.expandedRows.push(row)
+          if (this.$store.state.demoMode) {
+            EventBus.$emit('demo-action', 'event-expanded')
+          }
           return
         }
 
@@ -888,6 +891,9 @@ export default {
       } else {
         row['showDetails'] = true
         this.expandedRows.push(row)
+        if (this.$store.state.demoMode) {
+          EventBus.$emit('demo-action', 'event-expanded')
+        }
       }
     },
     newComment: function (row) {

@@ -11,6 +11,19 @@
           <img :src="LestradeLogo" alt="LEStrADE Logo" height="32" class="mr-2" />
         </router-link>
 
+        <!-- Close Tutorial Button -->
+        <v-btn
+          v-if="demoMode"
+          small
+          outlined
+          color="error"
+          class="ml-4"
+          @click="exitTutorial"
+        >
+          <v-icon left small>mdi-close-circle-outline</v-icon>
+          Exit Tutorial
+        </v-btn>
+
         <!-- Project Name Section -->
         <div v-if="isProjectInfoVisible" class="ml-4 d-none d-sm-flex align-center">
           <div v-if="demoMode" class="blue white--text px-3 py-1 rounded font-weight-bold" style="font-size: 0.85em; letter-spacing: 0.5px;">
@@ -51,7 +64,7 @@
               </v-list-item-icon>
               <v-list-item-title>How to Request Your Data</v-list-item-title>
             </v-list-item>
-            <v-list-item to="/demo/explore">
+            <v-list-item to="/demo/explore" class="interactive-demo-link">
               <v-list-item-icon>
                 <v-icon>mdi-play-circle</v-icon>
               </v-list-item-icon>
@@ -106,6 +119,13 @@ export default {
     isProjectInfoVisible() {
       const allowedRoutes = ['Explore', 'Devices', 'DemoExplore', 'DemoDevices']
       return allowedRoutes.includes(this.$route.name)
+    },
+  },
+  methods: {
+    exitTutorial() {
+      const demoWalkthrough = require('@/demo/demo.js').default
+      demoWalkthrough.complete()
+      this.$router.push('/')
     },
   },
   data() {

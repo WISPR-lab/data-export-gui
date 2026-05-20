@@ -181,6 +181,11 @@ export default {
       this.$emit('close')
       this.$store.dispatch('updateEventLabels', { label: tagList[0], num: 1 })
       
+      if (this.$store.state.demoMode) {
+        const EventBus = require('@/event-bus.js').default
+        EventBus.$emit('demo-action', 'tag-added')
+      }
+
       this.$nextTick(() => {
         this.selectedTags = null
         this.search = null

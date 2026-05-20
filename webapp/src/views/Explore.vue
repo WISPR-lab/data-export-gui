@@ -516,6 +516,9 @@ export default {
       queryRequest['parent'] = parent
       this.activeQueryRequest = queryRequest
       this.showSearchDropdown = false
+      if (this.$store.state.demoMode) {
+        EventBus.$emit('demo-action', 'search-executed')
+      }
     },
     // searchView: function (viewId) {
     //   this.showSearchDropdown = false

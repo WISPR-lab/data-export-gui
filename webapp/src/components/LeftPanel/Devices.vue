@@ -23,7 +23,7 @@ limitations under the License.
   >
     <v-icon :color="isActive ? 'primary' : ''">mdi-devices</v-icon>
   </div>
-  <div v-else>
+  <div v-else id="tsNavigationDevices">
     <v-divider class="mb-0"></v-divider>
     <div
       class="pa-4"
@@ -54,6 +54,9 @@ export default {
       const target = this.$store.state.demoMode ? '/demo/devices' : '/devices'
       if (this.$route.path !== target) {
         this.$router.push(target)
+      }
+      if (this.$store.state.demoMode) {
+        EventBus.$emit('demo-action', 'route-changed-devices')
       }
     },
   },

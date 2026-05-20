@@ -45,7 +45,7 @@
         @dragleave.native="activeDropId = null"
         @drop.native="onDrop($event, dev, i)"
       >
-        <v-expansion-panel-header class="pa-4">
+        <v-expansion-panel-header class="pa-4" @click="onDeviceExpand">
           <template v-slot:default="{ open }">
             <device-header :device="dev" :open="open" />
           </template>
@@ -213,19 +213,25 @@ export default {
       try {
         this.mergeLoading = true;
         this.mergeError = null;
-        
+
         console.log('[confirmGroup] Starting merge with:', { src: this.staging.source.id, tgt: this.staging.target.id });
         const result = await callPyodideWorker('merge', {
           srcProfileId: this.staging.source.id,
           tgtProfileId: this.staging.target.id
         });
         console.log('[confirmGroup] Worker returned:', result);
-        
+
         if (result && result.status === 'ok') {
           this.mergeSuccess = true;
+
+          if (this.$store.state.demoMode) {
+            const EventBus = require('@/event-bus.js').default
+            EventBus.$emit('demo-action', 'device-dropped')
+          }
+
           const idx = this.unassigned.indexOf(this.staging.source);
           if (idx > -1) this.unassigned.splice(idx, 1);
-          
+
           await this.fetchDevices();
         } else if (result && result.status === 'ineligible') {
           this.mergeError = result.message;
@@ -250,6 +256,12 @@ export default {
     },
     onModalClosed() {
       this.mergeSuccess = false;
+    },
+    onDeviceExpand() {
+      if (this.$store.state.demoMode) {
+        const EventBus = require('@/event-bus.js').default
+        EventBus.$emit('demo-action', 'device-expanded')
+      }
     },
     goToExplore(device) {
       const queryString = `device_profiles_data:${device.id}`;
