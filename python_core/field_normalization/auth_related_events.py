@@ -21,7 +21,7 @@ AUTH_DEVICE_ATTR_KEYS = {
     # "device_model_identifier", 
     # "device_model_name",
     # "device_manufacturer",
-    # "user_agent_device_model",
+    # "user_agent_device_model_name",
     # "user_agent_device_manufacturer",
     # "user_agent_device_model_identifier",
     # "user_agent_os_name",

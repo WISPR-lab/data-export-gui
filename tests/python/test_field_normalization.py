@@ -42,7 +42,7 @@ class TestFieldNormalization:
                     rows_with_ua += 1
                     # Verify specific fields were parsed
                     if ('user_agent_os_name' in attrs or 'user_agent_os_type' in attrs or 
-                        'user_agent_device_model' in attrs or 'user_agent_client_name' in attrs):
+                        'user_agent_device_model_name' in attrs or 'user_agent_client_name' in attrs):
                         rows_with_parsed += 1
             
             # If we had rows with UA data, verify they were parsed
@@ -162,8 +162,8 @@ class TestFieldNormalization:
                     os_names.add(attrs['user_agent_os_name'])
                 if attrs.get('user_agent_os_type'):
                     os_types.add(attrs['user_agent_os_type'])
-                if attrs.get('user_agent_device_model'):
-                    device_models.add(attrs['user_agent_device_model'])
+                if attrs.get('user_agent_device_model_name'):
+                    device_models.add(attrs['user_agent_device_model_name'])
             
             # Check that we got all three expected OS types
             assert os_names == {'iOS', 'Android', 'Windows'}, f"Expected iOS, Android, Windows but got {os_names}"

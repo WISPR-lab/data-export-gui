@@ -101,14 +101,14 @@ class TestDeviceGrouping:
                         'device_manufacturer': 'Apple',
                         'device_model_name': 'iPhone',  # Generic
                         'user_agent_device_manufacturer': 'Apple',
-                        'user_agent_device_model': 'iPhone 14 Pro',  # Specific in UA
+                        'user_agent_device_model_name': 'iPhone 14 Pro',  # Specific in UA
                     }
                 else:
                     attrs = {
                         'device_manufacturer': 'Apple',
                         'device_model_name': 'iPhone 14 Pro',  # Specific
                         'user_agent_device_manufacturer': 'Apple',
-                        'user_agent_device_model': 'iPhone 14 Pro',
+                        'user_agent_device_model_name': 'iPhone 14 Pro',
                     }
                 
                 conn.execute(

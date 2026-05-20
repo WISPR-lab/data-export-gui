@@ -122,7 +122,7 @@ export async function getAtomicDevices(atomicIds) {
       origins: origins,
       attributes: attrs,
       specificity: row.specificity,
-      model: attrs.device_model_name || attrs.user_agent_device_model || 'Unknown Device',
+      model: attrs.device_model_name || attrs.user_agent_device_model_name || 'Unknown Device',
       uploadPlatform: uploadInfo ? uploadInfo.platform : 'Unknown',
       uploadColor: uploadInfo ? uploadInfo.color : '#999999'
     };
@@ -231,7 +231,7 @@ export async function getDevices() {
         origins: enrichedOrigins,
         attributes: attrs,
         specificity: row.specificity,
-        model: attrs.device_model_name || attrs.user_agent_device_model || 'Unknown Device',
+        model: attrs.device_model_name || attrs.user_agent_device_model_name || 'Unknown Device',
         uploadPlatform: uploadInfo ? uploadInfo.platform : 'Unknown',
         uploadColor: uploadInfo ? uploadInfo.color : '#999999'
       };

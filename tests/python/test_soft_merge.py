@@ -59,8 +59,8 @@ class TestSoftMatch:
         assert _soft_match(attrs_a, attrs_b, 2, 2) == False
     
     def test_ua_device_model_fallback(self):
-        """Fallback to user_agent_device_model if device_model_name missing"""
-        attrs_a = {'device_manufacturer': 'Apple', 'user_agent_device_model': 'iPhone 13'}
+        """Fallback to user_agent_device_model_name if device_model_name missing"""
+        attrs_a = {'device_manufacturer': 'Apple', 'user_agent_device_model_name': 'iPhone 13'}
         attrs_b = {'device_manufacturer': 'Apple', 'device_model_name': 'iPhone 13'}
         assert _soft_match(attrs_a, attrs_b, 2, 2) == True
 

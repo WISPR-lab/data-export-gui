@@ -68,7 +68,7 @@ class UserAgentParser:
         if dd.os_version():
             attrs['user_agent_os_version'] = dd.os_version()
         if dd.device_model():
-            attrs['user_agent_device_model'] = dd.device_model()
+            attrs['user_agent_device_model_name'] = dd.device_model()
         if dd.device_brand():
             attrs['user_agent_device_manufacturer'] = dd.device_brand()
         if dd.device_type():
