@@ -29,6 +29,15 @@ export async function processUpload(file, platform, sketchId, store) {
     if (store) store.commit('START_UPLOAD', file.name);
     log(`Starting upload process for ${platform} with file: ${file.name}`);
     
+    // CRITICAL: Ensure uploads always target timeline.db, never demo.db
+    DB.setActiveDatabase('timeline');
+    if (store) {
+      store.commit('SET_DEMO_MODE', false);
+      store.commit('SET_CURRENT_DB', 'timeline');
+      store.commit('SET_TOUR_WAS_OFFERED', false);
+    }
+    log('Database context set to timeline.db');
+    
     const opfsManager = new OPFSManager();
     
     const result = await executeUpload(file, platform, opfsManager, {

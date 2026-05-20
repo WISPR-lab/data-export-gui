@@ -28,13 +28,14 @@ limitations under the License.
         v-model="newSketchName"
         @focus="$event.target.select()"
         clearable
+        counter="50"
         :rules="sketchNameRules"
       >
       </v-text-field>
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn text @click="closeDialog()"> Cancel </v-btn>
-        <v-btn :disabled="!newSketchName || newSketchName.length > 255" text color="primary" @click="renameSketch()">
+        <v-btn :disabled="!newSketchName || newSketchName.length > 50" text color="primary" @click="renameSketch()">
           Save
         </v-btn>
       </v-card-actions>
@@ -50,7 +51,7 @@ export default {
       newSketchName: '',
       sketchNameRules: [
         (v) => !!v || 'Sketch name is required.',
-        (v) => (v && v.length <= 255) || 'Sketch name is too long.',
+        (v) => (v && v.length <= 50) || 'Sketch name is too long.',
       ],
     }
   },

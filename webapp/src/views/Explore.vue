@@ -164,126 +164,129 @@ limitations under the License.
         </v-expand-transition>
       </div>
 
-      <!-- Time filter chips -->
-      <div>
-        <span v-for="(chip, index) in timeFilterChips" :key="index + chip.value">
-          <v-menu offset-y content-class="menu-with-gap">
-            <template v-slot:activator="{ on }">
-              <v-chip outlined v-on="on">
-                <v-icon left small> mdi-clock-outline </v-icon>
-                <span v-bind:style="[!chip.active ? { 'text-decoration': 'line-through', opacity: '50%' } : '']">
-                  <span>{{ formatTimeValue(chip.value.split(',')[0]) }}</span>
-                  <span v-if="chip.type === 'datetime_range' && chip.value.split(',')[0] !== chip.value.split(',')[1]">
-                    &rarr; {{ formatTimeValue(chip.value.split(',')[1]) }}</span
-                  >
-                </span>
-              </v-chip>
-            </template>
-            <v-card>
-              <v-list>
-                <!-- Edit timefilter menu -->
-                <v-menu
-                  offset-y
-                  :close-on-content-click="false"
-                  :close-on-click="true"
-                  nudge-top="70"
-                  content-class="menu-with-gap"
-                  allow-overflow
-                  style="overflow: visible"
-                >
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-list-item v-bind="attrs" v-on="on">
-                      <v-list-item-action>
-                        <v-icon>mdi-square-edit-outline</v-icon>
-                      </v-list-item-action>
-                      <v-list-item-subtitle>Edit filter</v-list-item-subtitle>
-                    </v-list-item>
-                  </template>
-                  <ts-filter-menu app :selected-chip="chip" @updateChip="updateChip($event, chip)"></ts-filter-menu>
-                </v-menu>
-                <v-list-item @click="copyFilterChip(chip)">
-                  <v-list-item-action>
-                    <v-icon>mdi-content-copy</v-icon>
-                  </v-list-item-action>
-                  <v-list-item-subtitle>Copy filter</v-list-item-subtitle>
-                </v-list-item>
-                <v-list-item @click="toggleChip(chip)">
-                  <v-list-item-action>
-                    <v-icon v-if="chip.active">mdi-eye-off</v-icon>
-                    <v-icon v-else>mdi-eye</v-icon>
-                  </v-list-item-action>
-                  <v-list-item-subtitle
-                    ><span v-if="chip.active">Temporarily disable</span
-                    ><span v-else>Re-enable</span></v-list-item-subtitle
-                  >
-                </v-list-item>
-                <v-list-item @click="removeChip(chip)">
-                  <v-list-item-action>
-                    <v-icon>mdi-delete</v-icon>
-                  </v-list-item-action>
-                  <v-list-item-subtitle>Remove filter</v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
-            </v-card>
-          </v-menu>
-          <v-btn v-if="index + 1 < timeFilterChips.length" icon small style="margin-top: 2px" class="mr-2">OR</v-btn>
-        </span>
-        <span>
-          <v-menu
-            v-model="timeFilterMenu"
-            offset-y
-            :close-on-content-click="false"
-            :close-on-click="true"
-            content-class="menu-with-gap"
-            allow-overflow
-            style="overflow: visible"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
-                <v-icon left small> mdi-clock-plus-outline </v-icon>
-                Add timefilter
-              </v-btn>
-            </template>
-
-            <ts-filter-menu app @cancel="timeFilterMenu = false" @addChip="addChip"></ts-filter-menu>
-          </v-menu>
-        </span>
-      </div>
-
-      <!-- Term filters -->
-      <div v-if="filterChips.length" class="mt-1">
-        <v-chip-group column>
-          <span v-for="(chip, index) in filterChips" :key="index + chip.value">
-            <v-tooltip top :disabled="formatChipDisplay(chip).length < 33" open-delay="300">
-              <template v-slot:activator="{ on: onTooltip, attrs }">
-                <v-chip
-                  outlined
-                  close
-                  close-icon="mdi-close"
-                  @click:close="removeChip(chip)"
-                  @click="copyFilterChip(chip)"
-                  v-bind="attrs"
-                  v-on="onTooltip"
-                >
-                  <v-icon v-if="chip.value === '__ts_star'" left small color="amber">mdi-star</v-icon>
-                  <v-icon v-if="chip.value === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
-                  <v-icon v-if="getQuickTag(chip.value)" left small :color="getQuickTag(chip.value).color">{{
-                    getQuickTag(chip.value).label
-                  }}</v-icon>
-                  <span v-if="chip.operator === 'must_not'" class="filter-chip-truncate">
-                    <span style="color: red">NOT </span>
-                    {{ formatChipDisplay(chip) }}
-                  </span>
-                  <span v-else class="filter-chip-truncate">
-                    {{ formatChipDisplay(chip) }}
+      <!-- Filters area -->
+      <div data-filter-id="demo-filters">
+        <!-- Time filter chips -->
+        <div>
+          <span v-for="(chip, index) in timeFilterChips" :key="index + chip.value">
+            <v-menu offset-y content-class="menu-with-gap">
+              <template v-slot:activator="{ on }">
+                <v-chip outlined v-on="on">
+                  <v-icon left small> mdi-clock-outline </v-icon>
+                  <span v-bind:style="[!chip.active ? { 'text-decoration': 'line-through', opacity: '50%' } : '']">
+                    <span>{{ formatTimeValue(chip.value.split(',')[0]) }}</span>
+                    <span v-if="chip.type === 'datetime_range' && chip.value.split(',')[0] !== chip.value.split(',')[1]">
+                      &rarr; {{ formatTimeValue(chip.value.split(',')[1]) }}</span
+                    >
                   </span>
                 </v-chip>
               </template>
-              <span>{{ chip.value }}</span>
-            </v-tooltip>
-            <v-btn v-if="index + 1 < timeFilterChips.length" icon small style="margin-top: 2px" class="mr-2">AND</v-btn>
+              <v-card>
+                <v-list>
+                  <!-- Edit timefilter menu -->
+                  <v-menu
+                    offset-y
+                    :close-on-content-click="false"
+                    :close-on-click="true"
+                    nudge-top="70"
+                    content-class="menu-with-gap"
+                    allow-overflow
+                    style="overflow: visible"
+                  >
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-list-item v-bind="attrs" v-on="on">
+                        <v-list-item-action>
+                          <v-icon>mdi-square-edit-outline</v-icon>
+                        </v-list-item-action>
+                        <v-list-item-subtitle>Edit filter</v-list-item-subtitle>
+                      </v-list-item>
+                    </template>
+                    <ts-filter-menu app :selected-chip="chip" @updateChip="updateChip($event, chip)"></ts-filter-menu>
+                  </v-menu>
+                  <v-list-item @click="copyFilterChip(chip)">
+                    <v-list-item-action>
+                      <v-icon>mdi-content-copy</v-icon>
+                    </v-list-item-action>
+                    <v-list-item-subtitle>Copy filter</v-list-item-subtitle>
+                  </v-list-item>
+                  <v-list-item @click="toggleChip(chip)">
+                    <v-list-item-action>
+                      <v-icon v-if="chip.active">mdi-eye-off</v-icon>
+                      <v-icon v-else>mdi-eye</v-icon>
+                    </v-list-item-action>
+                    <v-list-item-subtitle
+                      ><span v-if="chip.active">Temporarily disable</span
+                      ><span v-else>Re-enable</span></v-list-item-subtitle
+                    >
+                  </v-list-item>
+                  <v-list-item @click="removeChip(chip)">
+                    <v-list-item-action>
+                      <v-icon>mdi-delete</v-icon>
+                    </v-list-item-action>
+                    <v-list-item-subtitle>Remove filter</v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-card>
+            </v-menu>
+            <v-btn v-if="index + 1 < timeFilterChips.length" icon small style="margin-top: 2px" class="mr-2">OR</v-btn>
           </span>
-        </v-chip-group>
+          <span>
+            <v-menu
+              v-model="timeFilterMenu"
+              offset-y
+              :close-on-content-click="false"
+              :close-on-click="true"
+              content-class="menu-with-gap"
+              allow-overflow
+              style="overflow: visible"
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
+                  <v-icon left small> mdi-clock-plus-outline </v-icon>
+                  Add timefilter
+                </v-btn>
+              </template>
+
+              <ts-filter-menu app @cancel="timeFilterMenu = false" @addChip="addChip"></ts-filter-menu>
+            </v-menu>
+          </span>
+        </div>
+
+        <!-- Term filters -->
+        <div v-if="filterChips.length" class="mt-1">
+          <v-chip-group column>
+            <span v-for="(chip, index) in filterChips" :key="index + chip.value">
+              <v-tooltip top :disabled="formatChipDisplay(chip).length < 33" open-delay="300">
+                <template v-slot:activator="{ on: onTooltip, attrs }">
+                  <v-chip
+                    outlined
+                    close
+                    close-icon="mdi-close"
+                    @click:close="removeChip(chip)"
+                    @click="copyFilterChip(chip)"
+                    v-bind="attrs"
+                    v-on="onTooltip"
+                  >
+                    <v-icon v-if="chip.value === '__ts_star'" left small color="amber">mdi-star</v-icon>
+                    <v-icon v-if="chip.value === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
+                    <v-icon v-if="getQuickTag(chip.value)" left small :color="getQuickTag(chip.value).color">{{
+                      getQuickTag(chip.value).label
+                    }}</v-icon>
+                    <span v-if="chip.operator === 'must_not'" class="filter-chip-truncate">
+                      <span style="color: red">NOT </span>
+                      {{ formatChipDisplay(chip) }}
+                    </span>
+                    <span v-else class="filter-chip-truncate">
+                      {{ formatChipDisplay(chip) }}
+                    </span>
+                  </v-chip>
+                </template>
+                <span>{{ chip.value }}</span>
+              </v-tooltip>
+              <v-btn v-if="index + 1 < timeFilterChips.length" icon small style="margin-top: 2px" class="mr-2">AND</v-btn>
+            </span>
+          </v-chip-group>
+        </div>
       </div>
     </v-card>
 
@@ -294,7 +297,6 @@ limitations under the License.
         :query-request="activeQueryRequest"
         @countPerIndex="updateCountPerIndex($event)"
         @countPerTimeline="updateCountPerTimeline($event)"
-        @initialSearchComplete="startTour"
       ></ts-event-list>
     </v-card>
   </v-container>
@@ -304,7 +306,6 @@ limitations under the License.
 import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
-import { tourManager } from '../utils/tour.js'
 
 import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
 import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
@@ -398,6 +399,15 @@ export default {
     timeFilterChips: function () {
       return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && chip.type.startsWith('datetime'))
     },
+    demoMode() {
+      return this.$store.state.demoMode
+    },
+    tourWasOffered() {
+      return this.$store.state.tourWasOffered
+    },
+    hasTimelines() {
+      return !!(this.sketch.timelines && this.sketch.timelines.length)
+    },
     filteredLabels() {
       return this.$store.state.meta.filter_labels.filter((label) => !label.label.startsWith('__'))
     },
@@ -422,19 +432,31 @@ export default {
     enabledTimelines: function () {
       this.updateEnabledTimelines(this.enabledTimelines)
     },
+    hasTimelines(newVal) {
+      if (newVal && this.$route.name === 'DemoExplore') {
+        console.log('[Explore] Data loaded for DemoExplore, auto-starting walkthrough');
+        this.$nextTick(() => {
+          this.startWalkthrough();
+        });
+      }
+    },
+    $route(to) {
+      if (to.name === 'DemoExplore' && this.hasTimelines) {
+        console.log('[Explore] Route changed to DemoExplore, auto-starting walkthrough');
+        this.$nextTick(() => {
+          this.startWalkthrough();
+        });
+      }
+    },
   },
   methods: {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
     },
-    startTour() {
-      const forceTour = this.$route.query.tour === 'true';
-      tourManager.startTour(
-        'explore',
-        forceTour,
-        this.sketch.timelines && this.sketch.timelines.length > 0,
-        this.$store
-      )
+    startWalkthrough() {
+      console.log('[Explore] Starting demo walkthrough');
+      const demoWalkthrough = require('@/demo/demo.js').default
+      demoWalkthrough.startExplore(this.$store)
     },
     updateCountPerIndex: function (count) {
       this.countPerIndex = count
@@ -789,6 +811,14 @@ export default {
   mounted() {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
+    
+    // Auto-start walkthrough if in DemoExplore route
+    if (this.$route.name === 'DemoExplore' && this.hasTimelines) {
+      console.log('[Explore] Auto-starting walkthrough on mount');
+      this.$nextTick(() => {
+        this.startWalkthrough();
+      });
+    }
   },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')

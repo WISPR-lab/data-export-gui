@@ -46,13 +46,14 @@ export default {
   },
   computed: {
     isActive() {
-      return this.$route.name === 'Devices'
+      return this.$route.name === 'Devices' || this.$route.name === 'DemoDevices'
     }
   },
   methods: {
     navigateToDevices() {
-      if (this.$route.path !== '/devices') {
-        this.$router.push('/devices')
+      const target = this.$store.state.demoMode ? '/demo/devices' : '/devices'
+      if (this.$route.path !== target) {
+        this.$router.push(target)
       }
     },
   },

@@ -51,6 +51,8 @@ const defaultState = () => {
     console.error('[Store] Failed to load settings from localStorage:', e)
   }
 
+  const tourWasOffered = false
+
   return {
     // Core sketch data (virtual, not persisted to DB)
     sketch: {},
@@ -95,8 +97,13 @@ const defaultState = () => {
       warnings: [],
       success: false,
     },
-    exploreTourVisits: 0,
-    deviceTourVisits: 0,
+
+    // Demo mode state
+    demoMode: false,
+    currentDb: 'timeline', // 'timeline' for user data, 'demo' for sample data
+    tourWasOffered: tourWasOffered, // Has user seen the first-time demo modal?
+    tourInProgress: false, // Is walkthrough currently running?
+    tourCurrentStep: 0, // Which step are we on (0-7)?
   }
 }
 
@@ -249,11 +256,20 @@ export default new Vuex.Store({
         success: false,
       })
     },
-    INCREMENT_EXPLORE_TOUR_VISITS(state) {
-      state.exploreTourVisits++
+    SET_DEMO_MODE(state, demoMode) {
+      Vue.set(state, 'demoMode', demoMode)
     },
-    INCREMENT_DEVICE_TOUR_VISITS(state) {
-      state.deviceTourVisits++
+    SET_CURRENT_DB(state, dbName) {
+      Vue.set(state, 'currentDb', dbName)
+    },
+    SET_TOUR_WAS_OFFERED(state, value) {
+      Vue.set(state, 'tourWasOffered', value)
+    },
+    SET_TOUR_IN_PROGRESS(state, value) {
+      Vue.set(state, 'tourInProgress', value)
+    },
+    SET_TOUR_CURRENT_STEP(state, step) {
+      Vue.set(state, 'tourCurrentStep', step)
     },
   },
   actions: {
@@ -264,7 +280,11 @@ export default new Vuex.Store({
         return;
       }
 
-      const sketchName = localStorage.getItem('sketchName') || 'Local Takeout Workspace'
+      let sketchName = localStorage.getItem('sketchName') || 'My Data'
+      if (context.state.demoMode) {
+        sketchName = 'Instagram Demo Data'
+      }
+      
       const virtualSketch = {
         id: 1,
         name: sketchName,
@@ -326,6 +346,29 @@ export default new Vuex.Store({
     },
     toggleEnabledTimeline(context, timelineId) {
       context.commit('TOGGLE_ENABLED_TIMELINE', timelineId)
+    },
+    setDemoMode(context, demoMode) {
+      context.commit('SET_DEMO_MODE', demoMode)
+    },
+    setCurrentDb(context, dbName) {
+      context.commit('SET_CURRENT_DB', dbName)
+    },
+    setTourWasOffered(context, value) {
+      context.commit('SET_TOUR_WAS_OFFERED', value)
+    },
+    setTourInProgress(context, value) {
+      context.commit('SET_TOUR_IN_PROGRESS', value)
+    },
+    setTourCurrentStep(context, step) {
+      context.commit('SET_TOUR_CURRENT_STEP', step)
+    },
+    clearDemoState(context) {
+      // Clear UI state when switching out of demo mode to prevent filter leakage
+      context.commit('SET_EVENT_LABELS', [])
+      context.commit('SET_ENABLED_TIMELINES', [])
+      // Reset tour progress
+      context.commit('SET_TOUR_IN_PROGRESS', false)
+      context.commit('SET_TOUR_CURRENT_STEP', 0)
     },
   },
 })

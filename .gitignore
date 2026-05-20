@@ -23,7 +23,7 @@ webapp-v3.zip
 !.github/workflows/
 !.github/workflows/*.yml
 
-.roo/*
+.plans/*
 
 
 data/opensearch/

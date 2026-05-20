@@ -18,12 +18,15 @@
         <v-list-item-title>Explore My Data</v-list-item-title>
       </v-list-item>
       <v-list-item router-link to="/how-to-request" :active="$route.path === '/how-to-request'">
-        <v-list-item-title>Tutorials</v-list-item-title>
+        <v-list-item-title>How to Request Your Data</v-list-item-title>
+      </v-list-item>
+      <v-list-item router-link to="/demo/explore">
+        <v-list-item-title>Interactive Demo</v-list-item-title>
       </v-list-item>
       <v-list-item href="#">
         <v-list-item-title>Research</v-list-item-title>
       </v-list-item>
-      <v-list-item href="https://github.com/google/timesketch" target="_blank">
+      <v-list-item href="https://github.com/WISPR-lab/data-export-gui/" target="_blank">
         <v-list-item-title>GitHub<v-icon medium class="ml-2 mb-1">mdi-github</v-icon>
         </v-list-item-title>
       </v-list-item>

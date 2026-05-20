@@ -1,19 +1,65 @@
 <template>
-  <v-app-bar flat color="white" class="border-bottom">
+  <v-app-bar :app="app" :clipped-left="clippedLeft" flat color="white" class="border-bottom">
     <div class="header-content">
-      <!-- Left side: Logo + Tool Name -->
+      <!-- Left side: Drawer Toggle (optional) + Logo + Project Name -->
       <div class="header-left">
-        <!-- <v-icon size="24">mdi-database-search</v-icon>
-        <span class="tool-name ml-2">LEStrADE</span> -->
-        <img :src="LestradeLogo" alt="LEStrADE Logo" height="32" class="mr-2" />
-        <!-- <span class="tool-name">LEStrADE</span> -->
+        <v-btn v-if="showDrawer" icon @click="$emit('toggle-drawer')" class="mr-2">
+          <v-icon title="Toggle left panel">mdi-menu</v-icon>
+        </v-btn>
+        
+        <router-link to="/" class="d-flex align-center" style="text-decoration: none; color: inherit;">
+          <img :src="LestradeLogo" alt="LEStrADE Logo" height="32" class="mr-2" />
+        </router-link>
+
+        <!-- Project Name Section -->
+        <div v-if="isProjectInfoVisible" class="ml-4 d-none d-sm-flex align-center">
+          <div v-if="demoMode" class="blue white--text px-3 py-1 rounded font-weight-bold" style="font-size: 0.85em; letter-spacing: 0.5px;">
+            INTERACTIVE DEMO
+          </div>
+          <v-hover v-else-if="sketch && sketch.name" v-slot="{ hover }">
+            <div class="d-flex align-center">
+              <div
+                @dblclick="$emit('rename-project')"
+                style="font-size: 1.1em; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;"
+                :title="sketch.name"
+              >
+                <span class="font-weight-bold">Project:</span>&nbsp; {{ sketch.name }}
+              </div>
+              <v-icon title="Rename Project" small class="ml-3" v-if="hover" @click="$emit('rename-project')">mdi-pencil</v-icon>
+            </div>
+          </v-hover>
+        </div>
       </div>
 
       <!-- Desktop Navigation (shown on md and up) -->
       <div class="header-nav d-none d-md-flex">
         <v-btn text router-link to="/" class="nav-link">Home</v-btn>
         <v-btn text router-link to="/explore" class="nav-link">Explore My Data</v-btn>
-        <v-btn text router-link to="/how-to-request" class="nav-link">Tutorials</v-btn>
+        
+        <!-- Tutorials Dropdown -->
+        <v-menu offset-y open-on-hover>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn text v-bind="attrs" v-on="on" class="nav-link">
+              Tutorials
+              <v-icon small right>mdi-chevron-down</v-icon>
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item to="/how-to-request">
+              <v-list-item-icon>
+                <v-icon>mdi-help-circle-outline</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>How to Request Your Data</v-list-item-title>
+            </v-list-item>
+            <v-list-item to="/demo/explore">
+              <v-list-item-icon>
+                <v-icon>mdi-play-circle</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>Interactive Demo</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
         <v-btn text href="#" class="nav-link">Research</v-btn> <!-- todo --> 
         <v-btn text href="https://github.com/WISPR-lab/data-export-gui/" target="_blank" class="nav-link">
           GitHub
@@ -35,6 +81,32 @@ export default {
   name: 'PageHeader',
   components: {
     PageHeaderMobileMenu,
+  },
+  props: {
+    app: {
+      type: Boolean,
+      default: false,
+    },
+    clippedLeft: {
+      type: Boolean,
+      default: false,
+    },
+    showDrawer: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  computed: {
+    sketch() {
+      return this.$store.state.sketch
+    },
+    demoMode() {
+      return this.$store.state.demoMode
+    },
+    isProjectInfoVisible() {
+      const allowedRoutes = ['Explore', 'Devices', 'DemoExplore', 'DemoDevices']
+      return allowedRoutes.includes(this.$route.name)
+    },
   },
   data() {
     return {

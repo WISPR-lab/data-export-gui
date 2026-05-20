@@ -1,5 +1,22 @@
 <template>
   <v-container class="pa-6 white min-h-100" style="max-width: 900px;">
+    <!-- Demo completion modal -->
+    <v-dialog v-model="showDemoCompletionModal" width="500" persistent>
+      <v-card class="pa-6">
+        <v-card-title class="text-h5 mb-4">Excellent! 🎉</v-card-title>
+        <v-card-text>
+          <p>You've seen the main features of the data explorer. Now you're ready to analyze your own data.</p>
+          <p class="mt-4 mb-0">Would you like to upload your data now, or explore the demo a bit more?</p>
+        </v-card-text>
+        <v-card-actions class="pt-4">
+          <v-spacer></v-spacer>
+          <v-btn text @click="exploreMoreDemo">Explore More</v-btn>
+          <v-btn text @click="returnToHome">Return Home</v-btn>
+          <v-btn color="primary" @click="goToUpload">Upload Your Data</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <div class="mb-8">
       <h1 class="text-h4 font-weight-bold mb-2">Your devices</h1>
       <p class="body-1 grey--text text--darken-2">
@@ -18,11 +35,11 @@
     </div>
 
 
-    <v-expansion-panels flat class="device-panels">
+    <v-expansion-panels flat class="device-panels devices-list">
       <v-expansion-panel
         v-for="(dev, i) in devices"
         :key="i"
-        class="mb-3 border rounded-xl overflow-hidden device-drop-zone"
+        class="mb-3 border rounded-xl overflow-hidden device-drop-zone device-profile-card"
         :class="{'drop-active': isDragging && activeDropId === i}"
         @dragover.native.prevent="activeDropId = i"
         @dragleave.native="activeDropId = null"
@@ -120,10 +137,30 @@ export default {
       devices: [],
       unassigned: [],
       showDeviceHelpDialog: false,
+      showDemoCompletionModal: false,
+    }
+  },
+  watch: {
+    '$store.state.tourInProgress'(newVal, oldVal) {
+      // Show completion modal when tour finishes (tourInProgress changes from true to false)
+      if (oldVal && !newVal && this.$store.state.demoMode) {
+        console.log('[Devices] Tour completed, showing completion modal');
+        this.$nextTick(() => {
+          this.showDemoCompletionModal = true
+        })
+      }
     }
   },
   async mounted() {
     await this.fetchDevices();
+    
+    // Auto-resume walkthrough if in demo mode
+    if (this.$store.state.demoMode && this.$store.state.tourInProgress) {
+      console.log('[Devices] Resuming walkthrough at steps 6-7');
+      this.$nextTick(() => {
+        this.resumeWalkthrough();
+      });
+    }
   },
   methods: {
     async fetchDevices() {
@@ -216,10 +253,34 @@ export default {
     },
     goToExplore(device) {
       const queryString = `device_profiles_data:${device.id}`;
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore'
       this.$router.push({
-        name: 'Explore',
+        name: routeName,
         query: { q: queryString }
       });
+    },
+    resumeWalkthrough() {
+      console.log('[Devices] Resuming demo walkthrough');
+      const demoWalkthrough = require('@/demo/demo.js').default
+      demoWalkthrough.resumeDevices(this.$store)
+    },
+    goToUpload() {
+      console.log('[Devices] User chose to upload data');
+      this.showDemoCompletionModal = false
+      this.$store.dispatch('clearDemoState')
+      this.$store.commit('SET_DEMO_MODE', false)
+      this.$router.push('/')
+    },
+    returnToHome() {
+      console.log('[Devices] User chose to return home');
+      this.showDemoCompletionModal = false
+      this.$store.dispatch('clearDemoState')
+      this.$store.commit('SET_DEMO_MODE', false)
+      this.$router.push('/')
+    },
+    exploreMoreDemo() {
+      console.log('[Devices] User chose to explore more');
+      this.showDemoCompletionModal = false
     }
   }
 };

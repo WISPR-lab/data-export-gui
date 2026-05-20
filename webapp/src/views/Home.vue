@@ -26,7 +26,7 @@
             to="/how-to-request"
           >
             <v-icon left>mdi-information-outline</v-icon>
-            Get your data export
+            How to request your data
           </v-btn>
           <v-btn
             large
@@ -44,7 +44,7 @@
       <div class="mb-20">
         <img :src="heroScreenshot" alt="Dashboard screenshot" class="screenshot card-shadow" />
       </div>
-      <v-alert type="primary" dense class="font-weight-medium mt-10 mb-10 text-center"><span>
+      <v-alert color="primary" dense class="font-weight-medium mt-10 mb-10 text-center white--text"><span>
         LEStrADE is an academic tool in early beta. We welcome feedback to help us improve the tool on GitHub!
       </span></v-alert>
 

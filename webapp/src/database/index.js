@@ -10,6 +10,7 @@ import { loadConfig } from '../utils/config.js';
 
 let worker = null;
 let messageId = 0;
+let activeDbName = 'timeline'; // Track which DB is active
 
 function callPyodideWorker(method, args) {
   return new Promise((resolve, reject) => {
@@ -35,13 +36,14 @@ function callPyodideWorker(method, args) {
 let cachedPaths = null;
 
 async function getDbPaths() {
-  if (cachedPaths) return cachedPaths;
   const cfg = await loadConfig();
-  cachedPaths = {
+  const dbFilename = cfg.database.db_path.split('/').pop(); // e.g., "timeline.db"
+  const dbPath = activeDbName === 'timeline' ? `/${dbFilename}` : '/demo.db';
+  
+  return {
     schemaPath: cfg.paths.schema,
-    dbPath: '/' + cfg.database.db_path.split('/').pop(),
+    dbPath,
   };
-  return cachedPaths;
 }
 
 export async function getDB() {
@@ -156,6 +158,15 @@ export default {
   getDB,
   closeDB,
   clearAllTables,
+  
+  // DB switching
+  setActiveDatabase(dbName) {
+    activeDbName = dbName; // 'timeline' or 'demo'
+    console.log(`[Database] Switched to ${dbName} database`);
+  },
+  getActiveDatabase() {
+    return activeDbName;
+  },
   
   searchEvents: events.searchEvents,
   getEventCount: events.getEventCount,
