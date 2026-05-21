@@ -391,7 +391,7 @@ export default {
       eventData.chip = chip
       EventBus.$emit('setQueryAndFilter', eventData)
       if (this.$store.state.demoMode) {
-        EventBus.$emit('demo-action', 'inline-filter-clicked')
+        EventBus.$emit('demo:action', 'inline-filter-clicked')
       }
     },
   },

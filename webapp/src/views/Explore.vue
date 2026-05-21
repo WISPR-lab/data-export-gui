@@ -434,17 +434,17 @@ export default {
     },
     hasTimelines(newVal) {
       if (newVal && this.$route.name === 'DemoExplore') {
-        console.log('[Explore] Data loaded for DemoExplore, auto-starting walkthrough');
+        console.log('[Explore] Data loaded for DemoExplore, auto-starting demo');
         this.$nextTick(() => {
-          this.startWalkthrough();
+          this.startDemo();
         });
       }
     },
     $route(to) {
       if (to.name === 'DemoExplore' && this.hasTimelines) {
-        console.log('[Explore] Route changed to DemoExplore, auto-starting walkthrough');
+        console.log('[Explore] Route changed to DemoExplore, auto-starting demo');
         this.$nextTick(() => {
-          this.startWalkthrough();
+          this.startDemo();
         });
       }
     },
@@ -453,10 +453,10 @@ export default {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
     },
-    startWalkthrough() {
-      console.log('[Explore] Starting demo walkthrough');
-      const demoWalkthrough = require('@/demo/demo.js').default
-      demoWalkthrough.startExplore(this.$store)
+    startDemo() {
+      console.log('[Explore] Starting interactive demo');
+      const DemoController = require('@/demo/DemoController.js').default
+      DemoController.start(this.$store)
     },
     updateCountPerIndex: function (count) {
       this.countPerIndex = count
@@ -517,7 +517,7 @@ export default {
       this.activeQueryRequest = queryRequest
       this.showSearchDropdown = false
       if (this.$store.state.demoMode) {
-        EventBus.$emit('demo-action', 'search-executed')
+        EventBus.$emit('demo:action', 'search-executed')
       }
     },
     // searchView: function (viewId) {
@@ -815,11 +815,11 @@ export default {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
     
-    // Auto-start walkthrough if in DemoExplore route
+    // Auto-start demo if in DemoExplore route
     if (this.$route.name === 'DemoExplore' && this.hasTimelines) {
-      console.log('[Explore] Auto-starting walkthrough on mount');
+      console.log('[Explore] Auto-starting demo on mount');
       this.$nextTick(() => {
-        this.startWalkthrough();
+        this.startDemo();
       });
     }
   },

@@ -11,18 +11,6 @@
           <img :src="LestradeLogo" alt="LEStrADE Logo" height="32" class="mr-2" />
         </router-link>
 
-        <!-- Close Tutorial Button -->
-        <v-btn
-          v-if="demoMode"
-          small
-          outlined
-          color="error"
-          class="ml-4"
-          @click="exitTutorial"
-        >
-          <v-icon left small>mdi-close-circle-outline</v-icon>
-          Exit Tutorial
-        </v-btn>
 
         <!-- Project Name Section -->
         <div v-if="isProjectInfoVisible" class="ml-4 d-none d-sm-flex align-center">
@@ -49,7 +37,7 @@
         <v-btn text router-link to="/" class="nav-link">Home</v-btn>
         <v-btn text router-link to="/explore" class="nav-link">Explore My Data</v-btn>
         
-        <!-- Tutorials Dropdown -->
+        <!-- Tutorials Dropdown (Help Docs) -->
         <v-menu offset-y open-on-hover>
           <template v-slot:activator="{ on, attrs }">
             <v-btn text v-bind="attrs" v-on="on" class="nav-link">
@@ -122,9 +110,9 @@ export default {
     },
   },
   methods: {
-    exitTutorial() {
-      const demoWalkthrough = require('@/demo/demo.js').default
-      demoWalkthrough.complete()
+    exitDemo() {
+      const DemoController = require('@/demo/DemoController.js').default
+      DemoController.complete()
       this.$router.push('/')
     },
   },

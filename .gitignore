@@ -94,3 +94,5 @@ vagrant/*.log
 # Exclude JetBrains IDE files
 .idea/
 CODEBASE_AUDIT_REPORT.md
+tests/takeout*
+tests/Takeout/*

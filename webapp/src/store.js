@@ -51,8 +51,6 @@ const defaultState = () => {
     console.error('[Store] Failed to load settings from localStorage:', e)
   }
 
-  const tourWasOffered = false
-
   return {
     // Core sketch data (virtual, not persisted to DB)
     sketch: {},
@@ -98,12 +96,12 @@ const defaultState = () => {
       success: false,
     },
 
-    // Demo mode state
+    // Demo state
     demoMode: false,
     currentDb: 'timeline', // 'timeline' for user data, 'demo' for sample data
-    tourWasOffered: tourWasOffered, // Has user seen the first-time demo modal?
-    tourInProgress: false, // Is walkthrough currently running?
-    tourCurrentStep: 0, // Which step are we on (0-7)?
+    demoWasOffered: false, // Has user seen the first-time demo modal?
+    demoInProgress: false, // Is walkthrough currently running?
+    demoStep: 0, // Which step are we on?
   }
 }
 
@@ -120,12 +118,6 @@ export default new Vuex.Store({
     SET_SEARCH_HISTORY(state, payload) {
       Vue.set(state, 'searchHistory', payload.objects)
     },
-    // SET_SCENARIOS(state, payload) {
-    //   Vue.set(state, 'scenarios', payload.objects[0])
-    // },
-    // SET_SCENARIO_TEMPLATES(state, payload) {
-    //   Vue.set(state, 'scenarioTemplates', payload.objects)
-    // },
     SET_TIMELINE_TAGS(state, buckets) {
       Vue.set(state, 'tags', buckets)
     },
@@ -138,20 +130,6 @@ export default new Vuex.Store({
     SET_COUNT(state, payload) {
       Vue.set(state, 'count', payload)
     },
-    // SET_SEARCH_NODE(state, payload) {
-    //   Vue.set(state, 'currentSearchNode', payload)
-    // },
-    // SET_SIGMA_LIST(state, payload) {
-    //   Vue.set(state, 'sigmaRuleList', payload['objects'])
-    //   Vue.set(state, 'sigmaRuleList_count', payload['meta']['rules_count'])
-    // },
-    // SET_VISUALIZATION_LIST(state, payload) {
-    //   Vue.set(state, 'savedVisualizations', payload)
-    // },
-    // SET_ACTIVE_USER(state, payload) {
-    //   // Browser version: no user system, default to 'local-user'
-    //   Vue.set(state, 'currentUser', 'local-user')
-    // },
     SET_ACTIVE_CONTEXT(state, payload) {
       localStorage.setItem(
         'sketchContext' + state.sketch.id.toString(),
@@ -262,14 +240,14 @@ export default new Vuex.Store({
     SET_CURRENT_DB(state, dbName) {
       Vue.set(state, 'currentDb', dbName)
     },
-    SET_TOUR_WAS_OFFERED(state, value) {
-      Vue.set(state, 'tourWasOffered', value)
+    SET_DEMO_WAS_OFFERED(state, value) {
+      Vue.set(state, 'demoWasOffered', value)
     },
-    SET_TOUR_IN_PROGRESS(state, value) {
-      Vue.set(state, 'tourInProgress', value)
+    SET_DEMO_IN_PROGRESS(state, value) {
+      Vue.set(state, 'demoInProgress', value)
     },
-    SET_TOUR_CURRENT_STEP(state, step) {
-      Vue.set(state, 'tourCurrentStep', step)
+    SET_DEMO_STEP(state, step) {
+      Vue.set(state, 'demoStep', step)
     },
   },
   actions: {
@@ -326,7 +304,6 @@ export default new Vuex.Store({
       allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)
     },
-    // Tour actions removed - tours now self-initialize via BaseTour
     setSnackBar(context, snackbar) {
       context.commit('SET_SNACKBAR', {
         active: true,
@@ -353,22 +330,22 @@ export default new Vuex.Store({
     setCurrentDb(context, dbName) {
       context.commit('SET_CURRENT_DB', dbName)
     },
-    setTourWasOffered(context, value) {
-      context.commit('SET_TOUR_WAS_OFFERED', value)
+    setDemoWasOffered(context, value) {
+      context.commit('SET_DEMO_WAS_OFFERED', value)
     },
-    setTourInProgress(context, value) {
-      context.commit('SET_TOUR_IN_PROGRESS', value)
+    setDemoInProgress(context, value) {
+      context.commit('SET_DEMO_IN_PROGRESS', value)
     },
-    setTourCurrentStep(context, step) {
-      context.commit('SET_TOUR_CURRENT_STEP', step)
+    setDemoStep(context, step) {
+      context.commit('SET_DEMO_STEP', step)
     },
     clearDemoState(context) {
       // Clear UI state when switching out of demo mode to prevent filter leakage
       context.commit('SET_EVENT_LABELS', [])
       context.commit('SET_ENABLED_TIMELINES', [])
-      // Reset tour progress
-      context.commit('SET_TOUR_IN_PROGRESS', false)
-      context.commit('SET_TOUR_CURRENT_STEP', 0)
+      // Reset demo progress
+      context.commit('SET_DEMO_IN_PROGRESS', false)
+      context.commit('SET_DEMO_STEP', 0)
     },
   },
 })

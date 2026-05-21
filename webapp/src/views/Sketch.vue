@@ -323,8 +323,8 @@ export default {
     currentUser() {
       return this.$store.state.currentUser
     },
-    tourWasOffered() {
-      return this.$store.state.tourWasOffered
+    demoWasOffered() {
+      return this.$store.state.demoWasOffered
     },
     hasTimelines() {
       return !!(this.sketch.timelines && this.sketch.timelines.length)
@@ -342,7 +342,7 @@ export default {
   methods: {
     checkShowDemoModal() {
       const isRegularExploreRoute = this.$route.name === 'Explore'
-      if (isRegularExploreRoute && !this.demoMode && !this.tourWasOffered && !this.hasTimelines && !this.loadingSketch) {
+      if (isRegularExploreRoute && !this.demoMode && !this.demoWasOffered && !this.hasTimelines && !this.loadingSketch) {
         this.showFirstTimeModal = true;
       }
     },
@@ -353,7 +353,7 @@ export default {
     },
     skipDemo() {
       console.log('[Sketch] User skipped demo');
-      this.$store.commit('SET_TOUR_WAS_OFFERED', true);
+      this.$store.commit('SET_DEMO_WAS_OFFERED', true);
       this.showFirstTimeModal = false;
     },
     deleteSketch: async function () {

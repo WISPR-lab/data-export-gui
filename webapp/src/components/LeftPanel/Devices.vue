@@ -56,7 +56,7 @@ export default {
         this.$router.push(target)
       }
       if (this.$store.state.demoMode) {
-        EventBus.$emit('demo-action', 'route-changed-devices')
+        EventBus.$emit('demo:action', 'route-changed-devices')
       }
     },
   },

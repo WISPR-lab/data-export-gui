@@ -261,6 +261,7 @@ limitations under the License.
 import Vue from 'vue'
 import _ from 'lodash'
 import DB from '@/database/index.js'
+import EventBus from '@/event-bus.js'
 import { VSpacer } from 'vuetify/lib';
 
 const gradients = [
@@ -402,7 +403,7 @@ export default {
     // },
     onMenuToggle(isOpen) {
       if (isOpen && this.$store.state.demoMode) {
-        EventBus.$emit('demo-action', 'timeline-menu-opened')
+        EventBus.$emit('demo:action', 'timeline-menu-opened')
       }
     },
     toggleTimeline() {

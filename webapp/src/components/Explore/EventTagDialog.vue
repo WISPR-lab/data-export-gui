@@ -183,7 +183,7 @@ export default {
       
       if (this.$store.state.demoMode) {
         const EventBus = require('@/event-bus.js').default
-        EventBus.$emit('demo-action', 'tag-added')
+        EventBus.$emit('demo:action', 'tag-added')
       }
 
       this.$nextTick(() => {

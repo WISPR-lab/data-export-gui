@@ -141,10 +141,10 @@ export default {
     }
   },
   watch: {
-    '$store.state.tourInProgress'(newVal, oldVal) {
-      // Show completion modal when tour finishes (tourInProgress changes from true to false)
+    '$store.state.demoInProgress'(newVal, oldVal) {
+      // Show completion modal when demo finishes (demoInProgress changes from true to false)
       if (oldVal && !newVal && this.$store.state.demoMode) {
-        console.log('[Devices] Tour completed, showing completion modal');
+        console.log('[Devices] Demo completed, showing completion modal');
         this.$nextTick(() => {
           this.showDemoCompletionModal = true
         })
@@ -154,11 +154,11 @@ export default {
   async mounted() {
     await this.fetchDevices();
     
-    // Auto-resume walkthrough if in demo mode
-    if (this.$store.state.demoMode && this.$store.state.tourInProgress) {
-      console.log('[Devices] Resuming walkthrough at steps 6-7');
+    // Auto-resume demo if in demo mode
+    if (this.$store.state.demoMode && this.$store.state.demoInProgress) {
+      console.log('[Devices] Resuming demo');
       this.$nextTick(() => {
-        this.resumeWalkthrough();
+        this.resumeDemo();
       });
     }
   },
@@ -226,7 +226,7 @@ export default {
 
           if (this.$store.state.demoMode) {
             const EventBus = require('@/event-bus.js').default
-            EventBus.$emit('demo-action', 'device-dropped')
+            EventBus.$emit('demo:action', 'device-dropped')
           }
 
           const idx = this.unassigned.indexOf(this.staging.source);
@@ -260,7 +260,7 @@ export default {
     onDeviceExpand() {
       if (this.$store.state.demoMode) {
         const EventBus = require('@/event-bus.js').default
-        EventBus.$emit('demo-action', 'device-expanded')
+        EventBus.$emit('demo:action', 'device-expanded')
       }
     },
     goToExplore(device) {
@@ -271,10 +271,10 @@ export default {
         query: { q: queryString }
       });
     },
-    resumeWalkthrough() {
-      console.log('[Devices] Resuming demo walkthrough');
-      const demoWalkthrough = require('@/demo/demo.js').default
-      demoWalkthrough.resumeDevices(this.$store)
+    resumeDemo() {
+      console.log('[Devices] Resuming demo');
+      const DemoController = require('@/demo/DemoController.js').default
+      // TODO Note: We don't have a specific resume yet in DemoController, but we could add one if needed.
     },
     goToUpload() {
       console.log('[Devices] User chose to upload data');

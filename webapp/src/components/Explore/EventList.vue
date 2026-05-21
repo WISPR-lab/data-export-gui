@@ -879,7 +879,7 @@ export default {
           this.expandedRows.splice(index, 1)
           this.expandedRows.push(row)
           if (this.$store.state.demoMode) {
-            EventBus.$emit('demo-action', 'event-expanded')
+            EventBus.$emit('demo:action', 'event-expanded')
           }
           return
         }
@@ -892,7 +892,7 @@ export default {
         row['showDetails'] = true
         this.expandedRows.push(row)
         if (this.$store.state.demoMode) {
-          EventBus.$emit('demo-action', 'event-expanded')
+          EventBus.$emit('demo:action', 'event-expanded')
         }
       }
     },

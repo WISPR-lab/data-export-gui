@@ -30,17 +30,21 @@ limitations under the License.
 
     <!-- Safe Exit Button (global, on every page) -->
     <safe-exit-button></safe-exit-button>
+
+    <!-- Interactive Demo Overlay -->
+    <demo-overlay />
   </v-app>
 </template>
 
 <script>
 import EventBus from './event-bus.js'
 import { OPFSManager } from '@/storage/opfs_manager.js'
+import DemoOverlay from '@/components/Demo/DemoOverlay.vue'
 
 export default {
   name: 'app',
-  data() {
-    return {}
+  components: {
+    DemoOverlay
   },
   computed: {
     snackbar() {

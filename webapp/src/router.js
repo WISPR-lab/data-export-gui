@@ -31,7 +31,7 @@ import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 
 import store from './store.js'
 import DB from './database/index.js'
-import demoDataLoader from '@/demo/demoDataLoader.js'
+import demoDatabaseLoader from '@/demo/DemoDatabaseLoader.js'
 
 Vue.use(VueRouter)
 
@@ -161,17 +161,17 @@ router.beforeEach(async (to, from, next) => {
       DB.setActiveDatabase('demo')
       
       try {
-        await demoDataLoader.initializeDemoDb()
+        await demoDatabaseLoader.initializeDemoDb()
         await store.dispatch('updateSketch', 1)
       } catch (e) {
         console.error('[Router] Demo initialization failed:', e)
       }
     }
     
-    // Auto-start walkthrough state if visiting demo explore
+    // Auto-start demo state if visiting demo explore
     if (to.name === 'DemoExplore') {
-      store.commit('SET_TOUR_IN_PROGRESS', true)
-      store.commit('SET_TOUR_CURRENT_STEP', 1)
+      store.commit('SET_DEMO_IN_PROGRESS', true)
+      store.commit('SET_DEMO_STEP', 1)
     }
   } else {
     if (store.state.demoMode || DB.getActiveDatabase() !== 'timeline') {
