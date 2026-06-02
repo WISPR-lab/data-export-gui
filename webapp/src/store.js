@@ -98,7 +98,7 @@ const defaultState = () => {
 
     // Demo state
     demoMode: false,
-    currentDb: 'timeline', // 'timeline' for user data, 'demo' for sample data
+    currentDb: 'userdata', // 'userdata' for user data, 'demo' for sample data
     demoWasOffered: false, // Has user seen the first-time demo modal?
     demoInProgress: false, // Is walkthrough currently running?
     demoStep: 0, // Which step are we on?
@@ -264,7 +264,7 @@ export default new Vuex.Store({
       }
       
       const virtualSketch = {
-        id: 1,
+        id: context.state.demoMode ? 2 : 1,
         name: sketchName,
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],

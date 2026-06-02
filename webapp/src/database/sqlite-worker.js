@@ -47,8 +47,8 @@ self.onmessage = async (e) => {
   try {
     const sq3 = await getSqlite();
     
-    const db = new sq3.oo1.OpfsDb(args.dbPath || '/timeline.db');
-    await ensureSchema(db, args.schemaPath, args.dbPath || '/timeline.db');
+    const db = new sq3.oo1.OpfsDb(args.dbPath || '/userdata.db');
+    await ensureSchema(db, args.schemaPath, args.dbPath || '/userdata.db');
     
     const result = db.exec(args.sql, args.options);
     

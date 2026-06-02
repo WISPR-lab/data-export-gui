@@ -174,11 +174,11 @@ router.beforeEach(async (to, from, next) => {
       store.commit('SET_DEMO_STEP', 1)
     }
   } else {
-    if (store.state.demoMode || DB.getActiveDatabase() !== 'timeline') {
+    if (store.state.demoMode || DB.getActiveDatabase() !== 'userdata') {
       console.log('[Router] Leaving demo mode via route:', to.path);
       store.commit('SET_DEMO_MODE', false)
-      store.commit('SET_CURRENT_DB', 'timeline')
-      DB.setActiveDatabase('timeline')
+      store.commit('SET_CURRENT_DB', 'userdata')
+      DB.setActiveDatabase('userdata')
       await store.dispatch('updateSketch', 1)
     }
   }

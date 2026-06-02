@@ -10,7 +10,7 @@ import { loadConfig } from '../utils/config.js';
 
 let worker = null;
 let messageId = 0;
-let activeDbName = 'timeline'; // Track which DB is active
+let activeDbName = 'userdata'; // Track which DB is active ('userdata' mode vs 'demo')
 
 function callPyodideWorker(method, args) {
   return new Promise((resolve, reject) => {
@@ -37,8 +37,8 @@ let cachedPaths = null;
 
 async function getDbPaths() {
   const cfg = await loadConfig();
-  const dbFilename = cfg.database.db_path.split('/').pop(); // e.g., "timeline.db"
-  const dbPath = activeDbName === 'timeline' ? `/${dbFilename}` : '/demo.db';
+  const dbFilename = cfg.database.db_path.split('/').pop(); // e.g., "userdata.db"
+  const dbPath = activeDbName === 'userdata' ? `/${dbFilename}` : '/demo.db';
   
   return {
     schemaPath: cfg.paths.schema,
@@ -75,18 +75,19 @@ export async function getDB() {
       
       const cfg = await loadConfig();
 
+      // config.database.db_path is "/mnt/data/userdata.db" (a Pyodide mount path),
       // OpfsDb interprets the path as an OPFS-internal virtual path.
-      // config.database.db_path is "/mnt/data/timeline.db" (a Pyodide mount path),
+      // config.database.db_path is "/mnt/data/userdata.db" (a Pyodide mount path),
       // but OpfsDb would create literal "mnt/data/" dirs inside OPFS root.
-      // Extract just the filename so the DB sits at (root)/timeline.db,
-      // which Pyodide (mounting OPFS root at /mnt/data) sees as /mnt/data/timeline.db.
-      const dbFilename = cfg.database.db_path.split('/').pop(); // "timeline.db"
+      // Extract just the filename so the DB sits at (root)/userdata.db,
+      // which Pyodide (mounting OPFS root at /mnt/data) sees as /mnt/data/userdata.db.
+      const dbFilename = cfg.database.db_path.split('/').pop(); // "userdata.db"
       
       worker = new Worker('./sqlite-worker.js');
       window.dbWorker = worker;
       
       await callPyodideWorker('init', { 
-        dbPath: "/timeline.db",  // TODO FIX HARDCODING IN CONFIG
+        dbPath: "/userdata.db",  // TODO FIX HARDCODING IN CONFIG
         schemaPath: cfg.paths.schema
       });
       // [Database] Ready
@@ -161,7 +162,7 @@ export default {
   
   // DB switching
   setActiveDatabase(dbName) {
-    activeDbName = dbName; // 'timeline' or 'demo'
+    activeDbName = dbName; // 'userdata' or 'demo'
     console.log(`[Database] Switched to ${dbName} database`);
   },
   getActiveDatabase() {
