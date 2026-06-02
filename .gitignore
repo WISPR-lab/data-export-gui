@@ -98,3 +98,6 @@ tests/takeout*
 tests/Takeout/*
 
 AGENTS.md
+*.zip
+.gemini*
+TODO.md

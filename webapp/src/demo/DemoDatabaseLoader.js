@@ -1,5 +1,5 @@
 import DB from '@/database/index.js'
-import { demoInstagramSql } from './DemoData.js'
+import { demoInstagramSql } from './demoData.js'
 
 /**
  * DemoDatabaseLoader manages the database state for the demo.
