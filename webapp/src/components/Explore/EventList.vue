@@ -177,8 +177,8 @@ limitations under the License.
 
                 <v-dialog v-model="columnDialog" v-if="!disableColumns" max-width="500px" scrollable>
                   <template v-slot:activator="{ on, attrs }">
-                    <v-btn id="tsModifyColumnsBtn" icon v-bind="attrs" v-on="on">
-                      <v-icon title="Modify columns">mdi-view-column-outline</v-icon>
+                    <v-btn id="tsModifyColumnsBtn" small plain rounded v-bind="attrs" v-on="on">
+                      Edit Columns
                     </v-btn>
                   </template>
 

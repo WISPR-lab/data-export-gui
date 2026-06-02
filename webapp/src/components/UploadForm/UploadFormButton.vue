@@ -23,6 +23,12 @@ limitations under the License.
         <v-icon left small> mdi-plus </v-icon>
         Add Data Export
       </v-btn>
+
+      <v-btn v-else-if="btnType === 'leftPanel'" small text color="primary" style="width: 100%; height:2rem" class="lpanel" v-bind="slotProps.attrs" v-on="slotProps.on">
+        <v-icon left> mdi-plus </v-icon>
+        Add Data Export
+      </v-btn>
+
       <v-btn v-else rounded depressed color="primary" v-bind="slotProps.attrs" v-on="slotProps.on">
         <v-icon left> mdi-plus </v-icon>
         Add Data Export
@@ -40,3 +46,10 @@ export default {
   },
 }
 </script>
+
+<style scoped>
+.lpanel {
+  background-color: rgba(25, 118, 210, 0.08) !important;
+  border-radius: 2px !important;
+}
+</style>

@@ -65,8 +65,7 @@ limitations under the License.
         <ts-settings-dialog></ts-settings-dialog>
       </v-dialog>
 
-      <!-- Delete all data dialog -->
-      <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog>
+
 
       <!-- Top horizontal toolbar -->
       <page-header
@@ -114,7 +113,9 @@ limitations under the License.
         
         
         <div class="pa-4">
-          <delete-all-data-button @click="showDeleteDialog = true" style="width: 100%; height:2rem"></delete-all-data-button>
+          <ts-upload-timeline-form-button btnType="leftPanel"></ts-upload-timeline-form-button>
+          <div class="pa-1"></div>
+          <delete-all-data-button btnType="leftPanel"></delete-all-data-button>
         </div>
         
         <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
@@ -228,7 +229,6 @@ import TsDevices from '../components/LeftPanel/Devices.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
 import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
-import DeleteAllDataDialog from '../components/Delete/DeleteAllDataDialog.vue'
 import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
 
 export default {
@@ -249,7 +249,6 @@ export default {
     TsEventList,
     TsSettingsDialog,
     PrivacySettingsModal,
-    DeleteAllDataDialog,
     DeleteAllDataButton,
   },
   data() {
@@ -268,7 +267,7 @@ export default {
       showHidden: false,
       shareDialog: false,
       loadingSketch: false,
-      showDeleteDialog: false,
+
       showPrivacySettings: false,
       showFirstTimeModal: false,
       // Context

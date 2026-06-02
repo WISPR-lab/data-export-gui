@@ -3,6 +3,9 @@ Delete All Data Confirmation Dialog
 -->
 <template>
   <v-dialog v-model="isOpen" width="500px" @input="handleDialogChange">
+    <template v-slot:activator="{ on, attrs }">
+      <slot :attrs="attrs" :on="on"></slot>
+    </template>
     <v-card>
       <v-card-title class="headline">Delete all data?</v-card-title>
       <v-card-text>
