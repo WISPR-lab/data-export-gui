@@ -404,3 +404,9 @@ export async function updateEventTags(eventId, tags) {
   );
 }
 
+export async function clearAllTags() {
+  const db = await getDB();
+  console.log('[Database] Clearing all tags from events');
+  await db.exec("UPDATE events SET tags = '[]'");
+}
+

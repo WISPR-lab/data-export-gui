@@ -179,6 +179,7 @@ export default {
   addLabelEvent: events.addLabelEvent,
   removeLabelEvent: events.removeLabelEvent,
   updateEventTags: events.updateEventTags,
+  clearAllTags: events.clearAllTags,
   
   getUploads: uploads.getUploads,
   getUploadById: uploads.getUploadById,

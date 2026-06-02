@@ -471,7 +471,8 @@ export default {
       }
     },
     setQueryAndFilter: function (searchEvent) {
-      if (this.$route.name !== 'Explore') {
+      const isDemo = this.$route.name === 'DemoExplore' || this.$route.name === 'DemoDevices'
+      if (this.$route.name !== 'Explore' && !isDemo) {
         this.$router.push({ name: 'Explore', params: { sketchId: this.sketch.id } })
       }
       if (searchEvent.queryString) {

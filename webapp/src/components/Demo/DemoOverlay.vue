@@ -87,7 +87,7 @@ Provides broad area highlighting via SVG mask and a precise pulsing pointer for 
               v-else
               class="ml-4 font-weight-bold"
           >
-              FINISH
+              {{ finishButtonText || 'FINISH' }}
           </v-btn>
         </div>
       </div>
@@ -107,6 +107,7 @@ Provides broad area highlighting via SVG mask and a precise pulsing pointer for 
 
 <script>
 import EventBus from '@/event-bus.js'
+import DemoController from '@/demo/DemoController.js'
 
 export default {
   data() {
@@ -121,6 +122,7 @@ export default {
       visibleAreaBox: null,
       clickableAreaBox: null,
       arrowPosition: null, // manual override: 'top', 'bottom', 'left', 'right'
+      finishButtonText: null,
       isFirst: true,
       isLast: false,
       stepNumber: 0,
@@ -187,20 +189,34 @@ export default {
       }
       
       const box = this.visibleAreaBox
-      const spaceBelow = window.innerHeight - (box.y + box.height)
-      const spaceAbove = box.y
+      const popoverWidth = 320
+      const popoverHeight = 220 // Estimated average height
+      const margin = 24
+      
+      const canFitBelow = window.innerHeight - (box.y + box.height) > popoverHeight + margin
+      const canFitAbove = box.y > popoverHeight + margin
+      const canFitRight = window.innerWidth - (box.x + box.width) > popoverWidth + margin
+      const canFitLeft = box.x > popoverWidth + margin
       
       let top, left;
       
-      if (spaceBelow > 220) {
-        top = box.y + box.height + 20
-      } else if (spaceAbove > 220) {
-        top = box.y - 200
+      if (canFitBelow) {
+        top = box.y + box.height + margin
+        left = Math.max(margin, Math.min(window.innerWidth - popoverWidth - margin, box.x))
+      } else if (canFitAbove) {
+        top = box.y - popoverHeight - margin
+        left = Math.max(margin, Math.min(window.innerWidth - popoverWidth - margin, box.x))
+      } else if (canFitRight) {
+        top = Math.max(margin, Math.min(window.innerHeight - popoverHeight - margin, box.y))
+        left = box.x + box.width + margin
+      } else if (canFitLeft) {
+        top = Math.max(margin, Math.min(window.innerHeight - popoverHeight - margin, box.y))
+        left = box.x - popoverWidth - margin
       } else {
-        top = box.y + 10
+        // Absolute fallback: place in a corner that has the most space
+        top = box.y > window.innerHeight / 2 ? margin : window.innerHeight - popoverHeight - margin
+        left = box.x > window.innerWidth / 2 ? margin : window.innerWidth - popoverWidth - margin
       }
-      
-      left = Math.max(20, Math.min(window.innerWidth - 340, box.x))
         
       return {
         top: top + 'px',
@@ -325,10 +341,21 @@ export default {
         
         // Re-calculate immediately after interaction to catch UI changes (like menu collapse)
         this.$nextTick(() => this.updateBoxes())
+    },
+    handleKeydown(e) {
+        if (!this.active) return
+        
+        if (e.key === 'ArrowRight') {
+            if (!this.isLast) this.onNext()
+        } else if (e.key === 'ArrowLeft') {
+            if (!this.isFirst) this.onPrev()
+        }
     }
   },
   mounted() {
-    EventBus.$on('demo:update-ui', (data) => {
+    window.addEventListener('keydown', this.handleKeydown)
+    
+    const handleUpdate = (data) => {
       // Clear boxes immediately to prevent "ghosting" from the previous step
       this.visibleAreaBox = null
       this.clickableAreaBox = null
@@ -349,6 +376,7 @@ export default {
       this.clickableElementSelector = data.clickableElement
       this.blockedElementsSelectors = data.blockedElements || []
       this.arrowPosition = data.arrowPosition
+      this.finishButtonText = data.finishButtonText
       this.isFirst = data.isFirst
       this.isLast = data.isLast
       this.stepNumber = data.stepNumber
@@ -361,9 +389,19 @@ export default {
           this.refreshInterval = setInterval(this.updateBoxes, 16)
         }
       })
-    })
+    }
+
+    EventBus.$on('demo:update-ui', handleUpdate)
+
+    // Pull initial state immediately to catch up if we mounted late (fix hard refresh race)
+    const initialState = DemoController.getCurrentUiState()
+    if (initialState) {
+        console.log('[DemoOverlay] Catching up with initial state:', initialState.id);
+        handleUpdate(initialState)
+    }
   },
   beforeDestroy() {
+    window.removeEventListener('keydown', this.handleKeydown)
     if (this.refreshInterval) clearInterval(this.refreshInterval)
     EventBus.$off('demo:update-ui')
   }
@@ -477,6 +515,7 @@ export default {
     line-height: 1.5;
     color: #444;
     margin-bottom: 20px;
+    white-space: pre-line;
   }
   
   &-actions {

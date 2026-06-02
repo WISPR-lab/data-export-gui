@@ -134,6 +134,7 @@ limitations under the License.
 
     <div v-if="eventList.objects.length || searchInProgress">
       <v-data-table
+        id="tsEventTable"
         v-model="selectedEvents"
         :headers="headers"
         :items="DEBUG_filteredEventList"
@@ -148,6 +149,7 @@ limitations under the License.
         must-sort
         :sort-desc.sync="sortOrderAsc"
         @update:sort-desc="sortEvents"
+        @click:row="toggleDetailedEvent"
         sort-by="_source.timestamp"
         :hide-default-footer="totalHits < 11 || disablePagination"
         :expanded="expandedRows"
@@ -1286,6 +1288,39 @@ export default {
     
     this.search()
   },
+  mounted() {
+    // Demo mode: allow programmatic row expansion/collapse
+    EventBus.$on('demo:force-expand-first-row', () => {
+        const attemptExpand = () => {
+            if (this.eventList.objects.length > 0 && !this.searchInProgress) {
+                const first = this.eventList.objects[0]
+                if (!this.expandedRows.some(r => r._id === first._id)) {
+                    this.toggleDetailedEvent(first)
+                }
+                return true
+            }
+            return false
+        }
+
+        if (!attemptExpand()) {
+            // If data is not ready, retry for up to 2 seconds
+            let retries = 0
+            const interval = setInterval(() => {
+                retries++
+                if (attemptExpand() || retries > 20) {
+                    clearInterval(interval)
+                }
+            }, 100)
+        }
+    })
+    EventBus.$on('demo:force-collapse-all', () => {
+        this.expandedRows = []
+    })
+  },
+  beforeDestroy() {
+    EventBus.$off('demo:force-expand-first-row')
+    EventBus.$off('demo:force-collapse-all')
+  }
 }
 </script>
 
