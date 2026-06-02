@@ -47,8 +47,9 @@ const defaultState = () => {
     if (stored) {
       userSettings = { ...userSettings, ...JSON.parse(stored) }
     }
+    localStorage.removeItem('demoWasOffered')
   } catch (e) {
-    console.error('[Store] Failed to load settings from localStorage:', e)
+    console.error('[Store] Failed to load settings or clean legacy state:', e)
   }
 
   return {
@@ -95,8 +96,14 @@ const defaultState = () => {
       warnings: [],
       success: false,
     },
-    exploreTourVisits: 0,
-    deviceTourVisits: 0,
+
+    // Demo state
+    demoMode: false,
+    currentDb: 'userdata', // 'userdata' for user data, 'demo' for sample data
+    demoInProgress: false, // Is walkthrough currently running?
+    demoStep: 0, // Which step are we on?
+    demo_visit_or_skip_count: 0,
+    demoFinishCount: 0,
   }
 }
 
@@ -113,12 +120,6 @@ export default new Vuex.Store({
     SET_SEARCH_HISTORY(state, payload) {
       Vue.set(state, 'searchHistory', payload.objects)
     },
-    // SET_SCENARIOS(state, payload) {
-    //   Vue.set(state, 'scenarios', payload.objects[0])
-    // },
-    // SET_SCENARIO_TEMPLATES(state, payload) {
-    //   Vue.set(state, 'scenarioTemplates', payload.objects)
-    // },
     SET_TIMELINE_TAGS(state, buckets) {
       Vue.set(state, 'tags', buckets)
     },
@@ -131,20 +132,6 @@ export default new Vuex.Store({
     SET_COUNT(state, payload) {
       Vue.set(state, 'count', payload)
     },
-    // SET_SEARCH_NODE(state, payload) {
-    //   Vue.set(state, 'currentSearchNode', payload)
-    // },
-    // SET_SIGMA_LIST(state, payload) {
-    //   Vue.set(state, 'sigmaRuleList', payload['objects'])
-    //   Vue.set(state, 'sigmaRuleList_count', payload['meta']['rules_count'])
-    // },
-    // SET_VISUALIZATION_LIST(state, payload) {
-    //   Vue.set(state, 'savedVisualizations', payload)
-    // },
-    // SET_ACTIVE_USER(state, payload) {
-    //   // Browser version: no user system, default to 'local-user'
-    //   Vue.set(state, 'currentUser', 'local-user')
-    // },
     SET_ACTIVE_CONTEXT(state, payload) {
       localStorage.setItem(
         'sketchContext' + state.sketch.id.toString(),
@@ -249,11 +236,23 @@ export default new Vuex.Store({
         success: false,
       })
     },
-    INCREMENT_EXPLORE_TOUR_VISITS(state) {
-      state.exploreTourVisits++
+    SET_DEMO_MODE(state, demoMode) {
+      Vue.set(state, 'demoMode', demoMode)
     },
-    INCREMENT_DEVICE_TOUR_VISITS(state) {
-      state.deviceTourVisits++
+    SET_CURRENT_DB(state, dbName) {
+      Vue.set(state, 'currentDb', dbName)
+    },
+    SET_DEMO_IN_PROGRESS(state, value) {
+      Vue.set(state, 'demoInProgress', value)
+    },
+    SET_DEMO_STEP(state, step) {
+      Vue.set(state, 'demoStep', step)
+    },
+    INCREMENT_DEMO_VISIT_OR_SKIP_COUNT(state) {
+      Vue.set(state, 'demo_visit_or_skip_count', state.demo_visit_or_skip_count + 1)
+    },
+    INCREMENT_DEMO_FINISH_COUNT(state) {
+      Vue.set(state, 'demoFinishCount', state.demoFinishCount + 1)
     },
   },
   actions: {
@@ -264,9 +263,13 @@ export default new Vuex.Store({
         return;
       }
 
-      const sketchName = localStorage.getItem('sketchName') || 'Local Takeout Workspace'
+      let sketchName = localStorage.getItem('sketchName') || 'My Data'
+      if (context.state.demoMode) {
+        sketchName = 'Instagram Demo Data'
+      }
+      
       const virtualSketch = {
-        id: 1,
+        id: context.state.demoMode ? 2 : 1,
         name: sketchName,
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
@@ -306,7 +309,6 @@ export default new Vuex.Store({
       allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)
     },
-    // Tour actions removed - tours now self-initialize via BaseTour
     setSnackBar(context, snackbar) {
       context.commit('SET_SNACKBAR', {
         active: true,
@@ -326,6 +328,26 @@ export default new Vuex.Store({
     },
     toggleEnabledTimeline(context, timelineId) {
       context.commit('TOGGLE_ENABLED_TIMELINE', timelineId)
+    },
+    setDemoMode(context, demoMode) {
+      context.commit('SET_DEMO_MODE', demoMode)
+    },
+    setCurrentDb(context, dbName) {
+      context.commit('SET_CURRENT_DB', dbName)
+    },
+    setDemoInProgress(context, value) {
+      context.commit('SET_DEMO_IN_PROGRESS', value)
+    },
+    setDemoStep(context, step) {
+      context.commit('SET_DEMO_STEP', step)
+    },
+    clearDemoState(context) {
+      // Clear UI state when switching out of demo mode to prevent filter leakage
+      context.commit('SET_EVENT_LABELS', [])
+      context.commit('SET_ENABLED_TIMELINES', [])
+      // Reset demo progress
+      context.commit('SET_DEMO_IN_PROGRESS', false)
+      context.commit('SET_DEMO_STEP', 0)
     },
   },
 })

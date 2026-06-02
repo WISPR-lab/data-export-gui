@@ -26,7 +26,7 @@ limitations under the License.
     <v-icon left>mdi-content-save-outline</v-icon>
     <div style="height: 1px"></div>
   </div>
-  <div v-else>
+  <div v-else id="tsLeftPanelSavedSearches">
     <div
       :style="meta.views && meta.views.length ? 'cursor: pointer' : ''"
       class="pa-4"

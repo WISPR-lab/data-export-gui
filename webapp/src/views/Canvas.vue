@@ -20,7 +20,7 @@ limitations under the License.
 -->
 <template>
   <div>
-    <div v-show="currentRouteName === 'Explore'">
+    <div v-show="currentRouteName === 'Explore' || currentRouteName === 'DemoExplore'">
       <explore :sketch-id="sketchId"></explore>
     </div>
     <!-- TODO add devices view-->

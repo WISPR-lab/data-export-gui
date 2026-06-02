@@ -134,6 +134,7 @@ limitations under the License.
 
     <div v-if="eventList.objects.length || searchInProgress">
       <v-data-table
+        id="tsEventTable"
         v-model="selectedEvents"
         :headers="headers"
         :items="DEBUG_filteredEventList"
@@ -148,6 +149,7 @@ limitations under the License.
         must-sort
         :sort-desc.sync="sortOrderAsc"
         @update:sort-desc="sortEvents"
+        @click:row="toggleDetailedEvent"
         sort-by="_source.timestamp"
         :hide-default-footer="totalHits < 11 || disablePagination"
         :expanded="expandedRows"
@@ -175,8 +177,8 @@ limitations under the License.
 
                 <v-dialog v-model="columnDialog" v-if="!disableColumns" max-width="500px" scrollable>
                   <template v-slot:activator="{ on, attrs }">
-                    <v-btn id="tsModifyColumnsBtn" icon v-bind="attrs" v-on="on">
-                      <v-icon title="Modify columns">mdi-view-column-outline</v-icon>
+                    <v-btn id="tsModifyColumnsBtn" small plain rounded v-bind="attrs" v-on="on">
+                      Edit Columns
                     </v-btn>
                   </template>
 
@@ -878,6 +880,9 @@ export default {
           row['showDetails'] = true
           this.expandedRows.splice(index, 1)
           this.expandedRows.push(row)
+          if (this.$store.state.demoMode) {
+            EventBus.$emit('demo:action', 'event-expanded')
+          }
           return
         }
 
@@ -888,6 +893,9 @@ export default {
       } else {
         row['showDetails'] = true
         this.expandedRows.push(row)
+        if (this.$store.state.demoMode) {
+          EventBus.$emit('demo:action', 'event-expanded')
+        }
       }
     },
     newComment: function (row) {
@@ -1280,6 +1288,39 @@ export default {
     
     this.search()
   },
+  mounted() {
+    // Demo mode: allow programmatic row expansion/collapse
+    EventBus.$on('demo:force-expand-first-row', () => {
+        const attemptExpand = () => {
+            if (this.eventList.objects.length > 0 && !this.searchInProgress) {
+                const first = this.eventList.objects[0]
+                if (!this.expandedRows.some(r => r._id === first._id)) {
+                    this.toggleDetailedEvent(first)
+                }
+                return true
+            }
+            return false
+        }
+
+        if (!attemptExpand()) {
+            // If data is not ready, retry for up to 2 seconds
+            let retries = 0
+            const interval = setInterval(() => {
+                retries++
+                if (attemptExpand() || retries > 20) {
+                    clearInterval(interval)
+                }
+            }, 100)
+        }
+    })
+    EventBus.$on('demo:force-collapse-all', () => {
+        this.expandedRows = []
+    })
+  },
+  beforeDestroy() {
+    EventBus.$off('demo:force-expand-first-row')
+    EventBus.$off('demo:force-collapse-all')
+  }
 }
 </script>
 

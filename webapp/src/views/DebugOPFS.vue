@@ -24,6 +24,7 @@
     <div v-if="currentSection === 'opfs'">
       <v-row align="center" style="margin-bottom: 12px;">
         <v-btn small @click="refreshOPFS" :loading="opfsLoading" color="primary">Refresh</v-btn>
+        <v-btn small @click="exportDBAsSQL" :loading="exportLoading" color="success" style="margin-left: 8px;">Export DB</v-btn>
         <v-btn small @click="nukeAll" color="error" style="margin-left: 8px;">Nuke All</v-btn>
         <v-btn small @click="clearTempOnly" color="warning" style="margin-left: 8px;">Clear tmpstore</v-btn>
         <span style="margin-left: 16px; color: #888; font-size: 12px;">{{ opfsStatus }}</span>
@@ -116,25 +117,17 @@
 import { getDB, closeDB } from '@/database/index.js';
 import { OPFSManager } from '@/storage/opfs_manager.js';
 
-var DB_TABLES = ['uploads', 'uploaded_files', 'raw_data', 'events', 'devices_raw', 'atomic_devices', 'device_profiles', 'event_assoc'];
-var DB_VIEWS = ['v_device_profiles', 'v_events2profile'];
-
-var SECTIONS = [
-  { path: 'opfs', label: 'OPFS' }
-].concat(DB_TABLES.map(function(t) { return { path: t, label: t }; }))
- .concat(DB_VIEWS.map(function(v) { return { path: v, label: 'view: ' + v }; }));
-
 export default {
   name: 'DebugView',
   data: function() {
     return {
-      SECTIONS: SECTIONS,
-      DB_TABLES: DB_TABLES,
-      DB_VIEWS: DB_VIEWS,
+      DB_TABLES: [],
+      DB_VIEWS: [],
       // OPFS
       opfsTree: [],
       opfsLoading: false,
       opfsStatus: '',
+      exportLoading: false,
       fileDialog: false,
       selectedFile: '',
       fileContent: '',
@@ -154,19 +147,26 @@ export default {
       return this.$route.params.section || 'opfs';
     },
     currentTable: function() {
-      return (DB_TABLES.indexOf(this.currentSection) !== -1 || DB_VIEWS.indexOf(this.currentSection) !== -1) ? this.currentSection : null;
+      return (this.DB_TABLES.indexOf(this.currentSection) !== -1 || this.DB_VIEWS.indexOf(this.currentSection) !== -1) ? this.currentSection : null;
+    },
+    SECTIONS: function() {
+      return [
+        { path: 'opfs', label: 'OPFS' }
+      ].concat(this.DB_TABLES.map(function(t) { return { path: t, label: t }; }))
+       .concat(this.DB_VIEWS.map(function(v) { return { path: v, label: 'view: ' + v }; }));
     },
   },
   watch: {
     currentSection: function(val) {
       if (val === 'opfs') {
         this.refreshOPFS();
-      } else if (DB_TABLES.indexOf(val) !== -1 || DB_VIEWS.indexOf(val) !== -1) {
+      } else if (this.DB_TABLES.indexOf(val) !== -1 || this.DB_VIEWS.indexOf(val) !== -1) {
         this.loadTable();
       }
     },
   },
   mounted: function() {
+    this.discoverTablesAndViews();
     if (this.currentSection === 'opfs') {
       this.refreshOPFS();
     } else if (this.currentTable) {
@@ -174,6 +174,23 @@ export default {
     }
   },
   methods: {
+    discoverTablesAndViews: async function() {
+      try {
+        var db = await getDB();
+        var tablesResult = await db.exec(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+          { returnValue: 'resultRows', rowMode: 'object' }
+        );
+        var viewsResult = await db.exec(
+          "SELECT name FROM sqlite_master WHERE type='view' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+          { returnValue: 'resultRows', rowMode: 'object' }
+        );
+        this.DB_TABLES = (tablesResult || []).map(function(r) { return r.name; });
+        this.DB_VIEWS = (viewsResult || []).map(function(r) { return r.name; });
+      } catch (e) {
+        console.error('Error discovering tables/views:', e);
+      }
+    },
     // ── OPFS ──────────────────────────────────────────────────────────
     refreshOPFS: async function() {
       this.opfsLoading = true;
@@ -283,6 +300,58 @@ export default {
       try { this.cellContent = JSON.stringify(JSON.parse(val), null, 2); }
       catch (e) { this.cellContent = String(val !== null && val !== undefined ? val : '(null)'); }
       this.cellDialog = true;
+    },
+    exportDBAsSQL: async function() {
+      this.exportLoading = true;
+      this.opfsStatus = '';
+      try {
+        var db = await getDB();
+        var sqlLines = [];
+        
+        for (var i = 0; i < this.DB_TABLES.length; i++) {
+          var tableName = this.DB_TABLES[i];
+          var rows = await db.exec(
+            'SELECT * FROM ' + tableName,
+            { returnValue: 'resultRows', rowMode: 'object' }
+          );
+          
+          if (rows && rows.length > 0) {
+            var cols = Object.keys(rows[0]);
+            for (var j = 0; j < rows.length; j++) {
+              var row = rows[j];
+              var values = cols.map(function(col) {
+                var val = row[col];
+                if (val === null || val === undefined) {
+                  return 'NULL';
+                } else if (typeof val === 'string') {
+                  return "'" + val.replace(/'/g, "''") + "'";
+                } else if (typeof val === 'boolean') {
+                  return val ? '1' : '0';
+                } else {
+                  return String(val);
+                }
+              });
+              var stmt = 'INSERT INTO ' + tableName + ' (' + cols.join(', ') + ') VALUES (' + values.join(', ') + ');';
+              sqlLines.push(stmt);
+            }
+          }
+        }
+        
+        var sqlContent = sqlLines.join('\n');
+        var blob = new Blob([sqlContent], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'database_export_' + new Date().toISOString().split('T')[0] + '.sql';
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        this.opfsStatus = 'Exported ' + sqlLines.length + ' INSERT statements from ' + this.DB_TABLES.length + ' table(s).';
+      } catch (e) {
+        this.opfsStatus = 'Error: ' + e.message;
+      } finally {
+        this.exportLoading = false;
+      }
     },
   },
 };

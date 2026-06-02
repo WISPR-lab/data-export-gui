@@ -78,6 +78,9 @@ export default {
   methods: {
     setView: function (savedSearch) {
       EventBus.$emit('setActiveView', savedSearch)
+      if (this.$store.state.demoMode) {
+        EventBus.$emit('demo:action', 'saved-search-clicked')
+      }
     },
     copySavedSearchIdToClipboard(savedSearchId) {
       try {

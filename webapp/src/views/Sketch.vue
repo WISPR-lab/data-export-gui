@@ -19,6 +19,9 @@ limitations under the License.
 
 <template>
   <div>
+    <!-- First-time demo offer modal -->
+    <welcome-dialog v-model="showFirstTimeModal" @skip="skipDemo" @start="startDemo"></welcome-dialog>
+
     <!-- Progress indicator when loading sketch data -->
     <v-progress-linear v-if="loadingSketch" indeterminate color="primary"></v-progress-linear>
 
@@ -49,197 +52,17 @@ limitations under the License.
         <ts-settings-dialog></ts-settings-dialog>
       </v-dialog>
 
-      <!-- Delete all data dialog -->
-      <delete-all-data-dialog :open="showDeleteDialog" @close="showDeleteDialog = false"></delete-all-data-dialog>
+
 
       <!-- Top horizontal toolbar -->
-      <v-app-bar
+      <page-header
         v-if="!loadingSketch"
         app
         clipped-left
-        flat
-        :color="$vuetify.theme.dark ? '#121212' : 'white'"
-        :style="[
-          $vuetify.theme.dark
-            ? { 'border-bottom': '1px solid hsla(0,0%,100%,.12) !important' }
-            : { 'border-bottom': '1px solid rgba(0,0,0,.12) !important' },
-        ]"
-      >
-        <v-btn v-if="hasTimelines && !loadingSketch && !isArchived" icon @click.stop="toggleDrawer()">
-          <v-icon title="Toggle left panel">mdi-menu</v-icon>
-        </v-btn>
-
-        <!-- <v-avatar class="ml-n2 mt-1">
-          <router-link to="/">
-            <v-img src="/dist/timesketch-color.png" max-height="25" max-width="25" contain></v-img>
-          </router-link>
-        </v-avatar> -->
-        
-
-        <v-hover v-slot="{ hover }">
-          <div class="d-flex align-center" style="flex: 1;">
-            <div
-              class="flex-1-0"
-              @dblclick="renameSketchDialog = true"
-              style="
-                font-size: 1.1em;
-                cursor: pointer;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              "
-              :title="sketch.name"
-            >
-              <span class="font-weight-bold">Project:</span>&nbsp;  {{ sketch.name }}
-            </div>
-            <v-icon title="Rename Project" small class="ml-3" v-if="hover" @click="renameSketchDialog = true"
-              >mdi-pencil</v-icon
-            >
-          </div>
-        </v-hover>
-        
-        <v-spacer></v-spacer>
-
-        <!-- Sharing dialog -->
-        <!-- <v-dialog v-model="shareDialog" width="500">
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn small rounded depressed color="primary" class="mr -2" v-bind="attrs" v-on="on">
-              <v-icon small left>mdi-account-multiple-plus</v-icon>
-              Share
-            </v-btn>
-          </template>
-          <ts-share-card @close-dialog="shareDialog = false"></ts-share-card>
-        </v-dialog> -->
-
-        <!-- <v-avatar color="grey lighten-1" size="25" class="ml-2">
-          <span class="white--text">{{ currentUser | initialLetter }}</span>
-        </v-avatar> -->
-
-        <v-btn 
-          v-if="hasTimelines && !loadingSketch" 
-          small
-          outlined
-          color="grey"
-          @click="startTourManual"
-          title="Start guided tour"
-          class="mr-2"
-        >
-          <v-icon small left>mdi-lightbulb-on</v-icon>
-          TOUR
-        </v-btn>
-
-        <PageHeaderMobileMenu visibilityClass="" />
-        <!-- <v-menu offset-y>
-          <template v-slot:activator="{ on, attrs }">
-            <v-avatar>
-              <v-btn small icon v-bind="attrs" v-on="on">
-                <v-icon title="Sketch Options">mdi-dots-vertical</v-icon>
-              </v-btn>
-            </v-avatar>
-          </template>
-          <v-card>
-            <v-list two-line>
-              <v-list-item v-if="sketch.user">
-                <v-list-item-content>
-                  <v-list-item-title>
-                    <strong>Created:</strong> {{ sketch.created_at | shortDateTime }}
-                  </v-list-item-title>
-                  <v-list-item-subtitle>
-                    <small>{{ sketch.created_at | timeSince }} by {{ sketch.user.username }}</small>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-
-              <v-list-item>
-                <v-list-item-content>
-                  <v-list-item-title>
-                    <strong>Access: </strong>
-                    <span v-if="meta.permissions && meta.permissions.public">Public</span>
-                    <span v-else>Restricted</span>
-                  </v-list-item-title>
-                  <v-list-item-subtitle>
-                    <small v-if="meta.permissions && meta.permissions.public"
-                      >Visible to all users on this server</small
-                    >
-                    <small v-else>Only people with access can open</small>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
-
-            <v-list>
-              <v-list-item-group color="primary">
-                <v-list-item v-on:click="toggleTheme">
-                  <v-list-item-icon>
-                    <v-icon>mdi-brightness-6</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Toggle theme</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="renameSketchDialog = true">
-                  <v-list-item-icon>
-                    <v-icon>mdi-pencil</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Rename sketch</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="archiveSketch()" :disabled="isArchived">
-                  <v-list-item-icon>
-                    <v-icon>mdi-archive</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Archive sketch</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item> -->
-
-                <!-- <v-list-item v-if="meta.permissions && meta.permissions.delete" @click="deleteSketch()">
-                  <v-list-item-icon>
-                    <v-icon>mdi-trash-can-outline</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Delete sketch</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item> -->
-
-                <!-- <v-list-item v-on:click="switchUI">
-                  <v-list-item-icon>
-                    <v-icon>mdi-view-dashboard-outline</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Use the old UI</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="showSettingsDialog = true">
-                  <v-list-item-icon>
-                    <v-icon>mdi-cog-outline</v-icon>
-                  </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Settings</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <a href="/logout/" style="text-decoration: none; color: inherit">
-                  <v-list-item>
-                    <v-list-item-icon>
-                      <v-icon>mdi-logout</v-icon>
-                    </v-list-item-icon>
-
-                    <v-list-item-content>
-                      <v-list-item-title>Logout</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-                </a> -->
-              <!-- </v-list-item-group>
-            </v-list>
-          </v-card>
-        </v-menu> -->
-
-      </v-app-bar>
+        :show-drawer="hasTimelines && !loadingSketch && !isArchived"
+        @toggle-drawer="toggleDrawer()"
+        @rename-project="renameSketchDialog = true"
+      ></page-header>
 
       <!-- Left panel -->
       <v-navigation-drawer
@@ -277,7 +100,9 @@ limitations under the License.
         
         
         <div class="pa-4">
-          <delete-all-data-button @click="showDeleteDialog = true" style="width: 100%; height:2rem"></delete-all-data-button>
+          <ts-upload-timeline-form-button btnType="leftPanel"></ts-upload-timeline-form-button>
+          <div class="pa-1"></div>
+          <delete-all-data-button btnType="leftPanel"></delete-all-data-button>
         </div>
         
         <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
@@ -374,8 +199,8 @@ limitations under the License.
 <script>
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
-import { tourManager } from '../utils/tour.js'
-import PageHeaderMobileMenu from '../components/Navigation/PageHeaderMobileMenu.vue'
+import DB from '../database/index.js'
+import PageHeader from '../components/Navigation/PageHeader.vue'
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
@@ -390,14 +215,13 @@ import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
 import TsDevices from '../components/LeftPanel/Devices.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
-import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
-import DeleteAllDataDialog from '../components/Delete/DeleteAllDataDialog.vue'
 import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
+import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
 
 export default {
   props: ['sketchId'],
   components: {
-    PageHeaderMobileMenu,
+    PageHeader,
     TsSavedSearches,
     TsDataTypes,
     TsIPAddresses,
@@ -411,9 +235,8 @@ export default {
     PrivacySettingsItem,
     TsEventList,
     TsSettingsDialog,
-    PrivacySettingsModal,
-    DeleteAllDataDialog,
     DeleteAllDataButton,
+    WelcomeDialog,
   },
   data() {
     return {
@@ -431,8 +254,9 @@ export default {
       showHidden: false,
       shareDialog: false,
       loadingSketch: false,
-      showDeleteDialog: false,
+
       showPrivacySettings: false,
+      showFirstTimeModal: false,
       // Context
       timelineViewHeight: 60,
       showTimelineView: false,
@@ -450,12 +274,11 @@ export default {
   },
   mounted() {
     this.loadingSketch = true
-    console.log('[Sketch] mounted(), loadingSketch=true')
 
     this.$store.dispatch('updateSketch', this.sketchId)
       .then(() => {
         this.loadingSketch = false
-        console.log('[Sketch] Workspace loading complete')
+        this.checkShowDemoModal()
       })
       .catch(error => {
         console.error('[Sketch] Critical error:', error)
@@ -487,7 +310,7 @@ export default {
       return this.$store.state.currentUser
     },
     hasTimelines() {
-      return this.sketch.timelines && this.sketch.timelines.length
+      return !!(this.sketch.timelines && this.sketch.timelines.length)
     },
     currentRouteName() {
       return this.$route.name
@@ -495,11 +318,26 @@ export default {
     systemSettings() {
       return this.$store.state.systemSettings
     },
+    demoMode() {
+      return this.$store.state.demoMode
+    },
   },
   methods: {
-    startTourManual() {
-      const page = this.$route.name === 'Explore' ? 'explore' : 'devices'
-      tourManager.startTour(page, true, true, this.$store)
+    checkShowDemoModal() {
+      const isRegularExploreRoute = this.$route.name === 'Explore'
+      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasTimelines && !this.loadingSketch) {
+        this.showFirstTimeModal = true;
+      }
+    },
+    startDemo() {
+      console.log('[Sketch] User clicked "Try Demo"');
+      this.showFirstTimeModal = false;
+      this.$router.push('/demo/explore');
+    },
+    skipDemo() {
+      console.log('[Sketch] User skipped demo');
+      this.$store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT');
+      this.showFirstTimeModal = false;
     },
     deleteSketch: async function () {
       if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
@@ -511,6 +349,16 @@ export default {
           alert('Failed to delete data. See console for details.')
         }
       }
+    },
+    handleUploadData() {
+      this.$router.push('/')
+    },
+    handleReturnHome() {
+      this.$router.push('/')
+    },
+    startInteractiveDemo() {
+      console.log('[Sketch] Starting interactive demo');
+      this.$router.push('/demo/explore')
     },
     generateContextQuery(event) {
       let timestampMillis = this.$options.filters.formatTimestamp(event._source.primary_timestamp)
@@ -613,6 +461,12 @@ export default {
         this.showLeftPanel = false
       }
     },
+    $route(to, from) {
+      this.checkShowDemoModal()
+    },
   },
 }
 </script>
+
+<style lang="scss">
+</style>
