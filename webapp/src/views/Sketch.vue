@@ -309,9 +309,6 @@ export default {
     currentUser() {
       return this.$store.state.currentUser
     },
-    demoWasOffered() {
-      return this.$store.state.demoWasOffered
-    },
     hasTimelines() {
       return !!(this.sketch.timelines && this.sketch.timelines.length)
     },
@@ -328,7 +325,7 @@ export default {
   methods: {
     checkShowDemoModal() {
       const isRegularExploreRoute = this.$route.name === 'Explore'
-      if (isRegularExploreRoute && !this.demoMode && !this.demoWasOffered && !this.hasTimelines && !this.loadingSketch) {
+      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasTimelines && !this.loadingSketch) {
         this.showFirstTimeModal = true;
       }
     },
@@ -339,7 +336,7 @@ export default {
     },
     skipDemo() {
       console.log('[Sketch] User skipped demo');
-      this.$store.commit('SET_DEMO_WAS_OFFERED', true);
+      this.$store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT');
       this.showFirstTimeModal = false;
     },
     deleteSketch: async function () {

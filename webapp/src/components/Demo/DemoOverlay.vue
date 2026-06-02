@@ -82,15 +82,28 @@ Provides broad area highlighting via SVG mask and a precise pulsing pointer for 
           <v-btn 
               color="primary" 
               text
-              small 
+               
               @click="onComplete" 
               v-else
-              class="ml-4 font-weight-bold"
+              class="ml-6 font-weight-bold"
           >
-              {{ finishButtonText || 'FINISH' }}
+            FINISH 🎉
           </v-btn>
         </div>
       </div>
+    </div>
+
+    <!-- Exit Demo button (X icon in top right below nav bar) -->
+    <div class="demo-exit-button-wrapper">
+      <v-btn
+        icon
+        large
+        color="white"
+        @click="onComplete"
+        title="Exit Demo"
+      >
+        <v-icon large>mdi-close</v-icon>
+      </v-btn>
     </div>
 
     <!-- The Shield: Blocks clicks outside the specific interaction area -->
@@ -189,7 +202,7 @@ export default {
       }
       
       const box = this.visibleAreaBox
-      const popoverWidth = 320
+      const popoverWidth = 360
       const popoverHeight = 220 // Estimated average height
       const margin = 24
       
@@ -265,7 +278,7 @@ export default {
         const rect = clickableEl.getBoundingClientRect()
         if (!this.clickableAreaBox || this.clickableAreaBox.x !== rect.x || this.clickableAreaBox.y !== rect.y) {
           this.clickableAreaBox = rect
-        }
+        }{ name: 'Home' }
       } else {
         this.clickableAreaBox = null
       }
@@ -408,6 +421,14 @@ export default {
   pointer-events: none;
 }
 
+.demo-exit-button-wrapper {
+  position: absolute;
+  top: 36px;
+  right: 36px;
+  z-index: 20002;
+  pointer-events: auto;
+}
+
 .demo-mask {
   position: absolute;
   top: 0;
@@ -481,7 +502,7 @@ export default {
 
 .demo-popover {
   position: absolute;
-  width: 320px;
+  width: 360px;
   background: white;
   border-radius: 12px;
   padding: 20px;

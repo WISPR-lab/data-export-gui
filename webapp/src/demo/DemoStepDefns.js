@@ -276,7 +276,7 @@ export const getStepDefinitions = () => [
     view: 'explore',
     visibleElements: '#tsNavigationDevices',
     title: 'Devices View',
-    content: 'This button will take you to the Devices View, where you can analyze your data by device rather than chronologically. A guided tour is coming soon, but feel free to click on it and explore around after uploading your own data.',
+    content: 'This button will take you to the Devices View, where you can analyze your data by device rather than chronologically. \n\n A more in-depth guided tour is coming soon.',
     action: 'next-click',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
@@ -285,13 +285,16 @@ export const getStepDefinitions = () => [
   {
     id: 'FINISH',
     view: 'explore',
-    visibleElements: '#tsTutorialsButton',
+    visibleElements: ['#tsTutorialsButton', '.interactive-demo-link'],
     title: 'Finish',
     content: 'You can redo this demo again by navigating to Tutorials.', // TODO add interactive button
-    finishButtonText: 'FINISH',
     action: 'complete',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
+        controller.forceOpenTutorials()
+    },
+    onLeave: async (controller, store, isForward) => {
+        controller.stopForceOpenTutorials()
     }
   }
 ]

@@ -47,8 +47,9 @@ const defaultState = () => {
     if (stored) {
       userSettings = { ...userSettings, ...JSON.parse(stored) }
     }
+    localStorage.removeItem('demoWasOffered')
   } catch (e) {
-    console.error('[Store] Failed to load settings from localStorage:', e)
+    console.error('[Store] Failed to load settings or clean legacy state:', e)
   }
 
   return {
@@ -99,9 +100,10 @@ const defaultState = () => {
     // Demo state
     demoMode: false,
     currentDb: 'userdata', // 'userdata' for user data, 'demo' for sample data
-    demoWasOffered: false, // Has user seen the first-time demo modal?
     demoInProgress: false, // Is walkthrough currently running?
     demoStep: 0, // Which step are we on?
+    demo_visit_or_skip_count: 0,
+    demoFinishCount: 0,
   }
 }
 
@@ -240,14 +242,17 @@ export default new Vuex.Store({
     SET_CURRENT_DB(state, dbName) {
       Vue.set(state, 'currentDb', dbName)
     },
-    SET_DEMO_WAS_OFFERED(state, value) {
-      Vue.set(state, 'demoWasOffered', value)
-    },
     SET_DEMO_IN_PROGRESS(state, value) {
       Vue.set(state, 'demoInProgress', value)
     },
     SET_DEMO_STEP(state, step) {
       Vue.set(state, 'demoStep', step)
+    },
+    INCREMENT_DEMO_VISIT_OR_SKIP_COUNT(state) {
+      Vue.set(state, 'demo_visit_or_skip_count', state.demo_visit_or_skip_count + 1)
+    },
+    INCREMENT_DEMO_FINISH_COUNT(state) {
+      Vue.set(state, 'demoFinishCount', state.demoFinishCount + 1)
     },
   },
   actions: {
@@ -329,9 +334,6 @@ export default new Vuex.Store({
     },
     setCurrentDb(context, dbName) {
       context.commit('SET_CURRENT_DB', dbName)
-    },
-    setDemoWasOffered(context, value) {
-      context.commit('SET_DEMO_WAS_OFFERED', value)
     },
     setDemoInProgress(context, value) {
       context.commit('SET_DEMO_IN_PROGRESS', value)

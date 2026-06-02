@@ -10,6 +10,7 @@ class DemoController {
     this.store = null
     this._actionListener = null
     this._lastUiUpdate = null
+    this.referrerRoute = null
   }
 
   getStepDefinitions() {
@@ -23,6 +24,43 @@ class DemoController {
     this._closeAllMenus()
   }
 
+  forceOpenTutorials() {
+    if (this._tutorialsInterval) {
+        clearInterval(this._tutorialsInterval)
+        this._tutorialsInterval = null
+    }
+    this._tutorialsInterval = setInterval(() => {
+        const menuVisible = document.querySelector('.interactive-demo-link')
+        if (!menuVisible) {
+            const btn = document.querySelector('#tsTutorialsButton')
+            if (btn) {
+                btn.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }))
+            }
+        }
+    }, 50)
+  }
+  
+    stopForceOpenTutorials() {
+    if (this._tutorialsInterval) {
+        clearInterval(this._tutorialsInterval)
+        this._tutorialsInterval = null
+    }
+    
+    // Dispatch mouseleave on the activator button
+    const btn = document.querySelector('#tsTutorialsButton')
+    if (btn) {
+        btn.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }))
+    }
+    
+    // Dispatch mouseleave on active menus to trigger Vuetify close handlers
+    const activeMenus = document.querySelectorAll('.v-menu__content, .menuable__content__active')
+    activeMenus.forEach(menu => {
+        menu.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }))
+    })
+    
+    this._closeAllMenus()
+  }
+
   start(store) {
     if (this.store) {
         if (!this.currentStepId) this.runStep('WELCOME')
@@ -31,6 +69,7 @@ class DemoController {
 
     if (DEMO_DEBUGGING) console.log('[DemoController] Initializing start sequence...');
     this.store = store
+    this.store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT')
 
     this.onStart(this.store)
 
@@ -162,7 +201,8 @@ class DemoController {
   }
 
   complete() {
-    const wasCongrats = this.currentStepId === 'FINISH'
+    this.stopForceOpenTutorials()
+    const isFinal = this.currentStepId === 'FINISH'
     if (DEMO_DEBUGGING) console.log('[DemoController] Demo complete/exited');
     this._lastUiUpdate = null
     EventBus.$emit('demo:update-ui', null) // close overlay
@@ -170,6 +210,9 @@ class DemoController {
     if (this.store) {
       this.store.commit('SET_DEMO_IN_PROGRESS', false)
       this.store.commit('SET_DEMO_STEP', 0)
+      if (isFinal) {
+        this.store.commit('INCREMENT_DEMO_FINISHED_COUNT')
+      }
     }
 
     if (this._storeUnsubscribe) {
@@ -185,9 +228,9 @@ class DemoController {
     this.store = null
     this.currentStepId = null
 
-    if (wasCongrats) {
-        router.push({ name: 'Explore' })
-    }
+    const targetRoute = this.referrerRoute || { name: 'Home' }
+    this.referrerRoute = null
+    router.push(targetRoute)
   }
 
   // --- Helper Methods ---

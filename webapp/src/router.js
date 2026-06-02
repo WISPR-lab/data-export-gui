@@ -156,6 +156,12 @@ router.beforeEach(async (to, from, next) => {
   if (isDemoRoute) {
     if (!store.state.demoMode || DB.getActiveDatabase() !== 'demo') {
       console.log('[Router] Entering demo mode via route:', to.path);
+      
+      const DemoController = require('@/demo/DemoController.js').default
+      if (from && from.name) {
+        DemoController.referrerRoute = from.path
+      }
+      
       store.commit('SET_DEMO_MODE', true)
       store.commit('SET_CURRENT_DB', 'demo')
       DB.setActiveDatabase('demo')
