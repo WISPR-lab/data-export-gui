@@ -96,3 +96,5 @@ vagrant/*.log
 CODEBASE_AUDIT_REPORT.md
 tests/takeout*
 tests/Takeout/*
+
+AGENTS.md

@@ -24,7 +24,7 @@ limitations under the License.
 
     <!-- Search and Filters -->
     <v-card flat class="pa-3 pt-0 mt-n3" color="transparent">
-      <v-card class="d-flex align-start mb-1" outlined>
+      <v-card class="d-flex align-start mb-1" id="tsSearchBar" outlined>
         <!-- <v-sheet class="mt-2">
           <ts-search-history-buttons @toggleSearchHistory="toggleSearchHistory()"></ts-search-history-buttons>
         </v-sheet> -->
@@ -50,7 +50,7 @@ limitations under the License.
             >
               <template v-slot:append>
                 <v-icon title="Run search" @click="search()" class="mr-3">mdi-magnify</v-icon>
-                <v-icon title="Show search examples" @click="showSearchHelp = true">mdi-help-circle-outline</v-icon>
+                <v-icon title="Show search examples" id="tsSearchHelpButton" @click="showSearchHelp = true">mdi-help-circle-outline</v-icon>
               </template>
             </v-text-field>
           </template>
@@ -239,7 +239,7 @@ limitations under the License.
               style="overflow: visible"
             >
               <template v-slot:activator="{ on, attrs }">
-                <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
+                <v-btn small text rounded color="primary" id="tsAddTimefilterButton" v-bind="attrs" v-on="on">
                   <v-icon left small> mdi-clock-plus-outline </v-icon>
                   Add timefilter
                 </v-btn>

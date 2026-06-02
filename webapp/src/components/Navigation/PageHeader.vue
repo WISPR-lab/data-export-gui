@@ -40,7 +40,7 @@
         <!-- Tutorials Dropdown (Help Docs) -->
         <v-menu offset-y open-on-hover>
           <template v-slot:activator="{ on, attrs }">
-            <v-btn text v-bind="attrs" v-on="on" class="nav-link">
+            <v-btn text v-bind="attrs" v-on="on" class="nav-link" id="tsTutorialsButton">
               Tutorials
               <v-icon small right>mdi-chevron-down</v-icon>
             </v-btn>

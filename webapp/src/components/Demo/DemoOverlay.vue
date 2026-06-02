@@ -228,7 +228,7 @@ export default {
     updateBoxes() {
       const selectors = Array.isArray(this.visibleElementsSelector) ? this.visibleElementsSelector : [this.visibleElementsSelector]
       
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
       let found = false;
 
       selectors.forEach(sel => {
@@ -302,18 +302,7 @@ export default {
             if (isInside) {
                 this.passClickThrough(e.clientX, e.clientY)
             }
-            return
-        }
-
-        // Fallback: allow clicks anywhere in the visible area (e.g. for steps without a specific target)
-        if (this.visibleAreaBox) {
-            const b = this.visibleAreaBox
-            const isInside = e.clientX >= b.x && e.clientX <= b.x + b.width &&
-                             e.clientY >= b.y && e.clientY <= b.y + b.height
             
-            if (isInside) {
-                this.passClickThrough(e.clientX, e.clientY)
-            }
         }
     },
     passClickThrough(x, y) {

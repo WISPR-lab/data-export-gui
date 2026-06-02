@@ -20,20 +20,7 @@ limitations under the License.
 <template>
   <div>
     <!-- First-time demo offer modal -->
-    <v-dialog v-model="showFirstTimeModal" width="500" persistent>
-      <v-card class="pa-6">
-        <v-card-title class="text-h5 mb-4">Welcome!</v-card-title>
-        <v-card-text>
-          <p>This is where you'll explore your account activity once you upload your data.</p>
-          <p class="mt-4 mb-0">Would you like to try a quick interactive demo first? It'll walk you through the main features with sample data.</p>
-        </v-card-text>
-        <v-card-actions class="pt-4">
-          <v-spacer></v-spacer>
-          <v-btn text @click="skipDemo">Skip</v-btn>
-          <v-btn color="primary" @click="startDemo">Try Demo</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <welcome-dialog v-model="showFirstTimeModal" @skip="skipDemo" @start="startDemo"></welcome-dialog>
 
     <!-- Progress indicator when loading sketch data -->
     <v-progress-linear v-if="loadingSketch" indeterminate color="primary"></v-progress-linear>
@@ -228,8 +215,8 @@ import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
 import TsDevices from '../components/LeftPanel/Devices.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
-import PrivacySettingsModal from '../components/PrivacySettingsModal.vue'
 import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
+import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
 
 export default {
   props: ['sketchId'],
@@ -248,8 +235,8 @@ export default {
     PrivacySettingsItem,
     TsEventList,
     TsSettingsDialog,
-    PrivacySettingsModal,
     DeleteAllDataButton,
+    WelcomeDialog,
   },
   data() {
     return {
@@ -484,4 +471,5 @@ export default {
 }
 </script>
 
-<style lang="scss"></style>
+<style lang="scss">
+</style>

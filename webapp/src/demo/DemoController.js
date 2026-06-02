@@ -1,5 +1,8 @@
 import router from '@/router.js'
 import EventBus from '@/event-bus.js'
+import { getStepDefinitions } from './DemoStepDefns.js'
+
+const DEMO_DEBUGGING = false
 
 class DemoController {
   constructor() {
@@ -10,238 +13,14 @@ class DemoController {
   }
 
   getStepDefinitions() {
-    return [
-      {
-        id: 'WELCOME',
-        view: 'explore',
-        visibleElements: 'body',
-        title: 'Welcome',
-        content: 'This demo will walk you through the core features of LEStrADE using sample Instagram activity. \n\n (Tip: You can use the ← and → keys to navigate)',
-        action: 'next-click',
-        onEnter: (store) => {
-            this._setAllTimelinesVisible(store)
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-            this._clearSearch()
-            this._clearAllTags(store).catch(e => console.error(e))
-        },
-        onLeave: (store) => {
-            this._setAllTimelinesVisible(store)
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-            this._clearSearch()
-        }
-      },
-      {
-        id: 'OPEN_TIMELINE_MENU',
-        view: 'explore',
-        visibleElements: '.timeline-chip:first-child',
-        clickableElement: '#tsTimelineChipMenu',
-        title: 'Timeline Visibility',
-        content: 'Each chip represents a different data export you\'ve uploaded. Let\'s start by opening the menu.',
-        action: 'timeline-menu-opened',
-        onEnter: (store) => {
-            this._setAllTimelinesVisible(store)
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-            this._clearSearch()
-        },
-        onLeave: (store) => {
-            this._setAllTimelinesVisible(store)
-            this._forceCollapseAllRows()
-        }
-      },
-      {
-        id: 'HIDE_TIMELINE_DATA',
-        view: 'explore',
-        visibleElements: ['.timeline-chip:first-child', '.menuable__content__active'],
-        clickableElement: '#tsTimelineVisibilityToggle',
-        title: 'Data Export Visibility',
-        content: 'You can temporarily hide this export to focus on other data. Try toggling it off and on.',
-        action: 'timeline-toggled',
-        onEnter: (store) => {
-            this._setAllTimelinesVisible(store)
-            this._forceCollapseAllRows()
-            this._setFirstTimelineVisible(store, true)
-            // Ensure menu is open if they skipped to here
-            const menuVisible = document.querySelector('.menuable__content__active')
-            if (!menuVisible) {
-                this._secureClick('#tsTimelineChipMenu')
-            }
-        },
-        onLeave: (store) => {
-            this._setFirstTimelineVisible(store, false)
-            this._closeAllMenus()
-        }
-      },
-      {
-        id: 'SHOW_TIMELINE_DATA',
-        view: 'explore',
-        visibleElements: '.timeline-chip:first-child',
-        clickableElement: '.timeline-chip:first-child',
-        blockedElements: ['#tsTimelineChipMenu'], // Prevent menu opening
-        title: 'Data Export Visibility',
-        content: 'You can bring it back anytime by clicking on the chip itself. Try re-enabling it now.',
-        action: 'timeline-toggled',
-        onEnter: (store) => {
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-            this._setFirstTimelineVisible(store, false)
-        },
-        onLeave: (store) => {
-            this._setFirstTimelineVisible(store, true)
-        }
-      },
-      {
-        id: 'SHOW_TIMELINE_DATA2',
-        view: 'explore',
-        visibleElements: '.timeline-chip:first-child',
-        clickableElement: '',
-        blockedElements: ['#tsTimelineChipMenu', '.timeline-chip:first-child'],
-        title: 'Data Export Visibility',
-        content: 'Done! Let\'s move on to exploring your data.',
-        action: 'timeline-toggled',
-        onEnter: (store) => {
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-            this._setFirstTimelineVisible(store, true)
-        },
-        onLeave: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-        }
-      },
-      {
-        id: 'EVENTS_MACRO',
-        view: 'explore',
-        visibleElements: '#tsEventTable',
-        title: 'The Events Table',
-        content: 'This table shows every action extracted from your data exports, sorted chronologically. This is the heart of your investigation.',
-        action: 'next-click',
-        onEnter: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-        },
-        onLeave: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-        }
-      },
-      {
-        id: 'EXPAND_EVENT',
-        view: 'explore',
-        visibleElements: '#tsEventTable tbody tr:first-child',
-        clickableElement: '#tsEventTable tbody tr:first-child',
-        title: 'Deep Dive',
-        content: 'Click on the first event to expand it and see the raw details and metadata extracted by LEStrADE.',
-        action: 'event-expanded',
-        onEnter: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-        },
-        onLeave: (store) => {
-            // force expand if user clicked Next
-            this._forceExpandFirstRow()
-        }
-      },
-      {
-        id: 'READ_EVENT_DETAILS',
-        view: 'explore',
-        visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content'],
-        title: 'Deep Dive',
-        content: 'Take a moment to review the metadata extracted by LEStrADE.',
-        action: 'next-click',
-        onEnter: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-            this._forceExpandFirstRow()
-            this._closeAllMenus()
-        },
-        onLeave: (store) => {
-            this._forceExpandFirstRow()
-        }
-      },
-      {
-        id: 'OPEN_TAG_MENU',
-        view: 'explore',
-        visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content'],
-        clickableElement: '#tsEventTable tbody tr:first-child .v-icon[title*="Modify tags"]',
-        title: 'Tagging',
-        content: 'You can tag events to categorize them. Click the tag icon to open the tagging menu.',
-        action: 'tag-menu-opened',
-        onEnter: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-            this._forceExpandFirstRow()
-            this._closeAllMenus()
-            // Wipe tags here too to ensure a clean slate for the tagging interaction
-            this._clearAllTags(store).catch(e => console.error(e))
-        },
-        onLeave: (store) => {
-            this._forceExpandFirstRow()
-            this._forceOpenTagMenu()
-        }
-      },
-      {
-        id: 'ADD_TAG',
-        view: 'explore',
-        visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content', '.menuable__content__active'],
-        clickableElement: '.menuable__content__active .v-chip:first-child',
-        title: 'Add a Tag',
-        content: 'Choose a "quick tag" like "bad" to instantly label this event.',
-        action: 'tag-added',
-        onEnter: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-            this._forceExpandFirstRow()
-            this._clearAllTags(store).then(() => this._forceOpenTagMenu()).catch(e => console.error(e))
-        },
-        onLeave: (store) => {
-            this._closeAllMenus()
-            this._forceExpandFirstRow()
-            // Force the tag state so arrow navigation shows the same result as clicking
-            this._addSampleTag(store).catch(e => console.error(e))
-        }
-      },
-      {
-        id: 'VIEW_TAGGED_DATA',
-        view: 'explore',
-        visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content'],
-        title: 'Tag Saved',
-        content: 'The tag is now saved! You can see it appearing on the event row and in the expanded details.',
-        action: 'next-click',
-        onEnter: (store) => {
-            this._setFirstTimelineVisible(store, true)
-            this._clearSearch()
-            this._forceExpandFirstRow()
-            this._closeAllMenus()
-            // force apply the tag
-            this._addSampleTag(store).catch(e => console.error(e))
-        },
-        onLeave: (store) => {
-            this._forceCollapseAllRows()
-            this._clearSearch()
-        }
-      },
-      {
-        id: 'CONGRATS',
-        view: 'explore',
-        visibleElements: 'body',
-        title: 'Great Job!',
-        content: 'You\'ve successfully explored the core features of LEStrADE. You are now ready to begin your own investigation.',
-        finishButtonText: 'UPLOAD YOUR DATA',
-        action: 'complete',
-        onEnter: (store) => {
-            this._clearSearch()
-            this._forceCollapseAllRows()
-            this._closeAllMenus()
-        }
-      }
-    ]
+    return getStepDefinitions()
+  }
+
+  async basicInitialize(store) {
+    this._setAllTimelinesVisible(store)
+    this._clearSearch()
+    this._forceCollapseAllRows()
+    this._closeAllMenus()
   }
 
   start(store) {
@@ -250,7 +29,7 @@ class DemoController {
         return
     }
 
-    console.log('[DemoController] Initializing start sequence...');
+    if (DEMO_DEBUGGING) console.log('[DemoController] Initializing start sequence...');
     this.store = store
 
     this.onStart(this.store)
@@ -260,7 +39,7 @@ class DemoController {
     // auto-cleanup if demoMode is turned off in store (e.g. via router navigation)
     this._storeUnsubscribe = this.store.subscribe((mutation) => {
       if (mutation.type === 'SET_DEMO_MODE' && mutation.payload === false) {
-        console.log('[DemoController] demoMode disabled in store, completing demo');
+        if (DEMO_DEBUGGING) console.log('[DemoController] demoMode disabled in store, completing demo');
         this.complete()
       }
     })
@@ -285,7 +64,7 @@ class DemoController {
       const currentStepDef = allSteps.find(s => s.id === this.currentStepId)
       if (!currentStepDef) return
 
-      console.log(`[DemoController] Action received: ${actionType} (current step: ${this.currentStepId})`);
+      if (DEMO_DEBUGGING) console.log(`[DemoController] Action received: ${actionType} (current step: ${this.currentStepId})`);
 
       if (actionType === 'next-click' || actionType === 'prev-click') {
           if (actionType === 'next-click') this.moveNext()
@@ -325,14 +104,19 @@ class DemoController {
   }
 
 
-  runStep(stepId) {
+  async runStep(stepId) {
     const allSteps = this.getStepDefinitions()
-  
+    let isForward = true
+
     if (this.currentStepId) {
+        const currentIndex = allSteps.findIndex(s => s.id === this.currentStepId)
+        const nextIndex = allSteps.findIndex(s => s.id === stepId)
+        isForward = nextIndex > currentIndex
+
         const currentDef = allSteps.find(s => s.id === this.currentStepId)
         if (currentDef && currentDef.onLeave && this.store) {
-            console.log(`[DemoController] Executing onLeave for ${this.currentStepId}`);
-            currentDef.onLeave(this.store)
+            if (DEMO_DEBUGGING) console.log(`[DemoController] Executing onLeave for ${this.currentStepId} (isForward: ${isForward})`);
+            await currentDef.onLeave(this, this.store, isForward)
         }
     }
 
@@ -348,8 +132,8 @@ class DemoController {
       this.store.commit('SET_DEMO_IN_PROGRESS', true)
       
       if (stepDef.onEnter) {
-          console.log(`[DemoController] Executing onEnter for ${stepId}`);
-          stepDef.onEnter(this.store)
+          if (DEMO_DEBUGGING) console.log(`[DemoController] Executing onEnter for ${stepId} (isForward: ${isForward})`);
+          await stepDef.onEnter(this, this.store, isForward)
       }
     }
 
@@ -370,7 +154,7 @@ class DemoController {
     }
 
     EventBus.$emit('demo:update-ui', this._lastUiUpdate)
-    console.log('[DemoController] First step broadcasted.');
+    if (DEMO_DEBUGGING) console.log('[DemoController] First step broadcasted.');
   }
 
   getCurrentUiState() {
@@ -378,8 +162,8 @@ class DemoController {
   }
 
   complete() {
-    const wasCongrats = this.currentStepId === 'CONGRATS'
-    console.log('[DemoController] Demo complete/exited');
+    const wasCongrats = this.currentStepId === 'FINISH'
+    if (DEMO_DEBUGGING) console.log('[DemoController] Demo complete/exited');
     this._lastUiUpdate = null
     EventBus.$emit('demo:update-ui', null) // close overlay
     
@@ -451,7 +235,7 @@ class DemoController {
   }
 
   _clearSearch() {
-      console.log('[DemoController] Magically clearing search filters');
+      if (DEMO_DEBUGGING) console.log('[DemoController] Magically clearing search filters');
       EventBus.$emit('setQueryAndFilter', { 
           queryFilter: { 
               chips: [], 
@@ -464,7 +248,7 @@ class DemoController {
   }
 
   async _clearAllTags(store) {
-      console.log('[DemoController] Wiping all tags for fresh demo');
+      if (DEMO_DEBUGGING) console.log('[DemoController] Wiping all tags for fresh demo');
       const DB = require('@/database/index.js').default
       await DB.clearAllTags()
       if (store) {
@@ -479,28 +263,32 @@ class DemoController {
                                document.querySelector('.menuable__content__active .v-list')
           
           if (!tagMenuContent) {
-              console.log('[DemoController] Forcing tag menu open');
+              if (DEMO_DEBUGGING) console.log('[DemoController] Forcing tag menu open');
               this._secureClick('#tsEventTable tbody tr:first-child .v-icon[title*="Modify tags"]')
           }
       }, 100)
   }
 
-  async _addSampleTag(store) {
-      console.log('[DemoController] Programmatically adding sample tag');
-      const DB = require('@/database/index.js').default
-      const result = await DB.searchEvents('', { size: 1, order: 'asc' })
-      if (result.objects && result.objects.length > 0) {
-          const targetEvent = result.objects[0]
-          await DB.updateEventTags(targetEvent._id, ['bad'])
-          
-          setTimeout(() => {
-              EventBus.$emit('setQueryAndFilter', { doSearch: true })
-          }, 50)
-      }
-  }
+   async _addSampleTag(store) {
+       if (DEMO_DEBUGGING) console.log('[DemoController] Programmatically adding sample tag');
+       const DB = require('@/database/index.js').default
+       const result = await DB.searchEvents('', { size: 1, order: 'asc' })
+       if (result.objects && result.objects.length > 0) {
+           const targetEvent = result.objects[0]
+           await DB.updateEventTags(targetEvent._id, ['bad'])
+           
+           if (store) {
+               store.dispatch('updateEventLabels', { label: 'bad', num: 1 })
+           }
+           
+           setTimeout(() => {
+               EventBus.$emit('setQueryAndFilter', { doSearch: true })
+           }, 50)
+       }
+   }
 
   _forceApplySampleFilter() {
-      console.log('[DemoController] Forcing sample filter for result step');
+      if (DEMO_DEBUGGING) console.log('[DemoController] Forcing sample filter for result step');
       EventBus.$emit('setQueryAndFilter', { 
           doSearch: true,
           chip: {
