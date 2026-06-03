@@ -185,39 +185,3 @@ class DeviceInstanceGraph:
         return df.drop(columns=['attributes']).join(
             pd.json_normalize(parsed_json).add_prefix('attr__')
         )
-
-    @staticmethod
-    def calculate_profile_updates(
-        instances: List[DeviceInstance],
-        existing_profiles: dict,
-        ts: float
-    ) -> tuple[List[dict], List[dict]]:
-        # Compares the active batch of device instances against current database profiles to determine which new profiles
-        # must be generated, returning structured rows for both device_profiles_v2 and device_profile_instances tables.
-        device_profiles_v2_rows = []
-        device_profile_instances_rows = []
-        
-        for inst in instances:
-            man = inst.manufacturer
-            mod = inst.model
-            key = (man.lower() if man else '', mod.lower() if mod else '')
-            
-            if key in existing_profiles:
-                profile_id = existing_profiles[key]
-            else:
-                profile_id = str(uuid.uuid4())
-                device_profiles_v2_rows.append({
-                    'id': profile_id,
-                    'manufacturer': man,
-                    'model': mod,
-                    'created_at': ts,
-                    'updated_at': ts
-                })
-                existing_profiles[key] = profile_id
-                
-            device_profile_instances_rows.append({
-                'device_profile_id': profile_id,
-                'device_instance_id': inst.root_id
-            })
-            
-        return device_profiles_v2_rows, device_profile_instances_rows

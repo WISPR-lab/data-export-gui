@@ -107,3 +107,65 @@ class TestDeviceGrouping2:
             # Check profile instances links
             prof_insts = conn.execute('SELECT * FROM device_profile_instances').fetchall()
             assert len(prof_insts) >= 2
+
+    @pytest.mark.parametrize("order", [("A", "B"), ("B", "A")])
+    def test_multi_upload_order_independence(self, test_db_path, order):
+        schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'schema.sql')
+        if os.path.exists(test_db_path):
+            os.remove(test_db_path)
+            
+        uploads_data = {
+            "A": {
+                "id": "upload-A",
+                "event_id": "ev-A",
+                "attrs": {
+                    "norm__manufacturer": "Google",
+                    "norm__model_name": "Pixel 6",
+                    "norm__os_name": "Android",
+                    "norm__client_name": "Google App",
+                }
+            },
+            "B": {
+                "id": "upload-B",
+                "event_id": "ev-B",
+                "attrs": {
+                    "norm__manufacturer": "Google",
+                    "norm__model_name": "Pixel 6",
+                    "norm__os_name": "Android",
+                    "norm__client_name": "Facebook App",
+                }
+            }
+        }
+        
+        for upload_name in order:
+            data = uploads_data[upload_name]
+            with DatabaseSession(test_db_path, schema_path=schema_path) as conn:
+                conn.execute(
+                    'INSERT INTO uploads (id, platform, given_name) VALUES (?, ?, ?)',
+                    (data["id"], 'test', 'given-' + data["id"])
+                )
+                file_id = str(uuid.uuid4())
+                conn.execute(
+                    'INSERT INTO uploaded_files (id, upload_id, opfs_filename) VALUES (?, ?, ?)',
+                    (file_id, data["id"], 'file_' + data["id"] + '.json')
+                )
+                conn.execute(
+                    'INSERT INTO events (id, upload_id, file_ids, timestamp, attributes, treat_as_auth_device) VALUES (?, ?, ?, ?, ?, 1)',
+                    (data["event_id"], data["id"], json.dumps([file_id]), 1700000000.0, json.dumps(data["attrs"]))
+                )
+                conn.commit()
+            
+            group(data["id"], db_path=test_db_path)
+            
+        with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
+            profiles = conn.execute("SELECT * FROM device_profiles_v2").fetchall()
+            assert len(profiles) == 1
+            assert profiles[0]["manufacturer"] == "Google"
+            assert profiles[0]["model"] == "Pixel 6"
+            
+            mappings = conn.execute("SELECT * FROM device_profile_instances").fetchall()
+            assert len(mappings) == 2
+            profile_id = profiles[0]["id"]
+            assert mappings[0]["device_profile_id"] == profile_id
+            assert mappings[1]["device_profile_id"] == profile_id
+

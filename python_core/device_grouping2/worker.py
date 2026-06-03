@@ -6,7 +6,8 @@ import pandas as pd
 from db_session import DatabaseSession
 from . import deterministic_ids
 from . import client_os_upgrades
-from .graph import DeviceInstanceGraph
+from .instances import DeviceInstanceGraph
+from . import profiles
 
 
 def _get_config_value(name):
@@ -142,14 +143,12 @@ def _write_device_instances(conn, instances: list, ts: float) -> None:
 
 
 def _write_device_profiles(conn, instances: list, ts: float) -> None:
-    rows = conn.execute("SELECT id, manufacturer, model FROM device_profiles_v2").fetchall()
-    existing_profiles = {
-        (r['manufacturer'].lower() if r['manufacturer'] else '', 
-         r['model'].lower() if r['model'] else ''): r['id']
-        for r in rows
-    }
+    existing_instances = conn.execute("SELECT id, manufacturer, model FROM device_instances").fetchall()
+    existing_mappings = conn.execute("SELECT device_profile_id, device_instance_id FROM device_profile_instances").fetchall()
     
-    device_profiles_v2_rows, device_profile_instances_rows = DeviceInstanceGraph.calculate_profile_updates(instances, existing_profiles, ts)
+    device_profiles_v2_rows, device_profile_instances_rows = profiles.calculate_profile_updates(
+        instances, existing_instances, existing_mappings, ts
+    )
     
     if device_profiles_v2_rows:
         conn.executemany(
