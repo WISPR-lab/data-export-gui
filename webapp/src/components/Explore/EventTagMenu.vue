@@ -46,6 +46,14 @@ export default {
       search: null,
     }
   },
+  watch: {
+    showMenu(val) {
+      if (val && this.$store.state.demoMode) {
+        const EventBus = require('@/event-bus.js').default
+        EventBus.$emit('demo:action', 'tag-menu-opened')
+      }
+    }
+  },
   computed: {
     assignedTags() {
       if (!this.event._source.tags) return []

@@ -1,7 +1,7 @@
 <!-- SAFE EXIT BUTTON -->
 
 <template>
-  <div class="safe-exit-button">
+  <div v-if="!demoMode" class="safe-exit-button">
     <v-tooltip left>
       <template v-slot:activator="{ on, attrs }">
         <v-btn
@@ -30,6 +30,11 @@ import { OPFSManager } from '@/storage/opfs_manager';
 
 export default {
   name: 'SafeExitButton',
+  computed: {
+    demoMode() {
+      return this.$store.state.demoMode
+    }
+  },
   methods: {
     async safeExit() {
       try {

@@ -81,6 +81,7 @@ limitations under the License.
       :close-on-content-click="false"
       content-class="menu-with-gap"
       ref="timelineChipMenuRef"
+      @input="onMenuToggle"
     >
       <template v-slot:activator="{ on }">
         <slot
@@ -121,7 +122,7 @@ limitations under the License.
             </v-card>
           </v-dialog>
 
-          <v-list-item v-if="timelineAvailable" @click="$emit('toggle', timeline)">
+          <v-list-item id="tsTimelineVisibilityToggle" v-if="timelineAvailable" @click="$emit('toggle', timeline)">
             <v-list-item-action>
               <v-icon v-if="isSelected">mdi-eye-off</v-icon>
               <v-icon v-else>mdi-eye</v-icon>
@@ -260,6 +261,7 @@ limitations under the License.
 import Vue from 'vue'
 import _ from 'lodash'
 import DB from '@/database/index.js'
+import EventBus from '@/event-bus.js'
 import { VSpacer } from 'vuetify/lib';
 
 const gradients = [
@@ -399,6 +401,11 @@ export default {
     //   let eta = dayjs().add(secondsLeft, 'second').fromNow()
     //   return eta
     // },
+    onMenuToggle(isOpen) {
+      if (isOpen && this.$store.state.demoMode) {
+        EventBus.$emit('demo:action', 'timeline-menu-opened')
+      }
+    },
     toggleTimeline() {
       if (!this.timelineFailed) {
         this.$emit('toggle', this.timeline)

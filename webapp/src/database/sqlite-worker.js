@@ -1,5 +1,5 @@
 let sqlite3 = null;
-let hasInitialized = false;
+let initializedDbs = new Set(); // Track which DBs have been initialized
 
 async function loadConfig() {
   const response = await fetch('./config.yaml');
@@ -19,8 +19,8 @@ async function getSqlite() {
   return sqlite3;
 }
 
-async function ensureSchema(db, schemaPath) {
-  if (hasInitialized) return;
+async function ensureSchema(db, schemaPath, dbPath) {
+  if (initializedDbs.has(dbPath)) return; // Skip if already initialized
   try {
     const fetchPath = schemaPath.startsWith('/') ? `.${schemaPath}` : `./${schemaPath}`;
     const response = await fetch(fetchPath);
@@ -32,8 +32,8 @@ async function ensureSchema(db, schemaPath) {
       throw new Error('Schema file is empty');
     }
     db.exec(sql);
-    console.log('[Sqlite Worker] schema initialized');
-    hasInitialized = true;
+    initializedDbs.add(dbPath); // Mark as initialized
+    console.log(`[Sqlite Worker] schema initialized for ${dbPath}`);
   } catch (e) {
     console.error('[sqlite Worker] error initializing schema:', e);
     throw e;
@@ -47,8 +47,8 @@ self.onmessage = async (e) => {
   try {
     const sq3 = await getSqlite();
     
-    const db = new sq3.oo1.OpfsDb(args.dbPath || '/timeline.db');
-    await ensureSchema(db, args.schemaPath);
+    const db = new sq3.oo1.OpfsDb(args.dbPath || '/userdata.db');
+    await ensureSchema(db, args.schemaPath, args.dbPath || '/userdata.db');
     
     const result = db.exec(args.sql, args.options);
     

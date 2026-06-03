@@ -17,7 +17,7 @@ limitations under the License.
 <!--NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui -->
 
 <template>
-  <div>
+  <div id="tsLeftPanelEventTypesList">
     <v-data-iterator
       :items="eventMessages"
       :items-per-page.sync="itemsPerPage"
@@ -103,6 +103,9 @@ export default {
       // eventData.queryString = 'event_action:' + '"' + action + '"'
       eventData.queryString = 'message:' + '"' + action + '"'
       EventBus.$emit('setQueryAndFilter', eventData)
+      if (this.$store.state.demoMode) {
+        EventBus.$emit('demo:action', 'event-type-clicked')
+      }
     },
   },
 }

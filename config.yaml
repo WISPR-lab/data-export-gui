@@ -2,7 +2,7 @@
 # This file is synced to webapp/public/ during build
 
 database:
-  db_path: "/mnt/data/timeline.db"
+  db_path: "/mnt/data/userdata.db"
 
 storage:
   temp_zip_storage: "/mnt/data/tmpstore"

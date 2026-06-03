@@ -23,7 +23,7 @@ webapp-v3.zip
 !.github/workflows/
 !.github/workflows/*.yml
 
-.roo/*
+.plans/*
 
 
 data/opensearch/
@@ -94,3 +94,10 @@ vagrant/*.log
 # Exclude JetBrains IDE files
 .idea/
 CODEBASE_AUDIT_REPORT.md
+tests/takeout*
+tests/Takeout/*
+
+AGENTS.md
+*.zip
+.gemini*
+TODO.md

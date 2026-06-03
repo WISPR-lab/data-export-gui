@@ -6,7 +6,7 @@ export class OPFSManager {
   constructor() {
     this.opfsRoot = null;
     this.storageDir = null;
-    this.dbFilename = null;  // e.g. "timeline.db" – populated during init()
+    this.dbFilename = null;  // e.g. "userdata.db" – populated during init()
     this.whitelistPatterns = [];
     this.isInitialized = false;
   }
@@ -29,7 +29,7 @@ export class OPFSManager {
 
     const dbPath = ((config.database || {}).db_path || '');
     const dbPathParts = dbPath.split('/').filter(Boolean);
-    this.dbFilename = dbPathParts[dbPathParts.length - 1]; // e.g. "timeline.db"
+    this.dbFilename = dbPathParts[dbPathParts.length - 1]; // e.g. "userdata.db"
     const mountPrefix = '/' + dbPathParts.slice(0, -1).join('/'); // e.g. "/mnt/data"
     const relativePath = storagePath.startsWith(mountPrefix)
       ? storagePath.slice(mountPrefix.length)

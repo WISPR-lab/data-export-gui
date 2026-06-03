@@ -46,13 +46,14 @@ export default {
   },
   computed: {
     isActive() {
-      return this.$route.name === 'Explore'
+      return this.$route.name === 'Explore' || this.$route.name === 'DemoExplore'
     }
   },
   methods: {
     navigateToExplore() {
-      if (this.$route.path !== '/explore') {
-        this.$router.push('/explore')
+      const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+      if (this.$route.path !== target) {
+        this.$router.push(target)
       }
     },
   },

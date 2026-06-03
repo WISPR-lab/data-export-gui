@@ -22,15 +22,17 @@ limitations under the License.
             <template v-slot:default>
               <tbody>
                 <tr
-                  v-for="(value, key) in fullEventFiltered"
+                  v-for="(value, key, index) in fullEventFiltered"
                   :key="key"
                   @mouseover="c_key = key"
                   @mouseleave="c_key = -1"
+                  :class="{ 'demo-force-hover': $store.state.demoMode && index === 0 }"
                 >
                   <!-- Event field name actions -->
-                  <td v-if="key == c_key" class="text-right" style="min-width: 105px">
+                  <td v-if="key == c_key || ($store.state.demoMode && index === 0)" class="text-right" style="min-width: 105px">
+
                     <!-- Open aggregation dialog for this field -->
-                    <v-btn
+                    <!-- <v-btn
                       v-if="!ignoredAggregatorFields.has(key)"
                       @click.stop="loadAggregation(key, value)"
                       icon
@@ -38,7 +40,7 @@ limitations under the License.
                       class="mr-1"
                     >
                       <v-icon title="Aggregation dialog">mdi-chart-bar</v-icon>
-                    </v-btn>
+                    </v-btn> -->
 
                     <!-- Include field:value as filter chip -->
                     <v-btn
@@ -390,6 +392,9 @@ export default {
       }
       eventData.chip = chip
       EventBus.$emit('setQueryAndFilter', eventData)
+      if (this.$store.state.demoMode) {
+        EventBus.$emit('demo:action', 'inline-filter-clicked')
+      }
     },
   },
   created: function () {

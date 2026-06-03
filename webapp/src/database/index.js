@@ -10,6 +10,7 @@ import { loadConfig } from '../utils/config.js';
 
 let worker = null;
 let messageId = 0;
+let activeDbName = 'userdata'; // Track which DB is active ('userdata' mode vs 'demo')
 
 function callPyodideWorker(method, args) {
   return new Promise((resolve, reject) => {
@@ -35,13 +36,14 @@ function callPyodideWorker(method, args) {
 let cachedPaths = null;
 
 async function getDbPaths() {
-  if (cachedPaths) return cachedPaths;
   const cfg = await loadConfig();
-  cachedPaths = {
+  const dbFilename = cfg.database.db_path.split('/').pop(); // e.g., "userdata.db"
+  const dbPath = activeDbName === 'userdata' ? `/${dbFilename}` : '/demo.db';
+  
+  return {
     schemaPath: cfg.paths.schema,
-    dbPath: '/' + cfg.database.db_path.split('/').pop(),
+    dbPath,
   };
-  return cachedPaths;
 }
 
 export async function getDB() {
@@ -73,18 +75,19 @@ export async function getDB() {
       
       const cfg = await loadConfig();
 
+      // config.database.db_path is "/mnt/data/userdata.db" (a Pyodide mount path),
       // OpfsDb interprets the path as an OPFS-internal virtual path.
-      // config.database.db_path is "/mnt/data/timeline.db" (a Pyodide mount path),
+      // config.database.db_path is "/mnt/data/userdata.db" (a Pyodide mount path),
       // but OpfsDb would create literal "mnt/data/" dirs inside OPFS root.
-      // Extract just the filename so the DB sits at (root)/timeline.db,
-      // which Pyodide (mounting OPFS root at /mnt/data) sees as /mnt/data/timeline.db.
-      const dbFilename = cfg.database.db_path.split('/').pop(); // "timeline.db"
+      // Extract just the filename so the DB sits at (root)/userdata.db,
+      // which Pyodide (mounting OPFS root at /mnt/data) sees as /mnt/data/userdata.db.
+      const dbFilename = cfg.database.db_path.split('/').pop(); // "userdata.db"
       
       worker = new Worker('./sqlite-worker.js');
       window.dbWorker = worker;
       
       await callPyodideWorker('init', { 
-        dbPath: "/timeline.db",  // TODO FIX HARDCODING IN CONFIG
+        dbPath: "/userdata.db",  // TODO FIX HARDCODING IN CONFIG
         schemaPath: cfg.paths.schema
       });
       // [Database] Ready
@@ -157,6 +160,15 @@ export default {
   closeDB,
   clearAllTables,
   
+  // DB switching
+  setActiveDatabase(dbName) {
+    activeDbName = dbName; // 'userdata' or 'demo'
+    console.log(`[Database] Switched to ${dbName} database`);
+  },
+  getActiveDatabase() {
+    return activeDbName;
+  },
+  
   searchEvents: events.searchEvents,
   getEventCount: events.getEventCount,
   // Note: Frontend uses getEventActions (event_action field), not getCategories (event_category field)
@@ -168,6 +180,7 @@ export default {
   addLabelEvent: events.addLabelEvent,
   removeLabelEvent: events.removeLabelEvent,
   updateEventTags: events.updateEventTags,
+  clearAllTags: events.clearAllTags,
   
   getUploads: uploads.getUploads,
   getUploadById: uploads.getUploadById,

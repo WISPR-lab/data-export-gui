@@ -30,7 +30,7 @@ limitations under the License.
     <v-icon left>mdi-tag-multiple-outline</v-icon>
     <div style="height: 1px"></div>
   </div>
-  <div v-else>
+  <div v-else id="tsLeftPanelTags">
     <div
       :style="(tags && tags.length) || (filteredLabels && filteredLabels.length) ? 'cursor: pointer' : ''"
       class="pa-4"

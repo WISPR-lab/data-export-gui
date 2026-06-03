@@ -29,6 +29,10 @@ import Devices from './views/Devices.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 
+import store from './store.js'
+import DB from './database/index.js'
+import demoDatabaseLoader from '@/demo/DemoDatabaseLoader.js'
+
 Vue.use(VueRouter)
 
 const routes = [
@@ -41,6 +45,26 @@ const routes = [
     name: 'HowToRequest',
     path: '/how-to-request',
     component: HowToRequest,
+  },
+  {
+    // Demo layout
+    path: '/demo',
+    component: Sketch,
+    props: { sketchId: 1 },
+    children: [
+      {
+        path: 'explore',
+        name: 'DemoExplore',
+        component: Canvas,
+        props: { sketchId: 1 },
+      },
+      {
+        path: 'devices',
+        name: 'DemoDevices',
+        component: Devices,
+        props: { sketchId: 1 },
+      },
+    ],
   },
   {
     name: 'Debug',
@@ -125,6 +149,47 @@ const router = new VueRouter({
   mode: 'hash',
   routes,
 });
+
+router.beforeEach(async (to, from, next) => {
+  const isDemoRoute = to.path.startsWith('/demo')
+  
+  if (isDemoRoute) {
+    if (!store.state.demoMode || DB.getActiveDatabase() !== 'demo') {
+      console.log('[Router] Entering demo mode via route:', to.path);
+      
+      const DemoController = require('@/demo/DemoController.js').default
+      if (from && from.name) {
+        DemoController.referrerRoute = from.path
+      }
+      
+      store.commit('SET_DEMO_MODE', true)
+      store.commit('SET_CURRENT_DB', 'demo')
+      DB.setActiveDatabase('demo')
+      
+      try {
+        await demoDatabaseLoader.initializeDemoDb()
+        await store.dispatch('updateSketch', 1)
+      } catch (e) {
+        console.error('[Router] Demo initialization failed:', e)
+      }
+    }
+    
+    // Auto-start demo state if visiting demo explore
+    if (to.name === 'DemoExplore') {
+      store.commit('SET_DEMO_IN_PROGRESS', true)
+      store.commit('SET_DEMO_STEP', 1)
+    }
+  } else {
+    if (store.state.demoMode || DB.getActiveDatabase() !== 'userdata') {
+      console.log('[Router] Leaving demo mode via route:', to.path);
+      store.commit('SET_DEMO_MODE', false)
+      store.commit('SET_CURRENT_DB', 'userdata')
+      DB.setActiveDatabase('userdata')
+      await store.dispatch('updateSketch', 1)
+    }
+  }
+  next()
+})
 
 router.afterEach((to, from) => {
   // Warmup Pyodide when user navigates to /explore

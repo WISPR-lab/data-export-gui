@@ -138,6 +138,9 @@ export default {
     },
     toggleTimeline(timeline) {
       this.$store.dispatch('toggleEnabledTimeline', timeline.id)
+      if (this.$store.state.demoMode) {
+        EventBus.$emit('demo:action', 'timeline-toggled')
+      }
     },
     toggleTheme() {
       this.isDarkTheme = !this.isDarkTheme
