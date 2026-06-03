@@ -101,3 +101,4 @@ AGENTS.md
 *.zip
 .gemini*
 TODO.md
+docs*

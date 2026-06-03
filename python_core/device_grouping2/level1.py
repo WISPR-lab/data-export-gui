@@ -11,49 +11,66 @@ Add edge for records that share a deterministic static ID like:
 import pandas as pd
 from utils.redaction_utils import compare_redacted_vals
 
-DETERMINISTIC_KEYS = {
-    "attr__device_id",
-    "attr__device_serial_number",
-    "attr__device_imei",
-    "attr__device_meid",
-    # we also merge on "attr__client_session_id", but with its own logic since this value is often partially redacted
-}
 
-IS_DETERMINISTIC_KEY = lambda k: any(k == dk or k.startswith(dk) for dk in DETERMINISTIC_KEYS)
-
-
-def level1(df: pd.DataFrame) -> None:
-    deterministic_cols = [df_col for df_col in df.columns if IS_DETERMINISTIC_KEY(df_col)] 
-    melted = df[['id'] + deterministic_cols].melt(
+def level1(df: pd.DataFrame) -> pd.DataFrame:
+    hardware_id_cols = [col for col in df.columns if col in 
+                        ("attr__device_id", "attr__device_serial_number", "attr__device_imei")]
+    melted_hw = df[['id'] + hardware_id_cols].melt(
         id_vars=['id'], 
-        value_vars=deterministic_cols
+        value_vars=hardware_id_cols,
     ).dropna()
 
-    edges = melted.merge(
-        melted,
-        on=['value'],
-        suffixes=('_a', '_b')
-    )
-    edges = edges[edges['id_a'] < edges['id_b']][['id_a', 'id_b']]
-    edges['reason'] = 'level1_static_id__hardware'
+    hardware_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type'])
+    if not melted_hw.empty:
+        merged = melted_hw.merge(
+            melted_hw,
+            on=['value'],
+            suffixes=('_a', '_b')
+        )
+        hardware_edges = merged[merged['id_a'] < merged['id_b']][['id_a', 'id_b']].copy()
+        hardware_edges['type'] = 'Hardware'
+
+
+    # some platforms provide device fingerprints that they've generated using their own APIs. it's not strictly deterministic, but i 
+    # imagine facebook is pretty darn good at this, so we consider them close enough for our purposes.
+
+    platform_fp_cols = [col for col in df.columns if col.startswith("attr__device_id")]
+    melted_fp = df[['id'] + platform_fp_cols].melt(
+        id_vars=['id'], 
+        value_vars=platform_fp_cols,
+    ).dropna()
+    platform_fp_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type'])
+    if not melted_fp.empty:
+        merged_fp = melted_fp.merge(
+            melted_fp,
+            on=['value'],
+            suffixes=('_a', '_b')
+        )
+        platform_fp_edges = merged_fp[merged_fp['id_a'] < merged_fp['id_b']][['id_a', 'id_b']].copy()
+        platform_fp_edges['type'] = 'PlatformFingerprint'
+
 
     # then handle session id separately
     # Meta includes session ID data, but it is sometimes redacted like "ABCD*****". 
     # We want to link records with the same non-redacted substring, provided there is enough entropy in that substring.
     # Given that lestrade only works with one person's data, we declare that unredaced substrings must share at least 4 characters.
     # This is (2*26)^4 = a lot, and probably more sessions than any one user would have.
-    # TODO --> could restrict to less than 1 year apart
     # See more in utils.redaction_utils
+    session_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type'])
     session_id_col = 'attr__client_session_id'
     if session_id_col in df.columns:
         s_df = df[['id', session_id_col]].dropna()
-        pairs = s_df.merge(s_df, how='cross', suffixes=('_a', '_b'))
-        pairs = pairs[pairs['id_a'] < pairs['id_b']]
-        matches = pairs.apply(
-            lambda r: compare_redacted_vals(r[f'{session_id_col}_a'], r[f'{session_id_col}_b']),
-            axis=1
-        )
-        edges = pd.concat([edges, pairs[matches][['id_a', 'id_b']]])
-        edges['reason'] = 'level1_static_id__sessionid'
+        if not s_df.empty:
+            pairs = s_df.merge(s_df, how='cross', suffixes=('_a', '_b'))
+            pairs = pairs[pairs['id_a'] < pairs['id_b']]
+            if not pairs.empty:
+                matches = pairs.apply(
+                    lambda r: compare_redacted_vals(r[f'{session_id_col}_a'], r[f'{session_id_col}_b']),
+                    axis=1
+                )
+                session_edges = pairs[matches][['id_a', 'id_b']].copy()
+                session_edges['type'] = 'Session'
 
+    # finally....
+    edges = pd.concat([hardware_edges, platform_fp_edges, session_edges], ignore_index=True)
     return edges.drop_duplicates()
