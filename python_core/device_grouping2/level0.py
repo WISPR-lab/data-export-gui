@@ -13,7 +13,7 @@ have device IDs alongside almost every event, but many are the same.
 
 def level0(conn: DatabaseSession, upload_id: str) -> pd.DataFrame:
     edges_query = '''
-        INSERT OR IGNORE INTO edges (id_a, id_b, type)
+        INSERT OR IGNORE INTO edges (id_a, id_b, type, provenance)
         WITH RankedEvents AS (
             SELECT 
                 id, 
@@ -25,7 +25,8 @@ def level0(conn: DatabaseSession, upload_id: str) -> pd.DataFrame:
         SELECT 
             id_a, 
             id AS id_b, 
-            'Deduplication' AS type
+            'Deduplication' AS type,
+            '{"reason": "identical event metadata"}' AS provenance
         FROM RankedEvents
         WHERE id != id_a;
     '''

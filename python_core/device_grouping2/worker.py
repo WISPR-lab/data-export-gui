@@ -5,8 +5,6 @@ from db_session import DatabaseSession
 from .level0 import level0 # deduplicate identical rows from events
 from .level1 import level1 # group on static IDs
 from .level2 import level2 # group on UA/OS upgrades
-from .level3 import level3 # group on class-level device models
-
 
 def _get_config_value(name):
     import builtins
@@ -35,26 +33,19 @@ def group(upload_id: str, db_path: str = None) -> None:
         # 2. Compute and insert Level 1 and Level 2 edges
         level1_edges = level1(df)
         conn.executemany(
-            'INSERT OR IGNORE INTO edges (id_a, id_b, type) VALUES (?, ?, ?)',
-            level1_edges[['id_a', 'id_b', 'type']].values.tolist()
+            'INSERT OR IGNORE INTO edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
+            level1_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
         )
         
         level2_edges = level2(df)
         conn.executemany(
-            'INSERT OR IGNORE INTO edges (id_a, id_b, type) VALUES (?, ?, ?)',
-            level2_edges[['id_a', 'id_b', 'type']].values.tolist()
+            'INSERT OR IGNORE INTO edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
+            level2_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
         )
 
         conn.commit()
 
-        # 3. Compute and insert Level 3 (Device Profiles / Class-Level merges) edges
-        level3_edges = level3(conn, upload_id)
-        conn.executemany(
-            'INSERT OR IGNORE INTO edges (id_a, id_b, type) VALUES (?, ?, ?)',
-            level3_edges[['id_a', 'id_b', 'type']].values.tolist()
-        )
-
-        conn.commit()
+        # 3. todo level 3....
 
 
 def _format_initial(dedup_events_df, devices_df):

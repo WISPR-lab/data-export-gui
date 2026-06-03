@@ -151,6 +151,7 @@ CREATE TABLE IF NOT EXISTS edges ( -- for device/event grouping
     id_a TEXT, 
     id_b TEXT,  -- dropped from main dataframe in level0
     type TEXT,
+    provenance TEXT,
     UNIQUE(id_a, id_b, type)
 );
 

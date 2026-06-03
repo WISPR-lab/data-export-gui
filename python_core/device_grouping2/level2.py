@@ -120,6 +120,7 @@ def _pass1(events_df: pd.DataFrame, max_days = MAX_PASS_1_DAYS) -> pd.DataFrame:
     # prune
     edges = edges[edges['id_a'] < edges['id_b']][['id_a', 'id_b']].drop_duplicates() 
     edges['type'] = 'ClientUpgrade'
+    edges['provenance'] = '{"upgrade_type": "Client/Browser version"}'
     return edges, df # not the original df, filtered and has new col
 
 
@@ -150,7 +151,7 @@ def _pass2(subgraph_df: pd.DataFrame, max_days=MAX_PASS_2_DAYS) -> pd.DataFrame:
     ) # df where every row is a pair of subgraphs (F and G) that match on hardware and software names
 
     if pairs.empty:
-        return pd.DataFrame(columns=['id_a', 'id_b', 'type']), pairs
+        return pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance']), pairs
 
     # rule (a) - whole F must be temporally before whole G, but  they can't differ by more than max_days 
     valid_time_sequence = (pairs['max_ts_F'] < pairs['min_ts_G'])
@@ -167,13 +168,13 @@ def _pass2(subgraph_df: pd.DataFrame, max_days=MAX_PASS_2_DAYS) -> pd.DataFrame:
     pairs = pairs[valid_os_upgrade] 
 
     if pairs.empty:
-        return pd.DataFrame(columns=['id_a', 'id_b', 'type']), pairs
+        return pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance']), pairs
 
-    # take the max node in F and min node in G (this is arbitrary) and add an edge. 
     edges = pairs[['last_node_id_F', 'first_node_id_G']].rename(
         columns={'last_node_id_F': 'id_a', 'first_node_id_G': 'id_b'}
     ).drop_duplicates()
     edges['type'] = 'OSUpgrade'
+    edges['provenance'] = '{"upgrade_type": "OS version"}'
     return edges, pairs # don't really need to return pairs, for debug
 
 
@@ -182,7 +183,7 @@ def _pass2(subgraph_df: pd.DataFrame, max_days=MAX_PASS_2_DAYS) -> pd.DataFrame:
 def level2(df: pd.DataFrame) -> pd.DataFrame:
     events_df = df[df['table'] == 'events']
     if events_df.empty:
-        return pd.DataFrame(columns=['id_a', 'id_b', 'type'])
+        return pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance'])
     pass1_edges, subgraph_df = _pass1(events_df)
     pass2_edges, _ = _pass2(subgraph_df)
     combined = pd.concat([pass1_edges, pass2_edges], ignore_index=True)

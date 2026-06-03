@@ -9,8 +9,8 @@ Add edge for records that share a deterministic static ID like:
 - session id (accounting for redaction, see below)
 """
 import pandas as pd
+import json
 from utils.redaction_utils import compare_redacted_vals
-
 
 def level1(df: pd.DataFrame) -> pd.DataFrame:
     hardware_id_cols = [col for col in df.columns if col in 
@@ -20,15 +20,20 @@ def level1(df: pd.DataFrame) -> pd.DataFrame:
         value_vars=hardware_id_cols,
     ).dropna()
 
-    hardware_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type'])
+    hardware_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance'])
     if not melted_hw.empty:
         merged = melted_hw.merge(
             melted_hw,
             on=['value'],
             suffixes=('_a', '_b')
         )
-        hardware_edges = merged[merged['id_a'] < merged['id_b']][['id_a', 'id_b']].copy()
-        hardware_edges['type'] = 'Hardware'
+        matched_pairs = merged[merged['id_a'] < merged['id_b']].copy()
+        if not matched_pairs.empty:
+            hardware_edges = matched_pairs[['id_a', 'id_b']].copy()
+            hardware_edges['type'] = 'Hardware'
+            hardware_edges['provenance'] = matched_pairs.apply(
+                lambda r: json.dumps({"matched on column": r['variable_a'], "value": r['value']}), axis=1
+            )
 
 
     # some platforms provide device fingerprints that they've generated using their own APIs. it's not strictly deterministic, but i 
@@ -39,15 +44,20 @@ def level1(df: pd.DataFrame) -> pd.DataFrame:
         id_vars=['id'], 
         value_vars=platform_fp_cols,
     ).dropna()
-    platform_fp_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type'])
+    platform_fp_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance'])
     if not melted_fp.empty:
         merged_fp = melted_fp.merge(
             melted_fp,
             on=['value'],
             suffixes=('_a', '_b')
         )
-        platform_fp_edges = merged_fp[merged_fp['id_a'] < merged_fp['id_b']][['id_a', 'id_b']].copy()
-        platform_fp_edges['type'] = 'PlatformFingerprint'
+        matched_fp_pairs = merged_fp[merged_fp['id_a'] < merged_fp['id_b']].copy()
+        if not matched_fp_pairs.empty:
+            platform_fp_edges = matched_fp_pairs[['id_a', 'id_b']].copy()
+            platform_fp_edges['type'] = 'PlatformFingerprint'
+            platform_fp_edges['provenance'] = matched_fp_pairs.apply(
+                lambda r: json.dumps({"matched on column": r['variable_a'], "value": r['value']}), axis=1
+            )
 
 
     # then handle session id separately
@@ -56,7 +66,7 @@ def level1(df: pd.DataFrame) -> pd.DataFrame:
     # Given that lestrade only works with one person's data, we declare that unredaced substrings must share at least 4 characters.
     # This is (2*26)^4 = a lot, and probably more sessions than any one user would have.
     # See more in utils.redaction_utils
-    session_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type'])
+    session_edges = pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance'])
     session_id_col = 'attr__client_session_id'
     if session_id_col in df.columns:
         s_df = df[['id', session_id_col]].dropna()
@@ -68,8 +78,17 @@ def level1(df: pd.DataFrame) -> pd.DataFrame:
                     lambda r: compare_redacted_vals(r[f'{session_id_col}_a'], r[f'{session_id_col}_b']),
                     axis=1
                 )
-                session_edges = pairs[matches][['id_a', 'id_b']].copy()
-                session_edges['type'] = 'Session'
+                matched_session_pairs = pairs[matches].copy()
+                if not matched_session_pairs.empty:
+                    session_edges = matched_session_pairs[['id_a', 'id_b']].copy()
+                    session_edges['type'] = 'Session'
+                    session_edges['provenance'] = matched_session_pairs.apply(
+                        lambda r: json.dumps({
+                            "matched on column": session_id_col,
+                            "value_a": r[f'{session_id_col}_a'],
+                            "value_b": r[f'{session_id_col}_b']
+                        }), axis=1
+                    )
 
     # finally....
     edges = pd.concat([hardware_edges, platform_fp_edges, session_edges], ignore_index=True)
