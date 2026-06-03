@@ -1,10 +1,13 @@
-import pandas as pd
+import uuid
+from datetime import datetime, timezone
 import json
+import pandas as pd
 
 from db_session import DatabaseSession
-from .level0 import level0 # deduplicate identical rows from events
-from .level1 import level1 # group on static IDs
-from .level2 import level2 # group on UA/OS upgrades
+from . import deterministic_ids
+from . import client_os_upgrades
+from .graph import DeviceInstanceGraph
+
 
 def _get_config_value(name):
     import builtins
@@ -15,54 +18,148 @@ def _get_config_value(name):
 
 def group(upload_id: str, db_path: str = None) -> None:
     db_path = db_path or _get_config_value('DB_PATH')
-    
     json_columns = ['attributes', 'origins', 'upload_ids', 'file_ids', 'devices_raw_ids', 'atomic_devices_ids', 'tags', 'labels']
+    
     with DatabaseSession(db_path, use_dict_factory=True, json_columns=json_columns) as conn:
-        
-        # 1. Intra-upload Event Deduplication (Level 0)
-        dedup_events_df = level0(conn, upload_id)
-        devices_df = pd.DataFrame(
-            conn.execute(
-                '''SELECT id, upload_id, attributes, origin 
-                   FROM devices_raw
-                   WHERE upload_id = ?''', (upload_id,)
-            ).fetchall()
-        )
-        df = _format_initial(dedup_events_df, devices_df)
-        
-        # 2. Compute and insert Level 1 and Level 2 edges
-        level1_edges = level1(df)
-        conn.executemany(
-            'INSERT OR IGNORE INTO edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
-            level1_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
-        )
-        
-        level2_edges = level2(df)
-        conn.executemany(
-            'INSERT OR IGNORE INTO edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
-            level2_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
-        )
+        events_df, devices_df = _deduplicate_and_fetch_inputs(conn, upload_id)
+        if events_df.empty and devices_df.empty:
+            return
 
+        df = DeviceInstanceGraph.format_initial(events_df, devices_df)
+        
+        identity_edges = deterministic_ids.get_edges(df)
+        if not identity_edges.empty:
+            conn.executemany(
+                'INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
+                identity_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
+            )
+        
+        upgrade_edges = client_os_upgrades.get_edges(df)
+        if not upgrade_edges.empty:
+            conn.executemany(
+                'INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
+                upgrade_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
+            )
+        conn.commit()
+        
+        instances = _build_device_instances(conn, df)
+        
+        ts = datetime.now(timezone.utc).timestamp()
+        _write_device_instances(conn, instances, ts)
+        
+        _write_device_profiles(conn, instances, ts)
+        
         conn.commit()
 
-        # 3. todo level 3....
 
-
-def _format_initial(dedup_events_df, devices_df):
-    if dedup_events_df.empty:
-        dedup_events_df = pd.DataFrame(columns=['id', 'upload_id', 'attributes', 'origin', 'timestamp'])
-    dedup_events_df['table'] = 'events'
-    dedup_events_df['timestamp'] = pd.to_datetime(dedup_events_df['timestamp'], errors='coerce')
-    
-    if devices_df.empty:
-        devices_df = pd.DataFrame(columns=['id', 'upload_id', 'attributes', 'origin'])
-    devices_df['table'] = 'devices_raw'
-    
-    df = pd.concat([devices_df, dedup_events_df], ignore_index=True)
-    if df.empty:
-        return pd.DataFrame(columns=['id', 'upload_id', 'origin', 'table'])
-        
-    parsed_json = df['attributes'].apply(lambda x: json.loads(x) if (isinstance(x, str) and x) else (x if isinstance(x, dict) else {}))
-    return df.drop(columns=['attributes']).join(
-        pd.json_normalize(parsed_json).add_prefix('attr__')
+def _deduplicate_and_fetch_inputs(conn, upload_id: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    conn.execute(
+        '''INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance)
+           WITH Ranked AS (
+               SELECT id, MIN(id) OVER(PARTITION BY attributes, timestamp) as id_a
+               FROM events WHERE upload_id = ? AND treat_as_auth_device = 1
+           )
+           SELECT id_a, id, 'Deduplication', '{"reason": "identical event metadata"}'
+           FROM Ranked WHERE id != id_a;''', (upload_id,)
     )
+    conn.commit()
+
+    events_rows = conn.execute(
+        '''SELECT id, upload_id, attributes, origin, timestamp, treat_as_auth_device
+           FROM events
+           WHERE upload_id = ?
+           AND id IN (
+               SELECT MIN(id)
+               FROM events
+               WHERE upload_id = ?
+               GROUP BY 
+                   CASE WHEN treat_as_auth_device = 1 THEN attributes ELSE id END,
+                   CASE WHEN treat_as_auth_device = 1 THEN timestamp ELSE id END
+           )''',
+        (upload_id, upload_id)
+    ).fetchall()
+
+    devices_rows = conn.execute(
+        'SELECT id, upload_id, attributes, origin FROM devices_raw WHERE upload_id = ?',
+        (upload_id,)
+    ).fetchall()
+
+    return pd.DataFrame(events_rows), pd.DataFrame(devices_rows)
+
+
+def _build_device_instances(conn, df: pd.DataFrame) -> list:
+    vertex_ids = df['id'].tolist()
+    placeholders = ','.join('?' for _ in vertex_ids)
+    
+    edges_rows = conn.execute(
+        f'''SELECT id_a, id_b, type FROM device_instance_edges 
+            WHERE id_a IN ({placeholders}) OR id_b IN ({placeholders})''',
+        vertex_ids + vertex_ids
+    ).fetchall()
+    
+    graph = DeviceInstanceGraph(df, pd.DataFrame(edges_rows))
+    return graph.get_instances()
+
+
+def _write_device_instances(conn, instances: list, ts: float) -> None:
+    instance_ids = [inst.root_id for inst in instances]
+    if not instance_ids:
+        return
+        
+    inst_placeholders = ','.join('?' for _ in instance_ids)
+    conn.execute(f'DELETE FROM device_instances WHERE id IN ({inst_placeholders})', instance_ids)
+
+    for inst in instances:
+        export_data = inst.export_as_dict()
+        export_data['created_at'] = ts
+        for list_col in ['os_versions', 'client_versions', 'ip_addresses', 'locations']:
+            export_data[list_col] = json.dumps(export_data[list_col])
+        
+        conn.execute(
+            '''INSERT INTO device_instances 
+               (id, upload_id, platform, manufacturer, model, client_name, apple_masking, 
+                first_seen, last_seen, event_count, latest_os_version, latest_client_version, 
+                latest_ip_address, os_versions, client_versions, ip_addresses, locations, created_at)
+               VALUES (:id, :upload_id, :platform, :manufacturer, :model, :client_name, :apple_masking, 
+                       :first_seen, :last_seen, :event_count, :latest_os_version, :latest_client_version, 
+                       :latest_ip_address, :os_versions, :client_versions, :ip_addresses, :locations, :created_at)''',
+            export_data
+        )
+
+        events_mapping = [(inst.root_id, vid) for vid in inst.df[inst.df['table'] == 'events']['id']]
+        if events_mapping:
+            conn.executemany(
+                'INSERT OR IGNORE INTO device_instance_events (device_instance_id, event_id) VALUES (?, ?)',
+                events_mapping
+            )
+
+        devices_mapping = [(inst.root_id, vid) for vid in inst.df[inst.df['table'] == 'devices_raw']['id']]
+        if devices_mapping:
+            conn.executemany(
+                'INSERT OR IGNORE INTO device_instance_raw_devices (device_instance_id, devices_raw_id) VALUES (?, ?)',
+                devices_mapping
+            )
+
+
+def _write_device_profiles(conn, instances: list, ts: float) -> None:
+    rows = conn.execute("SELECT id, manufacturer, model FROM device_profiles_v2").fetchall()
+    existing_profiles = {
+        (r['manufacturer'].lower() if r['manufacturer'] else '', 
+         r['model'].lower() if r['model'] else ''): r['id']
+        for r in rows
+    }
+    
+    device_profiles_v2_rows, device_profile_instances_rows = DeviceInstanceGraph.calculate_profile_updates(instances, existing_profiles, ts)
+    
+    if device_profiles_v2_rows:
+        conn.executemany(
+            '''INSERT INTO device_profiles_v2 (id, manufacturer, model, created_at, updated_at) 
+               VALUES (:id, :manufacturer, :model, :created_at, :updated_at)''',
+            device_profiles_v2_rows
+        )
+    if device_profile_instances_rows:
+        conn.executemany(
+            '''INSERT OR IGNORE INTO device_profile_instances (device_profile_id, device_instance_id) 
+               VALUES (:device_profile_id, :device_instance_id)''',
+            device_profile_instances_rows
+        )

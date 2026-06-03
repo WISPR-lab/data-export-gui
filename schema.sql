@@ -147,12 +147,73 @@ CREATE TABLE IF NOT EXISTS event_assoc (
 
 
 
-CREATE TABLE IF NOT EXISTS edges ( -- for device/event grouping
+CREATE TABLE IF NOT EXISTS device_instance_edges ( -- for device/event grouping
     id_a TEXT, 
     id_b TEXT,  -- dropped from main dataframe in level0
     type TEXT,
     provenance TEXT,
     UNIQUE(id_a, id_b, type)
+);
+
+CREATE TABLE IF NOT EXISTS device_instances (
+    id TEXT PRIMARY KEY,
+    upload_id TEXT,
+    --
+    platform TEXT,
+    manufacturer TEXT,
+    model TEXT,
+    client_name TEXT,
+    --
+    apple_masking TEXT,
+    first_seen REAL,
+    last_seen REAL,
+    event_count INTEGER,
+    latest_os_version TEXT,            
+    latest_client_version TEXT,        
+    latest_ip_address TEXT, 
+    --           
+    os_versions TEXT,    -- TODO jsonstring????               
+    client_versions TEXT,         -- -- TODO jsonstring????              
+    ip_addresses TEXT,                 -- -- TODO jsonstring????         
+    locations TEXT,  -- -- TODO jsonstring????         
+    --                  
+    created_at REAL,
+    --
+    FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS device_instance_events (
+    device_instance_id TEXT,
+    event_id TEXT,
+    PRIMARY KEY (device_instance_id, event_id),
+    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE,
+    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS device_instance_raw_devices (
+    device_instance_id TEXT,
+    devices_raw_id TEXT,
+    PRIMARY KEY (device_instance_id, devices_raw_id),
+    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE,
+    FOREIGN KEY(devices_raw_id) REFERENCES devices_raw(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS device_profiles_v2 (
+    id TEXT PRIMARY KEY,
+    model TEXT,
+    manufacturer TEXT,
+    user_label TEXT,
+    notes TEXT,
+    created_at REAL,
+    updated_at REAL
+);
+
+CREATE TABLE IF NOT EXISTS device_profile_instances (
+    device_profile_id TEXT,
+    device_instance_id TEXT,
+    PRIMARY KEY (device_profile_id, device_instance_id),
+    FOREIGN KEY(device_profile_id) REFERENCES device_profiles_v2(id) ON DELETE CASCADE,
+    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE
 );
 
 
@@ -250,5 +311,7 @@ FROM event_assoc ea
 JOIN device_profiles dp ON 1=1
 JOIN json_each(dp.atomic_devices_ids) as j ON j.value = ea.atomic_device_id
 GROUP BY ea.event_id;
+
+
 
 

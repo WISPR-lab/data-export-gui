@@ -6,9 +6,9 @@ from db_session import DatabaseSession
 from device_grouping2.worker import group
 
 class TestDeviceGrouping2:
-    """Test device_grouping2.worker.group() incremental edge insertion."""
+    """Test device_grouping2 pipeline and its DB outputs."""
 
-    def test_group_edges_creation(self, test_db_path):
+    def test_group_pipeline_outputs(self, test_db_path):
         upload_id = 'test-grouping2-' + str(uuid.uuid4())
         schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'schema.sql')
         
@@ -24,7 +24,7 @@ class TestDeviceGrouping2:
                 (file_id, upload_id, 'test_file.json')
             )
             
-            # 1. Level 0: Add two identical events to trigger Deduplication
+            # 1. Level 0: Deduplication events
             attrs_dup = {
                 'norm__manufacturer': 'Apple',
                 'norm__model_name': 'iPhone 13',
@@ -43,7 +43,7 @@ class TestDeviceGrouping2:
                 ('ev-dup-2', upload_id, json.dumps([file_id]), 1700000000.0, json.dumps(attrs_dup))
             )
             
-            # 2. Level 1: Add two events sharing same hardware serial to trigger Hardware match
+            # 2. Level 1: Hardware serial match events (same serial)
             attrs_hw = {
                 'norm__manufacturer': 'Apple',
                 'norm__model_name': 'iPhone 13',
@@ -61,9 +61,9 @@ class TestDeviceGrouping2:
                 'INSERT INTO events (id, upload_id, file_ids, timestamp, attributes, treat_as_auth_device) VALUES (?, ?, ?, ?, ?, 1)',
                 ('ev-hw-2', upload_id, json.dumps([file_id]), 1700020000.0, json.dumps(attrs_hw))
             )
-
-            # 3. Level 3: Add two events of same model but different hardware serials to trigger DeviceModel profile grouping
-            attrs_prof1 = {
+            
+            # 3. Different model events to create a second profile
+            attrs_prof = {
                 'norm__manufacturer': 'Samsung',
                 'norm__model_name': 'Galaxy S22',
                 'norm__os_name': 'Android',
@@ -72,35 +72,38 @@ class TestDeviceGrouping2:
                 'norm__os_version': '12.0',
                 'device_serial_number': 'SN-PROF1',
             }
-            attrs_prof2 = {
-                'norm__manufacturer': 'Samsung',
-                'norm__model_name': 'Galaxy S22',
-                'norm__os_name': 'Android',
-                'norm__client_name': 'Chrome',
-                'norm__client_version': '100.0',
-                'norm__os_version': '12.0',
-                'device_serial_number': 'SN-PROF2',
-            }
             conn.execute(
                 'INSERT INTO events (id, upload_id, file_ids, timestamp, attributes, treat_as_auth_device) VALUES (?, ?, ?, ?, ?, 1)',
-                ('ev-prof-1', upload_id, json.dumps([file_id]), 1700030000.0, json.dumps(attrs_prof1))
-            )
-            conn.execute(
-                'INSERT INTO events (id, upload_id, file_ids, timestamp, attributes, treat_as_auth_device) VALUES (?, ?, ?, ?, ?, 1)',
-                ('ev-prof-2', upload_id, json.dumps([file_id]), 1700040000.0, json.dumps(attrs_prof2))
+                ('ev-prof-1', upload_id, json.dumps([file_id]), 1700030000.0, json.dumps(attrs_prof))
             )
 
             conn.commit()
 
-        # Run the new grouping worker
+        # Run the grouping pipeline
         group(upload_id, db_path=test_db_path)
 
-        # Assert edges are populated correctly
+        # Validate outputs in SQLite
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
-            edges = conn.execute('SELECT * FROM edges').fetchall()
-            assert len(edges) >= 3, f"Should have created edges, got {edges}"
-            
-            types = {e['type'] for e in edges}
-            assert 'Deduplication' in types, f"Expected Deduplication in types: {types}"
-            assert 'Hardware' in types, f"Expected Hardware in types: {types}"
-            assert 'DeviceModel' in types, f"Expected DeviceModel in types: {types}"
+            # Check edge tables (Deduplication and Hardware matching)
+            edges = conn.execute('SELECT * FROM device_instance_edges').fetchall()
+            assert len(edges) >= 2
+            edge_types = {e['type'] for e in edges}
+            assert 'Deduplication' in edge_types
+            assert 'Hardware' in edge_types
+
+            # Verify device_instances are created
+            instances = conn.execute('SELECT * FROM device_instances').fetchall()
+            assert len(instances) >= 2
+            inst_ids = {i['id'] for i in instances}
+
+            # Verify mapping tables are populated
+            inst_events = conn.execute('SELECT * FROM device_instance_events').fetchall()
+            assert len(inst_events) >= 3 # ev-dup-1 (representative), ev-hw-1 & ev-hw-2 (merged), ev-prof-1
+
+            # Verify profiles are populated
+            profiles = conn.execute('SELECT * FROM device_profiles_v2').fetchall()
+            assert len(profiles) >= 2 # Apple iPhone 13, and Samsung Galaxy S22
+
+            # Check profile instances links
+            prof_insts = conn.execute('SELECT * FROM device_profile_instances').fetchall()
+            assert len(prof_insts) >= 2
