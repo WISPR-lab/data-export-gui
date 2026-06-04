@@ -77,12 +77,15 @@ def _pass1_client(events_df: pd.DataFrame, max_days = MAX_DAYS_CLIENT_DIFF) -> t
         'attr__norm__client_name'
     ]
     
-    # Check if all required columns are present in events_df
-    for key in group_keys + ['timestamp', 'attr__norm__client_version']:
-        if key not in events_df.columns:
-            return pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance']), events_df
-
     df = events_df.copy()
+    # Check/initialize required columns defensively
+    if 'timestamp' not in df.columns:
+        return pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance']), df
+        
+    for col in group_keys + ['attr__norm__client_version']:
+        if col not in df.columns:
+            df[col] = None
+
     df = df.dropna(subset=group_keys + ['timestamp'])
     df = df.sort_values(by=group_keys + ['timestamp'])
 
@@ -90,7 +93,7 @@ def _pass1_client(events_df: pd.DataFrame, max_days = MAX_DAYS_CLIENT_DIFF) -> t
         return pd.DataFrame(columns=['id_a', 'id_b', 'type', 'provenance']), df
 
     exceeds_max_time = (df['timestamp'].diff().dt.days > max_days).tolist()
-    no_id_match = df[group_keys].ne(df[group_keys].shift()).any(axis=1).tolist()
+    no_id_match = df[group_keys].fillna("").ne(df[group_keys].fillna("").shift()).any(axis=1).tolist()
 
     client_versions = df['attr__norm__client_version'].tolist()
     client_version_downgraded = [False] * len(client_versions) 
@@ -105,7 +108,7 @@ def _pass1_client(events_df: pd.DataFrame, max_days = MAX_DAYS_CLIENT_DIFF) -> t
         for a, b, c in zip(exceeds_max_time, no_id_match, client_version_downgraded)
     ]
     
-    df['subgraph_id'] = pd.Series(subgraph_boundaries, index=df.index).cumsum()
+    df['subgraph_id'] = pd.Series(subgraph_boundaries, index=df.index).cumsum().values
 
     edges = df[['id', 'subgraph_id']].merge(
         df[['id', 'subgraph_id']], 

@@ -169,6 +169,7 @@ CREATE TABLE IF NOT EXISTS device_instances (
     apple_masking TEXT,
     first_seen REAL,
     last_seen REAL,
+    last_seen_dt TEXT,
     event_count INTEGER,
     latest_os_version TEXT,            
     latest_client_version TEXT,        

@@ -119,10 +119,10 @@ def _write_device_instances(conn, instances: list, ts: float) -> None:
         conn.execute(
             '''INSERT INTO device_instances 
                (id, upload_id, platform, manufacturer, model, client_name, os_name, os_type, apple_masking, 
-                first_seen, last_seen, event_count, latest_os_version, latest_client_version, 
+                first_seen, last_seen, last_seen_dt, event_count, latest_os_version, latest_client_version, 
                 latest_ip_address, os_versions, client_versions, ip_addresses, locations, created_at)
                VALUES (:id, :upload_id, :platform, :manufacturer, :model, :client_name, :os_name, :os_type, :apple_masking, 
-                       :first_seen, :last_seen, :event_count, :latest_os_version, :latest_client_version, 
+                       :first_seen, :last_seen, :last_seen_dt, :event_count, :latest_os_version, :latest_client_version, 
                        :latest_ip_address, :os_versions, :client_versions, :ip_addresses, :locations, :created_at)''',
             export_data
         )

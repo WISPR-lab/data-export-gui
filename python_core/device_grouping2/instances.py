@@ -31,6 +31,7 @@
 import json
 import uuid
 import pandas as pd
+from datetime import datetime, timezone
 from typing import List, Optional
 
 
@@ -112,6 +113,7 @@ class DeviceInstance:
             'apple_masking': self.apple_masking,
             'first_seen': self.first_seen,
             'last_seen': self.last_seen,
+            'last_seen_dt': datetime.fromtimestamp(self.last_seen, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S Z') if self.last_seen else None,
             'event_count': self.event_count,
             'latest_os_version': self.os_versions[-1] if self.os_versions else None,
             'latest_client_version': self.client_versions[-1] if self.client_versions else None,
@@ -175,7 +177,7 @@ class DeviceInstanceGraph:
         if events_df.empty:
             events_df = pd.DataFrame(columns=['id', 'upload_id', 'attributes', 'origin', 'timestamp'])
         events_df['table'] = 'events'
-        events_df['timestamp'] = pd.to_datetime(events_df['timestamp'], errors='coerce')
+        events_df['timestamp'] = pd.to_datetime(events_df['timestamp'], unit='ms', errors='coerce')
         
         if devices_df.empty:
             devices_df = pd.DataFrame(columns=['id', 'upload_id', 'attributes', 'origin'])
