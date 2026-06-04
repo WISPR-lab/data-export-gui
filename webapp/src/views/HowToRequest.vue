@@ -89,7 +89,7 @@
 <script>
 import PageHeader from '../components/Navigation/PageHeader.vue'
 import { marked } from 'marked'
-import { instructionRegistry } from '@/data/request_instructions'
+import { instructionRegistry } from '@/constants/request_instructions'
 
 export default {
   name: 'HowToRequest',
