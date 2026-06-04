@@ -51,6 +51,8 @@ class DeviceInstance:
         self.manufacturer = self._find_best_attribute('attr__norm__manufacturer')
         self.model = self._find_best_attribute('attr__norm__model_name')
         self.client_name = self._find_best_attribute('attr__norm__client_name')
+        self.os_name = self._find_best_attribute('attr__norm__os_name')
+        self.os_type = self._find_best_attribute('attr__norm__os_type')
 
         self.apple_masking = self._evaluate_apple_masking()
 
@@ -105,6 +107,8 @@ class DeviceInstance:
             'manufacturer': self.manufacturer,
             'model': self.model,
             'client_name': self.client_name,
+            'os_name': self.os_name,
+            'os_type': self.os_type,
             'apple_masking': self.apple_masking,
             'first_seen': self.first_seen,
             'last_seen': self.last_seen,

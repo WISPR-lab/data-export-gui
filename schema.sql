@@ -163,6 +163,8 @@ CREATE TABLE IF NOT EXISTS device_instances (
     manufacturer TEXT,
     model TEXT,
     client_name TEXT,
+    os_name TEXT,
+    os_type TEXT,
     --
     apple_masking TEXT,
     first_seen REAL,
@@ -202,6 +204,7 @@ CREATE TABLE IF NOT EXISTS device_profiles_v2 (
     id TEXT PRIMARY KEY,
     model TEXT,
     manufacturer TEXT,
+    os_type TEXT,
     user_label TEXT,
     notes TEXT,
     created_at REAL,
