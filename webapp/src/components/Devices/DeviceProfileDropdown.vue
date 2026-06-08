@@ -65,10 +65,10 @@
     <div v-if="device.instances && device.instances.length > 0" class="mb-6">
       <div class="overline mb-3">Device Instances ({{ device.instances.length }})</div>
       <div class="space-y-2" style="display: flex; flex-direction: column; gap: 12px;">
-        <AtomicDeviceRecord
+        <DeviceInstance
           v-for="inst in device.instances"
           :key="inst.id"
-          :atomic="inst"
+          :instance="inst"
           @showJSON="$emit('showJSON', $event)"
           @unmerge="$emit('unmerge', $event)"
         />
@@ -86,13 +86,13 @@
 </template>
 
 <script>
-import AtomicDeviceRecord from './AtomicDeviceRecord.vue';
+import DeviceInstance from './DeviceInstance.vue';
 import { getProfileAttributes } from '@/database/queries/devices_v2.js';
 
 export default {
-  name: 'DeviceDetailDropdown',
+  name: 'DeviceProfileDropdown',
   components: {
-    AtomicDeviceRecord
+    DeviceInstance
   },
   props: {
     device: {

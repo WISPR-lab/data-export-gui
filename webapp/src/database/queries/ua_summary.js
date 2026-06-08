@@ -22,9 +22,24 @@
  * 
  */
 
-import capitalizeObj from '../../filters/Capitalize.js';
-const capitalize = capitalizeObj.filter;
 
+const IRREGULAR_CAPS = {
+  webview: 'WebView',  // "Webview" is wrong
+  whatsapp: 'WhatsApp', // "Whatsapp" is wrong
+  youtube: 'YouTube',   // "Youtube" is wrong
+  ios: 'iOS',           // "Ios" is wrong
+  macos: 'macOS',       // "Macos" is wrong
+};
+function titleCase(str) {
+  if (!str) return '';
+  return str
+    .split(/\s+/)
+    .map(word => {
+      const lower = word.toLowerCase();
+      return IRREGULAR_CAPS[lower] !== undefined ? IRREGULAR_CAPS[lower] : (word.charAt(0).toUpperCase() + word.slice(1));
+    })
+    .join(' ');
+}
 
 function isBrowserName(name) {
   if (!name) return false;
@@ -33,13 +48,11 @@ function isBrowserName(name) {
 }
 
 function getCleanBrowserName(primary) {
-  const clean = capitalize(primary);
+  const clean = titleCase(primary);
   return clean.includes('WebView') ? 'WebView' : clean.replace(/Mobile\s*/gi, '').trim();
 }
 
-/**
- * Helper to ensure a service name does not end up with double "App" suffixing
- */
+// Helper to ensure a service name does not end up with double "App" suffixing
 function formatAppService(serviceName) {
   const lower = serviceName.toLowerCase();
   const hasAppSuffix = lower.endsWith('app') || lower.includes('for ios') || lower.includes('for android') || lower.includes('for mobile');
@@ -68,8 +81,8 @@ export function getUASummary(deviceInstances) {
     const osType = (instance.os_type || '').toLowerCase();
     const isMobile = ['ios', 'android'].includes(osType);
 
-    const cleanPrimary = capitalize(primary);
-    const cleanSecondary = capitalize(secondary);
+    const cleanPrimary = titleCase(primary);
+    const cleanSecondary = titleCase(secondary);
     const primaryIsBrowser = isBrowserName(cleanPrimary);
     
     const cleanBrowser = getCleanBrowserName(cleanPrimary);
@@ -79,32 +92,27 @@ export function getUASummary(deviceInstances) {
     let label1 = '';
     let label2 = '';
 
-    // ----------------------------------------------------
-    // ROUTING TO THE 6 DISTINCT SCENARIOS
-    // ----------------------------------------------------
-
     if (isMobile) {
       if (!primaryIsBrowser) {
         // 1 -- native mobile app
         // "gmail" + ios --> "Gmail App"
         // "google maps" + android --> "Google Maps App"
-        const service = platform === 'google' ? (cleanSecondary || cleanPrimary) : capitalize(platform);
+        const service = platform === 'google' ? (cleanSecondary || cleanPrimary) : titleCase(platform);
         label1 = formatAppService(service);
         label2 = '';
-
       } else if (primaryIsBrowser && secondary) {
         // 2 -- mobile in-app webview
         // "mobile safari :: gmail" + ios --> "Gmail App" (Safari WebView)
         // TODO example with facebook? look at existing UAs
         // i guess we don't know how this works with browsing in chrome. other signature?
-        const service = platform === 'google' ? cleanSecondary : capitalize(platform);
+        const service = platform === 'google' ? cleanSecondary : titleCase(platform);
         label1 = formatAppService(service);
         label2 = webViewRepr;
 
       } else {
         // 3 -- mobile web browsing
         // "mobile safari" + ios + google --> "Google (Safari)"
-        label1 = platform === 'google' ? 'Google' : capitalize(platform);
+        label1 = platform === 'google' ? 'Google' : titleCase(platform);
         label2 = cleanBrowser;
       }
     } else {
@@ -117,28 +125,26 @@ export function getUASummary(deviceInstances) {
         // 5 -- desktop in-app webview
         // "chrome :: gmail" + macos --> "Gmail (Chrome)"
         // "chrome :: slack" + macos --> "Slack (Chrome)"
-        label1 = platform === 'google' ? cleanSecondary : capitalize(platform);
+        label1 = platform === 'google' ? cleanSecondary : titleCase(platform);
         label2 = cleanBrowser;
       } else {
         // 6 -- desktop web browsing
         // "chrome" + macos + google --> "Google (Chrome)"
-        label1 = platform === 'google' ? 'Google' : capitalize(platform);
+        label1 = platform === 'google' ? 'Google' : titleCase(platform);
         label2 = cleanBrowser;
       }
     }
 
-    const unknown_ = false;
     const lower_label1 = label1.toLowerCase().trim();
-    if (!lower_label1 || lower_label1 === 'unknown' || lower_label1 === 'unknown client' || lower_label1.includes('gglunknown')) {
-      primary = capitalize(platform);
-      unknown_ = true;
+    const isUnknown = !lower_label1 || lower_label1 === 'unknown' || lower_label1 === 'unknown client' || lower_label1.includes('gglunknown');
+    if (isUnknown) {
+      return; // skip unclassifiable instances — no chip emitted
     }
 
     const color = instance.upload_color;
     const key = `${label1}-${label2}-${color}`;
     if (!uniqueSummaryItems[key]) {
       uniqueSummaryItems[key] = {
-        unknown: unknown_,
         primary: label1,
         secondary: label2,
         color

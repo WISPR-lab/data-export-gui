@@ -1,12 +1,12 @@
 // added for WISPR-lab/data-export-gui
 <template>
   <v-card outlined class="pa-4 d-flex align-center" style="gap: 16px; background-color: white;">
-    <!-- UA summary chip — same style as DeviceHeader origin chips -->
+    <!-- UA summary chip — same style as DeviceProfileHeader chips -->
     <div class="d-flex flex-wrap align-center" style="gap: 4px; flex: 0 0 auto;">
-      <OriginChip v-if="atomic.ua_summary" :summary="atomic.ua_summary" />
+      <UASummaryChip v-if="instance.ua_summary" :summary="instance.ua_summary" />
       <v-chip v-else small>
-        <v-icon :color="atomic.upload_color || '#5E75C2'" left small>mdi-circle</v-icon>
-        {{ (atomic.platform || 'Unknown').toUpperCase() }}
+        <v-icon :color="instance.upload_color || '#5E75C2'" left small>mdi-circle</v-icon>
+        {{ (instance.platform || 'Unknown').toUpperCase() }}
       </v-chip>
     </div>
 
@@ -14,14 +14,14 @@
     <div class="flex-grow-1 text-truncate">
       <div class="body-2 font-weight-bold">{{ getClientLabel | formatDeviceDetails }}</div>
       <div class="caption grey--text text--darken-2">
-        OS: {{ getOSLabel | formatDeviceDetails }} &bull; {{ getTimelineString }} &bull; {{ atomic.event_count || 0 }} events
+        OS: {{ getOSLabel | formatDeviceDetails }} &bull; {{ getTimelineString }} &bull; {{ instance.event_count || 0 }} events
       </div>
     </div>
 
     <!-- Actions -->
     <div class="d-flex align-center" style="gap: 8px;">
       <v-btn
-        v-if="atomic.event_count > 0"
+        v-if="instance.event_count > 0"
         text
         small
         color="primary"
@@ -39,7 +39,7 @@
             v-on="on"
             icon
             medium
-            @click.stop="$emit('showJSON', atomic)"
+            @click.stop="$emit('showJSON', instance)"
             title="View raw data"
           >
             <v-icon>mdi-code-braces</v-icon>
@@ -55,7 +55,7 @@
             v-on="on"
             icon
             medium
-            @click="$emit('unmerge', atomic.id)"
+            @click="$emit('unmerge', instance.id)"
             title="Unlink record from profile"
           >
             <v-icon>mdi-link-off</v-icon>
@@ -68,42 +68,42 @@
 </template>
 
 <script>
-import OriginChip from './OriginChip.vue';
+import UASummaryChip from './UASummaryChip.vue';
 
 export default {
-  name: 'AtomicDeviceRecord',
-  components: { OriginChip },
+  name: 'DeviceInstance',
+  components: { UASummaryChip },
   props: {
-    atomic: {
+    instance: {
       type: Object,
       required: true
     }
   },
   computed: {
     getClientLabel() {
-      const name = this.atomic.client_name || 'Unknown Client';
-      if (this.atomic.latest_client_version) {
-        return `${name} (v${this.atomic.latest_client_version})`;
+      const name = this.instance.client_name || 'Unknown Client';
+      if (this.instance.latest_client_version) {
+        return `${name} (v${this.instance.latest_client_version})`;
       }
       return name;
     },
     getOSLabel() {
-      const os = this.atomic.os_type || this.atomic.os_name || 'Unknown OS';
-      if (this.atomic.latest_os_version) {
-        return `${os.toUpperCase()} ${this.atomic.latest_os_version}`;
+      const os = this.instance.os_type || this.instance.os_name || 'Unknown OS';
+      if (this.instance.latest_os_version) {
+        return `${os.toUpperCase()} ${this.instance.latest_os_version}`;
       }
       return os.toUpperCase();
     },
     getTimelineString() {
-      if (!this.atomic.first_seen || !this.atomic.last_seen) return '';
-      const start = new Date(this.atomic.first_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-      const end = new Date(this.atomic.last_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      if (!this.instance.first_seen || !this.instance.last_seen) return '';
+      const start = new Date(this.instance.first_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      const end = new Date(this.instance.last_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       return start === end ? start : `${start} – ${end}`;
     }
   },
   methods: {
     goToExplore() {
-      const queryString = `device_instance_id:${this.atomic.id}`;
+      const queryString = `device_instance_id:${this.instance.id}`;
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore';
       this.$router.push({
         name: routeName,

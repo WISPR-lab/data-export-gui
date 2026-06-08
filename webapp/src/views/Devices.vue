@@ -48,12 +48,12 @@
       >
         <v-expansion-panel-header class="pa-4" @click="onDeviceExpand">
           <template v-slot:default="{ open }">
-            <device-header :device="dev" :open="open" @showJSON="showDeviceJSON" />
+            <device-profile-header :device="dev" :open="open" @showJSON="showDeviceJSON" />
           </template>
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" @unmerge="handleUnmerge(dev, $event)" @showJSON="showDeviceJSON" />
+          <device-profile-dropdown :device="dev" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" @unmerge="handleUnmerge(dev, $event)" @showJSON="showDeviceJSON" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -81,12 +81,12 @@
         >
           <v-expansion-panel-header class="pa-4">
             <template v-slot:default="{ open }">
-              <device-header :device="item" is-generic :open="open" @showJSON="showDeviceJSON" />
+              <device-profile-header :device="item" is-generic :open="open" @showJSON="showDeviceJSON" />
             </template>
           </v-expansion-panel-header>
 
           <v-expansion-panel-content class="grey lighten-5 border-top">
-            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" @see-all-events="goToExplore(item)" @unmerge="handleUnmerge(item, $event)" @showJSON="showDeviceJSON" />
+            <device-profile-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" @see-all-events="goToExplore(item)" @unmerge="handleUnmerge(item, $event)" @showJSON="showDeviceJSON" />
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
@@ -117,8 +117,8 @@
 </template>
 
 <script>
-import DeviceDetailDropdown from '@/components/Devices/DeviceDetailDropdown.vue';
-import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
+import DeviceProfileDropdown from '@/components/Devices/DeviceProfileDropdown.vue';
+import DeviceProfileHeader from '@/components/Devices/DeviceProfileHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
 import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
 import JSONModal from '@/components/Devices/JSONModal.vue';
@@ -128,8 +128,8 @@ import { callPyodideWorker } from '@/pyodide/pyodide-client';
 export default {
   name: 'Devices',
   components: {
-    DeviceDetailDropdown,
-    DeviceHeader,
+    DeviceProfileDropdown,
+    DeviceProfileHeader,
     DeviceGroupModal,
     DeviceDetectionHelpModal,
     'json-modal': JSONModal

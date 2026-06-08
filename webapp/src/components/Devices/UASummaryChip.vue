@@ -7,7 +7,7 @@
 
 <script>
 export default {
-  name: 'OriginChip',
+  name: 'UASummaryChip',
   props: {
     /**
      * A ua_summary dict: { primary: String, secondary: String, color: String }
