@@ -1,3 +1,4 @@
+// added for WISPR-lab/data-export-gui
 <template>
   <v-container class="pa-6 white min-h-100" style="max-width: 900px;">
     <!-- Demo completion modal -->
@@ -121,7 +122,7 @@ import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
 import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
 import JSONModal from '@/components/Devices/JSONModal.vue';
-import { getDevices, updateDeviceGroup } from '@/database/queries/devices.js';
+import { getDevices, updateDeviceProfile, getInstanceAttributes } from '@/database/queries/devices_v2.js';
 import { callPyodideWorker } from '@/pyodide/pyodide-client';
 
 export default {
@@ -192,7 +193,7 @@ export default {
     },
     async saveDeviceChanges(device) {
       try {
-        await updateDeviceGroup(device.id, {
+        await updateDeviceProfile(device.id, {
           user_label: device.user_label,
           notes: device.notes
         });
@@ -217,9 +218,19 @@ export default {
         console.error('Unmerge error:', error);
       }
     },
-    showDeviceJSON(data) {
-      this.selectedDeviceForJSON = data.attributes || data
-      this.showJSONModal = true
+    async showDeviceJSON(data) {
+      if (data && data.id && !data.instances) {
+        try {
+          const rawAttrs = await getInstanceAttributes(data.id);
+          this.selectedDeviceForJSON = rawAttrs;
+        } catch (e) {
+          console.error('Failed to load instance attributes:', e);
+          this.selectedDeviceForJSON = data;
+        }
+      } else {
+        this.selectedDeviceForJSON = data.attributes || data;
+      }
+      this.showJSONModal = true;
     },
     onDragStart(event, item) {
       this.isDragging = true;

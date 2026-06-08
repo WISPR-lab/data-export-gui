@@ -23,7 +23,7 @@ example of 'filter' object
 export async function searchEvents(queryString = '', filter = {}) {
   const db = await getDB();
   
-  const stringCols = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data'];
+  const stringCols = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
@@ -42,14 +42,16 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.event_type, 
       e.event_action, 
       e.event_kind,
-      f.opfs_filename AS source_file, 
+      e.file_ids,
+      e.raw_data_ids,
       u.given_name AS timeline_name, 
       u.platform AS platform,
-      COALESCE(ei.device_profiles_data, '[]') AS device_profiles_data
+      COALESCE(ei.device_profiles_data, '[]') AS device_profiles_data,
+      die.device_instance_id
     FROM events e
-    LEFT JOIN uploaded_files f ON json_extract(e.file_ids, '$[0]') = f.id
     LEFT JOIN uploads u ON e.upload_id = u.id
     LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
+    LEFT JOIN device_instance_events die ON e.id = die.event_id
     ${whereClause}
     ${orderClause}
     ${paginationClause}
@@ -69,7 +71,82 @@ export async function searchEvents(queryString = '', filter = {}) {
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
     const countPerTimeline = await _getEventsCountPerTimeline(db, whereClause, whereParams);
     
-    const objects = rows.map(row => _formatEventObject(row));
+    // Batch resolve files and line numbers
+    const allFileIds = new Set();
+    const allRawDataIds = new Set();
+    rows.forEach(row => {
+      try {
+        const fileIds = row.file_ids ? JSON.parse(row.file_ids) : [];
+        fileIds.forEach(id => { if (id) allFileIds.add(id); });
+      } catch (e) {}
+      try {
+        const rawDataIds = row.raw_data_ids ? JSON.parse(row.raw_data_ids) : [];
+        rawDataIds.forEach(id => { if (id) allRawDataIds.add(id); });
+      } catch (e) {}
+    });
+
+    const fileMap = {};
+    if (allFileIds.size > 0) {
+      const fileIdList = [...allFileIds];
+      const placeholders = fileIdList.map(() => '?').join(',');
+      const fileRows = await db.exec(`SELECT id, opfs_filename FROM uploaded_files WHERE id IN (${placeholders})`, {
+        bind: fileIdList,
+        returnValue: 'resultRows',
+        rowMode: 'object'
+      });
+      fileRows.forEach(fr => {
+        fileMap[fr.id] = fr.opfs_filename;
+      });
+    }
+
+    const rawDataMap = {};
+    if (allRawDataIds.size > 0) {
+      const rawDataIdList = [...allRawDataIds];
+      const placeholders = rawDataIdList.map(() => '?').join(',');
+      const rawRows = await db.exec(`SELECT id, file_id, line_numbers FROM raw_data WHERE id IN (${placeholders})`, {
+        bind: rawDataIdList,
+        returnValue: 'resultRows',
+        rowMode: 'object'
+      });
+      rawRows.forEach(rr => {
+        let lines = [];
+        try {
+          lines = rr.line_numbers ? JSON.parse(rr.line_numbers) : [];
+        } catch (e) {}
+        rawDataMap[rr.id] = { file_id: rr.file_id, lines };
+      });
+    }
+
+    const objects = rows.map(row => {
+      let fileIds = [];
+      let rawDataIds = [];
+      try {
+        fileIds = row.file_ids ? JSON.parse(row.file_ids) : [];
+      } catch (e) {}
+      try {
+        rawDataIds = row.raw_data_ids ? JSON.parse(row.raw_data_ids) : [];
+      } catch (e) {}
+
+      // Gather filenames
+      const filenames = [...new Set(fileIds.map(fid => fileMap[fid]).filter(Boolean))];
+
+      // Compile file-to-lines mapping or flat lists
+      const sourcesInfo = [];
+      const flatLineNumbers = [];
+      rawDataIds.forEach(rid => {
+        const rd = rawDataMap[rid];
+        if (rd) {
+          const fname = fileMap[rd.file_id] || 'Unknown File';
+          sourcesInfo.push({
+            filename: fname,
+            line_numbers: rd.lines
+          });
+          flatLineNumbers.push(...rd.lines);
+        }
+      });
+
+      return _formatEventObject(row, filenames, [...new Set(flatLineNumbers)], sourcesInfo);
+    });
     
     console.log(`[Search] "${queryString}" --> ${totalCount} results`);
     return {
@@ -231,7 +308,7 @@ export async function getIPAddresses() {
 }
 
 async function _getEventsTotalCount(db, whereClause, whereParams) {
-  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id ${whereClause}`;
+  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id LEFT JOIN device_instance_events die ON e.id = die.event_id ${whereClause}`;
   const result = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
@@ -246,6 +323,7 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
     FROM events e 
     LEFT JOIN uploads u ON e.upload_id = u.id
     LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
+    LEFT JOIN device_instance_events die ON e.id = die.event_id
     ${whereClause} 
     GROUP BY e.upload_id
   `;
@@ -262,7 +340,7 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
   return counts;
 }
 
-function _formatEventObject(row) {
+function _formatEventObject(row, filenames = [], lineNumbers = [], sources = []) {
   let attributes = {};
   let tags = [];
   let labels = [];
@@ -320,7 +398,10 @@ function _formatEventObject(row) {
     timeline_name: row.timeline_name,
     timeline_id: row.upload_id,
     platform: row.platform,
-    filename: row.source_file,
+    filename: filenames[0] || '',
+    filenames,
+    line_numbers: lineNumbers,
+    sources,
     device_profiles_data: deviceProfilesData,
   };
   

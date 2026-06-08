@@ -46,7 +46,14 @@ def treat_event_as_auth_device(event_row: dict) -> bool:
     #     return False
     
     # now check if has enough attributes
-    attr_keys = set(event_row.get("attributes", {}).keys())
+    attrs = event_row.get("attributes", {})
+    if isinstance(attrs, str):
+        try:
+            attrs = json.loads(attrs)
+        except Exception:
+            attrs = {}
+    
+    attr_keys = {k for k, v in attrs.items() if v is not None and str(v).strip() != ""}
     if attr_keys.intersection(AUTH_DEVICE_ATTR_KEYS):
         return True
     

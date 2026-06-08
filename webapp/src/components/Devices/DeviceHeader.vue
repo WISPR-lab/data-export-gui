@@ -1,3 +1,4 @@
+// added for WISPR-lab/data-export-gui
 <template>
   <v-row no-gutters align="center" class="py-2">
     <!-- Drag Handle and Icon -->
@@ -11,26 +12,25 @@
     <!-- Text Labels -->
     <v-col class="mr-4 min-width-0">
       <div v-if="!isGeneric" class="subtitle-1 font-weight-bold text-truncate">
-        {{ device.user_label || device.model }}
+        {{ (device.user_label || device.model) | formatDeviceDetails }}
         <span v-if="device.user_label && device.model" class="grey--text text--darken-3 body-2 font-weight-regular ml-1">
-          ({{ device.model }})
+          ({{ device.model | formatDeviceDetails }})
         </span>
       </div>
       <div v-else class="subtitle-1 font-weight-bold text-truncate">
-        {{ device.label }}
+        {{ device.label | formatDeviceDetails }}
       </div>
       <div class="body-2 grey--text text--darken-3 text-truncate">
-        <span>{{ device.manufacturer || 'Unknown' }} <span v-if="device.location">&bull; Last seen in {{ device.location }}</span></span>
+        <span>{{ (device.manufacturer || 'Unknown') | formatDeviceDetails }} &bull; {{ latestOSLabel | formatDeviceDetails }} <span v-if="activeDateRange">&bull; {{ activeDateRange }}</span></span>
       </div>
     </v-col>
 
     <!-- Origin Chips (horizontal) -->
-    <v-col cols="auto" v-if="device.origins && device.origins.length > 0" class="d-flex align-center flex-wrap mr-4" style="gap: 4px;">
+    <v-col cols="auto" v-if="device.ua_summaries && device.ua_summaries.length > 0" class="d-flex align-center flex-wrap mr-4" style="gap: 4px;">
       <OriginChip
-        v-for="(origin, idx) in device.origins"
+        v-for="(summary, idx) in device.ua_summaries"
         :key="idx"
-        :origin="origin"
-        small
+        :summary="summary"
       />
     </v-col>
 
@@ -87,6 +87,25 @@ export default {
     isHighlighted: {
       type: Boolean,
       default: false
+    }
+  },
+  computed: {
+    latestOSLabel() {
+      const instances = this.device.instances || [];
+      const sorted = [...instances].sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
+      const latest = sorted[0];
+      if (!latest) return this.device.os_type || '';
+      const os = (latest.os_type || latest.os_name || '').toUpperCase();
+      const ver = latest.latest_os_version || '';
+      return ver ? `${os} ${ver}` : os;
+    },
+    activeDateRange() {
+      const { first_seen, last_seen } = this.device;
+      if (!first_seen || !last_seen) return '';
+      const fmt = ts => new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      const start = fmt(first_seen);
+      const end = fmt(last_seen);
+      return start === end ? start : `${start} – ${end}`;
     }
   }
 }

@@ -66,22 +66,26 @@ def _deduplicate_and_fetch_inputs(conn, upload_id: str) -> tuple[pd.DataFrame, p
     conn.commit()
 
     events_rows = conn.execute(
-        '''SELECT id, upload_id, attributes, origin, timestamp, treat_as_auth_device
-           FROM events
-           WHERE upload_id = ?
-           AND id IN (
+        '''SELECT e.id, e.upload_id, e.attributes, e.origin, e.timestamp, e.treat_as_auth_device, u.platform
+           FROM events e
+           JOIN uploads u ON e.upload_id = u.id
+           WHERE e.upload_id = ?
+           AND e.treat_as_auth_device = 1
+           AND e.id IN (
                SELECT MIN(id)
                FROM events
                WHERE upload_id = ?
-               GROUP BY 
-                   CASE WHEN treat_as_auth_device = 1 THEN attributes ELSE id END,
-                   CASE WHEN treat_as_auth_device = 1 THEN timestamp ELSE id END
+               AND treat_as_auth_device = 1
+               GROUP BY attributes, timestamp
            )''',
         (upload_id, upload_id)
     ).fetchall()
 
     devices_rows = conn.execute(
-        'SELECT id, upload_id, attributes, origin FROM devices_raw WHERE upload_id = ?',
+        '''SELECT d.id, d.upload_id, d.attributes, d.origin, u.platform
+           FROM devices_raw d
+           JOIN uploads u ON d.upload_id = u.id
+           WHERE d.upload_id = ?''',
         (upload_id,)
     ).fetchall()
 

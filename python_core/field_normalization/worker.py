@@ -95,7 +95,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
         print(f"[FieldNormalizeWorker] Normalizing events for upload_id={upload_id}")
         rows = conn.execute(
             """
-            SELECT id, attributes
+            SELECT id, attributes, event_action as action, event_category as category
             FROM events
             WHERE upload_id = ?
             """,
@@ -111,7 +111,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
         conn.executemany(
             """
             UPDATE events 
-            SET attributes = :attributes, origin = :origin
+            SET attributes = :attributes, origin = :origin, treat_as_auth_device = :treat_as_auth_device
             WHERE id = :id
             """,
             updates 

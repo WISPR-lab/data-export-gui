@@ -1,7 +1,7 @@
 <template>
-  <v-chip :key="`${origin.origin}-${origin.upload_id}`">
+  <v-chip small>
     <v-icon :color="chipColor" left small>mdi-circle</v-icon>
-    {{ formatOriginText }}
+    {{ label }}
   </v-chip>
 </template>
 
@@ -9,27 +9,25 @@
 export default {
   name: 'OriginChip',
   props: {
-    origin: {
+    /**
+     * A ua_summary dict: { primary: String, secondary: String, color: String }
+     * Renders as "Primary (Secondary)" or just "Primary" when secondary is empty.
+     */
+    summary: {
       type: Object,
       required: true
     }
   },
   computed: {
-    formatOriginText() {
-      if (typeof this.origin === 'string') {
-        return this.origin.replace('/', ' / ');
-      }
-      return (this.origin.origin || '').replace('/', ' / ');
+    label() {
+      const p = this.summary.primary || '';
+      const s = this.summary.secondary || '';
+      return s ? `${p} (${s})` : p;
     },
     chipColor() {
-      if (typeof this.origin === 'object' && this.origin.color) {
-        const color = String(this.origin.color);
-        if (color.length > 0 && color[0] !== '#') {
-          return '#' + color;
-        }
-        return color;
-      }
-      return '#5E75C2';
+      const color = String(this.summary.color || '');
+      if (!color) return '#5E75C2';
+      return color[0] !== '#' ? '#' + color : color;
     }
   }
 }

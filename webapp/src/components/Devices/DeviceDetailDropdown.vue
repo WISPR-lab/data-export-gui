@@ -1,5 +1,31 @@
+// added for WISPR-lab/data-export-gui
 <template>
   <div class="pa-6">
+    <!-- 1. Device Details Table (at the very top, transparent background) -->
+    <div v-if="profileAttributesTable.length > 0" class="mb-6">
+      <div class="overline mb-3">Device Details</div>
+      <v-simple-table dense class="transparent">
+        <template v-slot:default>
+          <tbody>
+            <tr v-for="attr in profileAttributesTable" :key="attr.label">
+              <td style="font-weight: 600; width: 200px; color: #424242;">{{ attr.label }}</td>
+              <td style="word-break: break-word;">
+                <template v-if="attr.isTimestamp">
+                  {{ attr.value | longDateTimeLocal }}
+                </template>
+                <template v-else>
+                  {{ attr.value | formatDeviceDetails }}
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </template>
+      </v-simple-table>
+    </div>
+
+    <!-- <v-divider v-if="profileAttributesTable.length > 0" class="mb-6"></v-divider> -->
+
+    <!-- 2. Name & Notes Inputs -->
     <div class="d-flex mb-6" style="gap: 36px;">
       <div style="flex: 0 0 auto; width: 300px;">
         <div class="overline">Name</div>
@@ -14,55 +40,7 @@
             hide-details
             @change="$emit('change')"
           ></v-text-field>
-        </div> <!-- prepend-inner-icon="mdi-pencil" -->
-
-<!--         
-        <div class="mb-8">
-          <div class="overline mb-2">Tags</div>
-          <v-icon 
-            small 
-            class="cursor-pointer mb-2" 
-            title="Add tag"
-            @click="showTagDialog = true"
-          >
-            mdi-tag-plus-outline
-          </v-icon>
-          <div class="d-flex flex-wrap align-center" style="gap: 4px;">
-            <v-chip
-              v-for="tag in device.tags || []"
-              :key="tag"
-              small
-              close
-              @click:close="removeTag(tag)"
-            >
-              {{ tag }}
-            </v-chip>
-          </div>
         </div>
-
-        Tag Dialog
-        <v-dialog v-model="showTagDialog" max-width="400">
-          <v-card>
-            <v-card-title>Add Tag</v-card-title>
-            <v-card-text>
-              <v-combobox
-                ref="tagInput"
-                v-model="newTag"
-                :items="availableTags"
-                label="Tag name"
-                outlined
-                dense
-                hide-details
-                @keydown.enter="addTag"
-              ></v-combobox>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn text @click="showTagDialog = false">Cancel</v-btn>
-              <v-btn text color="primary" @click="addTag">Add</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog> -->
       </div>
 
       <!-- Right Column: Notes (tall, expands) -->
@@ -83,38 +61,19 @@
 
     <v-divider class="mb-6"></v-divider>
 
-    <!-- 2. Device Records (Atomics) -->
-    <div v-if="device.atomicDevices && device.atomicDevices.length > 0" class="mb-6 grey--lighten-5">
-      <div class="overline mb-3">Device Records ({{ device.atomicDevices.length }})</div>
+    <!-- 3. Device Instances -->
+    <div v-if="device.instances && device.instances.length > 0" class="mb-6">
+      <div class="overline mb-3">Device Instances ({{ device.instances.length }})</div>
       <div class="space-y-2" style="display: flex; flex-direction: column; gap: 12px;">
         <AtomicDeviceRecord
-          v-for="atomic in device.atomicDevices"
-          :key="atomic.id"
-          :atomic="atomic"
+          v-for="inst in device.instances"
+          :key="inst.id"
+          :atomic="inst"
           @showJSON="$emit('showJSON', $event)"
           @unmerge="$emit('unmerge', $event)"
         />
       </div>
     </div>
-
-    <!-- <v-divider v-if="device.atomicDevices && device.atomicDevices.length > 0" class="mb-6"></v-divider> -->
-
-    <!-- 3. Device Attributes Grid -->
-    <!-- <div v-if="filteredAttributes.length > 0" class="mb-6">
-      <div class="overline mb-3">Device details</div>
-      <v-simple-table dense class="grey lighten-5">
-        <template v-slot:default>
-          <tbody>
-            <tr v-for="(value, key) in deviceAttributesObject" :key="key">
-              <td style="font-weight: 500; min-width: 280px;">{{ key }}</td>
-              <td style="word-break: break-word;">{{ formatAttributeValue(value) }}</td>
-            </tr>
-          </tbody>
-        </template>
-      </v-simple-table>
-    </div> -->
-
-    
 
     <!-- Optional Help Footer for Generic Records -->
     <div v-if="isGeneric" class="mt-6 pt-4">
@@ -127,13 +86,12 @@
 </template>
 
 <script>
-import OriginChip from './OriginChip.vue';
 import AtomicDeviceRecord from './AtomicDeviceRecord.vue';
+import { getProfileAttributes } from '@/database/queries/devices_v2.js';
 
 export default {
   name: 'DeviceDetailDropdown',
   components: {
-    OriginChip,
     AtomicDeviceRecord
   },
   props: {
@@ -148,69 +106,110 @@ export default {
   },
   data() {
     return {
-      showTagDialog: false,
-      newTag: null
+      rawAttributes: {}
+    }
+  },
+  watch: {
+    device: {
+      immediate: true,
+      handler: 'loadAttributes'
     }
   },
   computed: {
-    availableTags() {
-      if (!this.device.tags) return []
-      return this.device.tags
-    },
-    deviceAttributesObject() {
-      if (!this.device.attributes) return {}
-      
-      try {
-        let attrs = {}
-        const parsed = typeof this.device.attributes === 'string'
-          ? JSON.parse(this.device.attributes)
-          : this.device.attributes
-        
-        for (const [key, value] of Object.entries(parsed)) {
-          if (value !== null && value !== undefined && value !== '') {
-            attrs[key] = value
+    profileAttributesTable() {
+      // Construct OS field (e.g. iOS 15.7 -> 16.2)
+      const osName = this.device.latest_os_name || this.device.os_name || this.device.latest_os_type || this.device.os_type || '';
+      const versions = (this.device.all_os_versions || []).filter(Boolean);
+      let osValue = '';
+      if (osName) {
+        osValue = osName.toUpperCase();
+        if (versions.length > 0) {
+          versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+          const firstV = versions[0];
+          const lastV = versions[versions.length - 1];
+          if (firstV === lastV) {
+            osValue = `${osName.toUpperCase()} ${firstV}`;
+          } else {
+            osValue = `${osName.toUpperCase()} ${firstV} → ${lastV}`;
           }
         }
-        return attrs
-      } catch (e) {
-        console.warn('Failed to parse device attributes:', e)
-        return {}
       }
-    },
-    filteredAttributes() {
-      return Object.entries(this.deviceAttributesObject)
+
+      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.ip_addresses || []))].filter(Boolean);
+
+      // Condense Manufacturer and Model into a single 'Model' value
+      let modelValue = '';
+      const mfr = (this.device.manufacturer || '').trim();
+      const mdl = (this.device.model || '').trim();
+      if (mfr && mdl) {
+        if (mdl.toLowerCase().startsWith(mfr.toLowerCase())) {
+          modelValue = mdl;
+        } else {
+          modelValue = `${mfr} ${mdl}`;
+        }
+      } else {
+        modelValue = mdl || mfr || '';
+      }
+
+      // Core attributes list (filtered to exclude empty / unknown values)
+      const coreCandidates = [
+        { label: 'Model', value: modelValue },
+        { label: 'OS', value: osValue },
+        { label: 'First Active', value: this.device.first_seen, isTimestamp: true },
+        { label: 'Last Active', value: this.device.last_seen, isTimestamp: true },
+        { label: 'IP Addresses', value: uniqueIPs.length > 0 ? uniqueIPs.join(', ') : '' }
+      ];
+
+      const core = coreCandidates.filter(item => item.value !== null && item.value !== undefined && String(item.value).trim() && String(item.value).toLowerCase() !== 'unknown');
+
+      // Optional hardware fields
+      const optionalKeys = [
+        { key: 'device.given_name', label: 'Device Name' },
+        { key: 'device.name', label: 'Device Name' },
+        { key: 'serial_number', label: 'Serial Number' },
+        { key: 'serialnumber', label: 'Serial Number' },
+        { key: 'mac_address', label: 'MAC Address' },
+        { key: 'wifi_mac', label: 'MAC Address' },
+        { key: 'wifiMac', label: 'MAC Address' },
+        { key: 'imei', label: 'IMEI' },
+        { key: 'device.imei', label: 'IMEI' },
+        { key: 'meid', label: 'MEID' },
+        { key: 'device.meid', label: 'MEID' },
+        { key: 'device.id.android', label: 'Android ID' },
+        { key: 'device.product.id', label: 'Hardware Product ID' },
+        { key: 'device.id.google.ad', label: 'Google Advertiser ID' },
+        { key: 'device.id.google', label: 'Google Device ID' },
+        { key: 'device.id.facebook', label: 'Facebook Device ID' },
+        { key: 'device.id.facebook.ad', label: 'Facebook Advertiser ID' },
+        { key: 'udid', label: 'UDID' },
+        { key: 'uuid', label: 'UUID' }
+      ];
+
+      const optionals = [];
+      optionalKeys.forEach(opt => {
+        const actualKey = Object.keys(this.rawAttributes).find(k => k.toLowerCase() === opt.key.toLowerCase());
+        if (actualKey) {
+          const val = this.rawAttributes[actualKey];
+          if (val && String(val).trim() && String(val).toLowerCase() !== 'unknown') {
+            if (!optionals.some(x => x.label === opt.label)) {
+              optionals.push({ label: opt.label, value: String(val).trim() });
+            }
+          }
+        }
+      });
+
+      return [...core, ...optionals];
     }
   },
   methods: {
-    formatAttributeValue(value) {
-      if (typeof value === 'boolean') {
-        return value ? 'Yes' : 'No'
+    async loadAttributes() {
+      if (this.device && this.device.id) {
+        try {
+          this.rawAttributes = await getProfileAttributes(this.device.id);
+        } catch (e) {
+          console.error('Failed to load profile attributes:', e);
+        }
       }
-      if (typeof value === 'object') {
-        return JSON.stringify(value)
-      }
-      return String(value)
-    },
-    removeTag(tag) {
-      if (!this.device.tags) return
-      const index = this.device.tags.indexOf(tag)
-      if (index > -1) {
-        this.device.tags.splice(index, 1)
-        this.$emit('change')
-      }
-    },
-    addTag() {
-      if (!this.newTag || this.newTag.trim() === '') return
-      if (!this.device.tags) {
-        this.$set(this.device, 'tags', [])
-      }
-      const tag = this.newTag.trim()
-      if (!this.device.tags.includes(tag)) {
-        this.device.tags.push(tag)
-        this.$emit('change')
-      }
-      this.newTag = null
-      this.showTagDialog = false
     }
   }
 }
@@ -221,4 +220,3 @@ export default {
   cursor: pointer;
 }
 </style>
-
