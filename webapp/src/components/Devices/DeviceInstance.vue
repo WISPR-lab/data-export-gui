@@ -1,13 +1,18 @@
 // added for WISPR-lab/data-export-gui
 <template>
   <v-card outlined class="pa-4 d-flex align-center" style="gap: 16px; background-color: white;">
+    <!-- Selection Checkbox (Edit mode) -->
+    <v-checkbox
+      v-if="showCheckbox"
+      :input-value="selected"
+      hide-details
+      class="ma-0 pa-0 flex-shrink-0"
+      @change="$emit('select', $event)"
+    ></v-checkbox>
+
     <!-- UA summary chip — same style as DeviceProfileHeader chips -->
-    <div class="d-flex flex-wrap align-center" style="gap: 4px; flex: 0 0 auto;">
-      <UASummaryChip v-if="instance.ua_summary" :summary="instance.ua_summary" />
-      <v-chip v-else small>
-        <v-icon :color="instance.upload_color || '#5E75C2'" left small>mdi-circle</v-icon>
-        {{ (instance.platform || 'Unknown').toUpperCase() }}
-      </v-chip>
+    <div v-if="instance.ua_summary && !instance.ua_summary.isUnknown" class="d-flex flex-wrap align-center" style="gap: 4px; flex: 0 0 auto;">
+      <UASummaryChip :summary="instance.ua_summary" />
     </div>
 
     <!-- Client Name & Version & OS & Timeline -->
@@ -77,6 +82,14 @@ export default {
     instance: {
       type: Object,
       required: true
+    },
+    showCheckbox: {
+      type: Boolean,
+      default: false
+    },
+    selected: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {

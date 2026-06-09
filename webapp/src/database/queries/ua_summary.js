@@ -54,6 +54,7 @@ function getCleanBrowserName(primary) {
 
 // Helper to ensure a service name does not end up with double "App" suffixing
 function formatAppService(serviceName) {
+  if (!serviceName || !serviceName.trim()) return '';
   const lower = serviceName.toLowerCase();
   const hasAppSuffix = lower.endsWith('app') || lower.includes('for ios') || lower.includes('for android') || lower.includes('for mobile');
   return hasAppSuffix ? serviceName : `${serviceName} App`;
@@ -136,10 +137,10 @@ export function getUASummary(deviceInstances) {
     }
 
     const lower_label1 = label1.toLowerCase().trim();
-    const isUnknown = !lower_label1 || lower_label1 === 'unknown' || lower_label1 === 'unknown client' || lower_label1.includes('gglunknown');
-    if (isUnknown) {
-      return; // skip unclassifiable instances — no chip emitted
-    }
+    const isUnknown = !lower_label1 || 
+                      lower_label1 === 'unknown' || 
+                      lower_label1 === 'unknown client' || 
+                      lower_label1.includes('gglunknown');
 
     const color = instance.upload_color;
     const key = `${label1}-${label2}-${color}`;
@@ -147,7 +148,8 @@ export function getUASummary(deviceInstances) {
       uniqueSummaryItems[key] = {
         primary: label1,
         secondary: label2,
-        color
+        color,
+        isUnknown: !!isUnknown
       };
     }
   });

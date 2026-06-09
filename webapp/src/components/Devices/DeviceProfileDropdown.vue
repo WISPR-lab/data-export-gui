@@ -63,12 +63,58 @@
 
     <!-- 3. Device Instances -->
     <div v-if="device.instances && device.instances.length > 0" class="mb-6">
-      <div class="overline mb-3">Device Instances ({{ device.instances.length }})</div>
+      <div class="d-flex align-center justify-space-between mb-3">
+        <div class="d-flex align-center">
+          <span class="overline">Device Instances ({{ device.instances.length }})</span>
+          <v-btn icon x-small class="ml-1" color="primary" @click="showHelpModal = true" title="What is a device instance?">
+            <v-icon small>mdi-help-circle-outline</v-icon>
+          </v-btn>
+        </div>
+        <v-btn
+          v-if="device.instances.length > 1"
+          text
+          small
+          color="grey darken-1"
+          class="rounded-lg text-none px-2"
+          @click="toggleEditMode"
+        >
+          {{ isEditingInstances ? 'Done' : 'Edit' }}
+        </v-btn>
+      </div>
+
+      <!-- Batch Action Bar (Edit mode) -->
+      <div v-if="isEditingInstances" class="d-flex align-center justify-space-between mb-4 pa-3 border rounded-lg bg-light-grey">
+        <div class="d-flex align-center">
+          <v-checkbox
+            :input-value="isAllSelected"
+            :indeterminate="isPartiallySelected"
+            hide-details
+            class="ma-0 pa-0 mr-3"
+            @change="toggleSelectAll"
+          ></v-checkbox>
+          <span class="body-2 font-weight-medium">{{ selectedInstanceIds.length }} selected</span>
+        </div>
+        <v-btn
+          color="error"
+          small
+          outlined
+          :disabled="selectedInstanceIds.length === 0"
+          class="rounded-lg"
+          @click="batchUnlink"
+        >
+          <v-icon left small>mdi-link-off</v-icon>
+          Unlink Selected
+        </v-btn>
+      </div>
+
       <div class="space-y-2" style="display: flex; flex-direction: column; gap: 12px;">
         <DeviceInstance
           v-for="inst in device.instances"
           :key="inst.id"
           :instance="inst"
+          :show-checkbox="isEditingInstances"
+          :selected="selectedInstanceIds.includes(inst.id)"
+          @select="toggleInstanceSelection(inst.id, $event)"
           @showJSON="$emit('showJSON', $event)"
           @unmerge="$emit('unmerge', $event)"
         />
@@ -82,6 +128,39 @@
         To group this record, drag this card onto one of your confirmed devices above.
       </p>
     </div>
+
+    <!-- Device Instances Explanation Modal -->
+    <v-dialog v-model="showHelpModal" max-width="500px">
+      <v-card class="pa-4 rounded-xl">
+        <v-card-title class="text-h6 font-weight-bold d-flex align-center">
+          <v-icon color="primary" class="mr-2">mdi-information-outline</v-icon>
+          Profiles vs. Instances
+        </v-card-title>
+        <v-card-text class="pt-2">
+          <p class="body-2">
+            This tool separates device data into a hierarchy to help map your timeline:
+          </p>
+          <div class="mb-4">
+            <div class="subtitle-2 font-weight-bold primary--text">Device Profile</div>
+            <div class="body-2 text--secondary">
+              Formed by connecting instances that share the same hardware model  (e.g. all <i>iPhone XRs</i> or all <i>MacBooks</i>). TODO caveat about masking/deterministic IDs
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="subtitle-2 font-weight-bold primary--text">Device Instance</div>
+            <div class="body-2 text--secondary">
+              A single continuous installation or session chain (e.g. a specific <i>Instagram App</i> setup or <i>Safari browser session</i>) representing an individual device deployment.
+            </div>
+          </div>
+          <p class="body-2 mb-0">
+
+          </p>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn color="primary" text @click="showHelpModal = false">Got it</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -106,7 +185,10 @@ export default {
   },
   data() {
     return {
-      rawAttributes: {}
+      rawAttributes: {},
+      showHelpModal: false,
+      isEditingInstances: false,
+      selectedInstanceIds: []
     }
   },
   watch: {
@@ -116,6 +198,13 @@ export default {
     }
   },
   computed: {
+    isAllSelected() {
+      if (!this.device.instances || this.device.instances.length === 0) return false;
+      return this.selectedInstanceIds.length === this.device.instances.length;
+    },
+    isPartiallySelected() {
+      return this.selectedInstanceIds.length > 0 && this.selectedInstanceIds.length < this.device.instances.length;
+    },
     profileAttributesTable() {
       // Construct OS field (e.g. iOS 15.7 -> 16.2)
       const osName = this.device.latest_os_name || this.device.os_name || this.device.latest_os_type || this.device.os_type || '';
@@ -210,6 +299,35 @@ export default {
           console.error('Failed to load profile attributes:', e);
         }
       }
+    },
+    toggleEditMode() {
+      this.isEditingInstances = !this.isEditingInstances;
+      if (!this.isEditingInstances) {
+        this.selectedInstanceIds = [];
+      }
+    },
+    toggleInstanceSelection(instanceId, isSelected) {
+      if (isSelected) {
+        if (!this.selectedInstanceIds.includes(instanceId)) {
+          this.selectedInstanceIds.push(instanceId);
+        }
+      } else {
+        this.selectedInstanceIds = this.selectedInstanceIds.filter(id => id !== instanceId);
+      }
+    },
+    toggleSelectAll(isSelected) {
+      if (isSelected) {
+        this.selectedInstanceIds = this.device.instances.map(inst => inst.id);
+      } else {
+        this.selectedInstanceIds = [];
+      }
+    },
+    batchUnlink() {
+      if (this.selectedInstanceIds.length > 0) {
+        this.$emit('batch-unmerge', this.selectedInstanceIds);
+        this.isEditingInstances = false;
+        this.selectedInstanceIds = [];
+      }
     }
   }
 }
@@ -218,5 +336,11 @@ export default {
 <style scoped>
 .cursor-pointer {
   cursor: pointer;
+}
+.bg-light-grey {
+  background-color: #f5f5f5;
+}
+.border {
+  border: 1px solid #e0e0e0;
 }
 </style>

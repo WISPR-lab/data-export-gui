@@ -1,44 +1,51 @@
 // added for WISPR-lab/data-export-gui
 <template>
-  <v-row no-gutters align="center" class="py-2">
-    <!-- Drag handle -->
-    <v-icon v-if="isGeneric" color="grey--darken-1" class="mr-4">mdi-drag-vertical</v-icon>
+  <div class="device-header-row py-2">
+    <!-- LEFT PART (60% boundary) -->
+    <div class="header-left-part">
+      <!-- Drag handle & Icon -->
+      <div class="header-icon-group">
+        <v-icon v-if="isGeneric" color="grey--darken-1" class="mr-4">mdi-drag-vertical</v-icon>
+        <v-avatar size="64" color="grey--lighten-4" class="mr-3 flex-shrink-0" :class="{'white border': isGeneric}">
+          <v-icon color="grey--darken-3" size="48">
+            {{ isGeneric ? 'mdi-help-circle-outline' : (device.icon || 'mdi-cellphone') }}
+          </v-icon>
+        </v-avatar>
+      </div>
 
-    <!-- Device icon -->
-    <v-avatar size="40" color="grey--lighten-4" class="mr-3 flex-shrink-0" :class="{'white border': isGeneric}">
-      <v-icon color="grey--darken-3" small>
-        {{ isGeneric ? 'mdi-help-circle-outline' : (device.icon || 'mdi-cellphone') }}
-      </v-icon>
-    </v-avatar>
+      <!-- Text block: model, manufacturer, activity -->
+      <div class="device-info-col mr-4">
+        <div v-if="!isGeneric" class="subtitle-1 font-weight-bold text-truncate">
+          {{ (device.user_label || device.model) | formatDeviceDetails }}
+          <span v-if="device.user_label && device.model" class="grey--text text--darken-3 body-2 font-weight-regular ml-1">
+            ({{ device.model | formatDeviceDetails }})
+          </span>
+        </div>
+        <div v-else class="subtitle-1 font-weight-bold text-truncate">
+          {{ device.label | formatDeviceDetails }}
+        </div>
+        <div v-if="device.manufacturer" class="body-2 grey--text text--darken-3">
+          {{ device.manufacturer | formatDeviceDetails }}
+        </div>
+        <div v-if="activityString" class="body-2 grey--text text--darken-3">
+          {{ activityString }}
+        </div>
+      </div>
+    </div>
 
-    <!-- Text block: model, manufacturer, activity -->
-    <v-col class="min-width-0 mr-4">
-      <div v-if="!isGeneric" class="subtitle-1 font-weight-bold text-truncate">
-        {{ (device.user_label || device.model) | formatDeviceDetails }}
-        <span v-if="device.user_label && device.model" class="grey--text text--darken-3 body-2 font-weight-regular ml-1">
-          ({{ device.model | formatDeviceDetails }})
-        </span>
+    <!-- RIGHT PART (40% boundary) -->
+    <div class="header-right-part">
+      <!-- UA summary chips — horizontal, wrapping -->
+      <div v-if="device.ua_summaries && device.ua_summaries.length > 0" class="chip-col-wrap mr-4">
+        <UASummaryChip
+          v-for="(summary, idx) in device.ua_summaries"
+          v-if="!summary.isUnknown"
+          :key="idx"
+          :summary="summary"
+        />
       </div>
-      <div v-else class="subtitle-1 font-weight-bold text-truncate">
-        {{ device.label | formatDeviceDetails }}
-      </div>
-      <div v-if="device.manufacturer" class="body-2 grey--text text--darken-3">
-        {{ device.manufacturer | formatDeviceDetails }}
-      </div>
-      <div v-if="activityString" class="body-2 grey--text text--darken-3">
-        {{ activityString }}
-      </div>
-    </v-col>
-
-    <!-- UA summary chips — horizontal, wrapping -->
-    <v-col v-if="device.ua_summaries && device.ua_summaries.length > 0" cols="auto" class="d-flex flex-wrap align-center mr-4" style="gap: 4px;">
-      <UASummaryChip
-        v-for="(summary, idx) in device.ua_summaries"
-        :key="idx"
-        :summary="summary"
-      />
-    </v-col>
-  </v-row>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -81,3 +88,51 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.device-header-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.header-left-part {
+  width: 60%;
+  max-width: 60%;
+  flex: 0 0 60%;
+  display: flex;
+  align-items: center;
+}
+
+.header-icon-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.device-info-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.header-right-part {
+  width: 40%;
+  max-width: 40%;
+  flex: 0 0 40%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.chip-col-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+  row-gap: 8px;
+  column-gap: 4px;
+}
+</style>
