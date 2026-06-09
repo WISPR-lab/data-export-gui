@@ -113,10 +113,80 @@ class MockWorker {
 }
 global.Worker = MockWorker
 
+// Mock navigator.storage for OPFSManager
+const mockSubStorageDir = {
+  getFileHandle: vi.fn().mockImplementation(async (name, options) => ({
+    createWritable: vi.fn().mockResolvedValue({
+      write: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined)
+    }),
+    getFile: vi.fn().mockResolvedValue({ size: 100 })
+  })),
+  entries: vi.fn().mockImplementation(() => {
+    return {
+      [Symbol.asyncIterator]() {
+        let index = 0;
+        const items = [['test.json', {}]];
+        return {
+          async next() {
+            if (index < items.length) {
+              return { value: items[index++], done: false };
+            }
+            return { done: true };
+          }
+        };
+      }
+    };
+  }),
+  removeEntry: vi.fn().mockResolvedValue(undefined)
+}
+
+const mockStorageDir = {
+  getDirectoryHandle: vi.fn().mockResolvedValue(mockSubStorageDir),
+  getFileHandle: vi.fn().mockImplementation(async (name, options) => ({
+    createWritable: vi.fn().mockResolvedValue({
+      write: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined)
+    }),
+    getFile: vi.fn().mockResolvedValue({ size: 100 })
+  })),
+  entries: vi.fn().mockImplementation(() => {
+    return {
+      [Symbol.asyncIterator]() {
+        let index = 0;
+        const items = [['test.json', {}]];
+        return {
+          async next() {
+            if (index < items.length) {
+              return { value: items[index++], done: false };
+            }
+            return { done: true };
+          }
+        };
+      }
+    };
+  }),
+  removeEntry: vi.fn().mockResolvedValue(undefined)
+}
+
+global.navigator = {
+  userAgent: 'node',
+  storage: {
+    getDirectory: vi.fn().mockResolvedValue(mockStorageDir)
+  }
+}
+
 // Mock global fetch
 global.fetch = vi.fn().mockImplementation((url) => {
   const filename = url.split('/').pop()
-  const schemaPath = path.join(__dirname, '../../schemas', filename)
+  if (filename === 'config.yaml') {
+    const configPath = path.join(__dirname, '../../config.yaml')
+    return Promise.resolve({
+      ok: true,
+      text: () => Promise.resolve(fs.readFileSync(configPath, 'utf8'))
+    })
+  }
+  const schemaPath = path.join(__dirname, '../../manifests', filename)
   if (fs.existsSync(schemaPath)) {
     return Promise.resolve({
       ok: true,
@@ -130,14 +200,35 @@ global.fetch = vi.fn().mockImplementation((url) => {
 })
 
 // Mock dependencies
-vi.mock('../../webapp/src/database.js', () => ({
+vi.mock('../../webapp/src/database/index.js', () => ({
   default: {
     createTimeline: vi.fn(),
     bulkInsert: vi.fn(),
     saveSketchTimeline: vi.fn(),
-    getTimelines: vi.fn()
+    getTimelines: vi.fn(),
+    setActiveDatabase: vi.fn(),
+    getUploads: vi.fn(),
+    getEventMeta: vi.fn()
   }
 }))
+
+vi.mock('../../webapp/src/storage/opfs_manager.js', () => {
+  return {
+    OPFSManager: vi.fn().mockImplementation(() => {
+      return {
+        init: vi.fn().mockImplementation(async (platform) => {
+          if (platform === 'nonexistent') {
+            throw new Error('Failed to read manifest for nonexistent');
+          }
+        }),
+        processZipUpload: vi.fn().mockResolvedValue(undefined),
+        clearTempStorage: vi.fn().mockResolvedValue(undefined),
+        clearDatabase: vi.fn().mockResolvedValue(undefined),
+        nukeAll: vi.fn().mockResolvedValue(undefined)
+      }
+    })
+  }
+})
 
 // Use dynamic import after global mocks are set
 let processUpload;
@@ -146,7 +237,7 @@ beforeAll(async () => {
   processUpload = module.processUpload
 })
 
-import BrowserDB from '../../webapp/src/database.js'
+import BrowserDB from '../../webapp/src/database/index.js'
 import JSZip from 'jszip'
 
 describe('Upload Functionality', () => {
@@ -157,6 +248,9 @@ describe('Upload Functionality', () => {
     BrowserDB.bulkInsert.mockResolvedValue(true)
     BrowserDB.saveSketchTimeline.mockResolvedValue({})
     BrowserDB.getTimelines.mockResolvedValue({ data: { objects: [] } })
+    BrowserDB.setActiveDatabase.mockResolvedValue({})
+    BrowserDB.getUploads.mockResolvedValue({ objects: [] })
+    BrowserDB.getEventMeta.mockResolvedValue({})
     workerMode = 'MOCK' // Reset to pure JS mock by default
   })
 

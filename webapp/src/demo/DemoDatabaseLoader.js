@@ -20,17 +20,14 @@ class DemoDatabaseLoader {
       console.log('[DemoDatabaseLoader] Initializing demo database...')
       DB.setActiveDatabase('demo')
 
-      const sqlContent = demoInstagramSql
-      const statements = sqlContent.split(';').filter((s) => s.trim().length > 0)
-      console.log(`[DemoDatabaseLoader] Parsed ${statements.length} SQL statements`)
+      // Clear any pre-existing demo data to avoid PK conflicts from persistent OPFS
+      await DB.clearAllTables()
 
-      for (const statement of statements) {
-        try {
-          await DB.runRawSql(statement + ';')
-        } catch (e) {
-          console.warn('[DemoDatabaseLoader] Error executing statement (continuing):', e.message)
-        }
-      }
+      const sqlContent = demoInstagramSql
+      console.log(`[DemoDatabaseLoader] Executing SQL script`)
+
+      const db = await DB.getDB()
+      await db.exec(sqlContent)
 
       this.demoDbLoaded = true
       console.log('[DemoDatabaseLoader] Demo database initialized successfully')
@@ -52,7 +49,7 @@ class DemoDatabaseLoader {
    */
   async clearDemoDb() {
     try {
-      await DB.wipeAllData()
+      await DB.clearAllTables()
       this.demoDbLoaded = false
       console.log('[DemoDatabaseLoader] Demo database cleared')
     } catch (e) {
@@ -62,3 +59,4 @@ class DemoDatabaseLoader {
 }
 
 export default new DemoDatabaseLoader()
+

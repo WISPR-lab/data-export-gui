@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <ts-search-guide-card
     :flat="inDialog"
@@ -36,7 +37,7 @@ limitations under the License.
             <span v-if="filterChips.length"
               >in combination with the selected filter chips
               <code>'{{ filterChips.map((chip) => chip.value).join(', ') }}'</code></span
-            >
+             >
             did not match any events.
           </p>
           <p v-if="!disableSaveSearch">
@@ -89,7 +90,7 @@ export default {
     showTags() {
       if (!this.$store.state.tags || !this.$store.state.meta.filter_labels) return false
       const filteredLabels = this.$store.state.meta.filter_labels.filter(
-        (labelObj) => !labelObj.label.startsWith('__ts_fact')
+        (labelObj) => labelObj && typeof labelObj.label === 'string' && !labelObj.label.startsWith('__ts_fact')
       )
       return [...this.$store.state.tags, ...filteredLabels].length > 0
     },

@@ -14,7 +14,9 @@ const IMPORT_NAME = {
 };
 
 function extractPackagesFromWorker() {
-  const src = readFileSync(WORKER_PATH, 'utf8');
+  const rawSrc = readFileSync(WORKER_PATH, 'utf8');
+  // Strip comments to ignore commented-out installs
+  const src = rawSrc.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
 
   const packages = new Set();
 
@@ -30,9 +32,22 @@ function extractPackagesFromWorker() {
     }
   }
 
+  // Parse builtinModules = [...] definition
+  const builtinMatch = src.match(/builtinModules\s*=\s*(\[.*?\])/);
+  if (builtinMatch) {
+    const arrayStr = builtinMatch[1];
+    for (const pkg of arrayStr.matchAll(/'([^']+)'|"([^"]+)"/g)) {
+      packages.add(pkg[1] || pkg[2]);
+    }
+  }
+
   // micropip.install('hjson') etc.
   for (const m of src.matchAll(/micropip\.install\(['"]([^'"]+)['"]\)/g)) {
-    packages.add(m[1]);
+    const pkg = m[1];
+    // Ignore emfs paths or templated paths
+    if (!pkg.startsWith('emfs:') && !pkg.includes('$')) {
+      packages.add(pkg);
+    }
   }
 
   // micropip itself is a Pyodide-only meta-package; skip it
