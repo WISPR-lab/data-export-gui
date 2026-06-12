@@ -18,6 +18,22 @@ limitations under the License.
 
 module.exports = {
   lintOnSave: false,
+  css: {
+    loaderOptions: {
+      sass: {
+        sassOptions: {
+          quietDeps: true,
+          silenceDeprecations: ['slash-div'],
+        },
+      },
+      scss: {
+        sassOptions: {
+          quietDeps: true,
+          silenceDeprecations: ['slash-div'],
+        },
+      },
+    },
+  },
   // For gh-pages deployment: use repo name as path
   publicPath: process.env.NODE_ENV === 'production' ? '/data-export-gui/' : '/',
   configureWebpack: (config) => {
