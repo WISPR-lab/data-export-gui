@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="internalValue" max-width="500px" @input="onDialogInput">
     <v-card v-if="source && target">
-      <v-toolbar flat dense color="grey lighten-4" height="64">
+      <v-toolbar flat dense color="grey--lighten-4" height="64">
         <v-toolbar-title class="text-h6 font-weight-bold ml-2">{{ success ? 'Merge successful!' : 'Is this the same device?' }}</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="cancel" :disabled="isLoading">
@@ -22,7 +22,7 @@
           Are you sure you want to combine the activity from <strong>{{ source.label }}</strong> into the <strong>{{ target.user_label || target.model }}</strong> profile?
         </div>
         
-        <div v-if="!success" class="body-2 grey--text text--darken-1 italic">
+        <div v-if="!success" class="body-2 grey--text text--darken-3 italic">
           <v-icon small class="mr-1">mdi-information-outline</v-icon>
           You can undo this later.
         </div>

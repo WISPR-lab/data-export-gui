@@ -13,6 +13,7 @@ import uuid
 import json
 from device_grouping.shared_utils import union_find
 from device_grouping.computed_fields import best_model_attr, get_mfr, MFR_DO_NOT_MERGE_GENERIC, compute_device_profile_fields
+from utils.merge_history import log_merge_event
 DEBUG = False
 
 def soft_match(a: dict, b: dict) -> bool:  
@@ -59,6 +60,15 @@ def soft_merge_single_upload(records: list[dict]) -> list[dict]:
         computed = compute_device_profile_fields(profile_row, records)
         profile_row.update(computed)
         rows.append(profile_row)
+
+        if len(id_list) > 1:
+            log_merge_event(
+                profile_id=profile_row['id'],
+                action='merge',
+                atomic_ids=id_list,
+                user_initiated=False,
+                system_reason='soft_match' # TODO better reason
+            )
     
     return rows
 
@@ -154,12 +164,32 @@ def soft_merge_multi_upload(new_atomic_device_rows: list[dict],
             row.update(computed)
             if DEBUG: print(f"[SoftMerge]   AFTER update: atomic_devices_ids={row.get('atomic_devices_ids')}, origins={row.get('origins')}")
             final_rows.append(row)
+            
+            new_atomics_added = [a for group in profiles_to_update[old_pf['id']] for a in group]
+            if new_atomics_added:
+                log_merge_event(
+                    profile_id=old_pf['id'],
+                    action='merge',
+                    atomic_ids=new_atomics_added,
+                    user_initiated=False,
+                    system_reason='soft_match' # TODO better reason
+                )
         else:
             if DEBUG: print(f"[SoftMerge]   NOT in profiles_to_update, keeping original")
             final_rows.append(old_pf)
     
     for nf in new_device_profile_rows:
         nf.update(compute_device_profile_fields(nf, atomic_devices_rows))
+        
+        if len(nf.get('atomic_devices_ids', [])) > 1:
+            log_merge_event(
+                profile_id=nf['id'],
+                action='merge',
+                atomic_ids=nf.get('atomic_devices_ids', []),
+                user_initiated=False,
+                system_reason='soft_match' # TODO better reason
+            )
+    
     final_rows.extend(new_device_profile_rows)
     
     if DEBUG: print(f"[SoftMerge] soft_merge_multi_upload returning {len(final_rows)} profiles")

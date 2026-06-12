@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <v-card class="mx-auto" >
     <v-toolbar dense flat>
@@ -248,7 +249,7 @@ limitations under the License.
 
 <script>
 import Apexchart from 'vue-apexcharts'
-import BrowserDB from '../../database.js'
+import BrowserDB from '@/database/index.js'
 
 export default {
   components: {

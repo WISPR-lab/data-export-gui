@@ -1,3 +1,4 @@
+// added for WISPR-lab/data-export-gui
 <template>
   <v-container class="pa-6 white min-h-100" style="max-width: 900px;">
     <!-- Demo completion modal -->
@@ -40,56 +41,25 @@
         v-for="(dev, i) in devices"
         :key="i"
         class="mb-3 border rounded-xl overflow-hidden device-drop-zone device-profile-card"
-        :class="{'drop-active': isDragging && activeDropId === i}"
+        :class="{'drop-active': isDragging && activeDropId === i, 'blue-grey lighten-5': dev.is_generic}"
+        draggable
+        @dragstart.native="onDragStart($event, dev)"
+        @dragend.native="onDragEnd"
         @dragover.native.prevent="activeDropId = i"
         @dragleave.native="activeDropId = null"
         @drop.native="onDrop($event, dev, i)"
       >
         <v-expansion-panel-header class="pa-4" @click="onDeviceExpand">
           <template v-slot:default="{ open }">
-            <device-header :device="dev" :open="open" />
+            <device-profile-header :device="dev" :is-generic="!!dev.is_generic" :open="open" @showJSON="showDeviceJSON" />
           </template>
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-detail-dropdown :device="dev" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" />
+          <device-profile-dropdown :device="dev" :is-generic="!!dev.is_generic" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" @unmerge="handleUnmerge(dev, $event)" @batch-unmerge="handleBatchUnmerge(dev, $event)" @showJSON="showDeviceJSON" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
-
-
-    <div v-if="unassigned.length > 0" class="mt-12 mb-10">
-      <div class="mb-6">
-        <h2 class="text-h6 font-weight-bold grey--text text--darken-4 mb-2">Sessions to Review</h2>
-        <div class="body-1 grey--text text--darken-2">
-            <p class="mb-1">These sessions are missing some specific device details. This usually happens when you use a web browser or private mode.</p>
-            <p>They might belong to one of your devices above, or several of these records might actually be the same device.
-            <!-- We couldn't automatically match these to specific device. This often happens when using private browsing mode or a different browser on your existing devices.  -->
-            If you recognize them, <span class="font-weight-bold">drag and drop</span> them onto the correct profile above.</p>
-        </div>
-      </div>
-
-      <v-expansion-panels flat class="device-panels">
-        <v-expansion-panel
-          v-for="(item, i) in unassigned"
-          :key="i"
-          class="mb-3 border rounded-xl overflow-hidden blue-grey lighten-5"
-          draggable
-          @dragstart.native="onDragStart($event, item)"
-          @dragend.native="onDragEnd"
-        >
-          <v-expansion-panel-header class="pa-4">
-            <template v-slot:default="{ open }">
-              <device-header :device="item" is-generic :open="open" />
-            </template>
-          </v-expansion-panel-header>
-
-          <v-expansion-panel-content class="grey lighten-5 border-top">
-            <device-detail-dropdown :device="item" is-generic @change="saveDeviceChanges(item)" @see-all-events="goToExplore(item)" />
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
-    </div>
 
 
     <device-group-modal 
@@ -105,24 +75,33 @@
 
     <device-detection-help-modal v-model="showDeviceHelpDialog" />
 
+    <!-- Device JSON Modal -->
+    <json-modal
+      v-model="showJSONModal"
+      :title="selectedDeviceForJSON ? ('Raw Data: ' + (selectedDeviceForJSON.user_label || selectedDeviceForJSON.model || selectedDeviceForJSON.label || 'Record')) : 'Data'"
+      :data="selectedDeviceForJSON || {}"
+      max-width="800"
+    />
   </v-container>
 </template>
 
 <script>
-import DeviceDetailDropdown from '@/components/Devices/DeviceDetailDropdown.vue';
-import DeviceHeader from '@/components/Devices/DeviceHeader.vue';
+import DeviceProfileDropdown from '@/components/Devices/DeviceProfileDropdown.vue';
+import DeviceProfileHeader from '@/components/Devices/DeviceProfileHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
 import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
-import { getDeviceGroups, updateDeviceGroup } from '@/database/queries/devices.js';
+import JSONModal from '@/components/Devices/JSONModal.vue';
+import { getDevices, updateDeviceProfile, getInstanceAttributes } from '@/database/queries/devices_v2.js';
 import { callPyodideWorker } from '@/pyodide/pyodide-client';
 
 export default {
   name: 'Devices',
   components: {
-    DeviceDetailDropdown,
-    DeviceHeader,
+    DeviceProfileDropdown,
+    DeviceProfileHeader,
     DeviceGroupModal,
-    DeviceDetectionHelpModal
+    DeviceDetectionHelpModal,
+    'json-modal': JSONModal
   },
   data() {
     return {
@@ -135,8 +114,9 @@ export default {
       selectedRecord: null,
       staging: null,
       devices: [],
-      unassigned: [],
       showDeviceHelpDialog: false,
+      showJSONModal: false,
+      selectedDeviceForJSON: null,
       showDemoCompletionModal: false,
     }
   },
@@ -165,11 +145,8 @@ export default {
   methods: {
     async fetchDevices() {
       try {
-        const allGroups = await getDeviceGroups();
-        // Categorize based on the logic:
-        // Everything in devices except the generic singletons
-        this.devices = allGroups.filter(g => !g.is_generic);
-        this.unassigned = allGroups.filter(g => g.is_generic);
+        const allGroups = await getDevices();
+        this.devices = allGroups;
       } catch (err) {
         console.error('Failed to fetch devices:', err);
       }
@@ -183,7 +160,7 @@ export default {
     },
     async saveDeviceChanges(device) {
       try {
-        await updateDeviceGroup(device.id, {
+        await updateDeviceProfile(device.id, {
           user_label: device.user_label,
           notes: device.notes
         });
@@ -191,6 +168,57 @@ export default {
       } catch (err) {
         console.error('Failed to save device changes:', err);
       }
+    },
+    async handleUnmerge(device, atomicId) {
+      try {
+        const result = await callPyodideWorker('unmerge', {
+          profileId: device.id,
+          atomicId: atomicId
+        });
+        
+        if (result && result.status === 'ok') {
+          await this.fetchDevices();
+        } else {
+          console.error('Unmerge failed:', result);
+        }
+      } catch (error) {
+        console.error('Unmerge error:', error);
+      }
+    },
+    async handleBatchUnmerge(device, atomicIds) {
+      try {
+        let successCount = 0;
+        for (const atomicId of atomicIds) {
+          const result = await callPyodideWorker('unmerge', {
+            profileId: device.id,
+            atomicId: atomicId
+          });
+          if (result && result.status === 'ok') {
+            successCount++;
+          } else {
+            console.error('Batch unmerge failed for atomicId:', atomicId, result);
+          }
+        }
+        if (successCount > 0) {
+          await this.fetchDevices();
+        }
+      } catch (error) {
+        console.error('Batch unmerge error:', error);
+      }
+    },
+    async showDeviceJSON(data) {
+      if (data && data.id && !data.instances) {
+        try {
+          const rawAttrs = await getInstanceAttributes(data.id);
+          this.selectedDeviceForJSON = rawAttrs;
+        } catch (e) {
+          console.error('Failed to load instance attributes:', e);
+          this.selectedDeviceForJSON = data;
+        }
+      } else {
+        this.selectedDeviceForJSON = data.attributes || data;
+      }
+      this.showJSONModal = true;
     },
     onDragStart(event, item) {
       this.isDragging = true;
@@ -228,9 +256,6 @@ export default {
             const EventBus = require('@/event-bus.js').default
             EventBus.$emit('demo:action', 'device-dropped')
           }
-
-          const idx = this.unassigned.indexOf(this.staging.source);
-          if (idx > -1) this.unassigned.splice(idx, 1);
 
           await this.fetchDevices();
         } else if (result && result.status === 'ineligible') {

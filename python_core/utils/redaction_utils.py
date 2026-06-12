@@ -2,6 +2,7 @@ import re
 
 MIN_ASTERISKS = 3
 PATTERN = rf'\*{{{MIN_ASTERISKS},}}'
+MIN_CHAR_OVERLAP = 4
 
 def unmasked_segments(value: str) -> list[str]:
     if not value:
@@ -16,6 +17,7 @@ def is_masked(value: str) -> bool:
 
 
 def compare_redacted_vals(*vals) -> bool:
+    # return True if all vals share at least one unmasked segment in common, False otherwise.
     if len(vals) == 1 and isinstance(vals[0], list):
         vals = vals[0]
     
@@ -36,10 +38,25 @@ def compare_redacted_vals(*vals) -> bool:
         all_parts_lists.append(parts)
     
     # Check if at least one part from the first value is shared with ALL other values
+    # for part1 in all_parts_lists[0]:
+    #     matches_all = True
+    #     for other_parts in all_parts_lists[1:]:
+    #         if not any(part1 in ap or ap in part1 for ap in other_parts):
+    #             matches_all = False
+    #             break
+    #     if matches_all:
+    #         return True
     for part1 in all_parts_lists[0]:
         matches_all = True
         for other_parts in all_parts_lists[1:]:
-            if not any(part1 in ap or ap in part1 for ap in other_parts):
+            found_match = False
+            for ap in other_parts:
+                if part1 in ap or ap in part1:
+                    overlap = min(len(part1), len(ap))
+                    if overlap >= MIN_CHAR_OVERLAP:
+                        found_match = True
+                        break
+            if not found_match:
                 matches_all = False
                 break
         if matches_all:

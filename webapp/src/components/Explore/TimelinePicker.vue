@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <span>
     <ts-timeline-chip
@@ -28,25 +29,17 @@ limitations under the License.
       @toggle="toggleTimeline"
       @disableAllOtherTimelines="disableAllOtherTimelines"
     ></ts-timeline-chip>
-    <v-btn
-      small
-      text
-      rounded
-      color="primary"
-      v-if="sketch.timelines.length > 20"
-      @click="showAll = !showAll"
-      class="mt-n3 mr-5"
-    >
-      <span v-if="showAll"> show less </span>
-      <span v-else> {{ sketch.timelines.length - 20 }} more.. </span>
-    </v-btn>
-    <br />
+    <span v-if="allTimelines.length > 20">
+      <v-btn text small @click="showAll = !showAll"
+        >{{ showAll ? 'Show less' : 'Show all' }} ({{ sketch.timelines.length }})</v-btn
+      >
+    </span>
   </span>
 </template>
 
 <script>
-import EventBus from '../../event-bus.js'
 import TsTimelineChip from './TimelineChip.vue'
+import EventBus from '../../event-bus.js'
 import DB from '@/database/index.js'
 
 import _ from 'lodash'
@@ -146,6 +139,9 @@ export default {
       this.isDarkTheme = !this.isDarkTheme
     },
     syncSelectedTimelines() {
+      if (!this.currentQueryFilter || !this.currentQueryFilter.uploadIds) {
+        return
+      }
       if (this.currentQueryFilter.uploadIds.includes('_all')) {
         this.updateEnabledTimelinesIfChanged(this.activeTimelines.map((tl) => tl.id))
         return

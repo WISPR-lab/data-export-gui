@@ -1,5 +1,5 @@
 from utils.redaction_utils import get_unredacted_val
-from utils.device_lookup import VARIANT_SUFFIXES
+from python_core.field_normalization.device_lookup import VARIANT_SUFFIXES
 from device_grouping.shared_utils import IS_HARD_KEY, flatten
 
 GENERIC = {'other', 'unknown', 'phone', 'smartphone', 'tablet', 'android', 'iphone', 'ipad', ''}
@@ -8,7 +8,7 @@ MFR_DO_NOT_MERGE_GENERIC = {'apple'}
 
 SINGLETON_KEYS = (
     'device_model_name', 
-    'user_agent_device_model', 
+    'user_agent_device_model_name', 
     'device_manufacturer', 
     'user_agent_device_manufacturer', 
     'device_model_identifier',
@@ -49,7 +49,7 @@ def pick_most_specific(values: list) -> str:
 
 def best_model_attr(attrs: dict) -> str:
     values = []
-    for key in ['device_model_name', 'user_agent_device_model']:
+    for key in ['device_model_name', 'user_agent_device_model_name']:
         val = attrs.get(key, '')
         if isinstance(val, list):
             val = pick_most_specific(list(flatten(val)))
