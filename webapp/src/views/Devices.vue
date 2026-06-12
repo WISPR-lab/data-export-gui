@@ -41,7 +41,7 @@
         v-for="(dev, i) in devices"
         :key="i"
         class="mb-3 border rounded-xl overflow-hidden device-drop-zone device-profile-card"
-        :class="{'drop-active': isDragging && activeDropId === i, 'blue-grey lighten-5': dev.is_generic}"
+        :class="{'drop-active': isDragging && activeDropId === i}"
         draggable
         @dragstart.native="onDragStart($event, dev)"
         @dragend.native="onDragEnd"
@@ -51,12 +51,12 @@
       >
         <v-expansion-panel-header class="pa-4" @click="onDeviceExpand">
           <template v-slot:default="{ open }">
-            <device-profile-header :device="dev" :is-generic="!!dev.is_generic" :open="open" @showJSON="showDeviceJSON" />
+            <device-profile-header :device="dev" :open="open" @showJSON="showDeviceJSON" />
           </template>
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-profile-dropdown :device="dev" :is-generic="!!dev.is_generic" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" @unmerge="handleUnmerge(dev, $event)" @batch-unmerge="handleBatchUnmerge(dev, $event)" @showJSON="showDeviceJSON" />
+          <device-profile-dropdown :device="dev" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" @unmerge="handleUnmerge(dev, $event)" @batch-unmerge="handleBatchUnmerge(dev, $event)" @showJSON="showDeviceJSON" />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -91,7 +91,7 @@ import DeviceProfileHeader from '@/components/Devices/DeviceProfileHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
 import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
 import JSONModal from '@/components/Devices/JSONModal.vue';
-import { getDevices, updateDeviceProfile, getInstanceAttributes } from '@/database/queries/devices_v2.js';
+import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
 import { callPyodideWorker } from '@/pyodide/pyodide-client';
 
 export default {
@@ -145,8 +145,7 @@ export default {
   methods: {
     async fetchDevices() {
       try {
-        const allGroups = await getDevices();
-        this.devices = allGroups;
+        this.devices = await getDevices();
       } catch (err) {
         console.error('Failed to fetch devices:', err);
       }
@@ -160,11 +159,10 @@ export default {
     },
     async saveDeviceChanges(device) {
       try {
-        await updateDeviceProfile(device.id, {
+        await updateProfile(device.id, {
           user_label: device.user_label,
           notes: device.notes
         });
-        // Optionally re-fetch if needed, but the local state is already correct
       } catch (err) {
         console.error('Failed to save device changes:', err);
       }
@@ -209,7 +207,7 @@ export default {
     async showDeviceJSON(data) {
       if (data && data.id && !data.instances) {
         try {
-          const rawAttrs = await getInstanceAttributes(data.id);
+          const rawAttrs = await getInstanceRawAttrs(data.id);
           this.selectedDeviceForJSON = rawAttrs;
         } catch (e) {
           console.error('Failed to load instance attributes:', e);

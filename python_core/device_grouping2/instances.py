@@ -71,7 +71,7 @@ class DeviceInstance:
 
         self.os_versions = self.df['attr__norm__os_version'].dropna().unique().tolist() if 'attr__norm__os_version' in self.df.columns else []
         self.client_versions = self.df['attr__norm__client_version'].dropna().unique().tolist() if 'attr__norm__client_version' in self.df.columns else []
-        self.ip_addresses = self.df['attr__ip_address'].dropna().unique().tolist() if 'attr__ip_address' in self.df.columns else []
+        self.client_ips = self.df['attr__client_ip'].dropna().unique().tolist() if 'attr__client_ip' in self.df.columns else []
         self.locations = self.df['attr__location'].dropna().unique().tolist() if 'attr__location' in self.df.columns else []
 
     def _find_best_attribute(self, col: str) -> Optional[str]:
@@ -117,10 +117,10 @@ class DeviceInstance:
             'event_count': self.event_count,
             'latest_os_version': self.os_versions[-1] if self.os_versions else None,
             'latest_client_version': self.client_versions[-1] if self.client_versions else None,
-            'latest_ip_address': self.ip_addresses[-1] if self.ip_addresses else None,
+            'latest_client_ip': self.client_ips[-1] if self.client_ips else None,
             'os_versions': self.os_versions,
             'client_versions': self.client_versions,
-            'ip_addresses': self.ip_addresses,
+            'client_ips': self.client_ips,
             'locations': self.locations
         }
 

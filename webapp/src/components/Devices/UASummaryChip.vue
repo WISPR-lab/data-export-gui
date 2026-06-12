@@ -6,6 +6,8 @@
 </template>
 
 <script>
+import { hexColor } from '@/utils/hex.js';
+
 export default {
   name: 'UASummaryChip',
   props: {
@@ -28,9 +30,7 @@ export default {
       return s ? `${p} (${s})` : p;
     },
     chipColor() {
-      const color = String(this.summary.color || '');
-      if (!color) return '#5E75C2';
-      return color[0] !== '#' ? '#' + color : color;
+      return hexColor(this.summary.color);
     }
   }
 }

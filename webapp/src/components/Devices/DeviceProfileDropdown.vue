@@ -4,23 +4,7 @@
     <!-- 1. Device Details Table (at the very top, transparent background) -->
     <div v-if="profileAttributesTable.length > 0" class="mb-6">
       <div class="overline mb-3">Device Details</div>
-      <v-simple-table dense class="transparent">
-        <template v-slot:default>
-          <tbody>
-            <tr v-for="attr in profileAttributesTable" :key="attr.label">
-              <td style="font-weight: 600; width: 200px; color: #424242;">{{ attr.label }}</td>
-              <td style="word-break: break-word;">
-                <template v-if="attr.isTimestamp">
-                  {{ attr.value | longDateTimeLocal }}
-                </template>
-                <template v-else>
-                  {{ attr.value | formatDeviceDetails }}
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </template>
-      </v-simple-table>
+      <device-attributes-table :attributes="profileAttributesTable" />
     </div>
 
     <!-- <v-divider v-if="profileAttributesTable.length > 0" class="mb-6"></v-divider> -->
@@ -48,7 +32,7 @@
         <div class="overline">Notes</div>
         <v-textarea
           v-model="device.notes"
-          :placeholder="isGeneric ? 'Add any personal notes about this record.' : 'Add any personal notes about this device.'"
+          placeholder="Add any personal notes about this device."
           outlined
           dense
           rows="1"
@@ -122,14 +106,6 @@
       </div>
     </div>
 
-    <!-- Optional Help Footer for Generic Records -->
-    <div v-if="isGeneric" class="mt-6 pt-4">
-      <p class="body-2 grey--text text--darken-3 mb-0">
-        <v-icon small class="mr-1" color="grey--darken-3">mdi-information-outline</v-icon>
-        To group this record, drag this card onto one of your confirmed devices above.
-      </p>
-    </div>
-
     <!-- Device Instances Explanation Modal -->
     <v-dialog v-model="showHelpModal" max-width="500px">
       <v-card class="pa-4 rounded-xl">
@@ -167,21 +143,20 @@
 
 <script>
 import DeviceInstance from './DeviceInstance.vue';
-import { getProfileAttributes } from '@/database/queries/devices_v2.js';
+import DeviceAttributesTable from './DeviceAttributesTable.vue';
+import { getProfileRawAttrs } from '@/database/queries/devices_v2.js';
+import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'DeviceProfileDropdown',
   components: {
-    DeviceInstance
+    DeviceInstance,
+    DeviceAttributesTable
   },
   props: {
     device: {
       type: Object,
       required: true
-    },
-    isGeneric: {
-      type: Boolean,
-      default: false
     }
   },
   data() {
@@ -212,20 +187,24 @@ export default {
       const versions = (this.device.all_os_versions || []).filter(Boolean);
       let osValue = '';
       if (osName) {
-        osValue = osName.toUpperCase();
+        osValue = titleCase(osName);
         if (versions.length > 0) {
           versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
           const firstV = versions[0];
           const lastV = versions[versions.length - 1];
           if (firstV === lastV) {
-            osValue = `${osName.toUpperCase()} ${firstV}`;
+            osValue = `${titleCase(osName)} ${firstV}`;
           } else {
-            osValue = `${osName.toUpperCase()} ${firstV} → ${lastV}`;
+            osValue = `${titleCase(osName)} ${firstV} → ${lastV}`;
           }
         }
       }
 
-      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.ip_addresses || []))].filter(Boolean);
+      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.client_ips || []))].filter(ip => {
+        if (!ip) return false;
+        const ipStr = String(ip).trim().toLowerCase();
+        return ipStr !== '' && ipStr !== 'null' && ipStr !== 'none' && ipStr !== 'unknown' && ipStr !== 'undefined';
+      });
 
       // Condense Manufacturer and Model into a single 'Model' value
       let modelValue = '';
@@ -247,10 +226,20 @@ export default {
         { label: 'OS', value: osValue },
         { label: 'First Active', value: this.device.first_seen, isTimestamp: true },
         { label: 'Last Active', value: this.device.last_seen, isTimestamp: true },
-        { label: 'IP Addresses', value: uniqueIPs.length > 0 ? uniqueIPs.join(', ') : '' }
+        { label: 'IP Addresses', value: uniqueIPs }
       ];
 
-      const core = coreCandidates.filter(item => item.value !== null && item.value !== undefined && String(item.value).trim() && String(item.value).toLowerCase() !== 'unknown');
+      const core = coreCandidates.filter(item => {
+        if (item.value === null || item.value === undefined) return false;
+        if (Array.isArray(item.value)) return item.value.length > 0;
+        if (item.isTimestamp) {
+          const num = Number(item.value);
+          if (isNaN(num) || num <= 0) return false;
+        }
+        const valStr = String(item.value).trim();
+        const lower = valStr.toLowerCase();
+        return valStr !== '' && lower !== 'unknown' && lower !== 'null' && lower !== 'none' && lower !== 'undefined';
+      });
 
       // Optional hardware fields
       const optionalKeys = [
@@ -280,9 +269,13 @@ export default {
         const actualKey = Object.keys(this.rawAttributes).find(k => k.toLowerCase() === opt.key.toLowerCase());
         if (actualKey) {
           const val = this.rawAttributes[actualKey];
-          if (val && String(val).trim() && String(val).toLowerCase() !== 'unknown') {
-            if (!optionals.some(x => x.label === opt.label)) {
-              optionals.push({ label: opt.label, value: String(val).trim() });
+          if (val !== null && val !== undefined) {
+            const valStr = String(val).trim();
+            const lower = valStr.toLowerCase();
+            if (valStr !== '' && lower !== 'unknown' && lower !== 'null' && lower !== 'none' && lower !== 'undefined') {
+              if (!optionals.some(x => x.label === opt.label)) {
+                optionals.push({ label: opt.label, value: valStr });
+              }
             }
           }
         }
@@ -295,7 +288,7 @@ export default {
     async loadAttributes() {
       if (this.device && this.device.id) {
         try {
-          this.rawAttributes = await getProfileAttributes(this.device.id);
+          this.rawAttributes = await getProfileRawAttrs(this.device.id);
         } catch (e) {
           console.error('Failed to load profile attributes:', e);
         }
