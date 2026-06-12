@@ -4,23 +4,7 @@
     <!-- 1. Device Details Table (at the very top, transparent background) -->
     <div v-if="profileAttributesTable.length > 0" class="mb-6">
       <div class="overline mb-3">Device Details</div>
-      <v-simple-table dense class="transparent">
-        <template v-slot:default>
-          <tbody>
-            <tr v-for="attr in profileAttributesTable" :key="attr.label">
-              <td style="font-weight: 600; width: 200px; color: #424242;">{{ attr.label }}</td>
-              <td style="word-break: break-word;">
-                <template v-if="attr.isTimestamp">
-                  {{ attr.value | longDateTimeLocal }}
-                </template>
-                <template v-else>
-                  {{ attr.value | formatDeviceDetails }}
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </template>
-      </v-simple-table>
+      <device-attributes-table :attributes="profileAttributesTable" />
     </div>
 
     <!-- <v-divider v-if="profileAttributesTable.length > 0" class="mb-6"></v-divider> -->
@@ -159,13 +143,15 @@
 
 <script>
 import DeviceInstance from './DeviceInstance.vue';
+import DeviceAttributesTable from './DeviceAttributesTable.vue';
 import { getProfileRawAttrs } from '@/database/queries/devices_v2.js';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'DeviceProfileDropdown',
   components: {
-    DeviceInstance
+    DeviceInstance,
+    DeviceAttributesTable
   },
   props: {
     device: {
@@ -214,7 +200,11 @@ export default {
         }
       }
 
-      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.ip_addresses || []))].filter(Boolean);
+      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.client_ips || []))].filter(ip => {
+        if (!ip) return false;
+        const ipStr = String(ip).trim().toLowerCase();
+        return ipStr !== '' && ipStr !== 'null' && ipStr !== 'none' && ipStr !== 'unknown' && ipStr !== 'undefined';
+      });
 
       // Condense Manufacturer and Model into a single 'Model' value
       let modelValue = '';
@@ -236,10 +226,20 @@ export default {
         { label: 'OS', value: osValue },
         { label: 'First Active', value: this.device.first_seen, isTimestamp: true },
         { label: 'Last Active', value: this.device.last_seen, isTimestamp: true },
-        { label: 'IP Addresses', value: uniqueIPs.length > 0 ? uniqueIPs.join(', ') : '' }
+        { label: 'IP Addresses', value: uniqueIPs }
       ];
 
-      const core = coreCandidates.filter(item => item.value !== null && item.value !== undefined && String(item.value).trim() && String(item.value).toLowerCase() !== 'unknown');
+      const core = coreCandidates.filter(item => {
+        if (item.value === null || item.value === undefined) return false;
+        if (Array.isArray(item.value)) return item.value.length > 0;
+        if (item.isTimestamp) {
+          const num = Number(item.value);
+          if (isNaN(num) || num <= 0) return false;
+        }
+        const valStr = String(item.value).trim();
+        const lower = valStr.toLowerCase();
+        return valStr !== '' && lower !== 'unknown' && lower !== 'null' && lower !== 'none' && lower !== 'undefined';
+      });
 
       // Optional hardware fields
       const optionalKeys = [
@@ -269,9 +269,13 @@ export default {
         const actualKey = Object.keys(this.rawAttributes).find(k => k.toLowerCase() === opt.key.toLowerCase());
         if (actualKey) {
           const val = this.rawAttributes[actualKey];
-          if (val && String(val).trim() && String(val).toLowerCase() !== 'unknown') {
-            if (!optionals.some(x => x.label === opt.label)) {
-              optionals.push({ label: opt.label, value: String(val).trim() });
+          if (val !== null && val !== undefined) {
+            const valStr = String(val).trim();
+            const lower = valStr.toLowerCase();
+            if (valStr !== '' && lower !== 'unknown' && lower !== 'null' && lower !== 'none' && lower !== 'undefined') {
+              if (!optionals.some(x => x.label === opt.label)) {
+                optionals.push({ label: opt.label, value: valStr });
+              }
             }
           }
         }

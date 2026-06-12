@@ -88,18 +88,21 @@ export async function getDevices() {
   // Group instances by their profile ID
   const instancesByProfile = {};
   instanceRows.forEach(inst => {
-    try {
-      inst.os_versions = inst.os_versions ? JSON.parse(inst.os_versions) : [];
-      inst.client_versions = inst.client_versions ? JSON.parse(inst.client_versions) : [];
-      inst.ip_addresses = inst.ip_addresses ? JSON.parse(inst.ip_addresses) : [];
-      inst.locations = inst.locations ? JSON.parse(inst.locations) : [];
-    } catch (e) {
-      console.warn('Failed to parse attributes for device instance', inst.id, e);
-      inst.os_versions = inst.os_versions || [];
-      inst.client_versions = inst.client_versions || [];
-      inst.ip_addresses = inst.ip_addresses || [];
-      inst.locations = inst.locations || [];
-    }
+    const parseField = (fieldVal) => {
+      if (!fieldVal) return [];
+      try {
+        const parsed = typeof fieldVal === 'string' ? JSON.parse(fieldVal) : fieldVal;
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('Failed to parse field', fieldVal, e);
+        return [];
+      }
+    };
+
+    inst.os_versions = parseField(inst.os_versions);
+    inst.client_versions = parseField(inst.client_versions);
+    inst.client_ips = parseField(inst.client_ips);
+    inst.locations = parseField(inst.locations);
 
     // normalize upload_color to a full hex string
     inst.upload_color = hexColor(inst.upload_color);
@@ -285,7 +288,9 @@ function formatInstanceAttrs(inst) {
 
   const formatDate = (ts) => {
     if (!ts) return null;
-    return new Date(ts * 1000).toLocaleDateString(undefined, { 
+    const num = Number(ts);
+    if (isNaN(num) || num <= 0) return null;
+    return new Date(num * 1000).toLocaleDateString(undefined, { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
@@ -299,18 +304,26 @@ function formatInstanceAttrs(inst) {
     if (key.includes('latest')) return;
     if (val === undefined || val === null) return;
     if (Array.isArray(val) && val.length === 0) return;
-    if (typeof val === 'string' && !val.trim()) return;
 
     let displayValue = val;
     if (Array.isArray(val)) {
-      displayValue = val.join(', ');
-    } else if (typeof val === 'string') {
-      displayValue = val.trim();
+      displayValue = val.map(function (item) { return String(item).trim(); }).filter(function (item) {
+        const lower = item.toLowerCase();
+        return item !== '' && lower !== 'null' && lower !== 'none' && lower !== 'unknown' && lower !== 'undefined';
+      });
+      if (displayValue.length === 0) return;
+    } else {
+      const displayStr = String(val).trim();
+      const lower = displayStr.toLowerCase();
+      if (!displayStr || lower === 'null' || lower === 'none' || lower === 'unknown' || lower === 'undefined') {
+        return;
+      }
+      displayValue = displayStr;
     }
 
     attrs.push({
       label: keyLabel(key),
-      value: String(displayValue)
+      value: displayValue
     });
   });
 

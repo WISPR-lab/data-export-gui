@@ -61,16 +61,7 @@
     <v-expand-transition>
       <div v-if="expanded" class="px-4 pb-4 pt-0" @click.stop>
         <v-divider class="mb-4"></v-divider>
-        <v-simple-table dense class="elevation-0 transparent">
-          <template v-slot:default>
-            <tbody>
-              <tr v-for="attr in instance.formatted_attributes" :key="attr.label">
-                <td style="font-weight: 500; width: 200px; border-bottom: none !important;">{{ attr.label }}</td>
-                <td style="word-break: break-word; border-bottom: none !important;">{{ attr.value }}</td>
-              </tr>
-            </tbody>
-          </template>
-        </v-simple-table>
+        <device-attributes-table :attributes="instance.formatted_attributes" />
       </div>
     </v-expand-transition>
   </v-card>
@@ -78,11 +69,12 @@
 
 <script>
 import UASummaryChip from './UASummaryChip.vue';
+import DeviceAttributesTable from './DeviceAttributesTable.vue';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'DeviceInstance',
-  components: { UASummaryChip },
+  components: { UASummaryChip, DeviceAttributesTable },
   props: {
     instance: {
       type: Object,

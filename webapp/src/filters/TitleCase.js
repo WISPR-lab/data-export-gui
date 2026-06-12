@@ -7,6 +7,7 @@ export const IRREGULAR_CAPS = {
   ios: 'iOS',
   macos: 'macOS',
   os: 'OS',
+  ip: 'IP',
 };
 
 export function titleCase(str) {

@@ -119,17 +119,17 @@ def _write_device_instances(conn, instances: list, ts: float) -> None:
     for inst in instances:
         export_data = inst.export_as_dict()
         export_data['created_at'] = ts
-        for list_col in ['os_versions', 'client_versions', 'ip_addresses', 'locations']:
+        for list_col in ['os_versions', 'client_versions', 'client_ips', 'locations']:
             export_data[list_col] = json.dumps(export_data[list_col])
         
         conn.execute(
             '''INSERT INTO device_instances 
                (id, upload_id, platform, manufacturer, model, client_name, os_name, os_type, apple_masking, 
                 first_seen, last_seen, last_seen_dt, event_count, latest_os_version, latest_client_version, 
-                latest_ip_address, os_versions, client_versions, ip_addresses, locations, created_at)
+                latest_client_ip, os_versions, client_versions, client_ips, locations, created_at)
                VALUES (:id, :upload_id, :platform, :manufacturer, :model, :client_name, :os_name, :os_type, :apple_masking, 
                        :first_seen, :last_seen, :last_seen_dt, :event_count, :latest_os_version, :latest_client_version, 
-                       :latest_ip_address, :os_versions, :client_versions, :ip_addresses, :locations, :created_at)''',
+                       :latest_client_ip, :os_versions, :client_versions, :client_ips, :locations, :created_at)''',
             export_data
         )
 

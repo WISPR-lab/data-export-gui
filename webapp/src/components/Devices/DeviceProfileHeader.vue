@@ -41,6 +41,19 @@
           :summary="summary"
         />
       </div>
+
+      <!-- View Events Button
+      <v-btn
+        text
+        small
+        color="primary"
+        class="mr-2 text-none"
+        @click.stop="goToExplore"
+        title="View all events for this device profile"
+      >
+        View Events
+        <v-icon right small>mdi-arrow-right</v-icon>
+      </v-btn> -->
     </div>
   </div>
 </template>
@@ -77,6 +90,16 @@ export default {
       if (first_seen) return `First seen ${fmt(first_seen)}`;
       if (last_seen) return `Last seen ${fmt(last_seen)}`;
       return '';
+    }
+  },
+  methods: {
+    goToExplore() {
+      const queryString = `device_profiles_data:${this.device.id}`;
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore';
+      this.$router.push({
+        name: routeName,
+        query: { q: queryString }
+      });
     }
   }
 }

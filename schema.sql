@@ -175,11 +175,11 @@ CREATE TABLE IF NOT EXISTS device_instances (
     event_count INTEGER,
     latest_os_version TEXT,            
     latest_client_version TEXT,        
-    latest_ip_address TEXT, 
+    latest_client_ip TEXT, 
     --           
     os_versions TEXT,    -- TODO jsonstring????               
     client_versions TEXT,         -- -- TODO jsonstring????              
-    ip_addresses TEXT,                 -- -- TODO jsonstring????         
+    client_ips TEXT,                 -- -- TODO jsonstring????         
     locations TEXT,  -- -- TODO jsonstring????         
     --                  
     created_at REAL,
