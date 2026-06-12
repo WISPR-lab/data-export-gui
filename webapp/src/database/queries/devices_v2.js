@@ -263,6 +263,36 @@ export async function getProfileRawAttrs(profileId) {
   return mergedAttributes;
 }
 
+export function getCondensedModel(manufacturer, model) {
+  const mfr = (manufacturer || '').trim();
+  const mdl = (model || '').trim();
+  if (mfr && mdl) {
+    if (mdl.toLowerCase().startsWith(mfr.toLowerCase())) {
+      return mdl;
+    }
+    return `${mfr} ${mdl}`;
+  }
+  return mdl || mfr || '';
+}
+
+export function getCondensedOS(osName, versions) {
+  const name = osName || '';
+  const list = (versions || []).filter(Boolean);
+  if (!name) return '';
+  const titleName = titleCase(name);
+  if (list.length > 0) {
+    const listCopy = [...list];
+    listCopy.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    const firstV = listCopy[0];
+    const lastV = listCopy[listCopy.length - 1];
+    if (firstV === lastV) {
+      return `${titleName} ${firstV}`;
+    }
+    return `${titleName} ${firstV} → ${lastV}`;
+  }
+  return titleName;
+}
+
 function formatInstanceAttrs(inst) {
   const internalKeys = new Set([
     'id', 
@@ -276,7 +306,13 @@ function formatInstanceAttrs(inst) {
     'last_seen_dt', 
     'ua_summary', 
     'instance_source_type',
-    'latest_os_version'
+    'latest_os_version',
+    'platform',
+    'manufacturer',
+    'model',
+    'os_name',
+    'os_type',
+    'os_versions'
   ]);
 
   const keyLabel = (str) => {
@@ -287,18 +323,21 @@ function formatInstanceAttrs(inst) {
       .join(' ');
   };
 
-  const formatDate = (ts) => {
-    if (!ts) return null;
-    const num = Number(ts);
-    if (isNaN(num) || num <= 0) return null;
-    return new Date(num * 1000).toLocaleDateString(undefined, { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
-
   const attrs = [];
+
+  // Condense Manufacturer and Model into a single 'Model' value
+  const modelValue = getCondensedModel(inst.manufacturer, inst.model);
+  const modelLower = modelValue.toLowerCase();
+  if (modelValue && modelLower !== 'unknown' && modelLower !== 'null' && modelLower !== 'none' && modelLower !== 'undefined') {
+    attrs.push({ label: 'Model', value: modelValue });
+  }
+
+  // Construct OS field
+  const osValue = getCondensedOS(inst.os_name || inst.os_type, inst.os_versions);
+  const osLower = osValue.toLowerCase();
+  if (osValue && osLower !== 'unknown' && osLower !== 'null' && osLower !== 'none' && osLower !== 'undefined') {
+    attrs.push({ label: 'OS', value: osValue });
+  }
 
   Object.entries(inst).forEach(([key, val]) => {
     if (internalKeys.has(key)) return;
@@ -328,17 +367,12 @@ function formatInstanceAttrs(inst) {
     });
   });
 
-  // fetch/format first and last seen strings
-  const firstSeenStr = formatDate(inst.first_seen);
-  const lastSeenStr = formatDate(inst.last_seen);
-
-  if (firstSeenStr) {
-    attrs.push({ label: 'First Seen', value: firstSeenStr });
+  if (inst.first_seen) {
+    attrs.push({ label: 'First Active', value: inst.first_seen, isTimestamp: true });
   }
 
-  // only show "Last Seen" if present and different from First Seen, or if it represents a session range
-  if (lastSeenStr && lastSeenStr !== firstSeenStr) {
-    attrs.push({ label: 'Last Seen', value: lastSeenStr });
+  if (inst.last_seen && inst.last_seen !== inst.first_seen) {
+    attrs.push({ label: 'Last Active', value: inst.last_seen, isTimestamp: true });
   }
 
   return attrs;

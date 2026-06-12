@@ -42,7 +42,7 @@
         :key="i"
         class="mb-3 border rounded-xl overflow-hidden device-drop-zone device-profile-card"
         :class="{'drop-active': isDragging && activeDropId === i}"
-        draggable
+        :draggable="false"
         @dragstart.native="onDragStart($event, dev)"
         @dragend.native="onDragEnd"
         @dragover.native.prevent="activeDropId = i"

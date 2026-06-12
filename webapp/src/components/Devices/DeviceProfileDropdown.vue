@@ -144,7 +144,7 @@
 <script>
 import DeviceInstance from './DeviceInstance.vue';
 import DeviceAttributesTable from './DeviceAttributesTable.vue';
-import { getProfileRawAttrs } from '@/database/queries/devices_v2.js';
+import { getProfileRawAttrs, getCondensedModel, getCondensedOS } from '@/database/queries/devices_v2.js';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
@@ -182,23 +182,10 @@ export default {
       return this.selectedInstanceIds.length > 0 && this.selectedInstanceIds.length < this.device.instances.length;
     },
     profileAttributesTable() {
-      // Construct OS field (e.g. iOS 15.7 -> 16.2)
+      // Construct OS field
       const osName = this.device.latest_os_name || this.device.os_name || this.device.latest_os_type || this.device.os_type || '';
       const versions = (this.device.all_os_versions || []).filter(Boolean);
-      let osValue = '';
-      if (osName) {
-        osValue = titleCase(osName);
-        if (versions.length > 0) {
-          versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-          const firstV = versions[0];
-          const lastV = versions[versions.length - 1];
-          if (firstV === lastV) {
-            osValue = `${titleCase(osName)} ${firstV}`;
-          } else {
-            osValue = `${titleCase(osName)} ${firstV} → ${lastV}`;
-          }
-        }
-      }
+      const osValue = getCondensedOS(osName, versions);
 
       const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.client_ips || []))].filter(ip => {
         if (!ip) return false;
@@ -207,18 +194,7 @@ export default {
       });
 
       // Condense Manufacturer and Model into a single 'Model' value
-      let modelValue = '';
-      const mfr = (this.device.manufacturer || '').trim();
-      const mdl = (this.device.model || '').trim();
-      if (mfr && mdl) {
-        if (mdl.toLowerCase().startsWith(mfr.toLowerCase())) {
-          modelValue = mdl;
-        } else {
-          modelValue = `${mfr} ${mdl}`;
-        }
-      } else {
-        modelValue = mdl || mfr || '';
-      }
+      const modelValue = getCondensedModel(this.device.manufacturer, this.device.model);
 
       // Core attributes list (filtered to exclude empty / unknown values)
       const coreCandidates = [
