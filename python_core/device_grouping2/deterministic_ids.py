@@ -29,6 +29,8 @@ def get_edges(df: pd.DataFrame) -> pd.DataFrame:
         ).dropna()
 
         if not melted_hw.empty:
+            melted_hw = melted_hw[melted_hw['value'].astype(str).str.strip() != ""]
+        if not melted_hw.empty:
             merged = melted_hw.merge(
                 melted_hw,
                 on=['value'],
@@ -51,6 +53,8 @@ def get_edges(df: pd.DataFrame) -> pd.DataFrame:
             value_vars=platform_fp_cols,
         ).dropna()
         if not melted_fp.empty:
+            melted_fp = melted_fp[melted_fp['value'].astype(str).str.strip() != ""]
+        if not melted_fp.empty:
             merged_fp = melted_fp.merge(
                 melted_fp,
                 on=['value'],
@@ -69,6 +73,8 @@ def get_edges(df: pd.DataFrame) -> pd.DataFrame:
     session_id_col = 'attr__client_session_id'
     if session_id_col in df.columns:
         s_df = df[['id', session_id_col]].dropna()
+        if not s_df.empty:
+            s_df = s_df[s_df[session_id_col].astype(str).str.strip() != ""]
         if not s_df.empty:
             pairs = s_df.merge(s_df, how='cross', suffixes=('_a', '_b'))
             pairs = pairs[pairs['id_a'] < pairs['id_b']]
