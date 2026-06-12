@@ -152,7 +152,9 @@ CREATE TABLE IF NOT EXISTS device_instance_edges ( -- for device/event grouping
     id_b TEXT,  -- dropped from main dataframe in level0
     type TEXT,
     provenance TEXT,
-    UNIQUE(id_a, id_b, type)
+    upload_id TEXT,
+    UNIQUE(id_a, id_b, type),
+    FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS device_instances (

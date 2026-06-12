@@ -3,26 +3,22 @@
   <div class="device-header-row py-2">
     <!-- LEFT PART (60% boundary) -->
     <div class="header-left-part">
-      <!-- Drag handle & Icon -->
+      <!-- Icon -->
       <div class="header-icon-group">
-        <v-icon v-if="isGeneric" color="grey--darken-1" class="mr-4">mdi-drag-vertical</v-icon>
-        <v-avatar size="64" color="grey--lighten-4" class="mr-3 flex-shrink-0" :class="{'white border': isGeneric}">
+        <v-avatar size="64" color="grey--lighten-4" class="mr-3 flex-shrink-0">
           <v-icon color="grey--darken-3" size="48">
-            {{ isGeneric ? 'mdi-help-circle-outline' : (device.icon || 'mdi-cellphone') }}
+            {{ device.icon || 'mdi-cellphone' }}
           </v-icon>
         </v-avatar>
       </div>
 
       <!-- Text block: model, manufacturer, activity -->
       <div class="device-info-col mr-4">
-        <div v-if="!isGeneric" class="subtitle-1 font-weight-bold text-truncate">
+        <div class="subtitle-1 font-weight-bold text-truncate">
           {{ (device.user_label || device.model) | formatDeviceDetails }}
           <span v-if="device.user_label && device.model" class="grey--text text--darken-3 body-2 font-weight-regular ml-1">
             ({{ device.model | formatDeviceDetails }})
           </span>
-        </div>
-        <div v-else class="subtitle-1 font-weight-bold text-truncate">
-          {{ device.label | formatDeviceDetails }}
         </div>
         <div v-if="device.manufacturer" class="body-2 grey--text text--darken-3">
           {{ device.manufacturer | formatDeviceDetails }}
@@ -39,6 +35,7 @@
       <div v-if="device.ua_summaries && device.ua_summaries.length > 0" class="chip-col-wrap mr-4">
         <UASummaryChip
           v-for="(summary, idx) in device.ua_summaries"
+          v-slot:default
           v-if="!summary.isUnknown"
           :key="idx"
           :summary="summary"
@@ -58,10 +55,6 @@ export default {
     device: {
       type: Object,
       required: true
-    },
-    isGeneric: {
-      type: Boolean,
-      default: false
     },
     open: {
       type: Boolean,

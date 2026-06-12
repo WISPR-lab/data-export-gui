@@ -30,16 +30,18 @@ def group(upload_id: str, db_path: str = None) -> None:
         
         identity_edges = deterministic_ids.get_edges(df)
         if not identity_edges.empty:
+            identity_edges['upload_id'] = upload_id
             conn.executemany(
-                'INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
-                identity_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
+                'INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance, upload_id) VALUES (?, ?, ?, ?, ?)',
+                identity_edges[['id_a', 'id_b', 'type', 'provenance', 'upload_id']].values.tolist()
             )
         
         upgrade_edges = client_os_upgrades.get_edges(df)
         if not upgrade_edges.empty:
+            upgrade_edges['upload_id'] = upload_id
             conn.executemany(
-                'INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance) VALUES (?, ?, ?, ?)',
-                upgrade_edges[['id_a', 'id_b', 'type', 'provenance']].values.tolist()
+                'INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance, upload_id) VALUES (?, ?, ?, ?, ?)',
+                upgrade_edges[['id_a', 'id_b', 'type', 'provenance', 'upload_id']].values.tolist()
             )
         conn.commit()
         
@@ -55,13 +57,13 @@ def group(upload_id: str, db_path: str = None) -> None:
 
 def _deduplicate_and_fetch_inputs(conn, upload_id: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     conn.execute(
-        '''INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance)
+        '''INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance, upload_id)
            WITH Ranked AS (
                SELECT id, MIN(id) OVER(PARTITION BY attributes, timestamp) as id_a
                FROM events WHERE upload_id = ? AND treat_as_auth_device = 1
            )
-           SELECT id_a, id, 'Deduplication', '{"reason": "identical event metadata"}'
-           FROM Ranked WHERE id != id_a;''', (upload_id,)
+           SELECT id_a, id, 'Deduplication', '{"reason": "identical event metadata"}', ?
+           FROM Ranked WHERE id != id_a;''', (upload_id, upload_id)
     )
     conn.commit()
 

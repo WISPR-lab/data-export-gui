@@ -48,7 +48,7 @@
         <div class="overline">Notes</div>
         <v-textarea
           v-model="device.notes"
-          :placeholder="isGeneric ? 'Add any personal notes about this record.' : 'Add any personal notes about this device.'"
+          placeholder="Add any personal notes about this device."
           outlined
           dense
           rows="1"
@@ -122,14 +122,6 @@
       </div>
     </div>
 
-    <!-- Optional Help Footer for Generic Records -->
-    <div v-if="isGeneric" class="mt-6 pt-4">
-      <p class="body-2 grey--text text--darken-3 mb-0">
-        <v-icon small class="mr-1" color="grey--darken-3">mdi-information-outline</v-icon>
-        To group this record, drag this card onto one of your confirmed devices above.
-      </p>
-    </div>
-
     <!-- Device Instances Explanation Modal -->
     <v-dialog v-model="showHelpModal" max-width="500px">
       <v-card class="pa-4 rounded-xl">
@@ -167,7 +159,8 @@
 
 <script>
 import DeviceInstance from './DeviceInstance.vue';
-import { getProfileAttributes } from '@/database/queries/devices_v2.js';
+import { getProfileRawAttrs } from '@/database/queries/devices_v2.js';
+import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'DeviceProfileDropdown',
@@ -178,10 +171,6 @@ export default {
     device: {
       type: Object,
       required: true
-    },
-    isGeneric: {
-      type: Boolean,
-      default: false
     }
   },
   data() {
@@ -212,15 +201,15 @@ export default {
       const versions = (this.device.all_os_versions || []).filter(Boolean);
       let osValue = '';
       if (osName) {
-        osValue = osName.toUpperCase();
+        osValue = titleCase(osName);
         if (versions.length > 0) {
           versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
           const firstV = versions[0];
           const lastV = versions[versions.length - 1];
           if (firstV === lastV) {
-            osValue = `${osName.toUpperCase()} ${firstV}`;
+            osValue = `${titleCase(osName)} ${firstV}`;
           } else {
-            osValue = `${osName.toUpperCase()} ${firstV} → ${lastV}`;
+            osValue = `${titleCase(osName)} ${firstV} → ${lastV}`;
           }
         }
       }
@@ -295,7 +284,7 @@ export default {
     async loadAttributes() {
       if (this.device && this.device.id) {
         try {
-          this.rawAttributes = await getProfileAttributes(this.device.id);
+          this.rawAttributes = await getProfileRawAttrs(this.device.id);
         } catch (e) {
           console.error('Failed to load profile attributes:', e);
         }
