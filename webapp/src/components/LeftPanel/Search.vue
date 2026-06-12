@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+// modified for WISPR-lab/data-export-gui
 <template>
   <div
     v-if="iconOnly"
@@ -20,7 +21,7 @@ limitations under the License.
     style="cursor: pointer"
     @click="navigateToExplore"
   >
-    <v-icon :color="isActive ? 'primary' : ''">mdi-magnify</v-icon>
+    <v-icon :color="isActive ? 'primary' : ''">mdi-timeline-clock-outline</v-icon>
   </div>
 
   <div v-else>
@@ -34,7 +35,7 @@ limitations under the License.
         isActive ? 'active-view' : ''
       ]"
     >
-      <span> <v-icon left :color="isActive ? 'primary' : ''">mdi-magnify</v-icon> Events </span>
+      <span> <v-icon left :color="isActive ? 'primary' : ''">mdi-timeline-clock-outline</v-icon> Events </span>
     </div>
   </div>
 </template>

@@ -139,6 +139,10 @@ export default {
       }
       eventData.chip = chip
       EventBus.$emit('setQueryAndFilter', eventData)
+      if (this.$route.name !== 'Explore' && this.$route.name !== 'DemoExplore') {
+        const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+        this.$router.push(target)
+      }
     },
   },
 }

@@ -106,6 +106,10 @@ export default {
       if (this.$store.state.demoMode) {
         EventBus.$emit('demo:action', 'event-type-clicked')
       }
+      if (this.$route.name !== 'Explore' && this.$route.name !== 'DemoExplore') {
+        const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+        this.$router.push(target)
+      }
     },
   },
 }
