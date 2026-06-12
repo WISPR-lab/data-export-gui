@@ -1,74 +1,76 @@
 // added for WISPR-lab/data-export-gui
 <template>
-  <v-card outlined class="pa-4 d-flex align-center" style="gap: 16px; background-color: white;">
-    <!-- Selection Checkbox (Edit mode) -->
-    <v-checkbox
-      v-if="showCheckbox"
-      :input-value="selected"
-      hide-details
-      class="ma-0 pa-0 flex-shrink-0"
-      @change="$emit('select', $event)"
-    ></v-checkbox>
+  <v-card 
+    outlined 
+    :ripple="false"
+    class="pa-0 d-flex flex-column cursor-pointer" 
+    style="background-color: white;"
+    @click="expanded = !expanded"
+  >
+    <div class="pa-4 d-flex align-center" style="gap: 16px; width: 100%;">
+      <!-- Selection Checkbox (Edit mode) -->
+      <v-checkbox
+        v-if="showCheckbox"
+        :input-value="selected"
+        hide-details
+        class="ma-0 pa-0 flex-shrink-0"
+        @change="$emit('select', $event)"
+        @click.native.stop
+      ></v-checkbox>
 
-    <!-- UA summary chip — same style as DeviceProfileHeader chips -->
-    <div v-if="instance.ua_summary && !instance.ua_summary.isUnknown" class="d-flex flex-wrap align-center" style="gap: 4px; flex: 0 0 auto;">
-      <UASummaryChip :summary="instance.ua_summary" />
-    </div>
+      <!-- UA summary chip column -->
+      <div v-if="instance.ua_summary && !instance.ua_summary.isUnknown" class="d-flex align-center" style="flex: 0 0 120px; max-width: 120px; width: 120px;">
+        <UASummaryChip
+          :summary="instance.ua_summary"
+          style="max-width: 100%; height: auto;"
+          class="align-start ma-0"
+        />
+      </div>
 
-    <!-- Client Name & Version & OS & Timeline -->
-    <div class="flex-grow-1 text-truncate">
-      <div class="body-2 font-weight-bold">{{ getClientLabel | formatDeviceDetails }}</div>
-      <div class="caption grey--text text--darken-2">
-        OS: {{ getOSLabel | formatDeviceDetails }} &bull; {{ getTimelineString }} &bull; {{ instance.event_count || 0 }} events
+      <!-- Client Name & Version & OS & Timeline -->
+      <div class="flex-grow-1 text-truncate">
+        <div class="body-2 font-weight-bold">{{ getHeaderLabel }}</div>
+        <div v-if="getTimelineString" class="caption grey--text text--darken-2">
+          Active: {{ getTimelineString }}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="d-flex align-center flex-shrink-0" style="gap: 8px;">
+        <v-btn
+          v-if="instance.event_count > 0"
+          text
+          small
+          color="primary"
+          @click.stop="goToExplore"
+          title="View events for this instance"
+        >
+          {{ instance.event_count }} Events
+          <v-icon right small>mdi-arrow-right</v-icon>
+        </v-btn>
+
+        <v-btn icon small @click.stop="expanded = !expanded">
+          <v-icon>{{ expanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+        </v-btn>
       </div>
     </div>
 
-    <!-- Actions -->
-    <div class="d-flex align-center" style="gap: 8px;">
-      <v-btn
-        v-if="instance.event_count > 0"
-        text
-        small
-        color="primary"
-        @click.stop="goToExplore"
-        title="View events for this instance"
-      >
-        View Events
-        <v-icon right small>mdi-arrow-right</v-icon>
-      </v-btn>
-
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            v-bind="attrs"
-            v-on="on"
-            icon
-            medium
-            @click.stop="$emit('showJSON', instance)"
-            title="View raw data"
-          >
-            <v-icon>mdi-code-braces</v-icon>
-          </v-btn>
-        </template>
-        <span>View raw data</span>
-      </v-tooltip>
-
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            v-bind="attrs"
-            v-on="on"
-            icon
-            medium
-            @click="$emit('unmerge', instance.id)"
-            title="Unlink record from profile"
-          >
-            <v-icon>mdi-link-off</v-icon>
-          </v-btn>
-        </template>
-        <span>Unlink record from profile</span>
-      </v-tooltip>
-    </div>
+    <!-- Expanded Content -->
+    <v-expand-transition>
+      <div v-if="expanded" class="px-4 pb-4 pt-0" @click.stop>
+        <v-divider class="mb-4"></v-divider>
+        <v-simple-table dense class="elevation-0 transparent">
+          <template v-slot:default>
+            <tbody>
+              <tr v-for="attr in instance.formatted_attributes" :key="attr.label">
+                <td style="font-weight: 500; width: 200px; border-bottom: none !important;">{{ attr.label }}</td>
+                <td style="word-break: break-word; border-bottom: none !important;">{{ attr.value }}</td>
+              </tr>
+            </tbody>
+          </template>
+        </v-simple-table>
+      </div>
+    </v-expand-transition>
   </v-card>
 </template>
 
@@ -90,9 +92,40 @@ export default {
     selected: {
       type: Boolean,
       default: false
+    },
+    showHelp: {
+      type: Boolean,
+      default: false
     }
   },
+  data() {
+    return {
+      expanded: false
+    };
+  },
   computed: {
+    getHeaderLabel() {
+      const type = this.instance.instance_source_type;
+      
+      const getSessionStr = () => {
+        const sum = this.instance.ua_summary;
+        if (sum) {
+          const p = sum.primary || '';
+          const s = sum.secondary || '';
+          const fmt = s ? `${p} (${s})` : p;
+          if (fmt) return `Session from ${fmt}`;
+        }
+        return 'Session';
+      };
+
+      if (type === 'raw_devices') {
+        return 'Recognized Device';
+      } else if (type === 'both') {
+        return `Recognized Device; ${getSessionStr()}`;
+      } else {
+        return getSessionStr();
+      }
+    },
     getClientLabel() {
       const name = this.instance.client_name || 'Unknown Client';
       if (this.instance.latest_client_version) {

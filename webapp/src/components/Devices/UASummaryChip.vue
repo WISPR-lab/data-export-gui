@@ -20,6 +20,9 @@ export default {
   },
   computed: {
     label() {
+      if (this.summary.platform) {
+        return this.summary.platform;
+      }
       const p = this.summary.primary || '';
       const s = this.summary.secondary || '';
       return s ? `${p} (${s})` : p;

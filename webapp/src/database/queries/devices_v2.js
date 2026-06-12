@@ -38,7 +38,25 @@ export async function getDevices() {
     SELECT 
       di.*, 
       dpi.device_profile_id,
-      COALESCE(u.color, '5E75C2') as upload_color
+      COALESCE(u.color, '5E75C2') as upload_color,
+      CASE 
+        WHEN EXISTS (
+          SELECT 1 FROM device_instance_raw_devices dir 
+          WHERE dir.device_instance_id = di.id
+        ) AND EXISTS (
+          SELECT 1 FROM device_instance_events die 
+          WHERE die.device_instance_id = di.id
+        ) THEN 'both'
+        WHEN EXISTS (
+          SELECT 1 FROM device_instance_raw_devices dir 
+          WHERE dir.device_instance_id = di.id
+        ) THEN 'raw_devices'
+        WHEN EXISTS (
+          SELECT 1 FROM device_instance_events die 
+          WHERE die.device_instance_id = di.id
+        ) THEN 'events'
+        ELSE 'unknown'
+      END AS instance_source_type
     FROM device_instances di
     JOIN device_profile_instances dpi ON di.id = dpi.device_instance_id
     LEFT JOIN uploads u ON di.upload_id = u.id
@@ -72,6 +90,8 @@ export async function getDevices() {
     // Attach user agent summary classification to the individual instance
     // Returns a single summary dict (or null) rather than an array
     inst.ua_summary = getUASummary([inst])[0] || null;
+
+    inst.formatted_attributes = computeFormattedAttributes(inst);
 
     if (!instancesByProfile[inst.device_profile_id]) {
       instancesByProfile[inst.device_profile_id] = [];
@@ -157,7 +177,27 @@ export async function getDeviceInstances(instanceIds) {
 
   const placeholders = instanceIds.map(() => '?').join(',');
   const sql = `
-    SELECT di.*, u.color as upload_color
+    SELECT 
+      di.*, 
+      u.color as upload_color,
+      CASE 
+        WHEN EXISTS (
+          SELECT 1 FROM device_instance_raw_devices dir 
+          WHERE dir.device_instance_id = di.id
+        ) AND EXISTS (
+          SELECT 1 FROM device_instance_events die 
+          WHERE die.device_instance_id = di.id
+        ) THEN 'both'
+        WHEN EXISTS (
+          SELECT 1 FROM device_instance_raw_devices dir 
+          WHERE dir.device_instance_id = di.id
+        ) THEN 'raw_devices'
+        WHEN EXISTS (
+          SELECT 1 FROM device_instance_events die 
+          WHERE die.device_instance_id = di.id
+        ) THEN 'events'
+        ELSE 'unknown'
+      END AS instance_source_type
     FROM device_instances di
     LEFT JOIN uploads u ON di.upload_id = u.id
     WHERE di.id IN (${placeholders})
@@ -186,6 +226,8 @@ export async function getDeviceInstances(instanceIds) {
     inst.upload_color = color;
 
     inst.ua_summary = getUASummary([inst])[0] || null;
+
+    inst.formatted_attributes = computeFormattedAttributes(inst);
 
     return inst;
   });
@@ -286,3 +328,80 @@ export async function getProfileAttributes(profileId) {
   
   return mergedAttributes;
 }
+
+function computeFormattedAttributes(inst) {
+  const internalKeys = new Set([
+    'id', 
+    'upload_id', 
+    'device_profile_id',
+    'upload_color',
+    'created_at', 
+    'event_count', 
+    'first_seen', 
+    'last_seen', 
+    'last_seen_dt', 
+    'ua_summary', 
+    'instance_source_type',
+    'latest_os_version'
+  ]);
+
+  const titleCase = (str) => {
+    return str
+      .split('_')
+      .map(word => {
+        const lower = word.toLowerCase();
+        if (lower === 'os') return 'OS';
+        if (lower === 'ip') return 'IP';
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ');
+  };
+
+  const formatDate = (ts) => {
+    if (!ts) return null;
+    return new Date(ts * 1000).toLocaleDateString(undefined, { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const attrs = [];
+
+  // 1. Process standard fields
+  Object.entries(inst).forEach(([key, val]) => {
+    if (internalKeys.has(key)) return;
+    if (key.includes('latest')) return;
+    if (val === undefined || val === null) return;
+    if (Array.isArray(val) && val.length === 0) return;
+    if (typeof val === 'string' && !val.trim()) return;
+
+    let displayValue = val;
+    if (Array.isArray(val)) {
+      displayValue = val.join(', ');
+    } else if (typeof val === 'string') {
+      displayValue = val.trim();
+    }
+
+    attrs.push({
+      label: titleCase(key),
+      value: String(displayValue)
+    });
+  });
+
+  // 2. Add First Seen & Last Seen based on availability and logic
+  const firstSeenStr = formatDate(inst.first_seen);
+  const lastSeenStr = formatDate(inst.last_seen);
+
+  if (firstSeenStr) {
+    attrs.push({ label: 'First Seen', value: firstSeenStr });
+  }
+
+  // Only show Last Seen if it is present and different from First Seen, or if it represents a session range
+  if (lastSeenStr && lastSeenStr !== firstSeenStr) {
+    attrs.push({ label: 'Last Seen', value: lastSeenStr });
+  }
+
+  return attrs;
+}
+

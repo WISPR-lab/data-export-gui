@@ -113,8 +113,10 @@ export function getUASummary(deviceInstances) {
       } else {
         // 3 -- mobile web browsing
         // "mobile safari" + ios + google --> "Google (Safari)"
-        label1 = platform === 'google' ? 'Google' : titleCase(platform);
-        label2 = cleanBrowser;
+        //label1 = platform === 'google' ? 'Google' : titleCase(platform);
+        //label2 = cleanBrowser;
+        // update:  "mobile safari" + ios + google --> "Safari"
+        label1 = cleanBrowser;
       }
     } else {
       if (!primaryIsBrowser) {
@@ -131,25 +133,25 @@ export function getUASummary(deviceInstances) {
       } else {
         // 6 -- desktop web browsing
         // "chrome" + macos + google --> "Google (Chrome)"
-        label1 = platform === 'google' ? 'Google' : titleCase(platform);
-        label2 = cleanBrowser;
+        // label1 = platform === 'google' ? 'Google' : titleCase(platform);
+        // label2 = cleanBrowser;
+        // update:  "chrome" + macos + google --> "Chrome"
+        label1 = cleanBrowser
       }
     }
 
-    const lower_label1 = label1.toLowerCase().trim();
-    const isUnknown = !lower_label1 || 
-                      lower_label1 === 'unknown' || 
-                      lower_label1 === 'unknown client' || 
-                      lower_label1.includes('gglunknown');
+    const isUnknown = !platform || platform.toLowerCase() === 'unknown';
 
     const color = instance.upload_color;
-    const key = `${label1}-${label2}-${color}`;
+    const displayPlatform = titleCase(platform);
+    const key = `${displayPlatform}-${color}`;
     if (!uniqueSummaryItems[key]) {
       uniqueSummaryItems[key] = {
         primary: label1,
         secondary: label2,
         color,
-        isUnknown: !!isUnknown
+        isUnknown: !!isUnknown,
+        platform: displayPlatform
       };
     }
   });

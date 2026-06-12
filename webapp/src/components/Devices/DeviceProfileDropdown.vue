@@ -114,6 +114,7 @@
           :instance="inst"
           :show-checkbox="isEditingInstances"
           :selected="selectedInstanceIds.includes(inst.id)"
+          :show-help="isFirstOfType(inst)"
           @select="toggleInstanceSelection(inst.id, $event)"
           @showJSON="$emit('showJSON', $event)"
           @unmerge="$emit('unmerge', $event)"
@@ -328,6 +329,16 @@ export default {
         this.isEditingInstances = false;
         this.selectedInstanceIds = [];
       }
+    },
+    isFirstOfType(instance) {
+      if (!this.device.instances) return false;
+      const isRecognized = instance.event_count === 0;
+      const firstIndex = this.device.instances.findIndex(inst => {
+        const instRecognized = inst.event_count === 0;
+        return instRecognized === isRecognized;
+      });
+      const firstInst = this.device.instances[firstIndex];
+      return firstInst ? firstInst.id === instance.id : false;
     }
   }
 }

@@ -75,7 +75,7 @@ export default {
   computed: {
     activityString() {
       const { first_seen, last_seen } = this.device;
-      const fmt = ts => new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+      const fmt = ts => new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       if (first_seen && last_seen) {
         const start = fmt(first_seen);
         const end = fmt(last_seen);
