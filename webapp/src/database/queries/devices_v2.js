@@ -280,6 +280,7 @@ function formatInstanceAttrs(inst) {
   ]);
 
   const keyLabel = (str) => {
+    if (str === 'client_ips' || str === 'client_ip') return 'IP Addresses';
     return str
       .split('_')
       .map(word => titleCase(word))

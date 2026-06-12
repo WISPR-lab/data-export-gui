@@ -97,8 +97,8 @@ export function getUASummary(deviceInstances) {
       } else {
         // 3 -- mobile web browsing
         // "mobile safari" + ios + google --> "Google (Safari)"
-        //label1 = platform === 'google' ? 'Google' : titleCase(platform);
-        //label2 = cleanBrowser;
+        // label1 = platform === 'google' ? 'Google' : titleCase(platform);
+        // label2 = cleanBrowser;
         // update:  "mobile safari" + ios + google --> "Safari"
         label1 = cleanBrowser;
       }
