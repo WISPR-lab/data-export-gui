@@ -520,9 +520,6 @@ result
         pyodide.globals.set('upload_id', uploadId);
 
         await pyodide.runPythonAsync(`
-import device_grouping.worker as device_grouping_worker
-device_grouping_worker.group(upload_id)
-
 import device_grouping2.worker as device_grouping2_worker
 device_grouping2_worker.group(upload_id)
 `);

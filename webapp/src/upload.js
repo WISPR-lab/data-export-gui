@@ -92,6 +92,14 @@ export async function processUpload(file, platform, sketchId, store) {
     console.error('[UploadService] Upload failed:', error);
     summary.errors.push(error.message);
     summary.errorType = error.errorType || ERROR_TYPES.PARSER_ERROR;
+    if (error.uploadId) {
+      log(`Cleaning up failed upload data for ID: ${error.uploadId}`);
+      try {
+        await DB.deleteUpload(error.uploadId);
+      } catch (deleteError) {
+        logError(`Failed to clean up upload data: ${deleteError.message}`);
+      }
+    }
     if (store) store.commit('FAIL_UPLOAD', summary);
   } finally {
     summary.processingTimeMs = Date.now() - startTime;
