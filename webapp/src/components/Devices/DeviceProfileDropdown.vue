@@ -3,16 +3,14 @@
   <div class="pa-6">
     <!-- 1. Device Details Table (at the very top, transparent background) -->
     <div v-if="profileAttributesTable.length > 0" class="mb-6">
-      <div class="overline mb-3">Device Details</div>
+      <div class="text-subtitle-1 font-weight-medium text--primary mb-3">Device Details</div>
       <device-attributes-table :attributes="profileAttributesTable" />
     </div>
-
-    <!-- <v-divider v-if="profileAttributesTable.length > 0" class="mb-6"></v-divider> -->
 
     <!-- 2. Name & Notes Inputs -->
     <div class="d-flex mb-6" style="gap: 36px;">
       <div style="flex: 0 0 auto; width: 300px;">
-        <div class="overline">Name</div>
+        <div class="text-subtitle-1 font-weight-medium text--primary">Name</div>
         
         <div class="mb-8">
           <v-text-field
@@ -29,7 +27,7 @@
 
       <!-- Right Column: Notes (tall, expands) -->
       <div style="flex: 1 0 auto;">
-        <div class="overline">Notes</div>
+        <div class="text-subtitle-1 font-weight-medium text--primary">Notes</div>
         <v-textarea
           v-model="device.notes"
           placeholder="Add any personal notes about this device."
@@ -49,10 +47,7 @@
     <div v-if="device.instances && device.instances.length > 0" class="mb-6">
       <div class="d-flex align-center justify-space-between mb-3">
         <div class="d-flex align-center">
-          <span class="overline">Device Instances ({{ device.instances.length }})</span>
-          <v-btn icon x-small class="ml-1" color="primary" @click="showHelpModal = true" title="What is a device instance?">
-            <v-icon small>mdi-help-circle-outline</v-icon>
-          </v-btn>
+          <span class="text-subtitle-1 font-weight-medium text--primary">Device Instances ({{ device.instances.length }})</span>
         </div>
         <v-btn
           v-if="device.instances.length > 1"
@@ -67,7 +62,7 @@
       </div>
 
       <!-- Batch Action Bar (Edit mode) -->
-      <div v-if="isEditingInstances" class="d-flex align-center justify-space-between mb-4 pa-3 border rounded-lg bg-light-grey">
+      <div v-if="isEditingInstances" class="d-flex align-center justify-space-between mb-4 pa-3 border rounded-lg bg-light-grey" style="gap: 8px; flex-wrap: wrap;">
         <div class="d-flex align-center">
           <v-checkbox
             :input-value="isAllSelected"
@@ -78,17 +73,30 @@
           ></v-checkbox>
           <span class="body-2 font-weight-medium">{{ selectedInstanceIds.length }} selected</span>
         </div>
-        <v-btn
-          color="error"
-          small
-          outlined
-          :disabled="selectedInstanceIds.length === 0"
-          class="rounded-lg"
-          @click="batchUnlink"
-        >
-          <v-icon left small>mdi-link-off</v-icon>
-          Unlink Selected
-        </v-btn>
+        <div class="d-flex align-center" style="gap: 8px;">
+          <v-btn
+            color="primary"
+            small
+            outlined
+            :disabled="selectedInstanceIds.length === 0"
+            class="rounded-lg text-none"
+            @click="moveSelected"
+          >
+            <v-icon left small>mdi-folder-move-outline</v-icon>
+            Move to Existing Profile
+          </v-btn>
+          <v-btn
+            color="primary"
+            small
+            outlined
+            :disabled="selectedInstanceIds.length === 0"
+            class="rounded-lg text-none"
+            @click="createProfileWithSelected"
+          >
+            <v-icon left small>mdi-plus-box-outline</v-icon>
+            Move to New Profile
+          </v-btn>
+        </div>
       </div>
 
       <div class="space-y-2" style="display: flex; flex-direction: column; gap: 12px;">
@@ -99,45 +107,13 @@
           :show-checkbox="isEditingInstances"
           :selected="selectedInstanceIds.includes(inst.id)"
           :show-help="isFirstOfType(inst)"
+          :ua-masking-text="uaMaskingText"
           @select="toggleInstanceSelection(inst.id, $event)"
           @showJSON="$emit('showJSON', $event)"
-          @unmerge="$emit('unmerge', $event)"
         />
       </div>
     </div>
-
-    <!-- Device Instances Explanation Modal -->
-    <v-dialog v-model="showHelpModal" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="text-h6 font-weight-bold d-flex align-center">
-          <v-icon color="primary" class="mr-2">mdi-information-outline</v-icon>
-          Profiles vs. Instances
-        </v-card-title>
-        <v-card-text class="pt-2">
-          <p class="body-2">
-            This tool separates device data into a hierarchy to help map your timeline:
-          </p>
-          <div class="mb-4">
-            <div class="subtitle-2 font-weight-bold primary--text">Device Profile</div>
-            <div class="body-2 text--secondary">
-              Formed by connecting instances that share the same hardware model  (e.g. all <i>iPhone XRs</i> or all <i>MacBooks</i>). TODO caveat about masking/deterministic IDs
-            </div>
-          </div>
-          <div class="mb-4">
-            <div class="subtitle-2 font-weight-bold primary--text">Device Instance</div>
-            <div class="body-2 text--secondary">
-              A single continuous installation or session chain (e.g. a specific <i>Instagram App</i> setup or <i>Safari browser session</i>) representing an individual device deployment.
-            </div>
-          </div>
-          <p class="body-2 mb-0">
-
-          </p>
-        </v-card-text>
-        <v-card-actions class="justify-end">
-          <v-btn color="primary" text @click="showHelpModal = false">Got it</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    </div>
   </div>
 </template>
 
@@ -157,20 +133,37 @@ export default {
     device: {
       type: Object,
       required: true
+    },
+    uaMaskingText: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
     return {
       rawAttributes: {},
-      showHelpModal: false,
       isEditingInstances: false,
       selectedInstanceIds: []
     }
   },
   watch: {
-    device: {
+    'device.id': {
       immediate: true,
-      handler: 'loadAttributes'
+      async handler(newId, oldId) {
+        await this.loadAttributes();
+        if (newId !== oldId) {
+          this.selectedInstanceIds = [];
+          this.isEditingInstances = false;
+        }
+      }
+    },
+    'device.instances': {
+      handler(newVal, oldVal) {
+        if (!oldVal || !newVal || newVal.length !== oldVal.length) {
+          this.selectedInstanceIds = [];
+          this.isEditingInstances = false;
+        }
+      }
     }
   },
   computed: {
@@ -187,7 +180,7 @@ export default {
       const versions = (this.device.all_os_versions || []).filter(Boolean);
       const osValue = getCondensedOS(osName, versions);
 
-      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.client_ips || []))].filter(ip => {
+      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(function(inst) { return inst.client_ips || []; }))].filter(function(ip) {
         if (!ip) return false;
         const ipStr = String(ip).trim().toLowerCase();
         return ipStr !== '' && ipStr !== 'null' && ipStr !== 'none' && ipStr !== 'unknown' && ipStr !== 'undefined';
@@ -198,6 +191,7 @@ export default {
 
       // Core attributes list (filtered to exclude empty / unknown values)
       const coreCandidates = [
+        { label: 'Profile ID', value: this.device.id },
         { label: 'Model', value: modelValue },
         { label: 'OS', value: osValue },
         { label: 'First Active', value: this.device.first_seen, isTimestamp: true },
@@ -205,7 +199,7 @@ export default {
         { label: 'IP Addresses', value: uniqueIPs }
       ];
 
-      const core = coreCandidates.filter(item => {
+      const core = coreCandidates.filter(function(item) {
         if (item.value === null || item.value === undefined) return false;
         if (Array.isArray(item.value)) return item.value.length > 0;
         if (item.isTimestamp) {
@@ -241,15 +235,16 @@ export default {
       ];
 
       const optionals = [];
-      optionalKeys.forEach(opt => {
-        const actualKey = Object.keys(this.rawAttributes).find(k => k.toLowerCase() === opt.key.toLowerCase());
+      const self = this;
+      optionalKeys.forEach(function(opt) {
+        const actualKey = Object.keys(self.rawAttributes).find(function(k) { return k.toLowerCase() === opt.key.toLowerCase(); });
         if (actualKey) {
-          const val = this.rawAttributes[actualKey];
+          const val = self.rawAttributes[actualKey];
           if (val !== null && val !== undefined) {
             const valStr = String(val).trim();
             const lower = valStr.toLowerCase();
             if (valStr !== '' && lower !== 'unknown' && lower !== 'null' && lower !== 'none' && lower !== 'undefined') {
-              if (!optionals.some(x => x.label === opt.label)) {
+              if (!optionals.some(function(x) { return x.label === opt.label; })) {
                 optionals.push({ label: opt.label, value: valStr });
               }
             }
@@ -257,10 +252,13 @@ export default {
         }
       });
 
-      return [...core, ...optionals];
+      return [].concat(core, optionals);
     }
   },
   methods: {
+    async loadData() {
+      await this.loadAttributes();
+    },
     async loadAttributes() {
       if (this.device && this.device.id) {
         try {
@@ -282,27 +280,30 @@ export default {
           this.selectedInstanceIds.push(instanceId);
         }
       } else {
-        this.selectedInstanceIds = this.selectedInstanceIds.filter(id => id !== instanceId);
+        this.selectedInstanceIds = this.selectedInstanceIds.filter(function(id) { return id !== instanceId; });
       }
     },
     toggleSelectAll(isSelected) {
       if (isSelected) {
-        this.selectedInstanceIds = this.device.instances.map(inst => inst.id);
+        this.selectedInstanceIds = this.device.instances.map(function(inst) { return inst.id; });
       } else {
         this.selectedInstanceIds = [];
       }
     },
-    batchUnlink() {
+    moveSelected() {
       if (this.selectedInstanceIds.length > 0) {
-        this.$emit('batch-unmerge', this.selectedInstanceIds);
-        this.isEditingInstances = false;
-        this.selectedInstanceIds = [];
+        this.$emit('move-instances', [...this.selectedInstanceIds]);
+      }
+    },
+    createProfileWithSelected() {
+      if (this.selectedInstanceIds.length > 0) {
+        this.$emit('create-profile', [...this.selectedInstanceIds]);
       }
     },
     isFirstOfType(instance) {
       if (!this.device.instances) return false;
       const isRecognized = instance.event_count === 0;
-      const firstIndex = this.device.instances.findIndex(inst => {
+      const firstIndex = this.device.instances.findIndex(function(inst) {
         const instRecognized = inst.event_count === 0;
         return instRecognized === isRecognized;
       });

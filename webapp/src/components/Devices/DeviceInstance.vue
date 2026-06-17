@@ -29,14 +29,33 @@
 
       <!-- OS & Timeline -->
       <div class="flex-grow-1 text-truncate">
-        <div class="body-2 font-weight-bold">{{ getHeaderLabel }}</div>
-        <div class="caption grey--text text--darken-2">
+        <div class="text-body-2 font-weight-medium text--primary d-flex align-center">
+          <span>{{ getHeaderLabel }}</span>
+          <v-tooltip v-if="isMaskedInstance" bottom max-width="320">
+            <template v-slot:activator="{ on, attrs }">
+              <span
+                class="d-inline-flex align-center justify-center rounded-circle grey lighten-2 ml-2"
+                style="width: 20px; height: 20px; flex-shrink: 0;"
+                v-bind="attrs"
+                v-on="on"
+              >
+                <v-icon
+                  color="grey darken-3"
+                  style="font-size: 13px;"
+                >
+                  mdi-fingerprint-off
+                </v-icon>
+              </span>
+            </template>
+            <span>{{ computedMaskingText }}</span>
+          </v-tooltip>
+        </div>
+        <div class="text-body-2 text--secondary">
           <span v-if="getOSLabel">{{ getOSLabel }}</span>
           <span v-if="getTimelineString && getOSLabel" class="ml-2 mr-2">&bull;</span>
-          <span v-if="getTimelineString">Active: {{ getTimelineString }}</span>
+          <span v-if="getTimelineString">Active {{ getTimelineString }}</span>
         </div>
       </div>
-
       <!-- Actions -->
       <div class="d-flex align-center flex-shrink-0" style="gap: 8px;">
         <v-btn
@@ -91,6 +110,10 @@ export default {
     showHelp: {
       type: Boolean,
       default: false
+    },
+    uaMaskingText: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
@@ -99,16 +122,30 @@ export default {
     };
   },
   computed: {
+    computedMaskingText() {
+      if (!this.uaMaskingText) return '';
+      const os = (this.instance.os_name || '').trim().toLowerCase();
+      const model = (this.instance.model || '').trim().toLowerCase();
+      const isMac = os === 'macos' || model === 'macintosh';
+      const baseText = isMac ? this.uaMaskingText.mac_ipad : this.uaMaskingText.iphone;
+      if (!baseText) return '';
+      return baseText.split('.')[0] + '.';
+    },
+    isMaskedInstance() {
+      if (this.instance.apple_masking && this.instance.apple_masking !== '0' && this.instance.apple_masking !== 'false') return true;
+      const model = (this.instance.model || '').trim().toLowerCase();
+      return model === 'iphone' || model === 'ipad' || model === 'ipod' || model === 'macintosh' || model === 'generic';
+    },
     getHeaderLabel() {
       const type = this.instance.instance_source_type;
       
-      const getSessionStr = () => {
+      const getStreamStr = () => {
         const sum = this.instance.ua_summary;
         if (sum) {
           const p = sum.primary || '';
           const s = sum.secondary || '';
           const fmt = s ? `${p} (${s})` : p;
-          if (fmt) return `Session(s) from ${fmt}`;
+          if (fmt) return `Session from ${fmt}`;
         }
         return 'Session';
       };
@@ -116,9 +153,9 @@ export default {
       if (type === 'raw_devices') {
         return 'Recognized Device';
       } else if (type === 'both') {
-        return `Recognized Device; ${getSessionStr()}`;
+        return `Recognized Device; ${getStreamStr()}`;
       } else {
-        return getSessionStr();
+        return getStreamStr();
       }
     },
     getClientLabel() {

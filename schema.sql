@@ -210,6 +210,8 @@ CREATE TABLE IF NOT EXISTS device_profiles_v2 (
     os_type TEXT,
     user_label TEXT,
     notes TEXT,
+    user_created INTEGER DEFAULT 0,
+    deleted INTEGER DEFAULT 0,
     created_at REAL,
     updated_at REAL
 );
@@ -220,6 +222,19 @@ CREATE TABLE IF NOT EXISTS device_profile_instances (
     PRIMARY KEY (device_profile_id, device_instance_id),
     FOREIGN KEY(device_profile_id) REFERENCES device_profiles_v2(id) ON DELETE CASCADE,
     FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_device_edits (
+    id TEXT PRIMARY KEY,
+    action_type TEXT,
+    instance_ids JSONTEXT,
+    instance_summaries JSONTEXT,
+    source_profile_id TEXT,
+    target_profile_id TEXT,
+    source_profile_label TEXT,
+    target_profile_label TEXT,
+    reason TEXT,
+    created_at REAL
 );
 
 

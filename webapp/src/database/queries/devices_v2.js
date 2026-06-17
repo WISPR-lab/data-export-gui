@@ -47,7 +47,7 @@ export async function getDevices() {
    */
   const db = await getDB();
 
-  const profileSql = `SELECT * FROM device_profiles_v2`;
+  const profileSql = `SELECT * FROM device_profiles_v2 WHERE deleted = 0`;
   const profileRows = await db.exec(profileSql, {
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -278,19 +278,16 @@ export function getCondensedModel(manufacturer, model) {
 export function getCondensedOS(osName, versions) {
   const name = osName || '';
   const list = (versions || []).filter(Boolean);
-  if (!name) return '';
+  if (!name) return [];
   const titleName = titleCase(name);
   if (list.length > 0) {
     const listCopy = [...list];
     listCopy.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    const firstV = listCopy[0];
-    const lastV = listCopy[listCopy.length - 1];
-    if (firstV === lastV) {
-      return `${titleName} ${firstV}`;
-    }
-    return `${titleName} ${firstV} → ${lastV}`;
+    return listCopy.map(function(v, idx) {
+      return idx === 0 ? (titleName + ' ' + v) : v;
+    });
   }
-  return titleName;
+  return [titleName];
 }
 
 function formatInstanceAttrs(inst) {
@@ -312,7 +309,8 @@ function formatInstanceAttrs(inst) {
     'model',
     'os_name',
     'os_type',
-    'os_versions'
+    'os_versions',
+    'apple_masking'
   ]);
 
   const keyLabel = (str) => {
@@ -325,6 +323,10 @@ function formatInstanceAttrs(inst) {
 
   const attrs = [];
 
+  if (inst.id) {
+    attrs.push({ label: 'Instance ID', value: inst.id });
+  }
+
   // Condense Manufacturer and Model into a single 'Model' value
   const modelValue = getCondensedModel(inst.manufacturer, inst.model);
   const modelLower = modelValue.toLowerCase();
@@ -334,9 +336,11 @@ function formatInstanceAttrs(inst) {
 
   // Construct OS field
   const osValue = getCondensedOS(inst.os_name || inst.os_type, inst.os_versions);
-  const osLower = osValue.toLowerCase();
-  if (osValue && osLower !== 'unknown' && osLower !== 'null' && osLower !== 'none' && osLower !== 'undefined') {
-    attrs.push({ label: 'OS', value: osValue });
+  if (osValue && osValue.length > 0) {
+    const osLower = String(osValue[0]).toLowerCase();
+    if (osLower !== 'unknown' && osLower !== 'null' && osLower !== 'none' && osLower !== 'undefined') {
+      attrs.push({ label: 'OS', value: osValue });
+    }
   }
 
   Object.entries(inst).forEach(([key, val]) => {
@@ -401,4 +405,40 @@ export function customSort(items) {
 
     return 0;
   });
+}
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+export async function getProfileComments(profileId) {
+  const db = await getDB();
+  const sql = `
+    SELECT * FROM device_profile_comments 
+    WHERE device_profile_id = ? 
+    ORDER BY created_at ASC
+  `;
+  return await db.exec(sql, {
+    bind: [profileId],
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+}
+
+export async function addProfileComment(profileId, comment) {
+  const db = await getDB();
+  const id = generateUUID();
+  const ts = Date.now() / 1000;
+  const sql = `
+    INSERT INTO device_profile_comments (id, device_profile_id, comment, created_at, updated_at) 
+    VALUES (?, ?, ?, ?, ?)
+  `;
+  await db.exec(sql, {
+    bind: [id, profileId, comment, ts, ts]
+  });
+  return { id, device_profile_id: profileId, comment, created_at: ts, updated_at: ts };
 }
