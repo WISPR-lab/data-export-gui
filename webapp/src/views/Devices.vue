@@ -128,8 +128,8 @@ export default {
       selectedDeviceForJSON: null,
       showDemoCompletionModal: false,
       uaMaskingText: {
-        "mac_ipad": "To prevent fingerprinting, browsers on Apple iPads & Macs use generic User-Agents that hide the model and iOS version. Some iPads are misclassified as Macs.",
-        "iphone": "To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the model.",
+        "mac_ipad": "To prevent fingerprinting, browsers on Apple iPads & Macs use generic User-Agents that hide the exact model and iOS version. Some iPads are misclassified as Macs.",
+        "iphone": "To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the exact model.",
         "profile": "Multiple physical devices may be grouped under this generic profile."
       }
     }
