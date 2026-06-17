@@ -1,7 +1,8 @@
 // added for WISPR-lab/data-export-gui
 <template>
   <v-dialog v-model="internalValue" max-width="500px" @input="onDialogInput">
-    <v-card>
+    <!-- Main Group / Move Card -->
+    <v-card v-if="!deleteWarningDialog">
       <v-toolbar flat dense color="grey lighten-4" height="64">
         <v-toolbar-title class="text-h6 font-weight-medium text--primary ml-2">
           {{ mode === 'create' ? 'Create New Profile' : 'Move to Existing Profile' }}
@@ -87,10 +88,46 @@
         </v-btn>
       </v-card-actions>
     </v-card>
+
+    <!-- Delete Profile Warning Card (Replaces main card in-place) -->
+    <v-card v-else>
+      <v-toolbar flat dense color="grey lighten-4" height="64">
+        <v-toolbar-title class="text-h6 font-weight-medium text--primary ml-2">
+          Profile Deletion Warning
+        </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="cancelDeleteWarning">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-toolbar>
+      <v-card-text class="pa-6">
+        <div class="d-flex align-start">
+          <v-icon color="orange" large class="mr-4 mt-1">mdi-alert-circle-outline</v-icon>
+          <div class="text-body-1 text--primary" style="line-height: 1.5;">
+            Moving these instance(s) will leave the profile <strong>{{ sourceProfileName }}</strong> empty, which will delete the profile.
+            <br><br>
+            Are you sure you want to proceed?
+          </div>
+        </div>
+      </v-card-text>
+      <v-divider></v-divider>
+      <v-card-actions class="pa-4">
+        <v-spacer></v-spacer>
+        <v-btn text @click="cancelDeleteWarning" class="text-none">
+          Cancel
+        </v-btn>
+        <v-btn color="primary" @click="proceedWithGroup" class="text-none px-6" :loading="isLoading">
+          Proceed
+        </v-btn>
+      </v-card-actions>
+    </v-card>
   </v-dialog>
 </template>
 
 <script>
+import { checkMoveEligibility } from '@/database/queries/user_device_edits.js';
+import { titleCase } from '@/filters/TitleCase.js';
+
 export default {
   name: 'DeviceGroupModal',
   props: {
@@ -127,7 +164,9 @@ export default {
     return {
       newProfileLabel: '',
       destinationProfileId: '',
-      reason: ''
+      reason: '',
+      deleteWarningDialog: false,
+      warningProceeded: false,
     };
   },
   watch: {
@@ -137,6 +176,8 @@ export default {
         this.newProfileLabel = '';
         this.destinationProfileId = '';
         this.reason = '';
+        this.deleteWarningDialog = false;
+        this.warningProceeded = false;
       }
     }
   },
@@ -145,16 +186,49 @@ export default {
       get() { return this.value; },
       set(val) { this.$emit('input', val); }
     },
+    selectedInstances() {
+      const instances = [];
+      const self = this;
+      this.selectedInstanceIdsToMove.forEach(function(id) {
+        let found = null;
+        self.existingProfiles.forEach(function(p) {
+          if (p.instances) {
+            const inst = p.instances.find(function(i) { return i.id === id; });
+            if (inst) found = inst;
+          }
+        });
+        if (found) {
+          instances.push(found);
+        }
+      });
+      return instances;
+    },
+    willSourceProfileBeEmptied() {
+      if (!this.sourceProfileId) return false;
+      const srcProfile = this.existingProfiles.find(p => p.id === this.sourceProfileId);
+      if (!srcProfile || !srcProfile.instances) return false;
+      return this.selectedInstanceIdsToMove.length === srcProfile.instances.length;
+    },
+    sourceProfileName() {
+      if (!this.sourceProfileId) return '';
+      const srcProfile = this.existingProfiles.find(p => p.id === this.sourceProfileId);
+      if (srcProfile) {
+        return srcProfile.user_label || titleCase(srcProfile.model || 'Unknown Profile');
+      }
+      return '';
+    },
     profileItems() {
       const self = this;
       return this.existingProfiles
         .filter(function(p) { return p.id !== self.sourceProfileId; })
         .map(function(p) {
+          const eligibility = checkMoveEligibility(p, self.selectedInstances);
+          const modelName = titleCase(p.model || 'Unknown Model');
           let labelText = '';
           if (p.user_label) {
-            labelText = p.user_label + ' (' + (p.model || 'Unknown Model') + ')';
+            labelText = p.user_label + ' (' + modelName + ')';
           } else {
-            labelText = (p.model || 'Unknown Model');
+            labelText = modelName;
           }
           
           if (p.id) {
@@ -165,16 +239,18 @@ export default {
             labelText += ' - ' + p.instances.length + ' instance(s)';
           }
 
+          if (!eligibility.isEligible) {
+            labelText += ' - Incompatible (' + eligibility.reason + ')';
+          }
+
           return {
             text: labelText,
-            value: p.id
+            value: p.id,
+            disabled: !eligibility.isEligible
           };
         });
     },
     isValid() {
-      const cleanReason = (this.reason || '').trim();
-      if (!cleanReason) return false;
-
       if (this.mode === 'create') {
         return (this.newProfileLabel || '').trim().length > 0;
       } else if (this.mode === 'move') {
@@ -186,12 +262,19 @@ export default {
   methods: {
     submit() {
       if (!this.isValid) return;
+
+      if (this.willSourceProfileBeEmptied && !this.warningProceeded) {
+        this.deleteWarningDialog = true;
+        return;
+      }
+
       this.$emit('confirm', {
         mode: this.mode,
         newProfileLabel: this.newProfileLabel.trim(),
         targetProfileId: this.destinationProfileId,
         reason: this.reason.trim()
       });
+      this.warningProceeded = false;
     },
     cancel() {
       this.$emit('input', false);
@@ -200,6 +283,14 @@ export default {
       if (!val) {
         this.$emit('closed');
       }
+    },
+    cancelDeleteWarning() {
+      this.deleteWarningDialog = false;
+    },
+    proceedWithGroup() {
+      this.deleteWarningDialog = false;
+      this.warningProceeded = true;
+      this.submit();
     }
   }
 }

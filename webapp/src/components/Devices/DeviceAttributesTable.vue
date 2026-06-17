@@ -30,7 +30,7 @@
               </span>
               <template v-if="hasSeeMore(attr)">
                 <span class="mr-1">...</span>
-                <a @click.stop="showAllIPs(attr.value)" class="text-caption text-decoration-underline mb-1">
+                <a @click.stop="showAllItems(attr)" class="text-caption text-decoration-underline mb-1">
                   See all ({{ attr.value.length }})
                 </a>
               </template>
@@ -40,26 +40,38 @@
       </template>
     </v-simple-table>
 
-    <!-- Dialog for displaying all IP Addresses -->
-    <v-dialog v-model="ipModalOpen" max-width="500px" @click.native.stop>
+    <!-- Dialog for displaying all items (IPs or OS versions) -->
+    <v-dialog v-model="detailModalOpen" max-width="500px" @click.native.stop>
       <v-card class="pa-4">
         <v-card-title class="text-h6 font-weight-bold px-0 pt-0 d-flex justify-space-between align-center">
-          All Associated IP Addresses
-          <v-btn icon small @click="ipModalOpen = false">
+          {{ modalTitle }}
+          <v-btn icon small @click="detailModalOpen = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
         <v-card-text class="px-0 py-2">
           <div class="d-flex flex-wrap" style="gap: 12px 16px;">
-            <a 
-              v-for="ip in modalIPs" 
-              :key="ip" 
-              @click.stop="clickIPFromModal(ip)"
-              class="ip-link"
-              style="font-size: 14px;"
-            >
-              {{ ip }}
-            </a>
+            <template v-if="isIPModal">
+              <a 
+                v-for="ip in modalItems" 
+                :key="ip" 
+                @click.stop="clickIPFromModal(ip)"
+                class="ip-link"
+                style="font-size: 14px;"
+              >
+                {{ ip }}
+              </a>
+            </template>
+            <template v-else>
+              <span 
+                v-for="item in modalItems" 
+                :key="item"
+                style="font-size: 14px;"
+                class="text-body-2 text--primary"
+              >
+                {{ item }}
+              </span>
+            </template>
           </div>
         </v-card-text>
       </v-card>
@@ -78,9 +90,19 @@ export default {
   },
   data() {
     return {
-      ipModalOpen: false,
-      modalIPs: []
+      detailModalOpen: false,
+      modalTitle: '',
+      modalItems: [],
+      isIPModal: false
     };
+  },
+  computed: {
+    MAX_OS_TYPES() {
+      return 5;
+    },
+    MAX_IP_ADDRESSES() {
+      return 5;
+    }
   },
   methods: {
     goToExploreIP(ip) {
@@ -94,6 +116,14 @@ export default {
     isIPAttribute(label) {
       return label && /\bips?\b/i.test(label);
     },
+    isOSAttribute(label) {
+      return label && /\bos\b/i.test(label);
+    },
+    getLimit(label) {
+      if (this.isIPAttribute(label)) return this.MAX_IP_ADDRESSES;
+      if (this.isOSAttribute(label)) return this.MAX_OS_TYPES;
+      return null;
+    },
     hasValidValue(attr) {
       if (attr.value === null || attr.value === undefined) return false;
       if (Array.isArray(attr.value)) {
@@ -105,22 +135,27 @@ export default {
     },
     getDisplayValue(attr) {
       if (Array.isArray(attr.value)) {
-        if (this.isIPAttribute(attr.label) && attr.value.length > 5) {
-          return attr.value.slice(0, 5);
+        const limit = this.getLimit(attr.label);
+        if (limit && attr.value.length > limit) {
+          return attr.value.slice(0, limit);
         }
         return attr.value;
       }
       return [attr.value];
     },
     hasSeeMore(attr) {
-      return Array.isArray(attr.value) && this.isIPAttribute(attr.label) && attr.value.length > 5;
+      if (!Array.isArray(attr.value)) return false;
+      const limit = this.getLimit(attr.label);
+      return limit && attr.value.length > limit;
     },
-    showAllIPs(ips) {
-      this.modalIPs = ips;
-      this.ipModalOpen = true;
+    showAllItems(attr) {
+      this.modalItems = attr.value;
+      this.isIPModal = this.isIPAttribute(attr.label);
+      this.modalTitle = this.isIPModal ? 'All Associated IP Addresses' : 'All Associated OS Versions';
+      this.detailModalOpen = true;
     },
     clickIPFromModal(ip) {
-      this.ipModalOpen = false;
+      this.detailModalOpen = false;
       this.goToExploreIP(ip);
     }
   }

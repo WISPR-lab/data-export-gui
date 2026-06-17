@@ -47,7 +47,7 @@ export async function getDevices() {
    */
   const db = await getDB();
 
-  const profileSql = `SELECT * FROM device_profiles_v2`;
+  const profileSql = `SELECT * FROM device_profiles_v2 WHERE deleted = 0`;
   const profileRows = await db.exec(profileSql, {
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -278,19 +278,16 @@ export function getCondensedModel(manufacturer, model) {
 export function getCondensedOS(osName, versions) {
   const name = osName || '';
   const list = (versions || []).filter(Boolean);
-  if (!name) return '';
+  if (!name) return [];
   const titleName = titleCase(name);
   if (list.length > 0) {
     const listCopy = [...list];
     listCopy.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    const firstV = listCopy[0];
-    const lastV = listCopy[listCopy.length - 1];
-    if (firstV === lastV) {
-      return `${titleName} ${firstV}`;
-    }
-    return `${titleName} ${firstV} → ${lastV}`;
+    return listCopy.map(function(v, idx) {
+      return idx === 0 ? (titleName + ' ' + v) : v;
+    });
   }
-  return titleName;
+  return [titleName];
 }
 
 function formatInstanceAttrs(inst) {
@@ -312,7 +309,8 @@ function formatInstanceAttrs(inst) {
     'model',
     'os_name',
     'os_type',
-    'os_versions'
+    'os_versions',
+    'apple_masking'
   ]);
 
   const keyLabel = (str) => {
@@ -338,9 +336,11 @@ function formatInstanceAttrs(inst) {
 
   // Construct OS field
   const osValue = getCondensedOS(inst.os_name || inst.os_type, inst.os_versions);
-  const osLower = osValue.toLowerCase();
-  if (osValue && osLower !== 'unknown' && osLower !== 'null' && osLower !== 'none' && osLower !== 'undefined') {
-    attrs.push({ label: 'OS', value: osValue });
+  if (osValue && osValue.length > 0) {
+    const osLower = String(osValue[0]).toLowerCase();
+    if (osLower !== 'unknown' && osLower !== 'null' && osLower !== 'none' && osLower !== 'undefined') {
+      attrs.push({ label: 'OS', value: osValue });
+    }
   }
 
   Object.entries(inst).forEach(([key, val]) => {
@@ -442,95 +442,3 @@ export async function addProfileComment(profileId, comment) {
   });
   return { id, device_profile_id: profileId, comment, created_at: ts, updated_at: ts };
 }
-
-export async function getUserDeviceEdits() {
-  const db = await getDB();
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS user_device_edits (
-      id TEXT PRIMARY KEY,
-      action_type TEXT,
-      instance_ids JSONTEXT,
-      instance_summaries JSONTEXT,
-      source_profile_id TEXT,
-      target_profile_id TEXT,
-      source_profile_label TEXT,
-      target_profile_label TEXT,
-      reason TEXT,
-      created_at REAL
-    )
-  `);
-
-  const sql = `SELECT * FROM user_device_edits ORDER BY created_at DESC`;
-  const rows = await db.exec(sql, {
-    returnValue: 'resultRows',
-    rowMode: 'object'
-  });
-
-  return rows.map(function(row) {
-    try {
-      row.instance_ids = row.instance_ids ? JSON.parse(row.instance_ids) : [];
-    } catch (e) {
-      row.instance_ids = [];
-    }
-    try {
-      row.instance_summaries = row.instance_summaries ? JSON.parse(row.instance_summaries) : [];
-    } catch (e) {
-      row.instance_summaries = [];
-    }
-    return row;
-  });
-}
-
-export async function createUserDeviceEdit(params) {
-  const db = await getDB();
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS user_device_edits (
-      id TEXT PRIMARY KEY,
-      action_type TEXT,
-      instance_ids JSONTEXT,
-      instance_summaries JSONTEXT,
-      source_profile_id TEXT,
-      target_profile_id TEXT,
-      source_profile_label TEXT,
-      target_profile_label TEXT,
-      reason TEXT,
-      created_at REAL
-    )
-  `);
-
-  const id = generateUUID();
-  const ts = Date.now() / 1000;
-  const sql = `
-    INSERT INTO user_device_edits 
-    (id, action_type, instance_ids, instance_summaries, source_profile_id, target_profile_id, source_profile_label, target_profile_label, reason, created_at) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  await db.exec(sql, {
-    bind: [
-      id,
-      params.action_type,
-      JSON.stringify(params.instance_ids || []),
-      JSON.stringify(params.instance_summaries || []),
-      params.source_profile_id || null,
-      params.target_profile_id || null,
-      params.source_profile_label || null,
-      params.target_profile_label || null,
-      params.reason || '',
-      ts
-    ]
-  });
-  return {
-    id,
-    action_type: params.action_type,
-    instance_ids: params.instance_ids,
-    instance_summaries: params.instance_summaries,
-    source_profile_id: params.source_profile_id,
-    target_profile_id: params.target_profile_id,
-    source_profile_label: params.source_profile_label,
-    target_profile_label: params.target_profile_label,
-    reason: params.reason,
-    created_at: ts
-  };
-}
-
-

@@ -238,3 +238,14 @@ html {
 //   background-color: #1976d2;
 //   color: #fff;
 // }
+
+// Global Vuetify Tooltip Overrides
+.v-tooltip__content {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  padding: 6px 10px !important;
+  background-color: rgb(97, 97, 97) !important; /* solid default grey */
+  color: #ffffff !important;
+  border-radius: 4px !important;
+}

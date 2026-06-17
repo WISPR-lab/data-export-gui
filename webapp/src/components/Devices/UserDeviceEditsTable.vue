@@ -1,18 +1,13 @@
 // added for WISPR-lab/data-export-gui
 <template>
-  <div class="mt-12 mb-6">
-    <h3 class="text-h6 font-weight-bold mb-2 text--primary">History of Manual Changes</h3>
-    <p class="text-body-2 text--secondary mb-4">
-      Logs when you manually move a <strong>device instance</strong> (a specific app installation or browser telemetry stream, like Instagram or Safari) to a different <strong>device profile</strong> (which groups instances by hardware model, like Apple iPhone 11).
-    </p>
- 
+  <div class="mb-6">
     <v-simple-table class="border rounded-xl overflow-hidden">
       <template v-slot:default>
         <thead>
           <tr>
-            <th class="text-left" style="width: 150px;">Time</th>
-            <th class="text-left">Action Description</th>
-            <th class="text-left">Reason</th>
+            <th class="text-left text-body-2 font-weight-medium text--primary" style="width: 150px;">Time</th>
+            <th class="text-left text-body-2 font-weight-medium text--primary">Action Description</th>
+            <th class="text-left text-body-2 font-weight-medium text--primary">Reason</th>
           </tr>
         </thead>
         <tbody>
@@ -25,16 +20,20 @@
             </td>
             <td class="text-body-2 py-2 text--primary">
               <span v-if="log.action_type === 'create_profile'">
-                Created new profile <strong>{{ log.target_profile_label }}</strong>
-                <span class="text-caption text--secondary" style="font-family: monospace;"> [ID: {{ log.target_profile_id ? log.target_profile_id.substring(0, 4) : '' }}...]</span>
+                Created new profile <strong>{{ titleCase(log.target_profile_label) }}</strong>
+                <span class="text--secondary ml-1 mr-1"> [ID: {{ log.target_profile_id ? log.target_profile_id.substring(0, 4) : '' }}...]</span>
               </span>
               <span v-else-if="log.action_type === 'move_instances'">
-                Moved {{ log.instance_ids.length }} instance(s) from 
-                <strong>{{ getProfileLabelById(log.source_profile_id) || log.source_profile_label || 'Deleted Profile' }}</strong>
-                <span v-if="log.source_profile_id" class="text-caption text--secondary" style="font-family: monospace;"> [ID: {{ log.source_profile_id.substring(0, 4) }}...]</span>
-                to 
-                <strong>{{ getProfileLabelById(log.target_profile_id) || log.target_profile_label }}</strong>
-                <span v-if="log.target_profile_id" class="text-caption text--secondary" style="font-family: monospace;"> [ID: {{ log.target_profile_id.substring(0, 4) }}...]</span>
+                Moved {{ log.instance_ids.length }} instance(s) from profile
+                <strong>{{ getProfileLabelById(log.source_profile_id) || titleCase(log.source_profile_label) || 'Deleted Profile' }}</strong>
+                <span v-if="log.source_profile_id" class="text--secondary ml-1 mr-1"> [ID: {{ log.source_profile_id.substring(0, 4) }}...]</span>
+                to profile 
+                <strong>{{ getProfileLabelById(log.target_profile_id) || titleCase(log.target_profile_label) }}</strong>
+                <span v-if="log.target_profile_id" class="text--secondary ml-1 mr-1"> [ID: {{ log.target_profile_id.substring(0, 4) }}...]</span>
+              </span>
+              <span v-else-if="log.action_type === 'delete_profile'">
+                Deleted profile <strong>{{ titleCase(log.source_profile_label) }}</strong>
+                <span v-if="log.source_profile_id" class="text--secondary ml-1 mr-1"> [ID: {{ log.source_profile_id.substring(0, 4) }}...]</span>
               </span>
             </td>
             <td class="text-body-2 text--secondary font-italic">
@@ -48,6 +47,8 @@
 </template>
 
 <script>
+import { titleCase } from '@/filters/TitleCase.js';
+
 export default {
   name: 'UserDeviceEditsTable',
   props: {
@@ -61,6 +62,9 @@ export default {
     }
   },
   methods: {
+    titleCase(str) {
+      return titleCase(str);
+    },
     formatLogTime(timestamp) {
       if (!timestamp) return '';
       return new Date(timestamp * 1000).toLocaleString(undefined, {
@@ -74,7 +78,7 @@ export default {
       if (!profileId) return '';
       const p = this.devices.find(function(d) { return d.id === profileId; });
       if (p) {
-        return p.user_label || p.model || 'Unknown Profile';
+        return titleCase(p.user_label) || titleCase(p.model || 'Unknown Profile');
       }
       return '';
     }
@@ -88,5 +92,10 @@ export default {
 }
 .rounded-xl {
   border-radius: 12px !important;
+}
+.v-data-table >>> th,
+.v-data-table >>> td {
+  padding-left: 24px !important;
+  padding-right: 24px !important;
 }
 </style>

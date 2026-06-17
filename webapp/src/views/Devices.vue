@@ -4,11 +4,22 @@
 
     <h1 class="text-h4 text--primary mb-6">Devices</h1>
     
-    <p class="text-body-2 text--primary mb-6" style="line-height: 1.7;">
-      LEStrADE organizes your the raw data in your export about authenticated devices into a two-tier abstraction:
+    <p class="text-body-2 text--primary" style="line-height: 1.7;">
+      Data exports often contain information about currently logged-in devices in addition to lists of login events associated with some information about the origin device. 
+      LEStrADE attempts to unify this data using a two-level abstraction:
     </p>
 
-    <v-row class="mb-6">
+    <ul class="text-body-2 text--primary mb-10" style="line-height: 1.7;">
+      <li class="mb-2">
+        <strong>Device Instance</strong>: A group of one or more raw records mapping to a trusted/registered device (e.g., for 2FA) or a group of login events linked by a common identifier (e.g., session ID or serial number) or tracked across browser/app upgrades.
+      </li>
+      <li>
+        <strong>Device Profile</strong>: A super-group of one or more <strong>device instances</strong> that share the same hardware model (e.g., Apple iPhone 11). Since you may own more than one physical device of the same model, you can reassign <strong>instances</strong> to a new or different <strong>profile</strong> 
+        by selecting "Edit" in the "Device Instances" list.
+      </li>
+    </ul>
+
+    <!-- <v-row class="mb-6">
       <v-col cols="12" md="6">
         <div class="text-subtitle-1 text--primary mb-1">Device Instance</div>
         <p class="text-body-2 text--primary mb-0" style="line-height: 1.5;">
@@ -22,7 +33,7 @@
           Since you may own more than one physical device of the same model, you can reassign <strong>instances</strong> to a new or different <strong>profile</strong>. 
         </p>
       </v-col>
-    </v-row>
+    </v-row> -->
 
     <h3 class="text-h6 text--primary mb-2">Device Profiles ({{ devices.length }})</h3>
 
@@ -34,13 +45,14 @@
       >
         <v-expansion-panel-header class="pa-4" @click="onDeviceExpand">
           <template v-slot:default="{ open }">
-            <device-profile-header :device="dev" :open="open" @showJSON="showDeviceJSON" />
+            <device-profile-header :device="dev" :open="open" :ua-masking-text="uaMaskingText" @showJSON="showDeviceJSON" />
           </template>
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
           <device-profile-dropdown
             :device="dev"
+            :ua-masking-text="uaMaskingText"
             @change="saveDeviceChanges(dev)"
             @see-all-events="goToExplore(dev)"
             @unmerge="handleUnmerge(dev, $event)"
@@ -65,8 +77,6 @@
       @closed="onModalClosed"
     />
 
-    <device-detection-help-modal v-model="showDeviceHelpDialog" />
-
     <!-- Device JSON Modal -->
     <json-modal
       v-model="showJSONModal"
@@ -76,6 +86,10 @@
     />
 
     <!-- Edit History Table Component -->
+    <h3 class="text-h6 text--primary mb-2 font-weight-medium mt-12">Profile Edit History</h3>
+    <p class="text-body-2 text--secondary mb-4">
+      Edits you've made to device instances and profiles.
+    </p>
     <user-device-edits-table :history-logs="historyLogs" :devices="devices" />
   </v-container>
 </template>
@@ -84,11 +98,12 @@
 import DeviceProfileDropdown from '@/components/Devices/DeviceProfileDropdown.vue';
 import DeviceProfileHeader from '@/components/Devices/DeviceProfileHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
-import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
 import JSONModal from '@/components/Devices/JSONModal.vue';
 import UserDeviceEditsTable from '@/components/Devices/UserDeviceEditsTable.vue';
-import { getDevices, updateProfile, getInstanceRawAttrs, getUserDeviceEdits, createUserDeviceEdit } from '@/database/queries/devices_v2.js';
+import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
+import { getUserDeviceEdits, moveInstancesToProfile, createProfileWithInstances } from '@/database/queries/user_device_edits.js';
 import { callPyodideWorker } from '@/pyodide/pyodide-client';
+import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'Devices',
@@ -96,7 +111,6 @@ export default {
     DeviceProfileDropdown,
     DeviceProfileHeader,
     DeviceGroupModal,
-    DeviceDetectionHelpModal,
     'json-modal': JSONModal,
     UserDeviceEditsTable
   },
@@ -110,10 +124,14 @@ export default {
       mergeError: null,
       devices: [],
       historyLogs: [],
-      showDeviceHelpDialog: false,
       showJSONModal: false,
       selectedDeviceForJSON: null,
       showDemoCompletionModal: false,
+      uaMaskingText: {
+        "mac_ipad": "To prevent fingerprinting, browsers on Apple iPads & Macs use generic User-Agents that hide the model and iOS version. Some iPads are misclassified as Macs.",
+        "iphone": "To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the model.",
+        "profile": "Multiple physical devices may be grouped under this generic profile."
+      }
     }
   },
   watch: {
@@ -248,75 +266,30 @@ export default {
         let result;
         if (payload.mode === 'move') {
           console.log('[confirmGroup] Moving instances:', payload.targetProfileId, this.selectedInstanceIdsToMove);
-          result = await callPyodideWorker('move_instances', {
-            instanceIds: this.selectedInstanceIdsToMove,
-            targetProfileId: payload.targetProfileId,
-            reason: payload.reason
-          });
+          result = await moveInstancesToProfile(
+            this.selectedInstanceIdsToMove,
+            payload.targetProfileId,
+            payload.reason
+          );
         } else {
           console.log('[confirmGroup] Creating profile:', payload.newProfileLabel, this.selectedInstanceIdsToMove);
-          result = await callPyodideWorker('create_profile', {
-            instanceIds: this.selectedInstanceIdsToMove,
-            newProfileLabel: payload.newProfileLabel,
-            reason: payload.reason
-          });
+          result = await createProfileWithInstances(
+            this.selectedInstanceIdsToMove,
+            payload.newProfileLabel,
+            payload.reason
+          );
         }
 
-        console.log('[confirmGroup] Worker returned:', result);
+        console.log('[confirmGroup] Database write returned:', result);
 
         if (result && result.status === 'ok') {
-          // Log User Edits
-          const instanceSummaries = this.getInstanceSummaries(this.selectedInstanceIdsToMove);
-          const sourceProfileLabel = this.getProfileLabelById(this.sourceProfileId);
-          
-          if (payload.mode === 'create') {
-            const newProfileId = result.new_profile_id || 'new-profile';
-            
-            // Log 1: Profile Creation
-            await createUserDeviceEdit({
-              action_type: 'create_profile',
-              instance_ids: [],
-              instance_summaries: [],
-              source_profile_id: null,
-              target_profile_id: newProfileId,
-              source_profile_label: null,
-              target_profile_label: payload.newProfileLabel,
-              reason: 'User created profile'
-            });
-
-            // Log 2: Move Instances
-            await createUserDeviceEdit({
-              action_type: 'move_instances',
-              instance_ids: this.selectedInstanceIdsToMove,
-              instance_summaries: instanceSummaries,
-              source_profile_id: this.sourceProfileId,
-              target_profile_id: newProfileId,
-              source_profile_label: sourceProfileLabel,
-              target_profile_label: payload.newProfileLabel,
-              reason: payload.reason
-            });
-          } else {
-            // Log Move
-            const targetProfileLabel = this.getProfileLabelById(payload.targetProfileId);
-            await createUserDeviceEdit({
-              action_type: 'move_instances',
-              instance_ids: this.selectedInstanceIdsToMove,
-              instance_summaries: instanceSummaries,
-              source_profile_id: this.sourceProfileId,
-              target_profile_id: payload.targetProfileId,
-              source_profile_label: sourceProfileLabel,
-              target_profile_label: targetProfileLabel,
-              reason: payload.reason
-            });
-          }
-
           this.groupDialog = false;
           await this.fetchDevices();
           await this.fetchHistory();
         } else if (result) {
           this.mergeError = result.message || 'Action failed';
         } else {
-          this.mergeError = 'Action failed: no response from worker';
+          this.mergeError = 'Action failed: no response from database';
         }
       } catch (error) {
         this.mergeError = (error && error.message) || 'Action failed';

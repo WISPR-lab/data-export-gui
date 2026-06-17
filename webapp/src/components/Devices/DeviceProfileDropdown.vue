@@ -48,9 +48,6 @@
       <div class="d-flex align-center justify-space-between mb-3">
         <div class="d-flex align-center">
           <span class="text-subtitle-1 font-weight-medium text--primary">Device Instances ({{ device.instances.length }})</span>
-          <v-btn icon x-small class="ml-1" color="primary" @click="showHelpModal = true" title="What is a device instance?">
-            <v-icon small>mdi-help-circle-outline</v-icon>
-          </v-btn>
         </div>
         <v-btn
           v-if="device.instances.length > 1"
@@ -110,67 +107,13 @@
           :show-checkbox="isEditingInstances"
           :selected="selectedInstanceIds.includes(inst.id)"
           :show-help="isFirstOfType(inst)"
+          :ua-masking-text="uaMaskingText"
           @select="toggleInstanceSelection(inst.id, $event)"
           @showJSON="$emit('showJSON', $event)"
         />
       </div>
     </div>
-
-    <!-- Device Instances Explanation Modal -->
-    <v-dialog v-model="showHelpModal" max-width="600px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="text-h6 font-weight-bold d-flex align-center">
-          <v-icon color="primary" class="mr-2">mdi-information-outline</v-icon>
-          Technical Specification: Profiles vs. Instances
-        </v-card-title>
-        <v-card-text class="pt-2 body-2">
-          <p>
-            To reconstruct your device history without relying on centralized tracking, this tool organizes hardware and telemetry data into a two-level hierarchy:
-          </p>
-
-          <div class="mb-4">
-            <div class="text-subtitle-1 text--primary">1. Device Instance</div>
-            <p class="text--secondary mb-1">
-              Either: (1) A trusted or registered device (e.g., registered for 2FA). (2) A group of login events linked by a common identifier (like a cookie or app token) or tracked across browser/client upgrades.
-            </p>
-            <p class="text--secondary">
-              Instances are clustered when events are linked by:
-              <br/>&bull; <strong>Deterministic Identifiers</strong>: Explicit serial numbers, Android IDs, MAC addresses, or Google/Facebook advertiser IDs.
-              <br/>&bull; <strong>Telemetry Upgrades</strong>: Sequential client version or OS upgrades detected on identical hardware fingerprints.
-              <br/>&bull; <strong>Network Coherence</strong>: Coherent IP addresses, locations, and browser/app user-agent details matching over time.
-            </p>
-          </div>
-
-          <div class="mb-4">
-            <div class="text-subtitle-1 text--primary">2. Device Profile</div>
-            <p class="text--secondary mb-1">
-              A super-group of one or more device instances that share the same hardware model (e.g., Apple iPhone 11). Since identical hardware models are grouped automatically, you can rename, edit, or split them apart if they represent different physical devices.
-            </p>
-          </div>
-
-          <!-- Collapsible technical details for progressive disclosure -->
-          <v-expansion-panels flat border class="mt-4 border rounded-lg overflow-hidden">
-            <v-expansion-panel>
-              <v-expansion-panel-header class="font-weight-bold py-2 px-3 body-2">
-                Under the Hood: How Linkages are Computed
-              </v-expansion-panel-header>
-              <v-expansion-panel-content class="grey lighten-5 body-2 py-2 px-3">
-                <p><strong>Linkage Confidence & Types:</strong></p>
-                <ul>
-                  <li><strong>Hardware:</strong> Hard matching on unique hardware attributes (e.g., IMEI, MAC address). Confidence: 100%.</li>
-                  <li><strong>Client/OS Upgrade:</strong> Chain linkage when a device's telemetry shows a version upgrade (e.g., iOS 15.0 &rarr; 15.1) on the same platform within a narrow time window.</li>
-                  <li><strong>Privacy Masking Caveat:</strong> Apple's privacy masking (Safari reporting generic 'Macintosh' or 'iPhone' without versions) can cause under-merging. These are kept as separate instances unless a deterministic hardware match joins them.</li>
-                </ul>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-          </v-expansion-panels>
-
-        </v-card-text>
-        <v-card-actions class="justify-end">
-          <v-btn color="primary" text @click="showHelpModal = false">Close</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    </div>
   </div>
 </template>
 
@@ -190,12 +133,15 @@ export default {
     device: {
       type: Object,
       required: true
+    },
+    uaMaskingText: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
     return {
       rawAttributes: {},
-      showHelpModal: false,
       isEditingInstances: false,
       selectedInstanceIds: []
     }
