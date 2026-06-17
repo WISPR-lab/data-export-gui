@@ -2,29 +2,29 @@
 <template>
   <v-container class="pa-6 white min-h-100" style="max-width: 1100px;">
 
-    <h1 class="text-h4 font-weight-bold mb-6 text--primary">Devices</h1>
+    <h1 class="text-h4 text--primary mb-6">Devices</h1>
     
-    <p class="text-body-1 text--primary mb-6" style="line-height: 1.7;">
+    <p class="text-body-2 text--primary mb-6" style="line-height: 1.7;">
       LEStrADE organizes your the raw data in your export about authenticated devices into a two-tier abstraction:
     </p>
 
-    <v-row class="mb-4">
+    <v-row class="mb-6">
       <v-col cols="12" md="6">
-        <v-card flat color="grey lighten-5" height="100%" class="pa-4 text-body-2 text--primary">
-          <strong>Device Instance</strong>:  
+        <div class="text-subtitle-1 text--primary mb-1">Device Instance</div>
+        <p class="text-body-2 text--primary mb-0" style="line-height: 1.5;">
           A group of one or more raw records mapping to a trusted/registered device (e.g., for 2FA) or a group of login events linked by a common identifier (e.g., session ID or serial number) or tracked across browser/app upgrades.
-        </v-card>
+        </p>
       </v-col>
       <v-col cols="12" md="6">
-        <v-card flat color="grey lighten-5" height="100%" class="pa-4 text-body-2 text--primary">
-          <strong>Device Profile</strong>: 
+        <div class="text-subtitle-1 text--primary mb-1">Device Profile</div>
+        <p class="text-body-2 text--primary mb-0" style="line-height: 1.5;">
           A super-group of one or more <strong>device instances</strong> that share the same hardware model (e.g., Apple iPhone 11).
           Since you may own more than one physical device of the same model, you can reassign <strong>instances</strong> to a new or different <strong>profile</strong>. 
-        </v-card>
+        </p>
       </v-col>
     </v-row>
 
-    <h3 class="text-h6 font-weight-bold mb-2 text--primary">Device Profiles ({{ devices.length }})</h3>
+    <h3 class="text-h6 text--primary mb-2">Device Profiles ({{ devices.length }})</h3>
 
     <v-expansion-panels flat class="device-panels devices-list">
       <v-expansion-panel
@@ -58,7 +58,7 @@
       :mode="editMode"
       :selected-instance-ids-to-move="selectedInstanceIdsToMove"
       :existing-profiles="devices"
-      :current-profile-id="sourceProfileId"
+      :source-profile-id="sourceProfileId"
       :is-loading="mergeLoading"
       :error="mergeError"
       @confirm="confirmGroup"

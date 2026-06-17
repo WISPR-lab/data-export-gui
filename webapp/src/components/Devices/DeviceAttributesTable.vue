@@ -4,10 +4,10 @@
       <template v-slot:default>
         <tbody>
           <tr v-for="attr in attributes" :key="attr.label" v-if="hasValidValue(attr)">
-            <td class="font-weight-medium text-left" style="width: 200px; border-bottom: none !important; color: #424242;">
+            <td class="text-body-2 font-weight-medium text--primary text-left" style="width: 200px; border-bottom: none !important;">
               {{ attr.label }}
             </td>
-            <td class="text-left" style="word-break: break-word; border-bottom: none !important; padding-top: 4px; padding-bottom: 4px;">
+            <td class="text-body-2 text--primary text-left" style="word-break: break-word; border-bottom: none !important; padding-top: 4px; padding-bottom: 4px;">
               <span v-for="(item, idx) in getDisplayValue(attr)" :key="idx" class="d-inline-block">
                 <template v-if="isIPAttribute(attr.label)">
                   <v-tooltip bottom open-delay="400">

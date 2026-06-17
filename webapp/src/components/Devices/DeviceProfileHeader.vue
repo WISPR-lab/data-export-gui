@@ -14,7 +14,7 @@
 
       <!-- Text block: model, manufacturer, activity -->
       <div class="device-info-col mr-4">
-        <div class="text-subtitle-1 font-weight-bold text-truncate text--primary">
+        <div class="text-subtitle-1 font-weight-medium text-truncate text--primary">
           {{ (device.user_label || device.model) | formatDeviceDetails }}
           <span v-if="device.user_label && device.model" class="text-body-2 text--secondary font-weight-regular ml-1">
             ({{ device.model | formatDeviceDetails }})

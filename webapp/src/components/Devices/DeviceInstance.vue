@@ -29,10 +29,10 @@
 
       <!-- OS & Timeline -->
       <div class="flex-grow-1 text-truncate">
-        <div class="text-body-2 font-weight-bold text--primary">
+        <div class="text-body-2 font-weight-medium text--primary">
           {{ getHeaderLabel }}
         </div>
-        <div class="text-caption text--secondary">
+        <div class="text-body-2 text--secondary">
           <span v-if="getOSLabel">{{ getOSLabel }}</span>
           <span v-if="getTimelineString && getOSLabel" class="ml-2 mr-2">&bull;</span>
           <span v-if="getTimelineString">Active: {{ getTimelineString }}</span>
@@ -110,9 +110,9 @@ export default {
           const p = sum.primary || '';
           const s = sum.secondary || '';
           const fmt = s ? `${p} (${s})` : p;
-          if (fmt) return `Telemetry stream from ${fmt}`;
+          if (fmt) return `Session from ${fmt}`;
         }
-        return 'Telemetry Stream';
+        return 'Session';
       };
 
       if (type === 'raw_devices') {

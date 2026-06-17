@@ -3,7 +3,7 @@
   <v-dialog v-model="internalValue" max-width="500px" @input="onDialogInput">
     <v-card>
       <v-toolbar flat dense color="grey lighten-4" height="64">
-        <v-toolbar-title class="text-h6 font-weight-bold ml-2">
+        <v-toolbar-title class="text-h6 font-weight-medium text--primary ml-2">
           {{ mode === 'create' ? 'Create New Profile' : 'Move to Existing Profile' }}
         </v-toolbar-title>
         <v-spacer></v-spacer>
@@ -14,26 +14,22 @@
 
       <v-card-text class="pa-6">
         <v-alert v-if="error" type="error" outlined dense class="mb-4">
-          <div class="body-2">{{ error }}</div>
+          <div class="text-body-2">{{ error }}</div>
         </v-alert>
 
-        <div class="mb-4 body-2 text--secondary">
-          Reassigning <strong>{{ selectedInstanceIdsToMove.length }}</strong> instance(s).
+        <div v-if="mode === 'move'" class="text-body-2 text--primary mb-4">
+          This operation assigns the selected <strong>{{ selectedInstanceIdsToMove.length }} instance(s)</strong> to the destination profile. If the source profile is left empty, it will be deleted.
         </div>
 
-        <div v-if="mode === 'move'" class="body-2 grey--text text--darken-3 mb-4">
-          This operation maps the selected instance(s) to the destination profile. In the database, the corresponding rows in the <code>device_profile_instances</code> table will be updated. If the source profile is left empty, it will be deleted.
-        </div>
-
-        <div v-if="mode === 'create'" class="body-2 grey--text text--darken-3 mb-4">
-          This operation creates a new profile row in the <code>device_profiles_v2</code> table with the name you provide. The selected instances will be mapped to it via the <code>device_profile_instances</code> table.
+        <div v-if="mode === 'create'" class="text-body-2 text--primary mb-4">
+          This operation creates a new profile with the name you provide and maps the selected <strong>{{ selectedInstanceIdsToMove.length }} instance(s)</strong> to it.
         </div>
 
         <!-- Create Profile Mode -->
         <div v-if="mode === 'create'" class="mb-4">
+          <div class="text-body-2 font-weight-medium text--primary mb-1">New Profile Name</div>
           <v-text-field
             v-model="newProfileLabel"
-            label="New Profile Name"
             placeholder="e.g. Work Phone"
             outlined
             dense
@@ -45,12 +41,13 @@
 
         <!-- Move to Profile Mode -->
         <div v-else-if="mode === 'move'" class="mb-4">
+          <div class="text-body-2 font-weight-medium text--primary mb-1">Destination Profile</div>
           <v-select
-            v-model="targetProfileId"
+            v-model="destinationProfileId"
             :items="profileItems"
-            label="Select Target Profile"
+            placeholder="Select"
             outlined
-            dense
+            denselabel="Select Destination Profile" 
             required
             class="rounded-lg"
             hide-details
@@ -59,13 +56,12 @@
 
         <!-- Required Reason Text Area -->
         <div class="mb-4 mt-4">
+          <div class="text-body-2 font-weight-medium text--primary mb-1">Reason</div>
           <v-textarea
             v-model="reason"
-            :label="mode === 'create' ? 'Reason for creating this profile' : 'Reason for moving these instances'"
-            placeholder="Required. Provide a technical or personal reason..."
+            placeholder="Optional: Provide a reason for editing instance(s)"
             outlined
             dense
-            required
             rows="3"
             class="rounded-lg"
             hide-details
@@ -114,7 +110,7 @@ export default {
       type: Array,
       default: function() { return []; }
     },
-    currentProfileId: {
+    sourceProfileId: {
       type: String,
       default: ''
     },
@@ -130,7 +126,7 @@ export default {
   data() {
     return {
       newProfileLabel: '',
-      targetProfileId: '',
+      destinationProfileId: '',
       reason: ''
     };
   },
@@ -139,7 +135,7 @@ export default {
       if (val) {
         // Reset fields when dialog opens
         this.newProfileLabel = '';
-        this.targetProfileId = '';
+        this.destinationProfileId = '';
         this.reason = '';
       }
     }
@@ -152,7 +148,7 @@ export default {
     profileItems() {
       const self = this;
       return this.existingProfiles
-        .filter(function(p) { return p.id !== self.currentProfileId; })
+        .filter(function(p) { return p.id !== self.sourceProfileId; })
         .map(function(p) {
           let labelText = '';
           if (p.user_label) {
@@ -182,7 +178,7 @@ export default {
       if (this.mode === 'create') {
         return (this.newProfileLabel || '').trim().length > 0;
       } else if (this.mode === 'move') {
-        return !!this.targetProfileId;
+        return !!this.destinationProfileId;
       }
       return false;
     }
@@ -193,7 +189,7 @@ export default {
       this.$emit('confirm', {
         mode: this.mode,
         newProfileLabel: this.newProfileLabel.trim(),
-        targetProfileId: this.targetProfileId,
+        targetProfileId: this.destinationProfileId,
         reason: this.reason.trim()
       });
     },

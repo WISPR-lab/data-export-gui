@@ -3,14 +3,14 @@
   <div class="pa-6">
     <!-- 1. Device Details Table (at the very top, transparent background) -->
     <div v-if="profileAttributesTable.length > 0" class="mb-6">
-      <div class="overline mb-3">Device Details</div>
+      <div class="text-subtitle-1 font-weight-medium text--primary mb-3">Device Details</div>
       <device-attributes-table :attributes="profileAttributesTable" />
     </div>
 
     <!-- 2. Name & Notes Inputs -->
     <div class="d-flex mb-6" style="gap: 36px;">
       <div style="flex: 0 0 auto; width: 300px;">
-        <div class="overline">Name</div>
+        <div class="text-subtitle-1 font-weight-medium text--primary">Name</div>
         
         <div class="mb-8">
           <v-text-field
@@ -27,7 +27,7 @@
 
       <!-- Right Column: Notes (tall, expands) -->
       <div style="flex: 1 0 auto;">
-        <div class="overline">Notes</div>
+        <div class="text-subtitle-1 font-weight-medium text--primary">Notes</div>
         <v-textarea
           v-model="device.notes"
           placeholder="Add any personal notes about this device."
@@ -47,7 +47,7 @@
     <div v-if="device.instances && device.instances.length > 0" class="mb-6">
       <div class="d-flex align-center justify-space-between mb-3">
         <div class="d-flex align-center">
-          <span class="overline">Device Instances ({{ device.instances.length }})</span>
+          <span class="text-subtitle-1 font-weight-medium text--primary">Device Instances ({{ device.instances.length }})</span>
           <v-btn icon x-small class="ml-1" color="primary" @click="showHelpModal = true" title="What is a device instance?">
             <v-icon small>mdi-help-circle-outline</v-icon>
           </v-btn>
@@ -129,7 +129,7 @@
           </p>
 
           <div class="mb-4">
-            <div class="subtitle-2 font-weight-bold primary--text">1. Device Instance</div>
+            <div class="text-subtitle-1 text--primary">1. Device Instance</div>
             <p class="text--secondary mb-1">
               Either: (1) A trusted or registered device (e.g., registered for 2FA). (2) A group of login events linked by a common identifier (like a cookie or app token) or tracked across browser/client upgrades.
             </p>
@@ -142,7 +142,7 @@
           </div>
 
           <div class="mb-4">
-            <div class="subtitle-2 font-weight-bold primary--text">2. Device Profile</div>
+            <div class="text-subtitle-1 text--primary">2. Device Profile</div>
             <p class="text--secondary mb-1">
               A super-group of one or more device instances that share the same hardware model (e.g., Apple iPhone 11). Since identical hardware models are grouped automatically, you can rename, edit, or split them apart if they represent different physical devices.
             </p>
