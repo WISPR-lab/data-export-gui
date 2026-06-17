@@ -14,16 +14,16 @@
 
       <!-- Text block: model, manufacturer, activity -->
       <div class="device-info-col mr-4">
-        <div class="subtitle-1 font-weight-bold text-truncate">
+        <div class="text-subtitle-1 font-weight-bold text-truncate text--primary">
           {{ (device.user_label || device.model) | formatDeviceDetails }}
-          <span v-if="device.user_label && device.model" class="grey--text text--darken-3 body-2 font-weight-regular ml-1">
+          <span v-if="device.user_label && device.model" class="text-body-2 text--secondary font-weight-regular ml-1">
             ({{ device.model | formatDeviceDetails }})
           </span>
         </div>
-        <div v-if="device.manufacturer" class="body-2 grey--text text--darken-3">
+        <div v-if="device.manufacturer" class="text-body-2 text--secondary">
           {{ device.manufacturer | formatDeviceDetails }}
         </div>
-        <div v-if="activityString" class="body-2 grey--text text--darken-3">
+        <div v-if="activityString" class="text-body-2 text--secondary">
           {{ activityString }}
         </div>
       </div>
@@ -41,19 +41,6 @@
           :summary="summary"
         />
       </div>
-
-      <!-- View Events Button
-      <v-btn
-        text
-        small
-        color="primary"
-        class="mr-2 text-none"
-        @click.stop="goToExplore"
-        title="View all events for this device profile"
-      >
-        View Events
-        <v-icon right small>mdi-arrow-right</v-icon>
-      </v-btn> -->
     </div>
   </div>
 </template>

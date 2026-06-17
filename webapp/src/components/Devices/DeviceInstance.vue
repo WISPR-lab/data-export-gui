@@ -29,8 +29,10 @@
 
       <!-- OS & Timeline -->
       <div class="flex-grow-1 text-truncate">
-        <div class="body-2 font-weight-bold">{{ getHeaderLabel }}</div>
-        <div class="caption grey--text text--darken-2">
+        <div class="text-body-2 font-weight-bold text--primary">
+          {{ getHeaderLabel }}
+        </div>
+        <div class="text-caption text--secondary">
           <span v-if="getOSLabel">{{ getOSLabel }}</span>
           <span v-if="getTimelineString && getOSLabel" class="ml-2 mr-2">&bull;</span>
           <span v-if="getTimelineString">Active: {{ getTimelineString }}</span>
@@ -102,23 +104,23 @@ export default {
     getHeaderLabel() {
       const type = this.instance.instance_source_type;
       
-      const getSessionStr = () => {
+      const getStreamStr = () => {
         const sum = this.instance.ua_summary;
         if (sum) {
           const p = sum.primary || '';
           const s = sum.secondary || '';
           const fmt = s ? `${p} (${s})` : p;
-          if (fmt) return `Session(s) from ${fmt}`;
+          if (fmt) return `Telemetry stream from ${fmt}`;
         }
-        return 'Session';
+        return 'Telemetry Stream';
       };
 
       if (type === 'raw_devices') {
         return 'Recognized Device';
       } else if (type === 'both') {
-        return `Recognized Device; ${getSessionStr()}`;
+        return `Recognized Device; ${getStreamStr()}`;
       } else {
-        return getSessionStr();
+        return getStreamStr();
       }
     },
     getClientLabel() {

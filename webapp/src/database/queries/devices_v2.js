@@ -325,6 +325,10 @@ function formatInstanceAttrs(inst) {
 
   const attrs = [];
 
+  if (inst.id) {
+    attrs.push({ label: 'Instance ID', value: inst.id });
+  }
+
   // Condense Manufacturer and Model into a single 'Model' value
   const modelValue = getCondensedModel(inst.manufacturer, inst.model);
   const modelLower = modelValue.toLowerCase();
@@ -402,3 +406,131 @@ export function customSort(items) {
     return 0;
   });
 }
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+export async function getProfileComments(profileId) {
+  const db = await getDB();
+  const sql = `
+    SELECT * FROM device_profile_comments 
+    WHERE device_profile_id = ? 
+    ORDER BY created_at ASC
+  `;
+  return await db.exec(sql, {
+    bind: [profileId],
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+}
+
+export async function addProfileComment(profileId, comment) {
+  const db = await getDB();
+  const id = generateUUID();
+  const ts = Date.now() / 1000;
+  const sql = `
+    INSERT INTO device_profile_comments (id, device_profile_id, comment, created_at, updated_at) 
+    VALUES (?, ?, ?, ?, ?)
+  `;
+  await db.exec(sql, {
+    bind: [id, profileId, comment, ts, ts]
+  });
+  return { id, device_profile_id: profileId, comment, created_at: ts, updated_at: ts };
+}
+
+export async function getUserDeviceEdits() {
+  const db = await getDB();
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS user_device_edits (
+      id TEXT PRIMARY KEY,
+      action_type TEXT,
+      instance_ids JSONTEXT,
+      instance_summaries JSONTEXT,
+      source_profile_id TEXT,
+      target_profile_id TEXT,
+      source_profile_label TEXT,
+      target_profile_label TEXT,
+      reason TEXT,
+      created_at REAL
+    )
+  `);
+
+  const sql = `SELECT * FROM user_device_edits ORDER BY created_at DESC`;
+  const rows = await db.exec(sql, {
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+
+  return rows.map(function(row) {
+    try {
+      row.instance_ids = row.instance_ids ? JSON.parse(row.instance_ids) : [];
+    } catch (e) {
+      row.instance_ids = [];
+    }
+    try {
+      row.instance_summaries = row.instance_summaries ? JSON.parse(row.instance_summaries) : [];
+    } catch (e) {
+      row.instance_summaries = [];
+    }
+    return row;
+  });
+}
+
+export async function createUserDeviceEdit(params) {
+  const db = await getDB();
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS user_device_edits (
+      id TEXT PRIMARY KEY,
+      action_type TEXT,
+      instance_ids JSONTEXT,
+      instance_summaries JSONTEXT,
+      source_profile_id TEXT,
+      target_profile_id TEXT,
+      source_profile_label TEXT,
+      target_profile_label TEXT,
+      reason TEXT,
+      created_at REAL
+    )
+  `);
+
+  const id = generateUUID();
+  const ts = Date.now() / 1000;
+  const sql = `
+    INSERT INTO user_device_edits 
+    (id, action_type, instance_ids, instance_summaries, source_profile_id, target_profile_id, source_profile_label, target_profile_label, reason, created_at) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  await db.exec(sql, {
+    bind: [
+      id,
+      params.action_type,
+      JSON.stringify(params.instance_ids || []),
+      JSON.stringify(params.instance_summaries || []),
+      params.source_profile_id || null,
+      params.target_profile_id || null,
+      params.source_profile_label || null,
+      params.target_profile_label || null,
+      params.reason || '',
+      ts
+    ]
+  });
+  return {
+    id,
+    action_type: params.action_type,
+    instance_ids: params.instance_ids,
+    instance_summaries: params.instance_summaries,
+    source_profile_id: params.source_profile_id,
+    target_profile_id: params.target_profile_id,
+    source_profile_label: params.source_profile_label,
+    target_profile_label: params.target_profile_label,
+    reason: params.reason,
+    created_at: ts
+  };
+}
+
+
