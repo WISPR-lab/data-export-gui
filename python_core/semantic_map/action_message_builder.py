@@ -21,6 +21,9 @@ def message(event_action, **kwargs):  # TODO add kwargs for better messages
         case "auth_checkpoint_pass":
             return "Account verification passed"
 
+        case "auth_checkpoint_fail":
+            return "Account verification failed"
+
         case "data_export_request":
             return "Data export requested by user"
         

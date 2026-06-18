@@ -74,3 +74,60 @@ class HTMLTableParser(CSVParser):
             raise
         except Exception as e:
             raise FileLevelError(f"CSV extraction failed: {e}", context={'error_type': type(e).__name__})
+
+
+class HTMLGglSubscriberInfoParser(HTMLTableParser):
+
+    @classmethod
+    def extract(cls, content: str, config: Optional[Dict] = None, filepath: str = None) -> List[Dict[str, Any]]:
+        import re
+        rows = super().extract(content, config, filepath)
+        
+        expanded_rows = []
+        for row in rows:
+            # Keep the original row (which contains the Login or Logout event)
+            expanded_rows.append(row)
+            
+            # Find the challenges column key, case-insensitively
+            challenges_key = next((k for k in row.keys() if 'challenges' in k.lower()), None)
+            if not challenges_key or not row[challenges_key]:
+                continue
+                
+            challenges_str = row[challenges_key]
+            parts = [p.strip() for p in challenges_str.split(';') if p.strip()]
+            
+            for part in parts:
+                # Format: "<Timestamp>: <Outcome>, <Dusi>"
+                # e.g., "2025-02-20 21:18:46 Z: Challenge Failed, -"
+                match = re.match(r'^(.+?\s[A-Z]):\s*(.+)$', part)
+                if not match:
+                    colon_idx = part.find(':')
+                    if colon_idx == -1:
+                        continue
+                    ts_str = part[:colon_idx].strip()
+                    rest = part[colon_idx+1:].strip()
+                else:
+                    ts_str = match.group(1).strip()
+                    rest = match.group(2).strip()
+                
+                outcome = rest
+                if ',' in rest:
+                    comma_parts = rest.split(',', 1)
+                    outcome = comma_parts[0].strip()
+                
+                # Build virtual row for the challenge event
+                challenge_row = {
+                    "Timestamp": ts_str,
+                    "IP Address": row.get("IP Address", ""),
+                    "Activity Type": "Challenge",
+                    "Challenge Outcome": outcome,
+                    "Interactive": row.get("Interactive", ""),
+                    "Initiating Service": row.get("Initiating Service", ""),
+                    "Geo": row.get("Geo", ""),
+                    "Raw User Agents": row.get("Raw User Agents", ""),
+                    "Challenges (timestamp, outcome, dusi)": "",
+                    "__line_numbers": row.get("__line_numbers", [1])
+                }
+                expanded_rows.append(challenge_row)
+                
+        return expanded_rows
