@@ -10,11 +10,14 @@ Instead of uploading sensitive files to a server, this project processes everyth
 
 **Prerequisites**
 - Node.js 18+
-- yarn
+- npm or brew
+- yarn (npm install --global yarn@1 or brew install yarn)
 
 **Setup**
 
 ```bash
+git clone --recurse-submodules https://github.com/WISPR-lab/data-export-gui/
+cd data-export-gui
 cd webapp
 yarn install
 yarn serve
