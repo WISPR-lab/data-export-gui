@@ -69,6 +69,17 @@ files:
     parser:
       format: "csv"
 
+  - id: "apple_push_notifications"
+    path: "App install and push notification activity/Push Notifications.csv"
+    parser:
+      format: "csv"
+
+  - id: "apple_messaging_json"
+    path: "Devices Registered with Apple Messaging.json"
+    parser:
+      format: "json"
+      json_root: "devices[]"
+
   # TODO NEED TO GET INTO OTHER_DATA_4
 
 
@@ -79,7 +90,7 @@ views:
 - file: 
     id: "apple_signon_info"
   static:
-      event.action: "user_login_success"
+      event.action: "user_login"
       event.kind: "event"
       event.category: ["authentication", "session"]
       event.type: ["start"]
@@ -204,3 +215,33 @@ views:
   - {target: "device.given_name", source: "device-name", type: "string"}
   - {target: "user_agent.original", source: "os-version", type: "string"}
   # TODO: potential 2FA field
+
+- file:
+    id: "apple_push_notifications"
+  static:
+    event.kind: "event"
+    event.action: "push_notification_activity"
+    event.category: ["web"]
+    event.type: ["access"]
+  fields:
+  - {target: "@timestamp", source: "Event Time", type: "datetime"}
+  - {target: "client.ip", source: "IP Network", type: "string"}
+  - {target: "user_agent.original", source: "User Agent", type: "string"}
+  - {target: "os.version", source: "Operating System Version", type: "string"}
+  - {target: "service.name", source: "App Name", type: "string"}
+  - {target: "geo.city_name", source: "IP City", type: "string"}
+  - {target: "geo.country_iso_code", source: "IP Country Code", type: "string"}
+  - {target: "geo.region_name", source: "IP Region Code", type: "string"}
+
+- file:
+    id: "apple_messaging_json"
+  static:
+    event.kind: "asset"
+    event.category: ["authentication", "session"]
+    event.type: ["info"]
+    entity.type: "authenticated_device"
+  fields:
+  - {target: "device.model.identifier", source: "hardware-version", type: "string"}
+  - {target: "device.given_name", source: "device-name", type: "string"}
+  - {target: "user_agent.original", source: "os-version", type: "string"}
+  - {target: "auth.method", source: "device-trust-level", type: "string"}
