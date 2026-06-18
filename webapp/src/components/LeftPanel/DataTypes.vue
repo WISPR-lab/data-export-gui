@@ -83,7 +83,23 @@ export default {
       return this.$store.state.sketch
     },
   },
+  watch: {
+    sketch: {
+      async handler() {
+        await this.loadEventMessages()
+      },
+      deep: true
+    }
+  },
   methods: {
+    async loadEventMessages() {
+      try {
+        this.eventMessages = await DB.getEventMessages();
+      } catch (e) {
+        console.error('Error loading event messages:', e)
+        this.eventMessages = []
+      }
+    },
     toggleExpand() {
       if (this.eventMessages && this.eventMessages.length) {
         this.expanded = !this.expanded
@@ -100,14 +116,7 @@ export default {
     }
   },
   async mounted() {
-    try {
-      // this.eventActions = await DB.getEventActions();
-      this.eventMessages = await DB.getEventMessages();
-    } catch (e) {
-      console.error('Error loading event messages:', e)
-      // this.eventActions = []
-      this.eventMessages = []
-    }
+    await this.loadEventMessages()
 
     EventBus.$on('demo:collapse-event-types', this.handleCollapse)
     EventBus.$on('demo:expand-event-types', this.handleExpand)

@@ -7,43 +7,39 @@ from utils.misc import clean_target
 
 
 
-def message(event_action, **kwargs):  # TODO add kwargs for better messages
-
-    event_action = clean_target(event_action)
+def message(event_action, **kwargs):
+    cleaned_action = clean_target(event_action)
+    outcome = kwargs.get("event_outcome") or kwargs.get("outcome")
     # translate ecs field with dot notation to underscore notation for mapping (dots annoying in sql)
     # also get rid of @ in timeline
 
-    match event_action:
+    translations = {
+        "auth": "authentication",
+        "user": "",
+        "init": "initiated",
+        "pass": "passed",
+        "fail": "failed",
+    }
 
-        case "auth_checkpoint_init":
-            return "Account verification request"
+    words = cleaned_action.split('_')
+    translated_words = [translations.get(w, w) for w in words]
+    base_action = " ".join([w for w in translated_words if w])
 
-        case "auth_checkpoint_pass":
-            return "Account verification passed"
+    if base_action == "user login" or base_action == "login":
+        base_action = "login"
 
-        case "data_export_request":
-            return "Data export requested by user"
-        
-        case "email_addition":
-            return "Email added"
+    base_action = base_action.capitalize()
 
-        case "password_reset_request":
-            return "Password reset requested by user"
+    if outcome == "success":
+        result_message = f"{base_action} - Success"
+    elif outcome in ("failure", "fail"):
+        result_message = f"{base_action} - Failure"
+    elif outcome == "initiated":
+        result_message = f"{base_action} - Initiated"
+    else:
+        result_message = base_action
 
-        case "recovery_contact_addition" | "legacy_contact_addition":
-            return "Recovery/legacy contact added"
-
-        case "user_login_success":
-            return "Successful login"
-
-        case "user_logout":
-            return "Logout"
-
-        case "user_password_change":
-            return "Password changed"
-
-        case _:
-            return event_action
+    return result_message
 
     
 

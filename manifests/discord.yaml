@@ -17,7 +17,7 @@ views:
       id: "discord_analytics_login"
       where: {source: "event_type", op: "==", value: "session_start_success"}
     static:
-      event.action: "user_login_success"
+      event.action: "user_login"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["start"]
