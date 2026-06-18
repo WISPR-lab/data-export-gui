@@ -45,7 +45,7 @@ views:
   - file:
       id: "insta_login_activity"
     static:
-      event.action: "user_login_success"
+      event.action: "user_login"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["start"]

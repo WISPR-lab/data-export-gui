@@ -28,15 +28,15 @@ def _filter_leaf(source:str, op:str, value:str, default=True) -> Callable:
         op = "=="
 
     if op in OP_MAPPING["eq"]:
-        return lambda dct: str(get_value_at_path(dct, source)) == value
+        return lambda dct: str(get_value_at_path(dct, source)).lower() == str(value).lower()
     if op in OP_MAPPING["ne"]:
-        return lambda dct: str(get_value_at_path(dct, source)) != value
+        return lambda dct: str(get_value_at_path(dct, source)).lower() != str(value).lower()
     if op in OP_MAPPING["contains"]:
-        return lambda dct: value in str(get_value_at_path(dct, source))
+        return lambda dct: str(value).lower() in str(get_value_at_path(dct, source)).lower()
     if op in OP_MAPPING["startswith"]:
-        return lambda dct: str(get_value_at_path(dct, source)).startswith(value)
+        return lambda dct: str(get_value_at_path(dct, source)).lower().startswith(str(value).lower())
     if op in OP_MAPPING["endswith"]:
-        return lambda dct: str(get_value_at_path(dct, source)).endswith(value)
+        return lambda dct: str(get_value_at_path(dct, source)).lower().endswith(str(value).lower())
     
     print(f"Unsupported operator in filter config: {op}")
     return lambda dct: default

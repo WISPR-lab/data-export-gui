@@ -62,7 +62,7 @@ views:
       where:
         {source: "action", op: "==", value: "Login"}
     static:
-      event.action: "user_login_success"
+      event.action: "user_login"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["start"]
@@ -83,7 +83,7 @@ views:
       where:
         {source: "action", op: "==", value: "Login"}
     static:
-      event.action: "user_login_success"
+      event.action: "user_login"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["start"]
@@ -103,10 +103,11 @@ views:
         - {source: "event", op: "startswith", value: "Checkpoint:*"}
         - {source: "event", op: "==", value: "Two-factor authentication"}
     static:
-      event.action: "auth_checkpoint_init"
+      event.action: "auth_challenge"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["info"]
+      event.outcome: "initiated"
     fields: &fb_record_details
       - {target: "@timestamp", source: "session.created_timestamp", type: "datetime"}
       - {target: "client.ip", source: "session.ip_address", type: "string"}
@@ -119,10 +120,11 @@ views:
       where:
         {source: "event", op: "==", value: "Checkpoint Passed"}
     static:
-      event.action: "auth_checkpoint_pass"
+      event.action: "auth_challenge"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["info"]
+      event.outcome: "success"
     fields:  *fb_record_details
 
 

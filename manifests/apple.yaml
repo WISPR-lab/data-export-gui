@@ -90,7 +90,7 @@ views:
 - file: 
     id: "apple_signon_info"
   static:
-      event.action: "user_login_success"
+      event.action: "user_login"
       event.kind: "event"
       event.category: ["authentication", "session"]
       event.type: ["start"]
