@@ -79,16 +79,12 @@ export default {
     }
   },
   async mounted() {
-    try {
-      // this.actions = await DB.getEventActions()
-      this.messages = await DB.getEventMessages()
-    } catch (e) {
-      console.error('Error loading event actions:', e)
-      // this.actions = []
-      this.messages = []
-    }
+    await this.loadMessages()
   },
   computed: {
+    sketch() {
+      return this.$store.state.sketch
+    },
     // eventActions() {
     //   return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
     // },
@@ -96,7 +92,25 @@ export default {
       return [...this.messages].sort((a, b) => a.message.localeCompare(b.message))
     },
   },
+  watch: {
+    sketch: {
+      async handler() {
+        await this.loadMessages()
+      },
+      deep: true
+    }
+  },
   methods: {
+    async loadMessages() {
+      try {
+        // this.actions = await DB.getEventActions()
+        this.messages = await DB.getEventMessages()
+      } catch (e) {
+        console.error('Error loading event actions:', e)
+        // this.actions = []
+        this.messages = []
+      }
+    },
     setQueryAndFilter(action) {
       let eventData = {}
       eventData.doSearch = true

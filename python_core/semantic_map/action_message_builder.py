@@ -28,14 +28,18 @@ def message(event_action, **kwargs):
     if base_action == "user login" or base_action == "login":
         base_action = "login"
 
+    base_action = base_action.capitalize()
+
     if outcome == "success":
-        result_message = f"successful {base_action}"
+        result_message = f"{base_action} - Success"
     elif outcome in ("failure", "fail"):
-        result_message = f"failed {base_action}"
+        result_message = f"{base_action} - Failure"
+    elif outcome == "initiated":
+        result_message = f"{base_action} - Initiated"
     else:
         result_message = base_action
 
-    return result_message.capitalize()
+    return result_message
 
     
 
