@@ -71,7 +71,7 @@ class DeviceInstance:
 
         self.os_versions = self.df['attr__norm__os_version'].dropna().unique().tolist() if 'attr__norm__os_version' in self.df.columns else []
         self.client_versions = self.df['attr__norm__client_version'].dropna().unique().tolist() if 'attr__norm__client_version' in self.df.columns else []
-        self.ip_addresses = self.df['attr__ip_address'].dropna().unique().tolist() if 'attr__ip_address' in self.df.columns else []
+        self.client_ips = self.df['attr__client_ip'].dropna().unique().tolist() if 'attr__client_ip' in self.df.columns else []
         self.locations = self.df['attr__location'].dropna().unique().tolist() if 'attr__location' in self.df.columns else []
 
     def _find_best_attribute(self, col: str) -> Optional[str]:
@@ -83,20 +83,34 @@ class DeviceInstance:
             return None
         return sorted(non_nulls, key=lambda s: len(str(s)), reverse=True)[0]
 
-    def _evaluate_apple_masking(self) -> Optional[str]:
+    def _evaluate_apple_masking(self) -> Optional[int]:
         # Apple's Safari browser intentionally masks device hardware details within the User Agent string
         # to prevent browser fingerprint tracking (e.g. reporting a generic 'Macintosh' with no specific macOS 
         # version or 'iPhone' with no specific model version). This function flags instances where this privacy 
         # masking is occurring to inform downstream clustering.
-        os_val = self._find_best_attribute('attr__norm__os_name')
-        client_val = self._find_best_attribute('attr__norm__client_name')
-        model_val = self._find_best_attribute('attr__norm__model_name')
+        os_val = (self._find_best_attribute('attr__norm__os_name') or '').strip().lower()
+        client_val = (self._find_best_attribute('attr__norm__client_name') or '').strip().lower()
+        model_val = (self._find_best_attribute('attr__norm__model_name') or '').strip().lower()
 
-        if os_val == 'macOS' and client_val == 'Safari':
-            return 'mac_safari'
-        if model_val == 'iPhone' and client_val == 'Safari':
-            return 'iphone_safari'
-        return None
+        # Ensure this won't apply to webkit
+        if 'webkit' in client_val:
+            return None
+
+        # Check if the device model is generic
+        is_generic_mac = (os_val == 'macos' and model_val == 'macintosh')
+        is_generic_ios = (os_val in ('ios', 'iphone os') and model_val in ('iphone', 'ipad', 'ipod'))
+
+        if not (is_generic_mac or is_generic_ios):
+            return None
+
+        # Check if the OS string is frozen (specifically for macOS 10.15)
+        if is_generic_mac:
+            os_versions = self.df['attr__norm__os_version'].dropna().unique().tolist() if 'attr__norm__os_version' in self.df.columns else []
+            has_frozen_mac_os = any(str(ver).startswith('10.15') for ver in os_versions)
+            if not has_frozen_mac_os:
+                return None
+
+        return 1
 
     def export_as_dict(self) -> dict:
         # Serializes the instance data into a flat database-compatible dictionary, retrieving the latest versions/IPs 
@@ -117,10 +131,10 @@ class DeviceInstance:
             'event_count': self.event_count,
             'latest_os_version': self.os_versions[-1] if self.os_versions else None,
             'latest_client_version': self.client_versions[-1] if self.client_versions else None,
-            'latest_ip_address': self.ip_addresses[-1] if self.ip_addresses else None,
+            'latest_client_ip': self.client_ips[-1] if self.client_ips else None,
             'os_versions': self.os_versions,
             'client_versions': self.client_versions,
-            'ip_addresses': self.ip_addresses,
+            'client_ips': self.client_ips,
             'locations': self.locations
         }
 

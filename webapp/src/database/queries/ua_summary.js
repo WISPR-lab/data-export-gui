@@ -23,23 +23,7 @@
  */
 
 
-const IRREGULAR_CAPS = {
-  webview: 'WebView',  // "Webview" is wrong
-  whatsapp: 'WhatsApp', // "Whatsapp" is wrong
-  youtube: 'YouTube',   // "Youtube" is wrong
-  ios: 'iOS',           // "Ios" is wrong
-  macos: 'macOS',       // "Macos" is wrong
-};
-function titleCase(str) {
-  if (!str) return '';
-  return str
-    .split(/\s+/)
-    .map(word => {
-      const lower = word.toLowerCase();
-      return IRREGULAR_CAPS[lower] !== undefined ? IRREGULAR_CAPS[lower] : (word.charAt(0).toUpperCase() + word.slice(1));
-    })
-    .join(' ');
-}
+import { titleCase } from '@/filters/TitleCase.js';
 
 function isBrowserName(name) {
   if (!name) return false;
@@ -113,8 +97,8 @@ export function getUASummary(deviceInstances) {
       } else {
         // 3 -- mobile web browsing
         // "mobile safari" + ios + google --> "Google (Safari)"
-        //label1 = platform === 'google' ? 'Google' : titleCase(platform);
-        //label2 = cleanBrowser;
+        // label1 = platform === 'google' ? 'Google' : titleCase(platform);
+        // label2 = cleanBrowser;
         // update:  "mobile safari" + ios + google --> "Safari"
         label1 = cleanBrowser;
       }

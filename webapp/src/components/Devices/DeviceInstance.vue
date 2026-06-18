@@ -27,14 +27,35 @@
         />
       </div>
 
-      <!-- Client Name & Version & OS & Timeline -->
+      <!-- OS & Timeline -->
       <div class="flex-grow-1 text-truncate">
-        <div class="body-2 font-weight-bold">{{ getHeaderLabel }}</div>
-        <div v-if="getTimelineString" class="caption grey--text text--darken-2">
-          Active: {{ getTimelineString }}
+        <div class="text-body-2 font-weight-medium text--primary d-flex align-center">
+          <span>{{ getHeaderLabel }}</span>
+          <v-tooltip v-if="isMaskedInstance" bottom max-width="320">
+            <template v-slot:activator="{ on, attrs }">
+              <span
+                class="d-inline-flex align-center justify-center rounded-circle grey lighten-2 ml-2"
+                style="width: 20px; height: 20px; flex-shrink: 0;"
+                v-bind="attrs"
+                v-on="on"
+              >
+                <v-icon
+                  color="grey darken-3"
+                  style="font-size: 13px;"
+                >
+                  mdi-fingerprint-off
+                </v-icon>
+              </span>
+            </template>
+            <span>{{ computedMaskingText }}</span>
+          </v-tooltip>
+        </div>
+        <div class="text-body-2 text--secondary">
+          <span v-if="getOSLabel">{{ getOSLabel }}</span>
+          <span v-if="getTimelineString && getOSLabel" class="ml-2 mr-2">&bull;</span>
+          <span v-if="getTimelineString">Active {{ getTimelineString }}</span>
         </div>
       </div>
-
       <!-- Actions -->
       <div class="d-flex align-center flex-shrink-0" style="gap: 8px;">
         <v-btn
@@ -59,16 +80,7 @@
     <v-expand-transition>
       <div v-if="expanded" class="px-4 pb-4 pt-0" @click.stop>
         <v-divider class="mb-4"></v-divider>
-        <v-simple-table dense class="elevation-0 transparent">
-          <template v-slot:default>
-            <tbody>
-              <tr v-for="attr in instance.formatted_attributes" :key="attr.label">
-                <td style="font-weight: 500; width: 200px; border-bottom: none !important;">{{ attr.label }}</td>
-                <td style="word-break: break-word; border-bottom: none !important;">{{ attr.value }}</td>
-              </tr>
-            </tbody>
-          </template>
-        </v-simple-table>
+        <device-attributes-table :attributes="instance.formatted_attributes" />
       </div>
     </v-expand-transition>
   </v-card>
@@ -76,10 +88,12 @@
 
 <script>
 import UASummaryChip from './UASummaryChip.vue';
+import DeviceAttributesTable from './DeviceAttributesTable.vue';
+import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'DeviceInstance',
-  components: { UASummaryChip },
+  components: { UASummaryChip, DeviceAttributesTable },
   props: {
     instance: {
       type: Object,
@@ -96,6 +110,10 @@ export default {
     showHelp: {
       type: Boolean,
       default: false
+    },
+    uaMaskingText: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
@@ -104,10 +122,24 @@ export default {
     };
   },
   computed: {
+    computedMaskingText() {
+      if (!this.uaMaskingText) return '';
+      const os = (this.instance.os_name || '').trim().toLowerCase();
+      const model = (this.instance.model || '').trim().toLowerCase();
+      const isMac = os === 'macos' || model === 'macintosh';
+      const baseText = isMac ? this.uaMaskingText.mac_ipad : this.uaMaskingText.iphone;
+      if (!baseText) return '';
+      return baseText.split('.')[0] + '.';
+    },
+    isMaskedInstance() {
+      if (this.instance.apple_masking && this.instance.apple_masking !== '0' && this.instance.apple_masking !== 'false') return true;
+      const model = (this.instance.model || '').trim().toLowerCase();
+      return model === 'iphone' || model === 'ipad' || model === 'ipod' || model === 'macintosh' || model === 'generic';
+    },
     getHeaderLabel() {
       const type = this.instance.instance_source_type;
       
-      const getSessionStr = () => {
+      const getStreamStr = () => {
         const sum = this.instance.ua_summary;
         if (sum) {
           const p = sum.primary || '';
@@ -121,9 +153,9 @@ export default {
       if (type === 'raw_devices') {
         return 'Recognized Device';
       } else if (type === 'both') {
-        return `Recognized Device; ${getSessionStr()}`;
+        return `Recognized Device; ${getStreamStr()}`;
       } else {
-        return getSessionStr();
+        return getStreamStr();
       }
     },
     getClientLabel() {
@@ -136,9 +168,9 @@ export default {
     getOSLabel() {
       const os = this.instance.os_type || this.instance.os_name || 'Unknown OS';
       if (this.instance.latest_os_version) {
-        return `${os.toUpperCase()} ${this.instance.latest_os_version}`;
+        return `${titleCase(os)} ${this.instance.latest_os_version}`;
       }
-      return os.toUpperCase();
+      return titleCase(os);
     },
     getTimelineString() {
       if (!this.instance.first_seen || !this.instance.last_seen) return '';

@@ -3,31 +3,43 @@
   <div class="device-header-row py-2">
     <!-- LEFT PART (60% boundary) -->
     <div class="header-left-part">
-      <!-- Drag handle & Icon -->
+      <!-- Icon -->
       <div class="header-icon-group">
-        <v-icon v-if="isGeneric" color="grey--darken-1" class="mr-4">mdi-drag-vertical</v-icon>
-        <v-avatar size="64" color="grey--lighten-4" class="mr-3 flex-shrink-0" :class="{'white border': isGeneric}">
+        <v-avatar size="64" color="grey--lighten-4" class="mr-3 flex-shrink-0">
           <v-icon color="grey--darken-3" size="48">
-            {{ isGeneric ? 'mdi-help-circle-outline' : (device.icon || 'mdi-cellphone') }}
+            {{ device.icon || 'mdi-cellphone' }}
           </v-icon>
         </v-avatar>
       </div>
 
       <!-- Text block: model, manufacturer, activity -->
       <div class="device-info-col mr-4">
-        <div v-if="!isGeneric" class="subtitle-1 font-weight-bold text-truncate">
-          {{ (device.user_label || device.model) | formatDeviceDetails }}
-          <span v-if="device.user_label && device.model" class="grey--text text--darken-3 body-2 font-weight-regular ml-1">
+        <div class="text-subtitle-1 font-weight-medium text-truncate text--primary d-flex align-center">
+          <span>{{ (device.user_label || device.model) | formatDeviceDetails }}</span>
+          <span v-if="device.user_label && device.model" class="text-body-2 text--secondary font-weight-regular ml-1">
             ({{ device.model | formatDeviceDetails }})
           </span>
+          <v-tooltip v-if="isMaskedProfile" bottom max-width="320">
+            <template v-slot:activator="{ on, attrs }">
+              <v-chip
+                small
+                color="grey lighten-2"
+                class="ml-4 font-weight-medium flex-shrink-0 grey--text text--darken-3"
+                v-bind="attrs"
+                v-on="on"
+                @click.stop
+              >
+                <v-icon left small class="grey--text text--darken-3">mdi-fingerprint-off</v-icon>
+                Reduced User-Agent
+              </v-chip>
+            </template>
+            <span>{{ computedMaskingText }}</span>
+          </v-tooltip>
         </div>
-        <div v-else class="subtitle-1 font-weight-bold text-truncate">
-          {{ device.label | formatDeviceDetails }}
-        </div>
-        <div v-if="device.manufacturer" class="body-2 grey--text text--darken-3">
+        <div v-if="device.manufacturer" class="text-body-2 text--secondary">
           {{ device.manufacturer | formatDeviceDetails }}
         </div>
-        <div v-if="activityString" class="body-2 grey--text text--darken-3">
+        <div v-if="activityString" class="text-body-2 text--secondary">
           {{ activityString }}
         </div>
       </div>
@@ -39,6 +51,7 @@
       <div v-if="device.ua_summaries && device.ua_summaries.length > 0" class="chip-col-wrap mr-4">
         <UASummaryChip
           v-for="(summary, idx) in device.ua_summaries"
+          v-slot:default
           v-if="!summary.isUnknown"
           :key="idx"
           :summary="summary"
@@ -59,10 +72,6 @@ export default {
       type: Object,
       required: true
     },
-    isGeneric: {
-      type: Boolean,
-      default: false
-    },
     open: {
       type: Boolean,
       default: false
@@ -70,9 +79,32 @@ export default {
     isHighlighted: {
       type: Boolean,
       default: false
+    },
+    uaMaskingText: {
+      type: Object,
+      default: () => ({})
     }
   },
   computed: {
+    computedMaskingText() {
+      if (!this.uaMaskingText) return '';
+      const instances = this.device.instances || [];
+      const isMac = instances.some(function(inst) {
+        const os = (inst.os_name || '').trim().toLowerCase();
+        const model = (inst.model || '').trim().toLowerCase();
+        return os === 'macos' || model === 'macintosh';
+      });
+      const baseText = isMac ? this.uaMaskingText.mac_ipad : this.uaMaskingText.iphone;
+      return (baseText || '') + ' ' + (this.uaMaskingText.profile || '');
+    },
+    isMaskedProfile() {
+      if (!this.device.instances || this.device.instances.length === 0) return false;
+      return this.device.instances.every(function(inst) {
+        if (inst.apple_masking && inst.apple_masking !== '0' && inst.apple_masking !== 'false') return true;
+        const model = (inst.model || '').trim().toLowerCase();
+        return model === 'iphone' || model === 'ipad' || model === 'ipod' || model === 'macintosh' || model === 'generic';
+      });
+    },
     activityString() {
       const { first_seen, last_seen } = this.device;
       const fmt = ts => new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -84,6 +116,16 @@ export default {
       if (first_seen) return `First seen ${fmt(first_seen)}`;
       if (last_seen) return `Last seen ${fmt(last_seen)}`;
       return '';
+    }
+  },
+  methods: {
+    goToExplore() {
+      const queryString = `device_profiles_data:${this.device.id}`;
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore';
+      this.$router.push({
+        name: routeName,
+        query: { q: queryString }
+      });
     }
   }
 }

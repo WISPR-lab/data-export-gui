@@ -12,7 +12,7 @@ export async function getUploads() {
       u.platform,
       CAST(u.upload_timestamp * 1000 AS INTEGER) as created_at,
       u.updated_at,
-      COALESCE(u.color, '5E75C2') as color,
+      u.color,
       'ready' as status,
       COUNT(e.id) as event_count
     FROM uploads u
@@ -45,7 +45,7 @@ export async function getUploadById(uploadId) {
       u.platform,
       CAST(u.upload_timestamp * 1000 AS INTEGER) as created_at,
       u.updated_at,
-      COALESCE(u.color, '5E75C2') as color,
+      u.color,
       'ready' as status,
       COUNT(e.id) as event_count
     FROM uploads u

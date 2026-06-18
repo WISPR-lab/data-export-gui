@@ -1,79 +1,81 @@
 // added for WISPR-lab/data-export-gui
 <template>
-  <v-container class="pa-6 white min-h-100" style="max-width: 900px;">
-    <!-- Demo completion modal -->
-    <v-dialog v-model="showDemoCompletionModal" width="500" persistent>
-      <v-card class="pa-6">
-        <v-card-title class="text-h5 mb-4">Excellent! 🎉</v-card-title>
-        <v-card-text>
-          <p>You've seen the main features of the data explorer. Now you're ready to analyze your own data.</p>
-          <p class="mt-4 mb-0">Would you like to upload your data now, or explore the demo a bit more?</p>
-        </v-card-text>
-        <v-card-actions class="pt-4">
-          <v-spacer></v-spacer>
-          <v-btn text @click="exploreMoreDemo">Explore More</v-btn>
-          <v-btn text @click="returnToHome">Return Home</v-btn>
-          <v-btn color="primary" @click="goToUpload">Upload Your Data</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+  <v-container class="pa-6 white min-h-100" style="max-width: 1100px;">
 
-    <div class="mb-8">
-      <h1 class="text-h4 font-weight-bold mb-2">Your devices</h1>
-      <p class="body-1 grey--text text--darken-2">
-        We found activity from these devices in your data export(s). You can label devices as malicious or give them custom names to keep track of them.
-        <v-btn
-          text
-          small
-          color="primary"
-          @click="showDeviceHelpDialog = true"
-          class="pa-0 ml-1"
-        >
-          Learn more
-          <v-icon small class="ml-1">mdi-help-circle-outline</v-icon>
-        </v-btn>
-      </p>
-    </div>
+    <h1 class="text-h4 text--primary mb-6">Devices</h1>
+    
+    <p class="text-body-2 text--primary" style="line-height: 1.7;">
+      Data exports often contain information about currently logged-in devices in addition to lists of login events associated with some information about the origin device. 
+      LEStrADE attempts to unify this data using a two-level abstraction:
+    </p>
 
+    <ul class="text-body-2 text--primary mb-10" style="line-height: 1.7;">
+      <li class="mb-2">
+        <strong>Device Instance</strong>: A group of one or more raw records mapping to a trusted/registered device (e.g., for 2FA) or a group of login events linked by a common identifier (e.g., session ID or serial number) or tracked across browser/app upgrades.
+      </li>
+      <li>
+        <strong>Device Profile</strong>: A super-group of one or more <strong>device instances</strong> that share the same hardware model (e.g., Apple iPhone 11). Since you may own more than one physical device of the same model, you can reassign <strong>instances</strong> to a new or different <strong>profile</strong> 
+        by selecting "Edit" in the "Device Instances" list.
+      </li>
+    </ul>
+
+    <!-- <v-row class="mb-6">
+      <v-col cols="12" md="6">
+        <div class="text-subtitle-1 text--primary mb-1">Device Instance</div>
+        <p class="text-body-2 text--primary mb-0" style="line-height: 1.5;">
+          A group of one or more raw records mapping to a trusted/registered device (e.g., for 2FA) or a group of login events linked by a common identifier (e.g., session ID or serial number) or tracked across browser/app upgrades.
+        </p>
+      </v-col>
+      <v-col cols="12" md="6">
+        <div class="text-subtitle-1 text--primary mb-1">Device Profile</div>
+        <p class="text-body-2 text--primary mb-0" style="line-height: 1.5;">
+          A super-group of one or more <strong>device instances</strong> that share the same hardware model (e.g., Apple iPhone 11).
+          Since you may own more than one physical device of the same model, you can reassign <strong>instances</strong> to a new or different <strong>profile</strong>. 
+        </p>
+      </v-col>
+    </v-row> -->
+
+    <h3 class="text-h6 text--primary mb-2">Device Profiles ({{ devices.length }})</h3>
 
     <v-expansion-panels flat class="device-panels devices-list">
       <v-expansion-panel
         v-for="(dev, i) in devices"
         :key="i"
-        class="mb-3 border rounded-xl overflow-hidden device-drop-zone device-profile-card"
-        :class="{'drop-active': isDragging && activeDropId === i, 'blue-grey lighten-5': dev.is_generic}"
-        draggable
-        @dragstart.native="onDragStart($event, dev)"
-        @dragend.native="onDragEnd"
-        @dragover.native.prevent="activeDropId = i"
-        @dragleave.native="activeDropId = null"
-        @drop.native="onDrop($event, dev, i)"
+        class="mb-3 border rounded-xl overflow-hidden device-profile-card"
       >
         <v-expansion-panel-header class="pa-4" @click="onDeviceExpand">
           <template v-slot:default="{ open }">
-            <device-profile-header :device="dev" :is-generic="!!dev.is_generic" :open="open" @showJSON="showDeviceJSON" />
+            <device-profile-header :device="dev" :open="open" :ua-masking-text="uaMaskingText" @showJSON="showDeviceJSON" />
           </template>
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-profile-dropdown :device="dev" :is-generic="!!dev.is_generic" @change="saveDeviceChanges(dev)" @see-all-events="goToExplore(dev)" @unmerge="handleUnmerge(dev, $event)" @batch-unmerge="handleBatchUnmerge(dev, $event)" @showJSON="showDeviceJSON" />
+          <device-profile-dropdown
+            :device="dev"
+            :ua-masking-text="uaMaskingText"
+            @change="saveDeviceChanges(dev)"
+            @see-all-events="goToExplore(dev)"
+            @unmerge="handleUnmerge(dev, $event)"
+            @batch-unmerge="handleBatchUnmerge(dev, $event)"
+            @move-instances="openMoveDialog(dev, $event)"
+            @create-profile="openCreateDialog(dev, $event)"
+            @showJSON="showDeviceJSON"
+          />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
 
-
     <device-group-modal 
       v-model="groupDialog" 
-      :source="staging ? staging.source : null" 
-      :target="staging ? staging.target : null"
+      :mode="editMode"
+      :selected-instance-ids-to-move="selectedInstanceIdsToMove"
+      :existing-profiles="devices"
+      :source-profile-id="sourceProfileId"
       :is-loading="mergeLoading"
       :error="mergeError"
-      :success="mergeSuccess"
       @confirm="confirmGroup"
       @closed="onModalClosed"
     />
-
-    <device-detection-help-modal v-model="showDeviceHelpDialog" />
 
     <!-- Device JSON Modal -->
     <json-modal
@@ -82,6 +84,13 @@
       :data="selectedDeviceForJSON || {}"
       max-width="800"
     />
+
+    <!-- Edit History Table Component -->
+    <h3 class="text-h6 text--primary mb-2 font-weight-medium mt-12">Profile Edit History</h3>
+    <p class="text-body-2 text--secondary mb-4">
+      Edits you've made to device instances and profiles.
+    </p>
+    <user-device-edits-table :history-logs="historyLogs" :devices="devices" />
   </v-container>
 </template>
 
@@ -89,10 +98,12 @@
 import DeviceProfileDropdown from '@/components/Devices/DeviceProfileDropdown.vue';
 import DeviceProfileHeader from '@/components/Devices/DeviceProfileHeader.vue';
 import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
-import DeviceDetectionHelpModal from '@/components/Devices/DeviceDetectionHelpModal.vue';
 import JSONModal from '@/components/Devices/JSONModal.vue';
-import { getDevices, updateDeviceProfile, getInstanceAttributes } from '@/database/queries/devices_v2.js';
+import UserDeviceEditsTable from '@/components/Devices/UserDeviceEditsTable.vue';
+import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
+import { getUserDeviceEdits, moveInstancesToProfile, createProfileWithInstances } from '@/database/queries/user_device_edits.js';
 import { callPyodideWorker } from '@/pyodide/pyodide-client';
+import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'Devices',
@@ -100,29 +111,31 @@ export default {
     DeviceProfileDropdown,
     DeviceProfileHeader,
     DeviceGroupModal,
-    DeviceDetectionHelpModal,
-    'json-modal': JSONModal
+    'json-modal': JSONModal,
+    UserDeviceEditsTable
   },
   data() {
     return {
-      isDragging: false,
-      activeDropId: null,
       groupDialog: false,
+      editMode: 'move', // 'move' or 'create'
+      selectedInstanceIdsToMove: [],
+      sourceProfileId: '',
       mergeLoading: false,
       mergeError: null,
-      mergeSuccess: false,
-      selectedRecord: null,
-      staging: null,
       devices: [],
-      showDeviceHelpDialog: false,
+      historyLogs: [],
       showJSONModal: false,
       selectedDeviceForJSON: null,
       showDemoCompletionModal: false,
+      uaMaskingText: {
+        "mac_ipad": "To prevent fingerprinting, browsers on Apple iPads & Macs use generic User-Agents that hide the exact model and iOS version. Some iPads are misclassified as Macs.",
+        "iphone": "To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the exact model.",
+        "profile": "Multiple physical devices may be grouped under this generic profile."
+      }
     }
   },
   watch: {
     '$store.state.demoInProgress'(newVal, oldVal) {
-      // Show completion modal when demo finishes (demoInProgress changes from true to false)
       if (oldVal && !newVal && this.$store.state.demoMode) {
         console.log('[Devices] Demo completed, showing completion modal');
         this.$nextTick(() => {
@@ -133,8 +146,8 @@ export default {
   },
   async mounted() {
     await this.fetchDevices();
+    await this.fetchHistory();
     
-    // Auto-resume demo if in demo mode
     if (this.$store.state.demoMode && this.$store.state.demoInProgress) {
       console.log('[Devices] Resuming demo');
       this.$nextTick(() => {
@@ -145,26 +158,24 @@ export default {
   methods: {
     async fetchDevices() {
       try {
-        const allGroups = await getDevices();
-        this.devices = allGroups;
+        this.devices = await getDevices();
       } catch (err) {
         console.error('Failed to fetch devices:', err);
       }
     },
-    getSoftware(device) {
-      if (!device.os_name && !device.os_version) return null;
-      const parts = [];
-      if (device.os_name) parts.push(String(device.os_name));
-      if (device.os_version) parts.push(String(device.os_version));
-      return parts.length ? parts.join(' ') : null;
+    async fetchHistory() {
+      try {
+        this.historyLogs = await getUserDeviceEdits();
+      } catch (err) {
+        console.error('Failed to fetch history logs:', err);
+      }
     },
     async saveDeviceChanges(device) {
       try {
-        await updateDeviceProfile(device.id, {
+        await updateProfile(device.id, {
           user_label: device.user_label,
           notes: device.notes
         });
-        // Optionally re-fetch if needed, but the local state is already correct
       } catch (err) {
         console.error('Failed to save device changes:', err);
       }
@@ -177,7 +188,21 @@ export default {
         });
         
         if (result && result.status === 'ok') {
+          // Log unlink action
+          const summaryText = 'Session [ID: ' + atomicId.substring(0, 4) + '...]';
+          await createUserDeviceEdit({
+            action_type: 'move_instances',
+            instance_ids: [atomicId],
+            instance_summaries: [summaryText],
+            source_profile_id: device.id,
+            source_profile_label: this.getProfileLabelById(device.id),
+            target_profile_id: result.new_profile_id || null,
+            target_profile_label: 'New Standalone Profile',
+            reason: 'Unlinked session from profile'
+          });
+          
           await this.fetchDevices();
+          await this.fetchHistory();
         } else {
           console.error('Unmerge failed:', result);
         }
@@ -194,6 +219,18 @@ export default {
             atomicId: atomicId
           });
           if (result && result.status === 'ok') {
+            // Log unlink action
+            const summaryText = 'Session [ID: ' + atomicId.substring(0, 4) + '...]';
+            await createUserDeviceEdit({
+              action_type: 'move_instances',
+              instance_ids: [atomicId],
+              instance_summaries: [summaryText],
+              source_profile_id: device.id,
+              source_profile_label: this.getProfileLabelById(device.id),
+              target_profile_id: result.new_profile_id || null,
+              target_profile_label: 'New Standalone Profile',
+              reason: 'Unlinked session from profile (Batch action)'
+            });
             successCount++;
           } else {
             console.error('Batch unmerge failed for atomicId:', atomicId, result);
@@ -201,15 +238,107 @@ export default {
         }
         if (successCount > 0) {
           await this.fetchDevices();
+          await this.fetchHistory();
         }
       } catch (error) {
         console.error('Batch unmerge error:', error);
       }
     },
+    openMoveDialog(device, instanceIds) {
+      this.editMode = 'move';
+      this.selectedInstanceIdsToMove = instanceIds;
+      this.sourceProfileId = device.id;
+      this.mergeError = null;
+      this.groupDialog = true;
+    },
+    openCreateDialog(device, instanceIds) {
+      this.editMode = 'create';
+      this.selectedInstanceIdsToMove = instanceIds;
+      this.sourceProfileId = device.id;
+      this.mergeError = null;
+      this.groupDialog = true;
+    },
+    async confirmGroup(payload) {
+      try {
+        this.mergeLoading = true;
+        this.mergeError = null;
+
+        let result;
+        if (payload.mode === 'move') {
+          console.log('[confirmGroup] Moving instances:', payload.targetProfileId, this.selectedInstanceIdsToMove);
+          result = await moveInstancesToProfile(
+            this.selectedInstanceIdsToMove,
+            payload.targetProfileId,
+            payload.reason
+          );
+        } else {
+          console.log('[confirmGroup] Creating profile:', payload.newProfileLabel, this.selectedInstanceIdsToMove);
+          result = await createProfileWithInstances(
+            this.selectedInstanceIdsToMove,
+            payload.newProfileLabel,
+            payload.reason
+          );
+        }
+
+        console.log('[confirmGroup] Database write returned:', result);
+
+        if (result && result.status === 'ok') {
+          this.groupDialog = false;
+          await this.fetchDevices();
+          await this.fetchHistory();
+        } else if (result) {
+          this.mergeError = result.message || 'Action failed';
+        } else {
+          this.mergeError = 'Action failed: no response from database';
+        }
+      } catch (error) {
+        this.mergeError = (error && error.message) || 'Action failed';
+        console.log('[confirmGroup] Error:', error);
+      } finally {
+        this.mergeLoading = false;
+      }
+    },
+    onModalClosed() {
+      this.selectedInstanceIdsToMove = [];
+      this.sourceProfileId = '';
+    },
+    getInstanceSummaries(instanceIds) {
+      const summaries = [];
+      const self = this;
+      instanceIds.forEach(function(id) {
+        let found = null;
+        self.devices.forEach(function(d) {
+          if (d.instances) {
+            const inst = d.instances.find(function(i) { return i.id === id; });
+            if (inst) found = inst;
+          }
+        });
+        if (found) {
+          const appName = (found.ua_summary && found.ua_summary.primary) || found.client_name || 'Session';
+          const os = found.os_name || found.os_type || 'Unknown OS';
+          const dates = found.first_seen ? new Date(found.first_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+          let text = appName + ' on ' + os;
+          if (dates) text += ' (Active: ' + dates + ')';
+          text += ' [ID: ' + id.substring(0, 4) + '...]';
+          summaries.push(text);
+        } else {
+          summaries.push('Session [ID: ' + id.substring(0, 4) + '...]');
+        }
+      });
+      return summaries;
+    },
+    getProfileLabelById(profileId) {
+      if (!profileId) return '';
+      const p = this.devices.find(function(d) { return d.id === profileId; });
+      if (p) {
+        return p.user_label || p.model || 'Unknown Profile';
+      }
+      return '';
+    },
     async showDeviceJSON(data) {
       if (data && data.id && !data.instances) {
         try {
-          const rawAttrs = await getInstanceAttributes(data.id);
+          const rawAttrs = await getInstanceRawAttrs(data.id);
           this.selectedDeviceForJSON = rawAttrs;
         } catch (e) {
           console.error('Failed to load instance attributes:', e);
@@ -219,68 +348,6 @@ export default {
         this.selectedDeviceForJSON = data.attributes || data;
       }
       this.showJSONModal = true;
-    },
-    onDragStart(event, item) {
-      this.isDragging = true;
-      this.selectedRecord = item;
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', JSON.stringify(item));
-    },
-    onDragEnd() {
-      this.isDragging = false;
-      this.activeDropId = null;
-    },
-    onDrop(event, targetDevice, index) {
-      if (!this.selectedRecord) return;
-      this.staging = { source: this.selectedRecord, target: targetDevice, index };
-      this.mergeError = null;  // Clear previous error when starting new merge
-      this.groupDialog = true;
-      this.activeDropId = null;
-    },
-    async confirmGroup() {
-      try {
-        this.mergeLoading = true;
-        this.mergeError = null;
-
-        console.log('[confirmGroup] Starting merge with:', { src: this.staging.source.id, tgt: this.staging.target.id });
-        const result = await callPyodideWorker('merge', {
-          srcProfileId: this.staging.source.id,
-          tgtProfileId: this.staging.target.id
-        });
-        console.log('[confirmGroup] Worker returned:', result);
-
-        if (result && result.status === 'ok') {
-          this.mergeSuccess = true;
-
-          if (this.$store.state.demoMode) {
-            const EventBus = require('@/event-bus.js').default
-            EventBus.$emit('demo:action', 'device-dropped')
-          }
-
-          await this.fetchDevices();
-        } else if (result && result.status === 'ineligible') {
-          this.mergeError = result.message;
-        } else if (result) {
-          this.mergeError = result.message || 'Merge failed';
-        } else {
-          this.mergeError = 'Merge failed: no response from worker';
-        }
-      } catch (error) {
-        this.mergeError = (error && error.message) || 'Merge failed';
-        console.log('[confirmGroup] Merge error:', error);
-      } finally {
-        this.mergeLoading = false;
-      }
-    },
-    cancelGroup() {
-      this.groupDialog = false;
-      this.staging = null;
-      this.selectedRecord = null;
-      this.mergeLoading = false;
-      this.mergeError = null;
-    },
-    onModalClosed() {
-      this.mergeSuccess = false;
     },
     onDeviceExpand() {
       if (this.$store.state.demoMode) {
@@ -299,7 +366,6 @@ export default {
     resumeDemo() {
       console.log('[Devices] Resuming demo');
       const DemoController = require('@/demo/DemoController.js').default
-      // TODO Note: We don't have a specific resume yet in DemoController, but we could add one if needed.
     },
     goToUpload() {
       console.log('[Devices] User chose to upload data');
@@ -327,34 +393,14 @@ export default {
 .min-h-100 { min-height: 100vh; }
 .white { background-color: #ffffff !important; }
 .border { border: 1px solid rgba(0,0,0,0.12) !important; }
-.border-dark { border: 1px solid rgba(0,0,0,0.24) !important; }
 .border-top { border-top: 1px solid rgba(0,0,0,0.12) !important; }
-.border-bottom { border-bottom: 1px solid rgba(0,0,0,0.12) !important; }
-.border-blue-grey { border: 1px solid #cfd8dc !important; }
-.gap-3 { gap: 12px; }
 
 .rounded-xl { border-radius: 12px !important; }
-
-.unassigned-chip {
-  min-width: 180px;
-  flex-shrink: 0;
-  cursor: grab;
-}
 
 .device-panels ::v-deep .v-expansion-panel-header--active {
   background-color: #f8f9fa;
 }
 
-.device-drop-zone {
-  transition: border 0.1s ease;
-}
-
-.drop-active {
-  border: 1px solid #1976d2 !important;
-  background-color: #e3f2fd !important;
-}
-
-/* Remove default shadow for a cleaner look */
 .v-expansion-panel::before {
   box-shadow: none !important;
 }

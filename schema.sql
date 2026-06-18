@@ -152,7 +152,9 @@ CREATE TABLE IF NOT EXISTS device_instance_edges ( -- for device/event grouping
     id_b TEXT,  -- dropped from main dataframe in level0
     type TEXT,
     provenance TEXT,
-    UNIQUE(id_a, id_b, type)
+    upload_id TEXT,
+    UNIQUE(id_a, id_b, type),
+    FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS device_instances (
@@ -173,11 +175,11 @@ CREATE TABLE IF NOT EXISTS device_instances (
     event_count INTEGER,
     latest_os_version TEXT,            
     latest_client_version TEXT,        
-    latest_ip_address TEXT, 
+    latest_client_ip TEXT, 
     --           
     os_versions TEXT,    -- TODO jsonstring????               
     client_versions TEXT,         -- -- TODO jsonstring????              
-    ip_addresses TEXT,                 -- -- TODO jsonstring????         
+    client_ips TEXT,                 -- -- TODO jsonstring????         
     locations TEXT,  -- -- TODO jsonstring????         
     --                  
     created_at REAL,
@@ -208,6 +210,8 @@ CREATE TABLE IF NOT EXISTS device_profiles_v2 (
     os_type TEXT,
     user_label TEXT,
     notes TEXT,
+    user_created INTEGER DEFAULT 0,
+    deleted INTEGER DEFAULT 0,
     created_at REAL,
     updated_at REAL
 );
@@ -218,6 +222,19 @@ CREATE TABLE IF NOT EXISTS device_profile_instances (
     PRIMARY KEY (device_profile_id, device_instance_id),
     FOREIGN KEY(device_profile_id) REFERENCES device_profiles_v2(id) ON DELETE CASCADE,
     FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_device_edits (
+    id TEXT PRIMARY KEY,
+    action_type TEXT,
+    instance_ids JSONTEXT,
+    instance_summaries JSONTEXT,
+    source_profile_id TEXT,
+    target_profile_id TEXT,
+    source_profile_label TEXT,
+    target_profile_label TEXT,
+    reason TEXT,
+    created_at REAL
 );
 
 

@@ -92,6 +92,14 @@ def extract(platform,
                 print(f"[Extractor] Raw dir listing: {os.listdir(tmp_storage_dir)}")
                 return {"status": "failure", "error": f"OPFS_EMPTY: No files found in {tmp_storage_dir}. Files were written by JS but are not visible to Python — likely an OPFS/NativeFS sync issue."}
 
+            COLOR_PALETTE = ['5E75C2', 'BB77C4', 'FD7EAC']
+
+            # Backfill any existing uploads that don't have a color
+            null_cursor = conn.execute('SELECT id FROM uploads WHERE color IS NULL OR color = ""')
+            null_uploads = null_cursor.fetchall()
+            for idx, (up_id,) in enumerate(null_uploads):
+                conn.execute('UPDATE uploads SET color = ? WHERE id = ?', (COLOR_PALETTE[idx % len(COLOR_PALETTE)], up_id))
+
             # Auto-generate upload name: "platform" or "platform 2", "platform 3", etc.
             result = conn.execute(
                 'SELECT COUNT(*) FROM uploads WHERE platform = ?',
@@ -100,9 +108,13 @@ def extract(platform,
             count = result[0] if result else 0
             auto_name = platform if count == 0 else f"{platform} {count + 1}"
             
+            total_result = conn.execute('SELECT COUNT(*) FROM uploads').fetchone()
+            total_count = total_result[0] if total_result else 0
+            assigned_color = COLOR_PALETTE[total_count % len(COLOR_PALETTE)]
+
             conn.execute(
-                'INSERT INTO uploads (id, platform, given_name, upload_timestamp, updated_at) VALUES (?, ?, ?, ?, ?)',
-                (upload_id, platform, auto_name, ts, ts)
+                'INSERT INTO uploads (id, platform, given_name, upload_timestamp, updated_at, color) VALUES (?, ?, ?, ?, ?, ?)',
+                (upload_id, platform, auto_name, ts, ts, assigned_color)
             )
 
             partial_errors = []

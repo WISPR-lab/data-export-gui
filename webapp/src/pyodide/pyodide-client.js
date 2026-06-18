@@ -126,6 +126,9 @@ export async function executeUpload(file, platform, opfsManager, callbacks = {})
   } catch (error) {
     const errorMsg = error.message || String(error);
     if (onError) onError({ stage: uploadId ? 'processing' : 'extract', error: errorMsg, uploadId });
+    if (uploadId) {
+      error.uploadId = uploadId;
+    }
     throw error;
   }
 }

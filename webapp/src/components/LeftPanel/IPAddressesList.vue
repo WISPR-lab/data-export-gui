@@ -8,13 +8,13 @@
       <template v-slot:default="props">
         <div
           v-for="item in props.items"
-          :key="item.ip_address"
-          @click="applyFilterChip(item.ip_address)"
+          :key="item.client_ip"
+          @click="applyFilterChip(item.client_ip)"
           style="cursor: pointer; font-size: 0.9em"
         >
           <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
             <span
-              >{{ item.ip_address }} (<small
+              >{{ item.client_ip }} (<small
                 ><strong>{{ item.count | compactNumber }}</strong></small
               >)</span
             >
@@ -51,11 +51,15 @@ export default {
     },
   },
   methods: {
-    applyFilterChip(ip_address) {
+    applyFilterChip(client_ip) {
       let eventData = {}
       eventData.doSearch = true
-      eventData.queryString = 'client_ip:' + '"' + ip_address + '"'
+      eventData.queryString = 'client_ip:' + '"' + client_ip + '"'
       EventBus.$emit('setQueryAndFilter', eventData)
+      if (this.$route.name !== 'Explore' && this.$route.name !== 'DemoExplore') {
+        const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+        this.$router.push(target)
+      }
     },
   },
 }

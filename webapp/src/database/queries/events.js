@@ -300,8 +300,8 @@ export async function getIPAddresses() {
   });
   
   return Object.entries(ipCounts)
-    .map(([ip_address, count]) => ({
-      ip_address,
+    .map(([client_ip, count]) => ({
+      client_ip,
       count
     }))
     .sort((a, b) => b.count - a.count);

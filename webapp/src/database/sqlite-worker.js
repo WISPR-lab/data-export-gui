@@ -48,6 +48,7 @@ self.onmessage = async (e) => {
     const sq3 = await getSqlite();
     
     const db = new sq3.oo1.OpfsDb(args.dbPath || '/userdata.db');
+    db.exec('PRAGMA foreign_keys = ON;');
     await ensureSchema(db, args.schemaPath, args.dbPath || '/userdata.db');
     
     const result = db.exec(args.sql, args.options);

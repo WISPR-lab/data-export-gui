@@ -1,34 +1,53 @@
+// added for WISPR-lab/data-export-gui
 import { getDB } from '../index.js';
 import { getUASummary } from './ua_summary.js';
+import { hexColor } from '@/utils/hex.js';
+import { titleCase } from '@/filters/TitleCase.js';
 
-/**
- * @returns {Promise<Array<Object>>} List of device profiles. Each profile matches the following shape:
- * {
- *   id: String (UUID),
- *   model: String (e.g. "iPhone 13"),
- *   manufacturer: String (e.g. "Apple"),
- *   user_label: String | null (e.g. "Work Phone"),
- *   notes: String,
- *   label: String (user_label || model),
- *   instance_count: Number,
- *   latest_os_version: String (e.g. "17.1" - shortcut OS version from most recently active instance),
- *   latest_os_name: String (e.g. "ios" - normalized lowercase OS name from most recently active instance),
- *   latest_os_type: String (e.g. "ios" - normalized lowercase OS type from most recently active instance),
- *   first_seen: Number | null (min timestamp in seconds across all child instances),
- *   last_seen: Number | null (max timestamp in seconds across all child instances),
- *   all_os_versions: Array<String> (unique clean version strings, e.g. ["16.5", "17.1"]),
- *   ua_summaries: Array<{
- *     primary: String (e.g. "Gmail App"),
- *     secondary: String (e.g. "Safari WebView" or ""),
- *     color: String (HEX color, e.g. "#4285F4")
- *   }> (de-duplicated across all child instances; each entry can be rendered as "Primary (Secondary)"),
- *   instances: Array<Object> (list of associated DeviceInstance records, see getDeviceInstances schema)
- * }
- */
 export async function getDevices() {
+  /*
+   * Example return value format with dummy data:
+   * [
+   *   {
+   *     id: "33595835-fd99-4bee-8f2d-6fa7b83d23f0",
+   *     model: "iPhone 11 Pro Max",
+   *     manufacturer: "apple",
+   *     os_type: "ios",
+   *     user_label: "My Personal Phone",
+   *     notes: "Primary test device.",
+   *     label: "My Personal Phone",
+   *     first_seen: 1769022758,
+   *     last_seen: 1779298838,
+   *     latest_os_version: "26.3.1",
+   *     latest_os_name: "iOS",
+   *     latest_os_type: "ios",
+   *     instance_count: 1,
+   *     all_os_versions: ["26.3.1"],
+   *     ua_summaries: [
+   *       { primary: "Instagram App", secondary: "WebKit", color: "#97D788" }
+   *     ],
+   *     instances: [
+   *       {
+   *         id: "89fd6bb9-b0bd-4be3-bc49-2ef5d5a3fd66",
+   *         upload_id: "6fff6a23-379f-45fd-9038-7376831ce6f7",
+   *         platform: "instagram",
+   *         model: "iPhone 11 Pro Max",
+   *         os_name: "iOS",
+   *         first_seen: 1769022758,
+   *         last_seen: 1779298838,
+   *         upload_color: "#97D788",
+   *         os_versions: ["26.3.1"],
+   *         formatted_attributes: [
+   *           { label: "Model", value: "iPhone 11 Pro Max" }
+   *         ]
+   *       }
+   *     ]
+   *   }
+   * ]
+   */
   const db = await getDB();
 
-  const profileSql = `SELECT * FROM device_profiles_v2`;
+  const profileSql = `SELECT * FROM device_profiles_v2 WHERE deleted = 0`;
   const profileRows = await db.exec(profileSql, {
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -38,7 +57,7 @@ export async function getDevices() {
     SELECT 
       di.*, 
       dpi.device_profile_id,
-      COALESCE(u.color, '5E75C2') as upload_color,
+      u.color as upload_color,
       CASE 
         WHEN EXISTS (
           SELECT 1 FROM device_instance_raw_devices dir 
@@ -69,29 +88,29 @@ export async function getDevices() {
   // Group instances by their profile ID
   const instancesByProfile = {};
   instanceRows.forEach(inst => {
-    try {
-      inst.os_versions = inst.os_versions ? JSON.parse(inst.os_versions) : [];
-      inst.client_versions = inst.client_versions ? JSON.parse(inst.client_versions) : [];
-      inst.ip_addresses = inst.ip_addresses ? JSON.parse(inst.ip_addresses) : [];
-      inst.locations = inst.locations ? JSON.parse(inst.locations) : [];
-    } catch (e) {
-      console.warn('Failed to parse attributes for device instance', inst.id, e);
-      inst.os_versions = inst.os_versions || [];
-      inst.client_versions = inst.client_versions || [];
-      inst.ip_addresses = inst.ip_addresses || [];
-      inst.locations = inst.locations || [];
-    }
+    const parseField = (fieldVal) => {
+      if (!fieldVal) return [];
+      try {
+        const parsed = typeof fieldVal === 'string' ? JSON.parse(fieldVal) : fieldVal;
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.warn('Failed to parse field', fieldVal, e);
+        return [];
+      }
+    };
 
-    // Normalize upload_color to a full hex string (DB stores it without the leading '#')
-    let color = inst.upload_color ? String(inst.upload_color) : '#5E75C2';
-    if (color.length > 0 && color[0] !== '#') color = '#' + color;
-    inst.upload_color = color;
+    inst.os_versions = parseField(inst.os_versions);
+    inst.client_versions = parseField(inst.client_versions);
+    inst.client_ips = parseField(inst.client_ips);
+    inst.locations = parseField(inst.locations);
+
+    // normalize upload_color to a full hex string
+    inst.upload_color = hexColor(inst.upload_color);
 
     // Attach user agent summary classification to the individual instance
-    // Returns a single summary dict (or null) rather than an array
     inst.ua_summary = getUASummary([inst])[0] || null;
 
-    inst.formatted_attributes = computeFormattedAttributes(inst);
+    inst.formatted_attributes = formatInstanceAttrs(inst);
 
     if (!instancesByProfile[inst.device_profile_id]) {
       instancesByProfile[inst.device_profile_id] = [];
@@ -99,18 +118,29 @@ export async function getDevices() {
     instancesByProfile[inst.device_profile_id].push(inst);
   });
 
-  return profileRows.map(profile => {
+  // Sort instances within each profile chronologically, and move recognized ones to top
+  Object.values(instancesByProfile).forEach(instances => {
+    customSort(instances);
+    const recognized = instances.filter(i => i.instance_source_type === 'raw_devices' || i.instance_source_type === 'both');
+    const others = instances.filter(i => i.instance_source_type !== 'raw_devices' && i.instance_source_type !== 'both');
+    instances.splice(0, instances.length, ...recognized, ...others);
+  });
+
+  const mapped = profileRows.map(profile => {
     const profileInstances = instancesByProfile[profile.id] || [];
 
-    // let "latest" os from from the most recently active instance
-    const sortedInstances = [...profileInstances].sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
-    const firstInstance = sortedInstances[0];
+    // os info from the newest active instance
+    const firstInstance = profileInstances[0];
     const latestOS = (firstInstance && firstInstance.latest_os_version) || '';
     const latestOSName = (firstInstance && firstInstance.os_name) || '';
     const latestOSType = (firstInstance && firstInstance.os_type) || '';
 
     // Collect all unique OS versions in this profile
     const allOSVersions = [...new Set(profileInstances.flatMap(inst => inst.os_versions))];
+
+    // Compute safe, finite timeline boundaries (or null if empty/invalid)
+    const validFirstSeens = profileInstances.map(i => i.first_seen).filter(ts => typeof ts === 'number' && !isNaN(ts));
+    const validLastSeens = profileInstances.map(i => i.last_seen).filter(ts => typeof ts === 'number' && !isNaN(ts));
 
     return {
       id: profile.id,
@@ -121,122 +151,28 @@ export async function getDevices() {
       notes: profile.notes || '',
       label: profile.user_label || profile.model || 'Unknown Device',
       
-      // Nest child instances
+      // list of session/app instances grouped under this profile
       instances: profileInstances,
-
-      // De-duplicated UA summaries across all child instances.
-      // Each entry: { primary, secondary, color } — renderable as "Primary (Secondary)".
       ua_summaries: getUASummary(profileInstances),
       all_os_versions: allOSVersions,
       
-      // Timeline boundaries
-      first_seen: profileInstances.length ? Math.min(...profileInstances.map(i => i.first_seen || Infinity)) : null,
-      last_seen: profileInstances.length ? Math.max(...profileInstances.map(i => i.last_seen || -Infinity)) : null,
+      // active date span (min/max timestamps)
+      first_seen: validFirstSeens.length ? Math.min(...validFirstSeens) : null,
+      last_seen: validLastSeens.length ? Math.max(...validLastSeens) : null,
       
-      // Shortcut metrics
+      // quick summary details for ui headers
       latest_os_version: latestOS,
       latest_os_name: latestOSName,
       latest_os_type: latestOSType,
       instance_count: profileInstances.length
     };
   });
+
+  return customSort(mapped);
 }
 
-/**
- * Fetches a list of specific device instances by their IDs, with upload colors.
- *
- * @param {Array<String>} instanceIds List of instance IDs.
- * @returns {Promise<Array<Object>>} List of hydrated device instances matching the shape:
- * {
- *   id: String (UUID),
- *   upload_id: String (upload provenance),
- *   platform: String (lowercase, e.g. "google"),
- *   manufacturer: String,
- *   model: String,
- *   client_name: String (raw composite, e.g. "Chrome :: WebView"),
- *   os_name: String (lowercase, e.g. "ios"),
- *   os_type: String (lowercase, e.g. "ios"),
- *   apple_masking: String,
- *   first_seen: Number (timestamp in seconds),
- *   last_seen: Number (timestamp in seconds),
- *   event_count: Number,
- *   latest_os_version: String (e.g. "17.0.1"),
- *   latest_client_version: String,
- *   latest_ip_address: String,
- *   os_versions: Array<String> (e.g. ["16.5", "17.0.1"]),
- *   client_versions: Array<String>,
- *   ip_addresses: Array<String>,
- *   locations: Array<String>,
- *   upload_color: String (HEX color of upload provenance),
- *   ua_summary: { primary: String, secondary: String, color: String } | null
- * }
- */
-export async function getDeviceInstances(instanceIds) {
-  const db = await getDB();
-  if (!instanceIds || instanceIds.length === 0) return [];
-
-  const placeholders = instanceIds.map(() => '?').join(',');
-  const sql = `
-    SELECT 
-      di.*, 
-      u.color as upload_color,
-      CASE 
-        WHEN EXISTS (
-          SELECT 1 FROM device_instance_raw_devices dir 
-          WHERE dir.device_instance_id = di.id
-        ) AND EXISTS (
-          SELECT 1 FROM device_instance_events die 
-          WHERE die.device_instance_id = di.id
-        ) THEN 'both'
-        WHEN EXISTS (
-          SELECT 1 FROM device_instance_raw_devices dir 
-          WHERE dir.device_instance_id = di.id
-        ) THEN 'raw_devices'
-        WHEN EXISTS (
-          SELECT 1 FROM device_instance_events die 
-          WHERE die.device_instance_id = di.id
-        ) THEN 'events'
-        ELSE 'unknown'
-      END AS instance_source_type
-    FROM device_instances di
-    LEFT JOIN uploads u ON di.upload_id = u.id
-    WHERE di.id IN (${placeholders})
-  `;
-
-  const rows = await db.exec(sql, {
-    bind: instanceIds,
-    returnValue: 'resultRows',
-    rowMode: 'object'
-  });
-
-  return rows.map(inst => {
-    try {
-      inst.os_versions = inst.os_versions ? JSON.parse(inst.os_versions) : [];
-      inst.client_versions = inst.client_versions ? JSON.parse(inst.client_versions) : [];
-      inst.ip_addresses = inst.ip_addresses ? JSON.parse(inst.ip_addresses) : [];
-      inst.locations = inst.locations ? JSON.parse(inst.locations) : [];
-    } catch (e) {
-      console.warn('Failed to parse JSON columns for instance', inst.id, e);
-    }
-
-    let color = inst.upload_color ? String(inst.upload_color) : '#999999';
-    if (color.length > 0 && color[0] !== '#') {
-      color = '#' + color;
-    }
-    inst.upload_color = color;
-
-    inst.ua_summary = getUASummary([inst])[0] || null;
-
-    inst.formatted_attributes = computeFormattedAttributes(inst);
-
-    return inst;
-  });
-}
-
-/**
- * Updates editable fields (user_label, notes) of a device profile.
- */
-export async function updateDeviceProfile(profileId, updates) {
+// update editable fields (user_label, notes) of a device profile
+export async function updateProfile(profileId, updates) {
   const db = await getDB();
   
   const allowed = ['user_label', 'notes'];
@@ -257,7 +193,7 @@ export async function updateDeviceProfile(profileId, updates) {
  * filters out database-specific noise (like id and upload_id), and compiles a de-duplicated
  * key-value list of all unique attributes to display.
  */
-export async function getInstanceAttributes(instanceId) {
+export async function getInstanceRawAttrs(instanceId) {
   const db = await getDB();
   const sql = `
     SELECT dr.attributes 
@@ -291,10 +227,8 @@ export async function getInstanceAttributes(instanceId) {
   return mergedAttributes;
 }
 
-/**
- * Fetches all associated devices_raw attributes for all instances under a given profile.
- */
-export async function getProfileAttributes(profileId) {
+// fetch all raw devices_raw attributes for all instances under a profile
+export async function getProfileRawAttrs(profileId) {
   const db = await getDB();
   const sql = `
     SELECT dr.attributes 
@@ -329,7 +263,34 @@ export async function getProfileAttributes(profileId) {
   return mergedAttributes;
 }
 
-function computeFormattedAttributes(inst) {
+export function getCondensedModel(manufacturer, model) {
+  const mfr = (manufacturer || '').trim();
+  const mdl = (model || '').trim();
+  if (mfr && mdl) {
+    if (mdl.toLowerCase().startsWith(mfr.toLowerCase())) {
+      return mdl;
+    }
+    return `${mfr} ${mdl}`;
+  }
+  return mdl || mfr || '';
+}
+
+export function getCondensedOS(osName, versions) {
+  const name = osName || '';
+  const list = (versions || []).filter(Boolean);
+  if (!name) return [];
+  const titleName = titleCase(name);
+  if (list.length > 0) {
+    const listCopy = [...list];
+    listCopy.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    return listCopy.map(function(v, idx) {
+      return idx === 0 ? (titleName + ' ' + v) : v;
+    });
+  }
+  return [titleName];
+}
+
+function formatInstanceAttrs(inst) {
   const internalKeys = new Set([
     'id', 
     'upload_id', 
@@ -342,66 +303,142 @@ function computeFormattedAttributes(inst) {
     'last_seen_dt', 
     'ua_summary', 
     'instance_source_type',
-    'latest_os_version'
+    'latest_os_version',
+    'platform',
+    'manufacturer',
+    'model',
+    'os_name',
+    'os_type',
+    'os_versions',
+    'apple_masking'
   ]);
 
-  const titleCase = (str) => {
+  const keyLabel = (str) => {
+    if (str === 'client_ips' || str === 'client_ip') return 'IP Addresses';
     return str
       .split('_')
-      .map(word => {
-        const lower = word.toLowerCase();
-        if (lower === 'os') return 'OS';
-        if (lower === 'ip') return 'IP';
-        return word.charAt(0).toUpperCase() + word.slice(1);
-      })
+      .map(word => titleCase(word))
       .join(' ');
-  };
-
-  const formatDate = (ts) => {
-    if (!ts) return null;
-    return new Date(ts * 1000).toLocaleDateString(undefined, { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
   };
 
   const attrs = [];
 
-  // 1. Process standard fields
+  if (inst.id) {
+    attrs.push({ label: 'Instance ID', value: inst.id });
+  }
+
+  // Condense Manufacturer and Model into a single 'Model' value
+  const modelValue = getCondensedModel(inst.manufacturer, inst.model);
+  const modelLower = modelValue.toLowerCase();
+  if (modelValue && modelLower !== 'unknown' && modelLower !== 'null' && modelLower !== 'none' && modelLower !== 'undefined') {
+    attrs.push({ label: 'Model', value: modelValue });
+  }
+
+  // Construct OS field
+  const osValue = getCondensedOS(inst.os_name || inst.os_type, inst.os_versions);
+  if (osValue && osValue.length > 0) {
+    const osLower = String(osValue[0]).toLowerCase();
+    if (osLower !== 'unknown' && osLower !== 'null' && osLower !== 'none' && osLower !== 'undefined') {
+      attrs.push({ label: 'OS', value: osValue });
+    }
+  }
+
   Object.entries(inst).forEach(([key, val]) => {
     if (internalKeys.has(key)) return;
     if (key.includes('latest')) return;
     if (val === undefined || val === null) return;
     if (Array.isArray(val) && val.length === 0) return;
-    if (typeof val === 'string' && !val.trim()) return;
 
     let displayValue = val;
     if (Array.isArray(val)) {
-      displayValue = val.join(', ');
-    } else if (typeof val === 'string') {
-      displayValue = val.trim();
+      displayValue = val.map(function (item) { return String(item).trim(); }).filter(function (item) {
+        const lower = item.toLowerCase();
+        return item !== '' && lower !== 'null' && lower !== 'none' && lower !== 'unknown' && lower !== 'undefined';
+      });
+      if (displayValue.length === 0) return;
+    } else {
+      const displayStr = String(val).trim();
+      const lower = displayStr.toLowerCase();
+      if (!displayStr || lower === 'null' || lower === 'none' || lower === 'unknown' || lower === 'undefined') {
+        return;
+      }
+      displayValue = displayStr;
     }
 
     attrs.push({
-      label: titleCase(key),
-      value: String(displayValue)
+      label: keyLabel(key),
+      value: displayValue
     });
   });
 
-  // 2. Add First Seen & Last Seen based on availability and logic
-  const firstSeenStr = formatDate(inst.first_seen);
-  const lastSeenStr = formatDate(inst.last_seen);
-
-  if (firstSeenStr) {
-    attrs.push({ label: 'First Seen', value: firstSeenStr });
+  if (inst.first_seen) {
+    attrs.push({ label: 'First Active', value: inst.first_seen, isTimestamp: true });
   }
 
-  // Only show Last Seen if it is present and different from First Seen, or if it represents a session range
-  if (lastSeenStr && lastSeenStr !== firstSeenStr) {
-    attrs.push({ label: 'Last Seen', value: lastSeenStr });
+  if (inst.last_seen && inst.last_seen !== inst.first_seen) {
+    attrs.push({ label: 'Last Active', value: inst.last_seen, isTimestamp: true });
   }
 
   return attrs;
 }
 
+// sort items in-place (newest active to oldest)
+export function customSort(items) {
+  if (!Array.isArray(items)) return [];
+  return items.sort((a, b) => {
+    const aLast = a.last_seen;
+    const bLast = b.last_seen;
+    if (aLast !== bLast) {
+      if (aLast === null || aLast === undefined) return 1;  // push nulls to the bottom
+      if (bLast === null || bLast === undefined) return -1;
+      return bLast - aLast; // Newest first
+    }
+
+    // tie breaker
+    const aFirst = a.first_seen;
+    const bFirst = b.first_seen;
+    if (aFirst !== bFirst) {
+      if (aFirst === null || aFirst === undefined) return 1;  // push nulls to the bottom
+      if (bFirst === null || bFirst === undefined) return -1;
+      return bFirst - aFirst; // Newest first
+    }
+
+    return 0;
+  });
+}
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+export async function getProfileComments(profileId) {
+  const db = await getDB();
+  const sql = `
+    SELECT * FROM device_profile_comments 
+    WHERE device_profile_id = ? 
+    ORDER BY created_at ASC
+  `;
+  return await db.exec(sql, {
+    bind: [profileId],
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+}
+
+export async function addProfileComment(profileId, comment) {
+  const db = await getDB();
+  const id = generateUUID();
+  const ts = Date.now() / 1000;
+  const sql = `
+    INSERT INTO device_profile_comments (id, device_profile_id, comment, created_at, updated_at) 
+    VALUES (?, ?, ?, ?, ?)
+  `;
+  await db.exec(sql, {
+    bind: [id, profileId, comment, ts, ts]
+  });
+  return { id, device_profile_id: profileId, comment, created_at: ts, updated_at: ts };
+}

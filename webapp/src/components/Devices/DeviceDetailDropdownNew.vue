@@ -1,7 +1,7 @@
 <template>
   <div class="pa-6">
-    <!-- 1. Custom Name (Only for confirmed devices) -->
-    <div v-if="!isGeneric" class="mb-6">
+    <!-- 1. Custom Name -->
+    <div class="mb-6">
       <v-text-field
         v-model="device.user_label"
         placeholder="Give this device a name (e.g. Work Phone)"
@@ -15,7 +15,7 @@
       ></v-text-field>
     </div>
 
-    <v-divider v-if="!isGeneric" class="mb-6"></v-divider>
+    <v-divider class="mb-6"></v-divider>
 
     <!-- 2. Device Attributes Grid -->
     <div v-if="filteredAttributes.length > 0" class="mb-6">
@@ -39,7 +39,7 @@
       <div class="overline mb-2">Notes</div>
       <v-textarea
         v-model="device.notes"
-        :placeholder="isGeneric ? 'Add any personal notes about this record...' : 'Add any personal notes about this device...'"
+        placeholder="Add any personal notes about this device..."
         outlined
         dense
         rows="2"
@@ -47,14 +47,6 @@
         hide-details
         @change="$emit('change')"
       ></v-textarea>
-    </div>
-
-    <!-- 4. Optional Help Footer for Generic Records -->
-    <div v-if="isGeneric" class="mt-6 pt-4">
-      <p class="body-2 grey--text text--darken-1 mb-0">
-        <v-icon small color="grey" class="mr-1">mdi-information-outline</v-icon>
-        To group this record, drag this card onto one of your confirmed devices above.
-      </p>
     </div>
   </div>
 </template>
@@ -66,10 +58,6 @@ export default {
     device: {
       type: Object,
       required: true
-    },
-    isGeneric: {
-      type: Boolean,
-      default: false
     }
   },
   computed: {

@@ -3,32 +3,14 @@
   <div class="pa-6">
     <!-- 1. Device Details Table (at the very top, transparent background) -->
     <div v-if="profileAttributesTable.length > 0" class="mb-6">
-      <div class="overline mb-3">Device Details</div>
-      <v-simple-table dense class="transparent">
-        <template v-slot:default>
-          <tbody>
-            <tr v-for="attr in profileAttributesTable" :key="attr.label">
-              <td style="font-weight: 600; width: 200px; color: #424242;">{{ attr.label }}</td>
-              <td style="word-break: break-word;">
-                <template v-if="attr.isTimestamp">
-                  {{ attr.value | longDateTimeLocal }}
-                </template>
-                <template v-else>
-                  {{ attr.value | formatDeviceDetails }}
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </template>
-      </v-simple-table>
+      <div class="text-subtitle-1 font-weight-medium text--primary mb-3">Device Details</div>
+      <device-attributes-table :attributes="profileAttributesTable" />
     </div>
-
-    <!-- <v-divider v-if="profileAttributesTable.length > 0" class="mb-6"></v-divider> -->
 
     <!-- 2. Name & Notes Inputs -->
     <div class="d-flex mb-6" style="gap: 36px;">
       <div style="flex: 0 0 auto; width: 300px;">
-        <div class="overline">Name</div>
+        <div class="text-subtitle-1 font-weight-medium text--primary">Name</div>
         
         <div class="mb-8">
           <v-text-field
@@ -45,10 +27,10 @@
 
       <!-- Right Column: Notes (tall, expands) -->
       <div style="flex: 1 0 auto;">
-        <div class="overline">Notes</div>
+        <div class="text-subtitle-1 font-weight-medium text--primary">Notes</div>
         <v-textarea
           v-model="device.notes"
-          :placeholder="isGeneric ? 'Add any personal notes about this record.' : 'Add any personal notes about this device.'"
+          placeholder="Add any personal notes about this device."
           outlined
           dense
           rows="1"
@@ -65,10 +47,7 @@
     <div v-if="device.instances && device.instances.length > 0" class="mb-6">
       <div class="d-flex align-center justify-space-between mb-3">
         <div class="d-flex align-center">
-          <span class="overline">Device Instances ({{ device.instances.length }})</span>
-          <v-btn icon x-small class="ml-1" color="primary" @click="showHelpModal = true" title="What is a device instance?">
-            <v-icon small>mdi-help-circle-outline</v-icon>
-          </v-btn>
+          <span class="text-subtitle-1 font-weight-medium text--primary">Device Instances ({{ device.instances.length }})</span>
         </div>
         <v-btn
           v-if="device.instances.length > 1"
@@ -83,7 +62,7 @@
       </div>
 
       <!-- Batch Action Bar (Edit mode) -->
-      <div v-if="isEditingInstances" class="d-flex align-center justify-space-between mb-4 pa-3 border rounded-lg bg-light-grey">
+      <div v-if="isEditingInstances" class="d-flex align-center justify-space-between mb-4 pa-3 border rounded-lg bg-light-grey" style="gap: 8px; flex-wrap: wrap;">
         <div class="d-flex align-center">
           <v-checkbox
             :input-value="isAllSelected"
@@ -94,17 +73,30 @@
           ></v-checkbox>
           <span class="body-2 font-weight-medium">{{ selectedInstanceIds.length }} selected</span>
         </div>
-        <v-btn
-          color="error"
-          small
-          outlined
-          :disabled="selectedInstanceIds.length === 0"
-          class="rounded-lg"
-          @click="batchUnlink"
-        >
-          <v-icon left small>mdi-link-off</v-icon>
-          Unlink Selected
-        </v-btn>
+        <div class="d-flex align-center" style="gap: 8px;">
+          <v-btn
+            color="primary"
+            small
+            outlined
+            :disabled="selectedInstanceIds.length === 0"
+            class="rounded-lg text-none"
+            @click="moveSelected"
+          >
+            <v-icon left small>mdi-folder-move-outline</v-icon>
+            Move to Existing Profile
+          </v-btn>
+          <v-btn
+            color="primary"
+            small
+            outlined
+            :disabled="selectedInstanceIds.length === 0"
+            class="rounded-lg text-none"
+            @click="createProfileWithSelected"
+          >
+            <v-icon left small>mdi-plus-box-outline</v-icon>
+            Move to New Profile
+          </v-btn>
+        </div>
       </div>
 
       <div class="space-y-2" style="display: flex; flex-direction: column; gap: 12px;">
@@ -115,87 +107,63 @@
           :show-checkbox="isEditingInstances"
           :selected="selectedInstanceIds.includes(inst.id)"
           :show-help="isFirstOfType(inst)"
+          :ua-masking-text="uaMaskingText"
           @select="toggleInstanceSelection(inst.id, $event)"
           @showJSON="$emit('showJSON', $event)"
-          @unmerge="$emit('unmerge', $event)"
         />
       </div>
     </div>
-
-    <!-- Optional Help Footer for Generic Records -->
-    <div v-if="isGeneric" class="mt-6 pt-4">
-      <p class="body-2 grey--text text--darken-3 mb-0">
-        <v-icon small class="mr-1" color="grey--darken-3">mdi-information-outline</v-icon>
-        To group this record, drag this card onto one of your confirmed devices above.
-      </p>
     </div>
-
-    <!-- Device Instances Explanation Modal -->
-    <v-dialog v-model="showHelpModal" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="text-h6 font-weight-bold d-flex align-center">
-          <v-icon color="primary" class="mr-2">mdi-information-outline</v-icon>
-          Profiles vs. Instances
-        </v-card-title>
-        <v-card-text class="pt-2">
-          <p class="body-2">
-            This tool separates device data into a hierarchy to help map your timeline:
-          </p>
-          <div class="mb-4">
-            <div class="subtitle-2 font-weight-bold primary--text">Device Profile</div>
-            <div class="body-2 text--secondary">
-              Formed by connecting instances that share the same hardware model  (e.g. all <i>iPhone XRs</i> or all <i>MacBooks</i>). TODO caveat about masking/deterministic IDs
-            </div>
-          </div>
-          <div class="mb-4">
-            <div class="subtitle-2 font-weight-bold primary--text">Device Instance</div>
-            <div class="body-2 text--secondary">
-              A single continuous installation or session chain (e.g. a specific <i>Instagram App</i> setup or <i>Safari browser session</i>) representing an individual device deployment.
-            </div>
-          </div>
-          <p class="body-2 mb-0">
-
-          </p>
-        </v-card-text>
-        <v-card-actions class="justify-end">
-          <v-btn color="primary" text @click="showHelpModal = false">Got it</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
 <script>
 import DeviceInstance from './DeviceInstance.vue';
-import { getProfileAttributes } from '@/database/queries/devices_v2.js';
+import DeviceAttributesTable from './DeviceAttributesTable.vue';
+import { getProfileRawAttrs, getCondensedModel, getCondensedOS } from '@/database/queries/devices_v2.js';
+import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'DeviceProfileDropdown',
   components: {
-    DeviceInstance
+    DeviceInstance,
+    DeviceAttributesTable
   },
   props: {
     device: {
       type: Object,
       required: true
     },
-    isGeneric: {
-      type: Boolean,
-      default: false
+    uaMaskingText: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
     return {
       rawAttributes: {},
-      showHelpModal: false,
       isEditingInstances: false,
       selectedInstanceIds: []
     }
   },
   watch: {
-    device: {
+    'device.id': {
       immediate: true,
-      handler: 'loadAttributes'
+      async handler(newId, oldId) {
+        await this.loadAttributes();
+        if (newId !== oldId) {
+          this.selectedInstanceIds = [];
+          this.isEditingInstances = false;
+        }
+      }
+    },
+    'device.instances': {
+      handler(newVal, oldVal) {
+        if (!oldVal || !newVal || newVal.length !== oldVal.length) {
+          this.selectedInstanceIds = [];
+          this.isEditingInstances = false;
+        }
+      }
     }
   },
   computed: {
@@ -207,50 +175,41 @@ export default {
       return this.selectedInstanceIds.length > 0 && this.selectedInstanceIds.length < this.device.instances.length;
     },
     profileAttributesTable() {
-      // Construct OS field (e.g. iOS 15.7 -> 16.2)
+      // Construct OS field
       const osName = this.device.latest_os_name || this.device.os_name || this.device.latest_os_type || this.device.os_type || '';
       const versions = (this.device.all_os_versions || []).filter(Boolean);
-      let osValue = '';
-      if (osName) {
-        osValue = osName.toUpperCase();
-        if (versions.length > 0) {
-          versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-          const firstV = versions[0];
-          const lastV = versions[versions.length - 1];
-          if (firstV === lastV) {
-            osValue = `${osName.toUpperCase()} ${firstV}`;
-          } else {
-            osValue = `${osName.toUpperCase()} ${firstV} → ${lastV}`;
-          }
-        }
-      }
+      const osValue = getCondensedOS(osName, versions);
 
-      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(inst => inst.ip_addresses || []))].filter(Boolean);
+      const uniqueIPs = [...new Set((this.device.instances || []).flatMap(function(inst) { return inst.client_ips || []; }))].filter(function(ip) {
+        if (!ip) return false;
+        const ipStr = String(ip).trim().toLowerCase();
+        return ipStr !== '' && ipStr !== 'null' && ipStr !== 'none' && ipStr !== 'unknown' && ipStr !== 'undefined';
+      });
 
       // Condense Manufacturer and Model into a single 'Model' value
-      let modelValue = '';
-      const mfr = (this.device.manufacturer || '').trim();
-      const mdl = (this.device.model || '').trim();
-      if (mfr && mdl) {
-        if (mdl.toLowerCase().startsWith(mfr.toLowerCase())) {
-          modelValue = mdl;
-        } else {
-          modelValue = `${mfr} ${mdl}`;
-        }
-      } else {
-        modelValue = mdl || mfr || '';
-      }
+      const modelValue = getCondensedModel(this.device.manufacturer, this.device.model);
 
       // Core attributes list (filtered to exclude empty / unknown values)
       const coreCandidates = [
+        { label: 'Profile ID', value: this.device.id },
         { label: 'Model', value: modelValue },
         { label: 'OS', value: osValue },
         { label: 'First Active', value: this.device.first_seen, isTimestamp: true },
         { label: 'Last Active', value: this.device.last_seen, isTimestamp: true },
-        { label: 'IP Addresses', value: uniqueIPs.length > 0 ? uniqueIPs.join(', ') : '' }
+        { label: 'IP Addresses', value: uniqueIPs }
       ];
 
-      const core = coreCandidates.filter(item => item.value !== null && item.value !== undefined && String(item.value).trim() && String(item.value).toLowerCase() !== 'unknown');
+      const core = coreCandidates.filter(function(item) {
+        if (item.value === null || item.value === undefined) return false;
+        if (Array.isArray(item.value)) return item.value.length > 0;
+        if (item.isTimestamp) {
+          const num = Number(item.value);
+          if (isNaN(num) || num <= 0) return false;
+        }
+        const valStr = String(item.value).trim();
+        const lower = valStr.toLowerCase();
+        return valStr !== '' && lower !== 'unknown' && lower !== 'null' && lower !== 'none' && lower !== 'undefined';
+      });
 
       // Optional hardware fields
       const optionalKeys = [
@@ -276,26 +235,34 @@ export default {
       ];
 
       const optionals = [];
-      optionalKeys.forEach(opt => {
-        const actualKey = Object.keys(this.rawAttributes).find(k => k.toLowerCase() === opt.key.toLowerCase());
+      const self = this;
+      optionalKeys.forEach(function(opt) {
+        const actualKey = Object.keys(self.rawAttributes).find(function(k) { return k.toLowerCase() === opt.key.toLowerCase(); });
         if (actualKey) {
-          const val = this.rawAttributes[actualKey];
-          if (val && String(val).trim() && String(val).toLowerCase() !== 'unknown') {
-            if (!optionals.some(x => x.label === opt.label)) {
-              optionals.push({ label: opt.label, value: String(val).trim() });
+          const val = self.rawAttributes[actualKey];
+          if (val !== null && val !== undefined) {
+            const valStr = String(val).trim();
+            const lower = valStr.toLowerCase();
+            if (valStr !== '' && lower !== 'unknown' && lower !== 'null' && lower !== 'none' && lower !== 'undefined') {
+              if (!optionals.some(function(x) { return x.label === opt.label; })) {
+                optionals.push({ label: opt.label, value: valStr });
+              }
             }
           }
         }
       });
 
-      return [...core, ...optionals];
+      return [].concat(core, optionals);
     }
   },
   methods: {
+    async loadData() {
+      await this.loadAttributes();
+    },
     async loadAttributes() {
       if (this.device && this.device.id) {
         try {
-          this.rawAttributes = await getProfileAttributes(this.device.id);
+          this.rawAttributes = await getProfileRawAttrs(this.device.id);
         } catch (e) {
           console.error('Failed to load profile attributes:', e);
         }
@@ -313,27 +280,30 @@ export default {
           this.selectedInstanceIds.push(instanceId);
         }
       } else {
-        this.selectedInstanceIds = this.selectedInstanceIds.filter(id => id !== instanceId);
+        this.selectedInstanceIds = this.selectedInstanceIds.filter(function(id) { return id !== instanceId; });
       }
     },
     toggleSelectAll(isSelected) {
       if (isSelected) {
-        this.selectedInstanceIds = this.device.instances.map(inst => inst.id);
+        this.selectedInstanceIds = this.device.instances.map(function(inst) { return inst.id; });
       } else {
         this.selectedInstanceIds = [];
       }
     },
-    batchUnlink() {
+    moveSelected() {
       if (this.selectedInstanceIds.length > 0) {
-        this.$emit('batch-unmerge', this.selectedInstanceIds);
-        this.isEditingInstances = false;
-        this.selectedInstanceIds = [];
+        this.$emit('move-instances', [...this.selectedInstanceIds]);
+      }
+    },
+    createProfileWithSelected() {
+      if (this.selectedInstanceIds.length > 0) {
+        this.$emit('create-profile', [...this.selectedInstanceIds]);
       }
     },
     isFirstOfType(instance) {
       if (!this.device.instances) return false;
       const isRecognized = instance.event_count === 0;
-      const firstIndex = this.device.instances.findIndex(inst => {
+      const firstIndex = this.device.instances.findIndex(function(inst) {
         const instRecognized = inst.event_count === 0;
         return instRecognized === isRecognized;
       });
