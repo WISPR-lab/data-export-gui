@@ -390,7 +390,7 @@ export default {
       return this.$store.state.meta
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term' || chip.type === 'tag'))
     },
     timeFilterChips: function () {
       return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && chip.type.startsWith('datetime'))
