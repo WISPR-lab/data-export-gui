@@ -34,7 +34,6 @@ const defaultState = () => {
     return tzPart ? tzPart.value : 'UTC'
   }
 
-  // Load user settings from localStorage
   let userSettings = {
     showProcessingTimelineEvents: false,
     showLeftPanel: true,
@@ -54,38 +53,25 @@ const defaultState = () => {
   }
 
   return {
-    // Core sketch data (virtual, not persisted to DB)
     sketch: {},
-    
-    // Field mappings and metadata (computed once on load)
     meta: {
       attributes: {},
       filter_labels: [],
       mappings: [],
     },
-    
-    // Event actions (categories from event_action field)
     eventActions: [],
-    
-    // Tags state (populated from events)
     tags: [],
-    
-    // Browser-specific settings
     localTimezoneAbbr: getLocalTimezoneAbbr(),
     settings: userSettings,
     eventActions: [],
-    
-    // UI state
-    currentSearchNode: null, // Search history tree (legacy OpenSearch feature)
-    enabledTimelines: [], // Timeline filter state
+    currentSearchNode: null,
+    enabledTimelines: [],
     snackbar: {
       active: false,
       color: '',
       message: '',
       timeout: -1,
     },
-
-    // Upload processing state
     uploadState: {
       isProcessing: false,
       currentFile: null,
@@ -97,18 +83,15 @@ const defaultState = () => {
       warnings: [],
       success: false,
     },
-
-    // Demo state
     demoMode: false,
-    currentDb: 'userdata', // 'userdata' for user data, 'demo' for sample data
-    demoInProgress: false, // Is walkthrough currently running?
-    demoStep: 0, // Which step are we on?
+    currentDb: 'userdata',
+    demoInProgress: false,
+    demoStep: 0,
     demo_visit_or_skip_count: 0,
     demoFinishCount: 0,
   }
 }
 
-// Initial state
 const state = defaultState()
 
 export default new Vuex.Store({
@@ -136,7 +119,6 @@ export default new Vuex.Store({
       Vue.set(state, 'snackbar', snackbar)
     },
     RESET_STATE(state, payload) {
-      // Browser version: reset to default with 'local-user'
       Object.assign(state, defaultState('local-user'))
     },
     SET_ENABLED_TIMELINES(state, payload) {
@@ -166,7 +148,6 @@ export default new Vuex.Store({
       }
     },
 
-    // Upload processing
     SET_UPLOAD_STATE(state, payload) {
       Vue.set(state, 'uploadState', { ...state.uploadState, ...payload })
     },
@@ -188,7 +169,6 @@ export default new Vuex.Store({
       })
     },
     COMPLETE_UPLOAD(state, payload = {}) {
-      // Accept optional summary object with warnings
       Vue.set(state, 'uploadState', {
         isProcessing: false,
         currentFile: null,
@@ -203,7 +183,6 @@ export default new Vuex.Store({
 
     },
     FAIL_UPLOAD(state, payload) {
-      // Accept summary object with errorType, errors, warnings
       const errorObj = typeof payload === 'string' ? { errors: [payload] } : payload;
       console.error('[Store] Upload failed:', errorObj)
       Vue.set(state, 'uploadState', {
@@ -238,7 +217,6 @@ export default new Vuex.Store({
   },
   actions: {
     async updateSketch(context, sketchId) {
-      // Virtualize the Project/Sketch (hardcoded - not saved to DB)
       if (!window.crossOriginIsolated) {
         console.warn('[Store.updateSketch] security headers missing. skippng db init.');
         return;
@@ -284,7 +262,6 @@ export default new Vuex.Store({
       } else {
         allLabels.push({ tag: inputLabel, count: num })
       }
-      // Remove tags with zero or negative count
       allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)
     },

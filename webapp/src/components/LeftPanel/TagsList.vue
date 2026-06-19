@@ -106,17 +106,15 @@ export default {
           const aIsLabel = !!a.label
           const bIsLabel = !!b.label
 
-          // Sort labels before tags
           if (aIsLabel && !bIsLabel) return -1
           if (!aIsLabel && bIsLabel) return 1
 
-          // Within labels and tags, sort by predefined order first, then alphabetically
           const aOrder = labelOrder.indexOf(aLabel)
           const bOrder = labelOrder.indexOf(bLabel)
 
-          if (aOrder > -1 && bOrder > -1) return aOrder - bOrder // Sort by predefined order
-          if (aOrder > -1) return -1 // Predefined labels come first
-          if (bOrder > -1) return 1 // Predefined labels come first
+          if (aOrder > -1 && bOrder > -1) return aOrder - bOrder
+          if (aOrder > -1) return -1
+          if (bOrder > -1) return 1
 
           return aLabel.localeCompare(bLabel)
         })

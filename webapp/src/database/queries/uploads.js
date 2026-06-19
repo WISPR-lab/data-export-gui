@@ -1,5 +1,3 @@
-// custom to WISPR-lab/data-export-gui
-
 import { getDB } from '../index.js';
 
 export async function getUploads() {
