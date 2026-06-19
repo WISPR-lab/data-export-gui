@@ -90,8 +90,8 @@ It replaces the generic UploadForm for the new workflow.
 
 <script>
 import { processUpload } from '../../upload.js';
-import ImportProgress from './ImportProgress.vue';
-import ImportErrorDisplay from './ImportErrorDisplay.vue';
+import ImportProgress from './Progress.vue';
+import ImportErrorDisplay from './ErrorDisplay.vue';
 import DiscordIcon from '../DiscordIcon.vue';
 import {
   getPlatformName,

@@ -40,6 +40,7 @@ limitations under the License.
 import PlatformSelector from './PlatformSelector.vue';
 
 export default {
+  name: 'NewDataExportButton',
   props: ['btnType'],
   components: {
     PlatformSelector,

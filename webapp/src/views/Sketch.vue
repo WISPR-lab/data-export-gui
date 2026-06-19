@@ -33,7 +33,7 @@ limitations under the License.
             <center>
               <v-img src="./images/empty-state.png" max-height="100" max-width="300"></v-img>
               <div style="font-size: 2em" class="mb-3 mt-3">It's empty around here</div>
-              <ts-upload-timeline-form-button btn-size="normal" btn-type="rounded"></ts-upload-timeline-form-button>
+              <new-data-export-button btn-size="normal" btn-type="rounded"></new-data-export-button>
             </center>
           </v-sheet>
         </v-row>
@@ -100,7 +100,7 @@ limitations under the License.
         
         
         <div class="pa-4">
-          <ts-upload-timeline-form-button btnType="leftPanel"></ts-upload-timeline-form-button>
+          <new-data-export-button btnType="leftPanel"></new-data-export-button>
           <div class="pa-1"></div>
           <delete-data-button btnType="leftPanel"></delete-data-button>
         </div>
@@ -208,7 +208,7 @@ import TsIPAddresses from '../components/LeftPanel/IPAddresses.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
 import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
-import TsUploadTimelineFormButton from '../components/Import/ImportButton.vue'
+import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
 import TsRenameSketch from '../components/RenameSketch.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
@@ -227,7 +227,7 @@ export default {
     TsIPAddresses,
     TsTags,
     TsSearchTemplates,
-    TsUploadTimelineFormButton,
+    NewDataExportButton,
     TsRenameSketch,
     TsSearch,
     TsTimelinesTable,

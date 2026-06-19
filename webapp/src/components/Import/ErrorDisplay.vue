@@ -56,7 +56,7 @@ Props:
 import { getErrorMessage, isUserError } from '@/constants/error_types';
 
 export default {
-  name: 'UploadErrorDisplay',
+  name: 'ImportErrorDisplay',
   props: {
     errorType: {
       type: String,
