@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 // NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui
+// modified for WISPR-lab/data-export-gui
 
 
 import Vue from 'vue'
@@ -117,9 +118,7 @@ export default new Vuex.Store({
       Vue.set(state, 'sketch', payload.objects[0])
       Vue.set(state, 'meta', payload.meta)
     },
-    SET_SEARCH_HISTORY(state, payload) {
-      Vue.set(state, 'searchHistory', payload.objects)
-    },
+
     SET_TIMELINE_TAGS(state, buckets) {
       Vue.set(state, 'tags', buckets)
     },
@@ -132,25 +131,7 @@ export default new Vuex.Store({
     SET_COUNT(state, payload) {
       Vue.set(state, 'count', payload)
     },
-    SET_ACTIVE_CONTEXT(state, payload) {
-      localStorage.setItem(
-        'sketchContext' + state.sketch.id.toString(),
-        JSON.stringify({
-          scenarioId: payload.scenarioId,
-          facetId: payload.facetId,
-          questionId: payload.questionId,
-        })
-      )
-      Vue.set(state, 'activeContext', payload)
-    },
-    CLEAR_ACTIVE_CONTEXT(state) {
-      let payload = {
-        scenario: state.activeContext.scenario,
-        facet: state.activeContext.facet,
-        question: {},
-      }
-      Vue.set(state, 'activeContext', payload)
-    },
+
     SET_SNACKBAR(state, snackbar) {
       Vue.set(state, 'snackbar', snackbar)
     },
@@ -291,9 +272,7 @@ export default new Vuex.Store({
     resetState(context) {
       context.commit('RESET_STATE')
     },
-    updateSearchNode(context, nodeId) {
-      context.commit('SET_SEARCH_NODE', nodeId)
-    },
+
     updateEventLabels(context, { label: inputLabel, num }) {
       if (!inputLabel || !num) {
         return

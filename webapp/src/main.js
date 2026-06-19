@@ -28,7 +28,6 @@ import SafeExitButton from '@/components/Delete/SafeExitButton.vue'
 
 require('./assets/main.scss')
 require('./assets/markdown.scss')
-require('./utils/RegisterAppComponents')
 require('./utils/RegisterAppFilters')
 
 // Register global components

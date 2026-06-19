@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 
 <!--
  Canvas is a routing component to keep views alive and to support communication between
@@ -23,18 +24,11 @@ limitations under the License.
     <div v-show="currentRouteName === 'Explore' || currentRouteName === 'DemoExplore'">
       <explore :sketch-id="sketchId"></explore>
     </div>
-    <!-- TODO add devices view-->
   </div>
 </template>
 
 <script>
 import Explore from './Explore.vue'
-// import ThreatIntel from './ThreatIntel.vue'
-// import Sigma from './Sigma.vue'
-// import Graph from './Graph.vue'
-// import Story from './Story.vue'
-// import Analyze from './Analyze.vue'
-// import Visualization from './Visualization.vue'
 export default {
   props: [
     'sketchId', 
@@ -44,12 +38,6 @@ export default {
   ],
   components: {
     Explore,
-    // ThreatIntel,
-    // Sigma,
-    // Graph,
-    // Story,
-    // Analyze,
-    // Visualization,
   },
   computed: {
     currentRouteName() {
