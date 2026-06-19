@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5001:5001"
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+      - /workspace/webapp/node_modules
+
+  test:
+    build: .
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+      - /workspace/webapp/node_modules
+    command: uv run pytest
+

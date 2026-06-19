@@ -75,7 +75,12 @@ else
   cp "$DIST_DIR/latest_wheel.txt" "$PUBLIC/wheels/" 2>/dev/null || true
 fi
 
-$LINK_DIR_CMD "$REPO_ROOT/manifests"                     "$PUBLIC/manifests"
+if [ "$LINK_MODE" = "--symlink" ]; then
+  $LINK_DIR_CMD "$REPO_ROOT/manifests"                     "$PUBLIC/manifests"
+else
+  mkdir -p "$PUBLIC/manifests"
+  cp "$REPO_ROOT/manifests"/*.yaml "$PUBLIC/manifests/"
+fi
 $LINK_FILE_CMD "$WEBAPP_DIR/src/pyodide/pyodide-worker.js"         "$PUBLIC/pyodide-worker.js"
 $LINK_FILE_CMD "$WEBAPP_DIR/src/database/sqlite-worker.js"         "$PUBLIC/sqlite-worker.js"
 
