@@ -80,7 +80,7 @@
     <v-expand-transition>
       <div v-if="expanded" class="px-4 pb-4 pt-0" @click.stop>
         <v-divider class="mb-4"></v-divider>
-        <device-attributes-table :attributes="instance.formatted_attributes" />
+        <attributes-table :attributes="instance.formatted_attributes" />
       </div>
     </v-expand-transition>
   </v-card>
@@ -88,12 +88,12 @@
 
 <script>
 import UASummaryChip from './UASummaryChip.vue';
-import DeviceAttributesTable from './DeviceAttributesTable.vue';
+import AttributesTable from './AttributesTable.vue';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
-  name: 'DeviceInstance',
-  components: { UASummaryChip, DeviceAttributesTable },
+  name: 'Instance',
+  components: { UASummaryChip, AttributesTable },
   props: {
     instance: {
       type: Object,

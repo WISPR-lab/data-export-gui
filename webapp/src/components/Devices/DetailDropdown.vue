@@ -53,7 +53,7 @@
 
 <script>
 export default {
-  name: 'DeviceDetailDropdownNew',
+  name: 'DetailDropdown',
   props: {
     device: {
       type: Object,

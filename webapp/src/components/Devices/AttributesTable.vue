@@ -81,7 +81,7 @@
 
 <script>
 export default {
-  name: 'DeviceAttributesTable',
+  name: 'AttributesTable',
   props: {
     attributes: {
       type: Array,

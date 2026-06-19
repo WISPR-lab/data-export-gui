@@ -310,11 +310,10 @@ import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.v
 import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
 import TsTimelinePicker from '../components/Explore/TimelinePicker.vue'
 import TsFilterMenu from '../components/Explore/FilterMenu.vue'
-import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButton.vue'
+import TsUploadTimelineFormButton from '../components/Import/ImportButton.vue'
 import TsAddManualEvent from '../components/Explore/AddManualEvent.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsSearchHelpCard from '../components/Explore/SearchHelpCard.vue'
-import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -341,7 +340,6 @@ export default {
     TsAddManualEvent,
     TsEventList,
     TsSearchHelpCard,
-    DeleteAllDataButton,
   },
   props: ['sketchId'],
   data() {

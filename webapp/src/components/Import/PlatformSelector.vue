@@ -75,9 +75,9 @@ proceeds to the file upload dialog
         </v-card-actions>
       </template>
 
-      <!-- Step 2: File Upload (delegated to PlatformUploadForm with platform info) -->
+      <!-- Step 2: File Upload (delegated to ImportZone with platform info) -->
       <div v-if="step === 'file-upload'" class="pa-0">
-        <PlatformUploadForm
+        <ImportZone
           :selectedPlatform="selectedPlatformId"
           @close="closeDialog"
           @success="handleUploadSuccess"
@@ -95,13 +95,13 @@ proceeds to the file upload dialog
 
 <script>
 import { PLATFORM_METADATA } from '../../utils/uploadFormUtils.js'
-import PlatformUploadForm from './UploadForm.vue'
+import ImportZone from './ImportZone.vue'
 import PrivacySettingsModal from '../PrivacySettingsModal.vue'
 
 export default {
   name: 'PlatformSelector',
   components: {
-    PlatformUploadForm,
+    ImportZone,
     PrivacySettingsModal,
   },
   data() {

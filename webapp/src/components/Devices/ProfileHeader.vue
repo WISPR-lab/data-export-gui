@@ -65,7 +65,7 @@
 import UASummaryChip from './UASummaryChip.vue';
 
 export default {
-  name: 'DeviceProfileHeader',
+  name: 'ProfileHeader',
   components: { UASummaryChip },
   props: {
     device: {

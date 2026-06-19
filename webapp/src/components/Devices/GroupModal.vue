@@ -129,7 +129,7 @@ import { checkMoveEligibility } from '@/database/queries/user_device_edits.js';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
-  name: 'DeviceGroupModal',
+  name: 'GroupModal',
   props: {
     value: {
       type: Boolean,

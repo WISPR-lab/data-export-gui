@@ -50,7 +50,7 @@
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
-  name: 'UserDeviceEditsTable',
+  name: 'EditsHistoryTable',
   props: {
     historyLogs: {
       type: Array,

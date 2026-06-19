@@ -100,7 +100,7 @@
       </div>
 
       <div class="space-y-2" style="display: flex; flex-direction: column; gap: 12px;">
-        <DeviceInstance
+        <Instance
           v-for="inst in device.instances"
           :key="inst.id"
           :instance="inst"
@@ -118,16 +118,16 @@
 </template>
 
 <script>
-import DeviceInstance from './DeviceInstance.vue';
-import DeviceAttributesTable from './DeviceAttributesTable.vue';
+import Instance from './Instance.vue';
+import AttributesTable from './AttributesTable.vue';
 import { getProfileRawAttrs, getCondensedModel, getCondensedOS } from '@/database/queries/devices_v2.js';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
-  name: 'DeviceProfileDropdown',
+  name: 'ProfileDropdown',
   components: {
-    DeviceInstance,
-    DeviceAttributesTable
+    Instance,
+    AttributesTable
   },
   props: {
     device: {
