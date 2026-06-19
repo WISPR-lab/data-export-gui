@@ -1,5 +1,6 @@
 import builtins
 
+
 def init_pyodide():
     try:
         from extractors import worker as extractor_worker
@@ -15,8 +16,7 @@ def init_pyodide():
 def load_manifests():
     import os
     import builtins
-    
-    manifests_dir = builtins.MANIFESTS_DIR
-    yaml_files = [f for f in os.listdir(manifests_dir) if f.endswith('.yaml')]
-    return yaml_files
 
+    manifests_dir = builtins.MANIFESTS_DIR
+    yaml_files = [f for f in os.listdir(manifests_dir) if f.endswith(".yaml")]
+    return yaml_files

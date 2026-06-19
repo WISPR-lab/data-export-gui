@@ -11,7 +11,9 @@ def test_csv_parse(test_case):
     records = CSVParser.extract(content, test_case.parser_cfg)
 
     if records:
-        print("\n\n ==== Printing first record === \n" + json.dumps(records[0], indent=2))
+        print(
+            "\n\n ==== Printing first record === \n" + json.dumps(records[0], indent=2)
+        )
 
     validate_results(test_case, records)
 
@@ -24,16 +26,32 @@ def test_csv_raises_file_level_error_on_empty_input():
 
 def test_access_log_devices_csv_has_2_rows():
     """Test that Access Log Devices CSV has exactly 2 device records."""
-    with open("tests/zip_data/google/Access Log Activity/Devices - A list of devices (i.e. Nest, Pixel, iPh.csv", "r", encoding='utf-8') as f:
+    with open(
+        "tests/zip_data/google/Access Log Activity/Devices - A list of devices (i.e. Nest, Pixel, iPh.csv",
+        "r",
+        encoding="utf-8",
+    ) as f:
         content = f.read()
-    
+
     records = CSVParser.extract(content, {})
-    
+
     assert isinstance(records, list), f"Expected list, got {type(records)}"
     assert len(records) == 2, f"Expected 2 device records, got {len(records)}"
-    
+
     # Verify expected fields exist
-    expected_fields = {"Device Type", "Brand Name", "Marketing Name", "OS", "OS Version", "Device Model", "User Given Name", "Device Last Location", "Gaia ID"}
+    expected_fields = {
+        "Device Type",
+        "Brand Name",
+        "Marketing Name",
+        "OS",
+        "OS Version",
+        "Device Model",
+        "User Given Name",
+        "Device Last Location",
+        "Gaia ID",
+    }
     for record in records:
         keys_without_line_numbers = {k for k in record.keys() if k != "__line_numbers"}
-        assert keys_without_line_numbers == expected_fields, f"Fields don't match expected: {keys_without_line_numbers}"
+        assert keys_without_line_numbers == expected_fields, (
+            f"Fields don't match expected: {keys_without_line_numbers}"
+        )

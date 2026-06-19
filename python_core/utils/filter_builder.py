@@ -7,12 +7,12 @@ OP_MAPPING = {
     "ne": ["!=", "!==", "ne", "neq"],
     "contains": ["contains", "includes"],
     "startswith": ["startswith", "starts_with"],
-    "endswith": ["endswith", "ends_with"]
+    "endswith": ["endswith", "ends_with"],
 }
 
 
-def _filter_leaf(source:str, op:str, value:str, default=True) -> Callable:
-    
+def _filter_leaf(source: str, op: str, value: str, default=True) -> Callable:
+
     if source is None or not isinstance(source, str):
         print(f"Filter condition missing 'source' or value is not a string: {source}")
         return lambda dct: default
@@ -22,35 +22,43 @@ def _filter_leaf(source:str, op:str, value:str, default=True) -> Callable:
         value = ""
     else:
         value = str(value)
-    
+
     if op is None:
         print(f"Filter condition missing 'op'. Defaulting to equality check.")
         op = "=="
 
     if op in OP_MAPPING["eq"]:
-        return lambda dct: str(get_value_at_path(dct, source)).lower() == str(value).lower()
+        return lambda dct: (
+            str(get_value_at_path(dct, source)).lower() == str(value).lower()
+        )
     if op in OP_MAPPING["ne"]:
-        return lambda dct: str(get_value_at_path(dct, source)).lower() != str(value).lower()
+        return lambda dct: (
+            str(get_value_at_path(dct, source)).lower() != str(value).lower()
+        )
     if op in OP_MAPPING["contains"]:
-        return lambda dct: str(value).lower() in str(get_value_at_path(dct, source)).lower()
+        return lambda dct: (
+            str(value).lower() in str(get_value_at_path(dct, source)).lower()
+        )
     if op in OP_MAPPING["startswith"]:
-        return lambda dct: str(get_value_at_path(dct, source)).lower().startswith(str(value).lower())
+        return lambda dct: (
+            str(get_value_at_path(dct, source)).lower().startswith(str(value).lower())
+        )
     if op in OP_MAPPING["endswith"]:
-        return lambda dct: str(get_value_at_path(dct, source)).lower().endswith(str(value).lower())
-    
+        return lambda dct: (
+            str(get_value_at_path(dct, source)).lower().endswith(str(value).lower())
+        )
+
     print(f"Unsupported operator in filter config: {op}")
     return lambda dct: default
 
 
-
-
 def make_filter(where: dict, default=True):
     """
-    where = EITHER 
-        {source: "action", op: "==", value: "Email Added"} 
+    where = EITHER
+        {source: "action", op: "==", value: "Email Added"}
     OR
         {
-            logic: "all" or "any", 
+            logic: "all" or "any",
             conditions: [{source: "action", op: "==", value: "Email Added"}, ...]
         }
     """
@@ -58,26 +66,31 @@ def make_filter(where: dict, default=True):
     if where is None or not isinstance(where, dict):
         print(f"Invalid filter config: {where}.")
         return lambda dct: default
-    
+
     if all(k in where.keys() for k in ["source", "op", "value"]):
-        return _filter_leaf(where['source'], where['op'], where['value'], default=default)
- 
+        return _filter_leaf(
+            where["source"], where["op"], where["value"], default=default
+        )
+
     if "logic" in where.keys() and "conditions" in where.keys():
-        if not all( \
-            isinstance(cond, dict) and \
-            all(k in cond.keys() for k in ["source", "op", "value"]) \
-            for cond in where.get("conditions", [])):
-            
-            print(f"Invalid filter config: {where}. 'conditions' should be a list of dicts, each with keys 'source', 'op', and 'value'.")
-            return lambda dct: default 
-        
-        child_conditions = [_filter_leaf(cond['source'], cond['op'], cond['value'], default=default) for cond in where.get("conditions", [])]
-        if where['logic'].lower() == "any":
+        if not all(
+            isinstance(cond, dict)
+            and all(k in cond.keys() for k in ["source", "op", "value"])
+            for cond in where.get("conditions", [])
+        ):
+            print(
+                f"Invalid filter config: {where}. 'conditions' should be a list of dicts, each with keys 'source', 'op', and 'value'."
+            )
+            return lambda dct: default
+
+        child_conditions = [
+            _filter_leaf(cond["source"], cond["op"], cond["value"], default=default)
+            for cond in where.get("conditions", [])
+        ]
+        if where["logic"].lower() == "any":
             return lambda dct, c=child_conditions: any(cond(dct) for cond in c)
-        elif where['logic'].lower() == "all":
+        elif where["logic"].lower() == "all":
             return lambda dct, c=child_conditions: all(cond(dct) for cond in c)
-    
+
     print(f"Invalid filter config: {where}.")
     return lambda dct: default
-
-

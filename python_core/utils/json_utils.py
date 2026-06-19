@@ -7,10 +7,11 @@ import logging
 # ([^.\[\]]+) -> Captures simple keys with or w/o dot: session and session.ip
 PATH_REGEX = re.compile(r"'([^']*)'|\[(\d+)\]|([^.\[\]]+)")
 
+
 def get_value_at_path(data, path, default=""):
     """
     Traverses a dictionary/list structure using a dot-notation path.
-    
+
     Supports:
     - Dot notation: "session.ip"
     - List indexing: "tokens[0].id"
@@ -22,7 +23,7 @@ def get_value_at_path(data, path, default=""):
 
     try:
         current = data
-        
+
         # Iterates over all matches in the path string
         for match in PATH_REGEX.finditer(path):
             quoted_key, list_idx, simple_key = match.groups()
@@ -33,7 +34,7 @@ def get_value_at_path(data, path, default=""):
                     current = current.get(quoted_key)
                 else:
                     return default
-            
+
             elif list_idx:
                 # Clist index ([0])
                 idx = int(list_idx)
@@ -41,7 +42,7 @@ def get_value_at_path(data, path, default=""):
                     current = current[idx]
                 else:
                     return default
-            
+
             elif simple_key:
                 # simple dict key
                 if isinstance(current, dict):
