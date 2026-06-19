@@ -38,14 +38,6 @@ def compare_redacted_vals(*vals) -> bool:
         all_parts_lists.append(parts)
     
     # Check if at least one part from the first value is shared with ALL other values
-    # for part1 in all_parts_lists[0]:
-    #     matches_all = True
-    #     for other_parts in all_parts_lists[1:]:
-    #         if not any(part1 in ap or ap in part1 for ap in other_parts):
-    #             matches_all = False
-    #             break
-    #     if matches_all:
-    #         return True
     for part1 in all_parts_lists[0]:
         matches_all = True
         for other_parts in all_parts_lists[1:]:

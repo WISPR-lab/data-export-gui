@@ -29,7 +29,6 @@
 #        OS: 15.0       OS: 15.1      OS: 16.0       OS: 16.1
 
 import json
-import uuid
 import pandas as pd
 from datetime import datetime, timezone
 from typing import List, Optional

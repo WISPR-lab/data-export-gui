@@ -1,12 +1,7 @@
-import pandas as pd
-import io
 import re
-import csv
-import pandas as pd
 from bs4 import BeautifulSoup
 from typing import List, Dict, Any, Optional
 from .base import BaseParser
-from .csv_ import CSVParser
 from python_core.errors import FileLevelError
 
 

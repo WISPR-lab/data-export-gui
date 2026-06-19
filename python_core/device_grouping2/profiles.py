@@ -2,7 +2,7 @@
 Device Profiles - matching manufacturer and model names
 """
 import uuid
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 from .instances import DeviceInstance
 
 def calculate_profile_updates(

@@ -1,5 +1,3 @@
-import os
-import sys
 from utils.misc import clean_target, is_trivial
 from utils.json_utils import get_value_at_path
 from utils.filter_builder import make_filter

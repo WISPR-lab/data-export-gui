@@ -45,22 +45,6 @@ class DatabaseSession:
         self.logger = logging.getLogger(__name__)
 
 
-    # def _firefox_workaround_opfs_to_memfs(self):
-    #     # Workaround: Mirror OPFS to internal MEMFS to avoid Firefox stat() crash
-    #     os.makedirs("/tmp", exist_ok=True)
-    #     fd, path = tempfile.mkstemp(suffix=".sqlite", dir="/tmp")
-    #     os.close(fd) 
-    #     self.firefox_internal_temp_path = path
-
-    #     if safefileutils.exists(self.db_path_orig):
-    #         # with open(self.db_path_orig, 'rb') as src, open(self.firefox_internal_temp_path, 'wb') as dst:
-    #         #     dst.write(src.read())
-    #         with open(self.firefox_internal_temp_path, 'rb') as src:
-    #             data = src.read()
-    #         with open(self.db_path_orig, 'wb') as dst:
-    #             dst.write(data)
-    #     return self.firefox_internal_temp_path
-    
     def _wrap_json_serialization(self):
         orig_execute = self.conn.execute
         orig_executemany = self.conn.executemany

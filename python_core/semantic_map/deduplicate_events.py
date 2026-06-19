@@ -1,5 +1,3 @@
-import json
-
 DEFAULT_EVENT_ACTIONS_TO_EXCLUDE = []  # e.g. messages, potentially, which might be sent in quick succession
 
 

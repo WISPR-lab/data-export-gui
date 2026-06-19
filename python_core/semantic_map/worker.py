@@ -1,5 +1,3 @@
-import os
-import sys
 import json
 from itertools import groupby
 import uuid
