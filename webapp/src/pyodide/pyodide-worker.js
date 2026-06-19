@@ -194,31 +194,26 @@ async function installUAExtract(pyodide) {
 
 
 
-async function loadManifests(config, pyodide) {
+async function loadManifestOnDemand(platform) {
   const manifestsPath = config.paths.manifests;
-  const manifestsBaseUrl = buildResourceUrl(config.paths.manifests);
-  pyodide.FS.mkdir(manifestsPath);
-  const manifestFiles = ['apple.yaml', 'facebook.yaml', 'instagram.yaml', 'discord.yaml', 'google.yaml', 'google.yaml'];
+  const targetFile = `${manifestsPath}/${platform}.yaml`;
   
-//   const manifestFiles = await pyodide.runPythonAsync(`
-// import sys
-// sys.path.insert(0, '${config.paths.python_core}')
-// sys.path.insert(0, '/')
-// from utils.pyodide_utils import load_manifests
-// load_manifests()
-// `).then(r => r.toJs());
-  
-  for (const manifest of manifestFiles) {
-    const res = await fetch(`${manifestsBaseUrl}/${manifest}`);
-    if (res.ok) {
-      const txt = await res.text();
-      pyodide.FS.writeFile(`${manifestsPath}/${manifest}`, txt);
-    } else {
-      console.warn(`[Pyodide Worker] Failed to fetch manifest: ${manifest}`);
-    }
+  try {
+    pyodide.FS.lookupPath(targetFile);
+    return; // Already loaded
+  } catch (e) {
+    // Fetch if not present
   }
 
-
+  const manifestsBaseUrl = buildResourceUrl(config.paths.manifests);
+  const res = await fetch(`${manifestsBaseUrl}/${platform}.yaml`);
+  if (res.ok) {
+    const txt = await res.text();
+    pyodide.FS.writeFile(targetFile, txt);
+    console.log(`[Pyodide Worker] Loaded manifest for platform: ${platform}`);
+  } else {
+    throw new Error(`Failed to load manifest for platform ${platform}`);
+  }
 }
 
 
@@ -265,7 +260,7 @@ builtins.PYTHON_CORE = "${config.paths.python_core}"
 builtins.IS_FIREFOX = ${isFirefox? 'True' : 'False'}
     `);
 
-    await loadManifests(config, pyodide);
+    pyodide.FS.mkdir(config.paths.manifests);
 
     await installDeps(pyodide, pyCorePath);
     await installUAExtract(pyodide);
@@ -418,13 +413,12 @@ self.onmessage = async (event) => {
       }
 
 
-      case 'extract': {
+      case 'run_pipeline': {
         const { platform, givenName } = args;
-        console.log(`[Pyodide Worker] extract called: platform=${platform}, givenName=${givenName}`);
+        console.log(`[Pyodide Worker] run_pipeline called: platform=${platform}, givenName=${givenName}`);
 
-        // Remount OPFS so Emscripten picks up files written by JS after initial mount.
-        // syncfs() only syncs file contents, NOT new directory entries.
-        // Unmount + remount forces a full directory rescan.
+        await loadManifestOnDemand(platform);
+
         if (opfsMountPoint) {
           console.log(`[Pyodide Worker] Remounting OPFS at ${opfsMountPoint}...`);
           try {
@@ -432,157 +426,45 @@ self.onmessage = async (event) => {
           } catch (e) {
             console.error('[Pyodide Worker] OPFS remount failed:', e);
           }
-        } else {
-          console.warn('[Pyodide Worker] opfsMountPoint not set — cannot remount OPFS');
         }
 
-        
-        try {
-          const tmpPath = config.storage.temp_zip_storage;
-          const tmpContents = pyodide.FS.readdir(tmpPath).filter(f => f !== '.' && f !== '..');
-          // console.log(`[Pyodide Worker] tmpstore visible to Python after remount (${tmpPath}):`, tmpContents);
-        } catch (e) {
-          console.warn(`[Pyodide Worker] tmpstore not visible after remount (${config.storage.temp_zip_storage}):`, e.message);
-        }
+        self.reportProgress = (stage, progress) => {
+          self.postMessage({ id, type: 'progress', stage, progress });
+        };
 
         pyodide.globals.set('platform', platform);
         pyodide.globals.set('given_name', givenName);
 
         result = await pyodide.runPythonAsync(`
-from extractors import worker as extractor_worker
-result = extractor_worker.extract(platform, given_name)
-result
+import run
+run.run(platform, given_name)
 `);
+
+        delete self.reportProgress;
 
         await flushOPFSDatabase();
 
         result = result.toJs({ dict_converter: Object.fromEntries });
-        console.log(`[Pyodide Worker] extract result:`, result);
+        console.log(`[Pyodide Worker] run_pipeline result:`, result);
         break;
       }
 
-      case 'normalize': {
-        const { uploadId } = args;
-        console.log(`[Pyodide Worker] normalize called: uploadId=${uploadId}`);
-
-        pyodide.globals.set('upload_id', uploadId);
-
-        result = await pyodide.runPythonAsync(`
-from field_normalization import worker as norm_worker
-result = norm_worker.normalize(upload_id)
-result
-`);
-
-        await flushOPFSDatabase();
-
-        result = result.toJs({ dict_converter: Object.fromEntries });
-        console.log(`[Pyodide Worker] normalize result:`, result);
-        break;
-      }
-      
-      case 'semantic_map': {
-        // Call Python semantic_map_worker
-        const { platform: mapPlatform, uploadId } = args;
-        console.log(`[Pyodide Worker] semantic_map called: platform=${mapPlatform}, uploadId=${uploadId}`);
-        
-        if (!uploadId) {
-          throw new Error(`uploadId is missing from args: ${JSON.stringify(args)}`);
-        }
-        
-        pyodide.globals.set('platform', mapPlatform);
-        pyodide.globals.set('upload_id', uploadId);
-        
-        await pyodide.runPythonAsync(`
-import semantic_map.worker as semantic_map_worker
-semantic_map_worker.map(platform, upload_id)
-`);
-        
-        await flushOPFSDatabase();
-        
-        // Get result counts from DB
-        result = await pyodide.runPythonAsync(`
-from semantic_map.worker import get_counts
-result = get_counts(upload_id)
-result
-`);
-        result = result.toJs({ dict_converter: Object.fromEntries });
-        break;
-      }
-
-      case 'group': {
-        const { uploadId } = args;
-        console.log(`[Pyodide Worker] group called: uploadId=${uploadId}`);
-
-        if (!uploadId) {
-          throw new Error(`uploadId is missing from args: ${JSON.stringify(args)}`);
-        }
-
-        pyodide.globals.set('upload_id', uploadId);
-
-        await pyodide.runPythonAsync(`
-import device_grouping2.worker as device_grouping2_worker
-device_grouping2_worker.group(upload_id)
-`);
-
-        await flushOPFSDatabase();
-
-        result = {
-          status: 'success',
-          message: 'Device grouping complete'
-        };
-        break;
-      }
 
       case 'get_whitelist': {
         // Returns file path patterns from the manifest for a given platform
         const { platform: wlPlatform } = args;
+        await loadManifestOnDemand(wlPlatform);
         pyodide.globals.set('platform', wlPlatform);
         
         result = await pyodide.runPythonAsync(`
 from manifest import Manifest
-m = Manifest(platform=platform)
-paths = m.file_paths()
-paths
+Manifest(platform=platform).file_paths()
 `);
         result = result.toJs();
         break;
       }
 
-      case 'merge': {
-        console.log('[worker] merge case called with args:', args);
-        const { srcProfileId, tgtProfileId } = args;
-        
-        try {
-          result = await pyodide.runPythonAsync(`
-from user_merge.merge import merge_device_profiles
-result = merge_device_profiles('${srcProfileId}', '${tgtProfileId}')
-result
-`);
-          console.log('[worker] Python returned:', result);
-          result = result.toJs({ dict_converter: Object.fromEntries });
-          console.log('[worker] After .toJs():', result);
-        } catch (pyError) {
-          console.error('[worker] Python merge error:', pyError);
-          result = { status: 'error', message: 'Python merge failed: ' + (pyError.message || String(pyError)) };
-        }
-        
-        await flushOPFSDatabase();
-        break;
-      }
 
-      case 'unmerge': {
-        const { profileId, atomicId } = args;
-        
-        result = await pyodide.runPythonAsync(`
-from user_merge.unmerge import unmerge_device_profiles
-result = unmerge_device_profiles('${profileId}', '${atomicId}')
-result
-`);
-        result = result.toJs({ dict_converter: Object.fromEntries });
-        
-        await flushOPFSDatabase();
-        break;
-      }
 
       default:
         throw new Error(`Unknown command: ${command}`);
