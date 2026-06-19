@@ -3,9 +3,14 @@ import { getDB } from '../index.js';
 import { getUASummary } from './ua_summary.js';
 import { hexColor } from '@/utils/hex.js';
 import { titleCase } from '@/filters/TitleCase.js';
+import { getCondensedModel } from '@/filters/GetCondensedModel.js';
+import { getCondensedOS } from '@/filters/GetCondensedOS.js';
+
 
 export async function getDevices() {
-  /*
+  /* 
+   * Queries profiles + instances, parses JSON fields, computes UA summaries and date spans, sorts recognized instances first within each profile.
+   *
    * Example return value format with dummy data:
    * [
    *   {
@@ -104,10 +109,8 @@ export async function getDevices() {
     inst.client_ips = parseField(inst.client_ips);
     inst.locations = parseField(inst.locations);
 
-    // normalize upload_color to a full hex string
     inst.upload_color = hexColor(inst.upload_color);
 
-    // Attach user agent summary classification to the individual instance
     inst.ua_summary = getUASummary([inst])[0] || null;
 
     inst.formatted_attributes = formatInstanceAttrs(inst);
@@ -118,7 +121,7 @@ export async function getDevices() {
     instancesByProfile[inst.device_profile_id].push(inst);
   });
 
-  // Sort instances within each profile chronologically, and move recognized ones to top
+  // sort instances within each profile chronologically, and move recognized ones to top
   Object.values(instancesByProfile).forEach(instances => {
     customSort(instances);
     const recognized = instances.filter(i => i.instance_source_type === 'raw_devices' || i.instance_source_type === 'both');
@@ -130,15 +133,12 @@ export async function getDevices() {
     const profileInstances = instancesByProfile[profile.id] || [];
 
     // os info from the newest active instance
-    const firstInstance = profileInstances[0];
-    const latestOS = (firstInstance && firstInstance.latest_os_version) || '';
-    const latestOSName = (firstInstance && firstInstance.os_name) || '';
-    const latestOSType = (firstInstance && firstInstance.os_type) || '';
+    const latestOS = (profileInstances[0] && firstInstance.latest_os_version) || '';
+    const latestOSName = (profileInstances[0] && firstInstance.os_name) || '';
+    const latestOSType = (profileInstances[0] && firstInstance.os_type) || '';
 
-    // Collect all unique OS versions in this profile
-    const allOSVersions = [...new Set(profileInstances.flatMap(inst => inst.os_versions))];
+    const allOSVersions = [...new Set(profileInstances.flatMap(inst => inst.os_versions))]; // all unique vals in this profile
 
-    // Compute safe, finite timeline boundaries (or null if empty/invalid)
     const validFirstSeens = profileInstances.map(i => i.first_seen).filter(ts => typeof ts === 'number' && !isNaN(ts));
     const validLastSeens = profileInstances.map(i => i.last_seen).filter(ts => typeof ts === 'number' && !isNaN(ts));
 
@@ -171,7 +171,6 @@ export async function getDevices() {
   return customSort(mapped);
 }
 
-// update editable fields (user_label, notes) of a device profile
 export async function updateProfile(profileId, updates) {
   const db = await getDB();
   
@@ -188,12 +187,9 @@ export async function updateProfile(profileId, updates) {
   await db.exec(sql, { bind: params });
 }
 
-/**
- * Fetches all associated devices_raw rows for the instance, parses their JSON attributes,
- * filters out database-specific noise (like id and upload_id), and compiles a de-duplicated
- * key-value list of all unique attributes to display.
- */
 export async function getInstanceRawAttrs(instanceId) {
+  /* Merges deduplicated attributes from all raw device rows linked to this instance, excluding DB-internal keys. */
+
   const db = await getDB();
   const sql = `
     SELECT dr.attributes 
@@ -227,8 +223,8 @@ export async function getInstanceRawAttrs(instanceId) {
   return mergedAttributes;
 }
 
-// fetch all raw devices_raw attributes for all instances under a profile
 export async function getProfileRawAttrs(profileId) {
+  /* Same as getInstanceRawAttrs but joins across all instances under a profile. */
   const db = await getDB();
   const sql = `
     SELECT dr.attributes 
@@ -263,34 +259,10 @@ export async function getProfileRawAttrs(profileId) {
   return mergedAttributes;
 }
 
-export function getCondensedModel(manufacturer, model) {
-  const mfr = (manufacturer || '').trim();
-  const mdl = (model || '').trim();
-  if (mfr && mdl) {
-    if (mdl.toLowerCase().startsWith(mfr.toLowerCase())) {
-      return mdl;
-    }
-    return `${mfr} ${mdl}`;
-  }
-  return mdl || mfr || '';
-}
 
-export function getCondensedOS(osName, versions) {
-  const name = osName || '';
-  const list = (versions || []).filter(Boolean);
-  if (!name) return [];
-  const titleName = titleCase(name);
-  if (list.length > 0) {
-    const listCopy = [...list];
-    listCopy.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    return listCopy.map(function(v, idx) {
-      return idx === 0 ? (titleName + ' ' + v) : v;
-    });
-  }
-  return [titleName];
-}
 
 function formatInstanceAttrs(inst) {
+  /* Builds a display-ready label/value list from instance fields, excluding internal keys; appends timestamp fields at the end. */
   const internalKeys = new Set([
     'id', 
     'upload_id', 
@@ -343,25 +315,17 @@ function formatInstanceAttrs(inst) {
     }
   }
 
+  const invalidVals = new Set(['', 'null', 'none', 'unknown', 'undefined']);
   Object.entries(inst).forEach(([key, val]) => {
-    if (internalKeys.has(key)) return;
-    if (key.includes('latest')) return;
-    if (val === undefined || val === null) return;
-    if (Array.isArray(val) && val.length === 0) return;
+    if (internalKeys.has(key) || key.includes('latest') || val === undefined || val === null) return;
 
-    let displayValue = val;
+    let displayValue;
     if (Array.isArray(val)) {
-      displayValue = val.map(function (item) { return String(item).trim(); }).filter(function (item) {
-        const lower = item.toLowerCase();
-        return item !== '' && lower !== 'null' && lower !== 'none' && lower !== 'unknown' && lower !== 'undefined';
-      });
+      displayValue = val.map(item => String(item).trim()).filter(item => !invalidVals.has(item.toLowerCase()));
       if (displayValue.length === 0) return;
     } else {
       const displayStr = String(val).trim();
-      const lower = displayStr.toLowerCase();
-      if (!displayStr || lower === 'null' || lower === 'none' || lower === 'unknown' || lower === 'undefined') {
-        return;
-      }
+      if (invalidVals.has(displayStr.toLowerCase())) return;
       displayValue = displayStr;
     }
 
@@ -389,36 +353,28 @@ export function customSort(items) {
     const aLast = a.last_seen;
     const bLast = b.last_seen;
     if (aLast !== bLast) {
-      if (aLast === null || aLast === undefined) return 1;  // push nulls to the bottom
+      if (aLast === null || aLast === undefined) return 1; 
       if (bLast === null || bLast === undefined) return -1;
-      return bLast - aLast; // Newest first
+      return bLast - aLast; 
     }
 
     // tie breaker
     const aFirst = a.first_seen;
     const bFirst = b.first_seen;
     if (aFirst !== bFirst) {
-      if (aFirst === null || aFirst === undefined) return 1;  // push nulls to the bottom
+      if (aFirst === null || aFirst === undefined) return 1; 
       if (bFirst === null || bFirst === undefined) return -1;
-      return bFirst - aFirst; // Newest first
+      return bFirst - aFirst; 
     }
 
     return 0;
   });
 }
 
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-export async function getProfileComments(profileId) {
+export async function getProfileNotes(profileId) {
   const db = await getDB();
   const sql = `
-    SELECT * FROM device_profile_comments 
+    SELECT * FROM device_profile_notes 
     WHERE device_profile_id = ? 
     ORDER BY created_at ASC
   `;
@@ -429,16 +385,16 @@ export async function getProfileComments(profileId) {
   });
 }
 
-export async function addProfileComment(profileId, comment) {
+export async function addProfileNote(profileId, note) {
   const db = await getDB();
-  const id = generateUUID();
+  const id = crypto.randomUUID();
   const ts = Date.now() / 1000;
   const sql = `
-    INSERT INTO device_profile_comments (id, device_profile_id, comment, created_at, updated_at) 
+    INSERT INTO device_profile_notes (id, device_profile_id, comment, created_at, updated_at) 
     VALUES (?, ?, ?, ?, ?)
   `;
   await db.exec(sql, {
-    bind: [id, profileId, comment, ts, ts]
+    bind: [id, profileId, note, ts, ts]
   });
-  return { id, device_profile_id: profileId, comment, created_at: ts, updated_at: ts };
+  return { id, device_profile_id: profileId, comment: note, created_at: ts, updated_at: ts };
 }

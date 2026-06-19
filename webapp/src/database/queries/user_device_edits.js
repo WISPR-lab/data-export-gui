@@ -1,13 +1,7 @@
 // custom to WISPR-lab/data-export-gui
 import { getDB } from '../index.js';
 
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
+
 
 async function getProfileLabel(db, profileId) {
   if (!profileId) return '';
@@ -21,6 +15,7 @@ async function getProfileLabel(db, profileId) {
 }
 
 async function getInstanceSummaries(db, instanceIds) {
+  /* Builds human-readable summary strings (app, OS, date range, truncated ID) for audit log display. */
   const placeholders = instanceIds.map(function() { return '?'; }).join(',');
   const sql = `SELECT id, platform, client_name, os_name, os_type, first_seen FROM device_instances WHERE id IN (${placeholders})`;
   const rows = await db.exec(sql, {
@@ -72,7 +67,7 @@ export async function getUserDeviceEdits() {
 
 export async function addUserDeviceEdit(params) {
   const db = await getDB();
-  const id = generateUUID();
+  const id = crypto.randomUUID();
   const ts = Date.now() / 1000;
   const sql = `
     INSERT INTO user_device_edits 
@@ -108,6 +103,7 @@ export async function addUserDeviceEdit(params) {
 }
 
 export function checkMoveEligibility(targetProfile, selectedInstances) {
+  /* Enforces hardware compatibility for profile merges: verifies OS family, manufacturer, and model match, treating generic model names as wildcards. */
   if (!targetProfile || !selectedInstances || selectedInstances.length === 0) {
     return { isEligible: false, reason: 'No destination or selection' };
   }
@@ -157,6 +153,7 @@ export function checkMoveEligibility(targetProfile, selectedInstances) {
 }
 
 export function resolveProfileAttributes(instances) {
+  /* Picks best manufacturer/model/os_type from a set of instances using a recency-then-specificity heuristic. */
   if (!instances || instances.length === 0) {
     return { manufacturer: null, model: null, os_type: null };
   }
@@ -256,6 +253,7 @@ async function updateProfileAttributes(db, profileId) {
 }
 
 export async function moveInstancesToProfile(instanceIds, targetProfileId, reason) {
+  /* Remaps instances to target profile, updates profile metadata, prunes empty source profiles (soft-delete), and logs to user_device_edits audit ledger. */
   const db = await getDB();
 
   // Find source profiles of these instances before we move them
@@ -343,6 +341,7 @@ export async function moveInstancesToProfile(instanceIds, targetProfileId, reaso
 }
 
 export async function createProfileWithInstances(instanceIds, newProfileLabel, reason) {
+  /* Creates a new profile, moves instances to it, prunes empty source profiles, and logs to audit ledger. Shares pruning logic with moveInstancesToProfile. */
   const db = await getDB();
   
   if (!instanceIds || instanceIds.length === 0) {
@@ -373,7 +372,7 @@ export async function createProfileWithInstances(instanceIds, newProfileLabel, r
   const sourceProfileLabel = await getProfileLabel(db, sourceProfileId);
   const instanceSummaries = await getInstanceSummaries(db, instanceIds);
 
-  const newProfileId = generateUUID();
+  const newProfileId = crypto.randomUUID();
   const now = Date.now() / 1000;
 
   // Insert the new profile (user_created = 1)

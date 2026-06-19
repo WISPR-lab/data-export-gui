@@ -103,10 +103,10 @@ CREATE TABLE IF NOT EXISTS atomic_devices ( -- hard merge based on static device
 
 
 
-CREATE TABLE IF NOT EXISTS device_profile_comments (
+CREATE TABLE IF NOT EXISTS device_profile_notes (
     id TEXT PRIMARY KEY,
     device_profile_id TEXT,
-    comment TEXT,
+    note TEXT,
     created_at REAL,
     updated_at REAL,
     FOREIGN KEY(device_profile_id) REFERENCES device_profiles_v2(id) ON DELETE CASCADE

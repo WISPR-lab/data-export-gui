@@ -36,6 +36,7 @@ async function loadConfig() {
 }
 
 async function setupOPFSMount(pyInstance, mountPoint) {
+  /* Idempotent: creates mount-point dirs, unmounts if already mounted, then mounts OPFS root at mountPoint. */
   const opfsRoot = await navigator.storage.getDirectory();
   
   const parts = mountPoint.split('/').filter(p => p);
@@ -63,6 +64,7 @@ async function setupOPFSMount(pyInstance, mountPoint) {
 
 
 async function extractPythonCoreZip(pyInstance, pyCorePath) {
+  /* Fetches python_core.zip and extracts it, stripping the top-level python_core/ directory prefix so contents land directly in pyCorePath. */
   const zipResponse = await fetch('./python_core.zip');
   if (!zipResponse.ok) {
     throw new Error(`Failed to fetch python_core.zip: ${zipResponse.statusText}`);
@@ -132,6 +134,7 @@ async function loadRequirements(pyInstance, pyCorePath) {
 
 
 async function installDeps(pyodide, pyCorePath) {
+  /* Loads builtins first, then micropip-installs remaining requirements.txt entries; posts packageInstallFailure for any that fail. */
   const builtinModules = ['pyyaml', 'pytz', 'pandas', 'sqlite3', 'regex', 'aiohttp', 'micropip'];
   await pyodide.loadPackage(builtinModules);
   const micropip = pyodide.pyimport('micropip');
@@ -153,6 +156,7 @@ async function installDeps(pyodide, pyCorePath) {
 }
 
 async function installUAExtract(pyodide) {
+  /* Fetches wheel filename from latest_wheel.txt pointer file, then micropip-installs the wheel by absolute URL. */
   try {
     console.log(`[Pyodide Worker] installing local ua-extract wheel`);
     const micropip = pyodide.pyimport('micropip');
@@ -291,6 +295,7 @@ init_pyodide()
 
 
 async function initPyodideWithRetry() {
+  /* Retries initPyodide up to 3 times with 100/200/400ms exponential backoff; each attempt has a 30s timeout. */
   const MAX_RETRIES = 3;
   const INIT_TIMEOUT = 30000; // 30 seconds per attempt
   
@@ -328,6 +333,7 @@ pyodideReadyPromise = initPyodideWithRetry();
 
 
 async function flushOPFSDatabase() {
+  /* Firefox: bypasses Emscripten syncfs (crashes on stat()) by manually reading DB bytes and writing them to OPFS via SyncAccessHandle. Chrome: uses standard FS.syncfs. */
   if (isFirefox) {
     // Python already manually flushed the bytes to OPFS safely.
     console.log("[Pyodide Worker] Firefox detected: manually syncing db to opfs without calling syncfs() to avoid Firefox stat() crash.");

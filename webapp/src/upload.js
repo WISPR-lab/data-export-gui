@@ -13,6 +13,7 @@ function logError(...args) { console.error('[UploadService]', ...args); }
 
 
 export async function processUpload(file, platform, sketchId, store) {
+  /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. */
   const startTime = Date.now();
   const summary = {
     success: false,

@@ -4,6 +4,7 @@ import { parse as parseLucene } from 'lucene-query-parser';
 
 
 export function buildWhereClause(filter = {}, queryString = '', stringColumns = []) {
+  /* Composes string search, upload filter, datetime range, and chip conditions into a single WHERE clause with parameterized bindings. */
   const allConditions = [];
   const allParams = [];
 
@@ -52,6 +53,7 @@ function wildcardToLike(term) {
 
 
 function stringLeaf(field, value, stringColumns) {
+  /* If field matches a known column, scopes LIKE to it; otherwise broadcasts LIKE across all stringColumns plus json_extract on attributes. */
   const isWildcard = value.includes('*') || value.includes('?');
   const likeValue = isWildcard ? value : `%${value}%`;
   
@@ -84,6 +86,7 @@ function stringLeaf(field, value, stringColumns) {
 
 
 function astToConditions(ast, stringColumns) {
+  /* Recursively walks a Lucene AST (AND/OR/NOT/leaf) and converts each node to SQL conditions with parameterized bindings. */
   if (!ast) return { conditions: [], params: [] };
 
   if (ast.left && !ast.operator_type) {
@@ -128,6 +131,7 @@ function astToConditions(ast, stringColumns) {
 
 
 export function stringConditions(queryString, stringColumns) {
+  /* Parses queryString as Lucene syntax; falls back to literal LIKE search across all columns on parse failure. */
   if (!queryString || !queryString.trim()) {
     return { conditions: [], params: [] };
   }
@@ -171,6 +175,7 @@ function uploadCondition(uploadIds = []) {
 
 
 function datetimeChipCondition(chips = []) {
+  /* Extends date-only end values (YYYY-MM-DD) to 23:59:59.999 so the full day is included in the range. */
   if (!Array.isArray(chips) || chips.length === 0) {
     return { conditions: [], params: [] };
   }
@@ -222,6 +227,7 @@ function datetimeChipCondition(chips = []) {
 
 
 function otherChipConditions(chips = [], stringColumns = []) {
+  /* Routes tag/label chips to JSON LIKE queries and term chips to column-scoped stringLeaf conditions. */
   if (!Array.isArray(chips) || chips.length === 0) {
     return { conditions: [], params: [] };
   }

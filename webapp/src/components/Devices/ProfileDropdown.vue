@@ -120,7 +120,9 @@
 <script>
 import Instance from './Instance.vue';
 import AttributesTable from './AttributesTable.vue';
-import { getProfileRawAttrs, getCondensedModel, getCondensedOS } from '@/database/queries/devices_v2.js';
+import { getProfileRawAttrs } from '@/database/queries/devices_v2.js';
+import { getCondensedModel } from '@/filters/GetCondensedModel.js';
+import { getCondensedOS } from '@/filters/GetCondensedOS.js';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {

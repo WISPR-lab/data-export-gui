@@ -5,7 +5,7 @@ import json
 import python_core.utils.safe_file_utils as safefileutils
 
 
-def dict_factory(cursor, row, json_columns=None):
+def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -> dict:
     d = {}
     for idx, col in enumerate(cursor.description):
         val = row[idx]
@@ -19,8 +19,8 @@ def dict_factory(cursor, row, json_columns=None):
     return d
 
 
-def get_config_value(name, default="NONE FOUND"):
-    """Get config value from builtins (injected by JS) or use default."""
+def get_config_value(name: str, default: str = "NONE FOUND"):
+    """Reads from builtins namespace (injected by pyodide-worker.js at boot)."""
     try:
         import builtins
 
@@ -30,10 +30,10 @@ def get_config_value(name, default="NONE FOUND"):
 
 
 class DatabaseSession:
-    # synchronous context manager for SQLite
+    """ synchronous context manager for SQLite """
     def __init__(
-        self, db_path=None, schema_path=None, use_dict_factory=False, json_columns=None
-    ):
+        self, db_path: str = None, schema_path: str = None, use_dict_factory: bool = False, json_columns: list = None
+    ) -> None:
         self.db_path_orig = db_path or get_config_value("DB_PATH")
         self.db_path_target = None
         self.schema_path = schema_path or get_config_value("SCHEMA_PATH")
@@ -46,7 +46,7 @@ class DatabaseSession:
         self.conn = None
         self.logger = logging.getLogger(__name__)
 
-    def _wrap_json_serialization(self):
+    def _wrap_json_serialization(self) -> None:
         orig_execute = self.conn.execute
         orig_executemany = self.conn.executemany
 
@@ -63,7 +63,7 @@ class DatabaseSession:
         self.conn.execute = execute
         self.conn.executemany = executemany
 
-    def _serialize_params(self, params):
+    def _serialize_params(self, params: dict) -> dict:
         params = params.copy()
         for col in self.json_columns:
             if col in params and params[col] is not None:
@@ -72,8 +72,8 @@ class DatabaseSession:
                     params[col] = json.dumps(val)
         return params
 
-    def _firefox_workaround_opfs_to_memfs(self):
-        # Workaround: Mirror OPFS to internal MEMFS to avoid Firefox stat() crash
+    def _firefox_workaround_opfs_to_memfs(self) -> str:
+        """ Workaround: Mirror OPFS to internal MEMFS to avoid Firefox stat() crash """
         os.makedirs("/tmp", exist_ok=True)
 
         if safefileutils.exists(self.db_path_orig):
@@ -87,7 +87,7 @@ class DatabaseSession:
 
         return self.firefox_internal_temp_path
 
-    def _firefox_flush_memfs_to_opfs(self):
+    def _firefox_flush_memfs_to_opfs(self) -> None:
         if self.firefox_internal_temp_path and safefileutils.exists(
             self.firefox_internal_temp_path
         ):
@@ -99,7 +99,7 @@ class DatabaseSession:
             os.remove(self.firefox_internal_temp_path)
             self.firefox_internal_temp_path = None
 
-    def __enter__(self):
+    def __enter__(self) -> sqlite3.Connection:
 
         try:
             if self.is_firefox:
@@ -156,7 +156,7 @@ class DatabaseSession:
             traceback.print_exc()
             raise e
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if self.conn:
             try:
                 if exc_type is None:

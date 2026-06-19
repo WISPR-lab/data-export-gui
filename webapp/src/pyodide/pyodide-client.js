@@ -16,6 +16,7 @@ export function getPyodideWorker() {
 }
 
 export function callPyodideWorker(command, args, onProgress, timeoutMs) {
+  /* Routes progress events to onProgress callback; rejects with WORKER_TIMEOUT errorType if timeoutMs elapses (default 60s, 0 disables). */
   const timeoutVal = timeoutMs === undefined ? 60000 : timeoutMs;
   return new Promise((resolve, reject) => {
     const worker = getPyodideWorker();
@@ -68,6 +69,7 @@ export function terminatePyodideWorker() {
 
 
 export async function executeUpload(file, platform, opfsManager, callbacks) {
+  /* Orchestrates ZIP→OPFS extraction (JS side), then delegates extract/map/normalize/group to Pyodide, then cleans temp storage. Attaches uploadId to errors for upstream cleanup. */
   const cb = callbacks || {};
   const onProgress = cb.onProgress;
   const onError = cb.onError;

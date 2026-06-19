@@ -101,9 +101,9 @@ export async function getUploadedFiles(uploadId) {
 }
 
 export async function deleteUpload(uploadId) {
+  /* Manual cascade: deletes events, uploaded_files, and raw_data rows before removing the upload record itself (schema lacks ON DELETE CASCADE). */
   const db = await getDB();
   
-  // Delete related data first (cascading deletes)
   await db.exec('DELETE FROM events WHERE upload_id = ?', { 
     bind: [uploadId]
   });
@@ -116,7 +116,6 @@ export async function deleteUpload(uploadId) {
     bind: [uploadId]
   });
   
-  // Finally delete the upload record
   await db.exec('DELETE FROM uploads WHERE id = ?', { 
     bind: [uploadId]
   });

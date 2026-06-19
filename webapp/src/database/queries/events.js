@@ -21,6 +21,7 @@ example of 'filter' object
 */
 
 export async function searchEvents(queryString = '', filter = {}) {
+  /* Builds WHERE/ORDER/PAGINATION, batch-resolves file refs and raw_data line numbers, returns Elasticsearch-shaped {_id, _index, _source} hit objects. */
   const db = await getDB();
   
   const stringColumns = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id'];
@@ -127,10 +128,9 @@ export async function searchEvents(queryString = '', filter = {}) {
         rawDataIds = row.raw_data_ids ? JSON.parse(row.raw_data_ids) : [];
       } catch (e) {}
 
-      // Gather filenames
       const filenames = [...new Set(fileIds.map(fid => fileMap[fid]).filter(Boolean))];
 
-      // Compile file-to-lines mapping or flat lists
+      // map file to. lines
       const sourcesInfo = [];
       const flatLineNumbers = [];
       rawDataIds.forEach(rid => {
@@ -235,8 +235,8 @@ export async function getEventMessages() {
 }
 
 export async function getEventTags() {
+  /* Client-side aggregation: parses JSON tags from all events and counts occurrences. */
   const db = await getDB();
-  // Get all events with tags, parse the JSON, and aggregate
   const sql = `
     SELECT tags 
     FROM events 
@@ -248,7 +248,6 @@ export async function getEventTags() {
     rowMode: 'object'
   });
   
-  // Aggregate tags from all events
   const tagCounts = {};
   rows.forEach(row => {
     try {
@@ -275,6 +274,7 @@ export async function getEventTags() {
 }
 
 export async function getIPAddresses() {
+  /* Client-side aggregation: parses JSON attributes from all events and counts client_ip occurrences. */
   const db = await getDB();
   const sql = `
     SELECT attributes 
@@ -341,6 +341,7 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
 }
 
 function _formatEventObject(row, filenames = [], lineNumbers = [], sources = []) {
+  /* Transforms a DB row into Elasticsearch-compatible {_id, _index, _source} format, parsing 6 JSON fields with fallback defaults. */
   let attributes = {};
   let tags = [];
   let labels = [];
@@ -413,6 +414,7 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
 }
 
 export async function addLabelEvent(eventIds, labels) {
+  /* Per-row read-modify-write: reads current JSON labels, merges new ones (deduped), writes back. Not batched. */
   if (!eventIds || eventIds.length === 0 || !labels || labels.length === 0) {
     return;
   }
@@ -445,6 +447,7 @@ export async function addLabelEvent(eventIds, labels) {
 }
 
 export async function removeLabelEvent(eventIds, labels) {
+  /* Per-row read-modify-write: reads current JSON labels, filters out specified ones, writes back. Not batched. */
   if (!eventIds || eventIds.length === 0 || !labels || labels.length === 0) {
     return;
   }
