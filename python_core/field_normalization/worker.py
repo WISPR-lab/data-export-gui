@@ -63,6 +63,7 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
         ua_parser = UserAgentParser()
         
         # ----- devices raw normalization -------
+        records_normalized = 0
         
         rows = conn.execute(
             """
@@ -73,24 +74,22 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             (upload_id,)
         ).fetchall()
         
-        if not rows:
+        if rows:
+            updates = _normalize(rows, platform, ua_parser, file_map, table='devices')
+            conn.executemany(
+                """
+                UPDATE devices_raw
+                SET attributes = :attributes, origin = :origin
+                WHERE id = :id
+                """,
+                updates
+            )
+            records_normalized += len(updates)
+        else:
             print(f"[FieldNormalizeWorker] No devices_raw rows for upload_id={upload_id}")
-            return {'status': 'success', 'message': 'No records to normalize'}
-        
-        updates = _normalize(rows, platform, ua_parser, file_map, table='devices')
-        
-        conn.executemany(
-            """
-            UPDATE devices_raw
-            SET attributes = :attributes, origin = :origin
-            WHERE id = :id
-            """,
-            updates
-        )
 
 
         # ----- events normalization -------
-
 
         print(f"[FieldNormalizeWorker] Normalizing events for upload_id={upload_id}")
         rows = conn.execute(
@@ -102,31 +101,36 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             (upload_id,)
         ).fetchall()
 
-        if not rows:
+        if rows:
+            updates = _normalize(rows, platform, ua_parser, file_map, table='events')
+            conn.executemany(
+                """
+                UPDATE events 
+                SET attributes = :attributes, origin = :origin, treat_as_auth_device = :treat_as_auth_device
+                WHERE id = :id
+                """,
+                updates 
+            )
+            records_normalized += len(updates)
+        else:
             print(f"[FieldNormalizeWorker] No events rows for upload_id={upload_id}")
-            return {'status': 'success', 'message': 'No records to normalize'}
-        
-        updates = _normalize(rows, platform, ua_parser, file_map, table='events')
-
-        conn.executemany(
-            """
-            UPDATE events 
-            SET attributes = :attributes, origin = :origin, treat_as_auth_device = :treat_as_auth_device
-            WHERE id = :id
-            """,
-            updates 
-        )
+            
         conn.commit()
 
-
-
-        print(f"[FieldNormalizationWorker] Normalization Complete")
+        print(f"[FieldNormalizeWorker] Normalization Complete")
         
-        print(f"[normalize] Normalized {len(updates)} records")
+        if records_normalized == 0:
+            return {
+                'status': 'success',
+                'message': 'No records to normalize',
+                'records_normalized': 0,
+                'unique_uas_parsed': 0,
+            }
+            
+        print(f"[normalize] Normalized {records_normalized} records")
         return {
             'status': 'success',
-            'message': f'Normalized {len(updates)} records',
-            'records_normalized': len(updates),
+            'message': f'Normalized {records_normalized} records',
+            'records_normalized': records_normalized,
             'unique_uas_parsed': len(ua_parser._cache),
         }
-

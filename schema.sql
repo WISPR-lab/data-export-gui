@@ -101,28 +101,7 @@ CREATE TABLE IF NOT EXISTS atomic_devices ( -- hard merge based on static device
 );
 
 
-CREATE TABLE IF NOT EXISTS device_profiles (
-    id TEXT PRIMARY KEY,
-    atomic_devices_ids JSONTEXT NOT NULL,  -- JSON list of atomic_devices.id that are in this cluster
-    --
-    attributes JSONTEXT,  -- merged attributes from all atomics
-    specificity INTEGER DEFAULT 1,  -- max specificity from atomics
-    model TEXT,  -- best model name from attributes
-    manufacturer TEXT,  -- best manufacturer from attributes
-    origins JSONTEXT,  -- merged origins from all atomics
-    --
-    system_soft_merge BOOLEAN DEFAULT 0,  -- 1 if profile created by system soft-merge AND has 2+ atomics, else 0
-    is_generic BOOLEAN DEFAULT 0,  -- 1 if specificity < 2 and Apple
-    --
-    user_label TEXT,
-    notes TEXT,
-    --
-    created_at REAL,
-    updated_at REAL,
-    --
-    tags JSONTEXT DEFAULT "[]",
-    labels JSONTEXT DEFAULT "[]"
-);
+
 
 CREATE TABLE IF NOT EXISTS device_profile_comments (
     id TEXT PRIMARY KEY,
@@ -130,7 +109,7 @@ CREATE TABLE IF NOT EXISTS device_profile_comments (
     comment TEXT,
     created_at REAL,
     updated_at REAL,
-    FOREIGN KEY(device_profile_id) REFERENCES device_profiles(id) ON DELETE CASCADE
+    FOREIGN KEY(device_profile_id) REFERENCES device_profiles_v2(id) ON DELETE CASCADE
 );
 
 
@@ -289,32 +268,6 @@ SELECT DISTINCT event_action
 FROM events
 WHERE event_action IS NOT NULL AND event_action != '';
 
-
-
-DROP VIEW IF EXISTS v_device_profiles;
-CREATE VIEW v_device_profiles AS
-SELECT 
-    dg.id AS profile_id,
-    json_group_array(json(ad.attributes)) AS attributes,
-    json_group_array(ad.specificity) AS specificity,
-    json(json_group_array(DISTINCT j2.value)) AS origins
-FROM device_profiles dg
-JOIN json_each(dg.atomic_devices_ids) as j ON 1=1
-JOIN atomic_devices ad ON ad.id = j.value
-JOIN json_each(ad.origins) as j2 ON 1=1
-GROUP BY dg.id;
-
-
-DROP VIEW IF EXISTS v_events2profile;
-CREATE VIEW v_events2profile AS
-SELECT 
-    ea.event_id,
-    dp.id AS device_profile_id,
-    ea.match_reason,
-    ea.event_specificity
-FROM event_assoc ea
-JOIN device_profiles dp ON 1=1
-JOIN json_each(dp.atomic_devices_ids) as j ON j.value = ea.atomic_device_id;
 
 
 DROP VIEW IF EXISTS v_events2profile_indexed;

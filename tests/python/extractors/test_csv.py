@@ -35,4 +35,5 @@ def test_access_log_devices_csv_has_2_rows():
     # Verify expected fields exist
     expected_fields = {"Device Type", "Brand Name", "Marketing Name", "OS", "OS Version", "Device Model", "User Given Name", "Device Last Location", "Gaia ID"}
     for record in records:
-        assert set(record.keys()) == expected_fields, f"Fields don't match expected: {set(record.keys())}"
+        keys_without_line_numbers = {k for k in record.keys() if k != "__line_numbers"}
+        assert keys_without_line_numbers == expected_fields, f"Fields don't match expected: {keys_without_line_numbers}"

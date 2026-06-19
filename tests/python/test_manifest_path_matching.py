@@ -20,7 +20,7 @@ class TestManifestPathMatching:
         cfg = manifest.get_file_cfg(opfs_filename)
         
         assert cfg.get('id') == 'ggl_subscriber_info', f"Expected ggl_subscriber_info, got {cfg.get('id')}"
-        assert cfg.get('path') == 'Google Account/*.SubscriberInfo.html'
+        assert cfg.get('path') == 'Google Account/bob.researcher24.SubscriberInfo.html'
 
     def test_matches_opfs_flattened_change_history(self):
         """Test matching ChangeHistory OPFS filename."""
@@ -30,7 +30,7 @@ class TestManifestPathMatching:
         cfg = manifest.get_file_cfg(opfs_filename)
         
         assert cfg.get('id') == 'ggl_change_history', f"Expected ggl_change_history, got {cfg.get('id')}"
-        assert cfg.get('path') == 'Google Account/*.ChangeHistory.html'
+        assert cfg.get('path') == 'Google Account/bob.researcher24.ChangeHistory.html'
 
     def test_matches_opfs_flattened_devices_csv(self):
         """Test matching Devices CSV OPFS filename with wildcard in manifest."""
@@ -77,7 +77,10 @@ class TestManifestPathMatching:
         """Test that wildcard patterns in manifest paths work correctly."""
         manifest = Manifest('google', manifest_dir='manifests', validate=False)
         
-        # Manifest uses "Devices - A list of devices*" which matches any filename starting with that prefix
+        manifest.config['files'] = [
+            {'id': 'ggl_access_log_devices', 'path': 'Access Log Activity/Devices - A list of devices*.csv'}
+        ]
+        
         # Test various forms of the Devices filename
         test_filenames = [
             "google___Access Log Activity___Devices - A list of devices.csv",

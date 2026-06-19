@@ -202,6 +202,8 @@ class TestHTMLTableParserDataTypes:
         assert isinstance(result, list)
         for record in result:
             for key, value in record.items():
+                if key == "__line_numbers":
+                    continue
                 # All values should be strings (pandas fillna with '')
                 assert isinstance(value, str), f"Value should be string, got {type(value)}: {value}"
 
@@ -219,8 +221,8 @@ class TestHTMLTableParserFieldNames:
         assert isinstance(result, list) and len(result) > 0
         first_record = result[0]
         
-        # All field names should match table headers
-        field_names = set(first_record.keys())
+        # All field names should match table headers (excluding line numbers metadata)
+        field_names = set(k for k in first_record.keys() if k != "__line_numbers")
         expected_headers = {"Timestamp", "IP Address", "Change Type", "Old Value", "New Value"}
         
         assert field_names == expected_headers, f"Fields {field_names} don't match headers {expected_headers}"
@@ -329,7 +331,8 @@ class TestHTMLTableParserExactCounts:
         assert isinstance(result, list), f"Expected list, got {type(result)}"
         assert len(result) == 11, f"Expected 11 rows, got {len(result)}"
         
-        # Verify each record has exactly 5 columns
+        # Verify each record has exactly 5 columns (excluding __line_numbers metadata)
         for record in result:
-            assert len(record) == 5, f"Expected 5 columns, got {len(record)}"
-            assert set(record.keys()) == {"Timestamp", "IP Address", "Change Type", "Old Value", "New Value"}
+            cols = {k for k in record.keys() if k != "__line_numbers"}
+            assert len(cols) == 5, f"Expected 5 columns, got {len(cols)}"
+            assert cols == {"Timestamp", "IP Address", "Change Type", "Old Value", "New Value"}

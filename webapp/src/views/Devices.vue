@@ -55,8 +55,6 @@
             :ua-masking-text="uaMaskingText"
             @change="saveDeviceChanges(dev)"
             @see-all-events="goToExplore(dev)"
-            @unmerge="handleUnmerge(dev, $event)"
-            @batch-unmerge="handleBatchUnmerge(dev, $event)"
             @move-instances="openMoveDialog(dev, $event)"
             @create-profile="openCreateDialog(dev, $event)"
             @showJSON="showDeviceJSON"
@@ -102,7 +100,6 @@ import JSONModal from '@/components/Devices/JSONModal.vue';
 import UserDeviceEditsTable from '@/components/Devices/UserDeviceEditsTable.vue';
 import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
 import { getUserDeviceEdits, moveInstancesToProfile, createProfileWithInstances } from '@/database/queries/user_device_edits.js';
-import { callPyodideWorker } from '@/pyodide/pyodide-client';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
@@ -180,70 +177,7 @@ export default {
         console.error('Failed to save device changes:', err);
       }
     },
-    async handleUnmerge(device, atomicId) {
-      try {
-        const result = await callPyodideWorker('unmerge', {
-          profileId: device.id,
-          atomicId: atomicId
-        });
-        
-        if (result && result.status === 'ok') {
-          // Log unlink action
-          const summaryText = 'Session [ID: ' + atomicId.substring(0, 4) + '...]';
-          await createUserDeviceEdit({
-            action_type: 'move_instances',
-            instance_ids: [atomicId],
-            instance_summaries: [summaryText],
-            source_profile_id: device.id,
-            source_profile_label: this.getProfileLabelById(device.id),
-            target_profile_id: result.new_profile_id || null,
-            target_profile_label: 'New Standalone Profile',
-            reason: 'Unlinked session from profile'
-          });
-          
-          await this.fetchDevices();
-          await this.fetchHistory();
-        } else {
-          console.error('Unmerge failed:', result);
-        }
-      } catch (error) {
-        console.error('Unmerge error:', error);
-      }
-    },
-    async handleBatchUnmerge(device, atomicIds) {
-      try {
-        let successCount = 0;
-        for (const atomicId of atomicIds) {
-          const result = await callPyodideWorker('unmerge', {
-            profileId: device.id,
-            atomicId: atomicId
-          });
-          if (result && result.status === 'ok') {
-            // Log unlink action
-            const summaryText = 'Session [ID: ' + atomicId.substring(0, 4) + '...]';
-            await createUserDeviceEdit({
-              action_type: 'move_instances',
-              instance_ids: [atomicId],
-              instance_summaries: [summaryText],
-              source_profile_id: device.id,
-              source_profile_label: this.getProfileLabelById(device.id),
-              target_profile_id: result.new_profile_id || null,
-              target_profile_label: 'New Standalone Profile',
-              reason: 'Unlinked session from profile (Batch action)'
-            });
-            successCount++;
-          } else {
-            console.error('Batch unmerge failed for atomicId:', atomicId, result);
-          }
-        }
-        if (successCount > 0) {
-          await this.fetchDevices();
-          await this.fetchHistory();
-        }
-      } catch (error) {
-        console.error('Batch unmerge error:', error);
-      }
-    },
+
     openMoveDialog(device, instanceIds) {
       this.editMode = 'move';
       this.selectedInstanceIdsToMove = instanceIds;

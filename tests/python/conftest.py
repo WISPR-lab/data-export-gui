@@ -231,11 +231,8 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
                         filepath = os.path.join(root, filename)
                         rel_path = os.path.relpath(filepath, tmpdir)
                         
-                        # Strip platform prefix (e.g., 'facebook/path/to/file.json' -> 'path/to/file.json')
-                        if rel_path.startswith('facebook/'):
-                            manifest_path = rel_path[len('facebook/'):]
-                        else:
-                            manifest_path = rel_path
+                        # Keep platform prefix so get_file_cfg can correctly strip it
+                        manifest_path = rel_path
                         
                         # Use get_file_cfg which handles path matching (including Pyodide underscore flattening)
                         file_cfg = manifest.get_file_cfg(manifest_path)
