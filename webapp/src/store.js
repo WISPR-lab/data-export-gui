@@ -238,8 +238,8 @@ export default new Vuex.Store({
       try {
         console.log('[Store.updateSketch] Fetching uploads from database...');
         const uploads = await DB.getUploads()
-        console.log('[Store.updateSketch] Received uploads:', uploads.objects);
-        const sketch = { ...virtualSketch, timelines: uploads.objects || [] }
+        console.log('[Store.updateSketch] Received uploads:', uploads.uploads);
+        const sketch = { ...virtualSketch, timelines: uploads.uploads || [] }
         const meta = await DB.getEventMeta()
         console.log('[Store.updateSketch] Committing SET_SKETCH with timelines:', sketch.timelines.map(t => ({ id: t.id, name: t.name, color: t.color })));
         context.commit('SET_SKETCH', { objects: [sketch], meta })

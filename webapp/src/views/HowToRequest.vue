@@ -98,9 +98,9 @@ export default {
     return {
       instructionRegistry,
       selectedPlatform: instructionRegistry.google,
-      platforms: Object.values(instructionRegistry).map(p => ({
-        id: p.id,
-        name: p.name
+      platforms: Object.values(instructionRegistry).map(platform => ({
+        id: platform.id,
+        name: platform.name
       }))
     }
   },

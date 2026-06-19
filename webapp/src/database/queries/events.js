@@ -23,11 +23,11 @@ example of 'filter' object
 export async function searchEvents(queryString = '', filter = {}) {
   const db = await getDB();
   
-  const stringCols = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id'];
+  const stringColumns = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
-  const { clause: whereClause, params: whereParams } = buildWhereClause(filter, queryString, stringCols);
+  const { clause: whereClause, params: whereParams } = buildWhereClause(filter, queryString, stringColumns);
   
   const sql = `
     SELECT 
@@ -94,8 +94,8 @@ export async function searchEvents(queryString = '', filter = {}) {
         returnValue: 'resultRows',
         rowMode: 'object'
       });
-      fileRows.forEach(fr => {
-        fileMap[fr.id] = fr.opfs_filename;
+      fileRows.forEach(fileRow => {
+        fileMap[fileRow.id] = fileRow.opfs_filename;
       });
     }
 
@@ -108,12 +108,12 @@ export async function searchEvents(queryString = '', filter = {}) {
         returnValue: 'resultRows',
         rowMode: 'object'
       });
-      rawRows.forEach(rr => {
+      rawRows.forEach(rawRow => {
         let lines = [];
         try {
-          lines = rr.line_numbers ? JSON.parse(rr.line_numbers) : [];
+          lines = rawRow.line_numbers ? JSON.parse(rawRow.line_numbers) : [];
         } catch (e) {}
-        rawDataMap[rr.id] = { file_id: rr.file_id, lines };
+        rawDataMap[rawRow.id] = { file_id: rawRow.file_id, lines };
       });
     }
 

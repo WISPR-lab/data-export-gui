@@ -3,12 +3,12 @@ import { parse as parseLucene } from 'lucene-query-parser';
 
 
 
-export function buildWhereClause(filter = {}, queryString = '', stringCols = []) {
+export function buildWhereClause(filter = {}, queryString = '', stringColumns = []) {
   const allConditions = [];
   const allParams = [];
 
   if (queryString && queryString.trim()) {
-    const { conditions, params } = stringConditions(queryString, stringCols);
+    const { conditions, params } = stringConditions(queryString, stringColumns);
     allConditions.push(...conditions);
     allParams.push(...params);
   }
@@ -21,7 +21,7 @@ export function buildWhereClause(filter = {}, queryString = '', stringCols = [])
   allConditions.push(...datetimeConds);
   allParams.push(...datetimeParams);
 
-  const { conditions: filterConds, params: filterParams } = otherChipConditions(filter.chips, stringCols);
+  const { conditions: filterConds, params: filterParams } = otherChipConditions(filter.chips, stringColumns);
   allConditions.push(...filterConds);
   allParams.push(...filterParams);
 
@@ -51,12 +51,12 @@ function wildcardToLike(term) {
 
 
 
-function stringLeaf(field, value, stringCols) {
+function stringLeaf(field, value, stringColumns) {
   const isWildcard = value.includes('*') || value.includes('?');
   const likeValue = isWildcard ? value : `%${value}%`;
   
   if (field) {
-    const matchedCol = stringCols.find(col => {
+    const matchedCol = stringColumns.find(col => {
       const colName = col.includes('.') ? col.split('.')[1] : col;
       return colName === field;
     });
@@ -73,32 +73,32 @@ function stringLeaf(field, value, stringCols) {
       };
     }
   } else {
-    const fieldConditions = stringCols.map(f => `LOWER(${f}) LIKE ? ESCAPE '|'`);
+    const fieldConditions = stringColumns.map(f => `LOWER(${f}) LIKE ? ESCAPE '|'`);
     const lowerLikeValue = likeValue.toLowerCase();
     return {
       conditions: [`(${fieldConditions.join(' OR ')} OR json_extract(e.attributes, '$') LIKE ?)`],
-      params: [...Array(stringCols.length).fill(lowerLikeValue), `%${value}%`]
+      params: [...Array(stringColumns.length).fill(lowerLikeValue), `%${value}%`]
     };
   }
 }
 
 
-function astToConditions(ast, stringCols) {
+function astToConditions(ast, stringColumns) {
   if (!ast) return { conditions: [], params: [] };
 
   if (ast.left && !ast.operator_type) {
-    return astToConditions(ast.left, stringCols);
+    return astToConditions(ast.left, stringColumns);
   }
 
   if (ast.term !== undefined) {
     const field = ast.field && ast.field !== '<implicit>' ? ast.field : null;
     const value = wildcardToLike(ast.term);
-    return stringLeaf(field, value, stringCols);
+    return stringLeaf(field, value, stringColumns);
   }
 
   if (ast.operator_type === 'OR') {
-    const left = astToConditions(ast.left, stringCols);
-    const right = astToConditions(ast.right, stringCols);
+    const left = astToConditions(ast.left, stringColumns);
+    const right = astToConditions(ast.right, stringColumns);
     return {
       conditions: [`(${left.conditions.join(' OR ')} OR ${right.conditions.join(' OR ')})`],
       params: [...left.params, ...right.params]
@@ -106,8 +106,8 @@ function astToConditions(ast, stringCols) {
   }
 
   if (ast.operator_type === 'AND') {
-    const left = astToConditions(ast.left, stringCols);
-    const right = astToConditions(ast.right, stringCols);
+    const left = astToConditions(ast.left, stringColumns);
+    const right = astToConditions(ast.right, stringColumns);
     return {
       conditions: [`(${left.conditions.join(' AND ')} AND ${right.conditions.join(' AND ')})`],
       params: [...left.params, ...right.params]
@@ -115,7 +115,7 @@ function astToConditions(ast, stringCols) {
   }
 
   if (ast.operator_type === 'NOT') {
-    const inner = astToConditions(ast.term, stringCols);
+    const inner = astToConditions(ast.term, stringColumns);
     return {
       conditions: [`NOT (${inner.conditions.join(' AND ')})`],
       params: inner.params
@@ -127,18 +127,18 @@ function astToConditions(ast, stringCols) {
 
 
 
-export function stringConditions(queryString, stringCols) {
+export function stringConditions(queryString, stringColumns) {
   if (!queryString || !queryString.trim()) {
     return { conditions: [], params: [] };
   }
 
   try {
     const ast = parseLucene(queryString);
-    return astToConditions(ast, stringCols);
+    return astToConditions(ast, stringColumns);
   } catch (error) {
     console.warn('[stringConditions] Parse error, falling back to literal search:', error);
     const escaped = escapeLikePattern(queryString);
-    return stringLeaf(null, escaped, stringCols);
+    return stringLeaf(null, escaped, stringColumns);
   }
 }
 
@@ -221,7 +221,7 @@ function datetimeChipCondition(chips = []) {
 // other chip filters
 
 
-function otherChipConditions(chips = [], stringCols = []) {
+function otherChipConditions(chips = [], stringColumns = []) {
   if (!Array.isArray(chips) || chips.length === 0) {
     return { conditions: [], params: [] };
   }
@@ -247,7 +247,7 @@ function otherChipConditions(chips = [], stringCols = []) {
       conditions.push(`json_extract(e.labels, '$') LIKE ?`);
       params.push(`%"${escapedValue}"%`);
     } else if (chip.type === 'term' && chip.field) {
-      const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringCols);
+      const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringColumns);
       conditions.push(...termConds);
       params.push(...termParams);
     }

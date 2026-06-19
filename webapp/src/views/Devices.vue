@@ -69,8 +69,8 @@
       :selected-instance-ids-to-move="selectedInstanceIdsToMove"
       :existing-profiles="devices"
       :source-profile-id="sourceProfileId"
-      :is-loading="mergeLoading"
-      :error="mergeError"
+      :is-loading="groupLoading"
+      :error="groupError"
       @confirm="confirmGroup"
       @closed="onModalClosed"
     />
@@ -117,8 +117,8 @@ export default {
       editMode: 'move', // 'move' or 'create'
       selectedInstanceIdsToMove: [],
       sourceProfileId: '',
-      mergeLoading: false,
-      mergeError: null,
+      groupLoading: false,
+      groupError: null,
       devices: [],
       historyLogs: [],
       showJSONModal: false,
@@ -182,20 +182,20 @@ export default {
       this.editMode = 'move';
       this.selectedInstanceIdsToMove = instanceIds;
       this.sourceProfileId = device.id;
-      this.mergeError = null;
+      this.groupError = null;
       this.groupDialog = true;
     },
     openCreateDialog(device, instanceIds) {
       this.editMode = 'create';
       this.selectedInstanceIdsToMove = instanceIds;
       this.sourceProfileId = device.id;
-      this.mergeError = null;
+      this.groupError = null;
       this.groupDialog = true;
     },
     async confirmGroup(payload) {
       try {
-        this.mergeLoading = true;
-        this.mergeError = null;
+        this.groupLoading = true;
+        this.groupError = null;
 
         let result;
         if (payload.mode === 'move') {
@@ -221,15 +221,15 @@ export default {
           await this.fetchDevices();
           await this.fetchHistory();
         } else if (result) {
-          this.mergeError = result.message || 'Action failed';
+          this.groupError = result.message || 'Action failed';
         } else {
-          this.mergeError = 'Action failed: no response from database';
+          this.groupError = 'Action failed: no response from database';
         }
       } catch (error) {
-        this.mergeError = (error && error.message) || 'Action failed';
+        this.groupError = (error && error.message) || 'Action failed';
         console.log('[confirmGroup] Error:', error);
       } finally {
-        this.mergeLoading = false;
+        this.groupLoading = false;
       }
     },
     onModalClosed() {

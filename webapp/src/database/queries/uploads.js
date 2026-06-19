@@ -25,7 +25,7 @@ export async function getUploads() {
   });
   
   return {
-    objects: rows || []
+    uploads: rows || []
   };
 }
 
