@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
-// NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui
+// modified for WISPR-lab/data-export-gui
 
 
 import Vue from 'vue'
@@ -93,50 +92,6 @@ const routes = [
         name: 'Devices',
         component: Devices,
         props: { sketchId: 1 },
-      },
-      {
-        path: 'intelligence',
-        name: 'Intelligence',
-        component: Canvas,
-        props: { sketchId: 1 },
-      },
-      {
-        path: 'sigma',
-        component: Canvas,
-        props: { sketchId: 1 },
-        children: [
-          {
-            path: 'new',
-            name: 'SigmaNewRule',
-            component: Canvas,
-            props: { sketchId: 1 },
-          },
-          {
-            path: 'edit/:ruleId',
-            name: 'SigmaEditRule',
-            component: Canvas,
-            props: { sketchId: 1, ruleId: true },
-          },
-        ]
-      },
-      {
-        path: 'visualization',
-        component: Canvas,
-        props: { sketchId: 1 },
-        children: [
-          {
-            path: 'new',
-            name: 'VisualizationNew',
-            component: Canvas,
-            props: { sketchId: 1 },
-          },
-          {
-            path: 'view/:aggregationId',
-            name: 'VisualizationView',
-            component: Canvas,
-            props: { sketchId: 1, aggregationId: true },
-          },
-        ]
       },
     ],
   },

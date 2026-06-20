@@ -33,7 +33,7 @@ limitations under the License.
             <center>
               <v-img src="./images/empty-state.png" max-height="100" max-width="300"></v-img>
               <div style="font-size: 2em" class="mb-3 mt-3">It's empty around here</div>
-              <ts-upload-timeline-form-button btn-size="normal" btn-type="rounded"></ts-upload-timeline-form-button>
+              <new-data-export-button btn-size="normal" btn-type="rounded"></new-data-export-button>
             </center>
           </v-sheet>
         </v-row>
@@ -100,9 +100,9 @@ limitations under the License.
         
         
         <div class="pa-4">
-          <ts-upload-timeline-form-button btnType="leftPanel"></ts-upload-timeline-form-button>
+          <new-data-export-button btnType="leftPanel"></new-data-export-button>
           <div class="pa-1"></div>
-          <delete-all-data-button btnType="leftPanel"></delete-all-data-button>
+          <delete-data-button btnType="leftPanel"></delete-data-button>
         </div>
         
         <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
@@ -208,14 +208,14 @@ import TsIPAddresses from '../components/LeftPanel/IPAddresses.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
 import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
-import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButton.vue'
+import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
 import TsRenameSketch from '../components/RenameSketch.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
 import TsDevices from '../components/LeftPanel/Devices.vue'
 import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
-import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
+import DeleteDataButton from '../components/DeleteDataButton.vue'
 import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
 
 export default {
@@ -227,7 +227,7 @@ export default {
     TsIPAddresses,
     TsTags,
     TsSearchTemplates,
-    TsUploadTimelineFormButton,
+    NewDataExportButton,
     TsRenameSketch,
     TsSearch,
     TsTimelinesTable,
@@ -235,7 +235,7 @@ export default {
     PrivacySettingsItem,
     TsEventList,
     TsSettingsDialog,
-    DeleteAllDataButton,
+    DeleteDataButton,
     WelcomeDialog,
   },
   data() {

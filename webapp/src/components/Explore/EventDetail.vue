@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <div>
     <v-row>
@@ -32,15 +33,6 @@ limitations under the License.
                   <td v-if="key == c_key || ($store.state.demoMode && index === 0)" class="text-right" style="min-width: 105px">
 
                     <!-- Open aggregation dialog for this field -->
-                    <!-- <v-btn
-                      v-if="!ignoredAggregatorFields.has(key)"
-                      @click.stop="loadAggregation(key, value)"
-                      icon
-                      x-small
-                      class="mr-1"
-                    >
-                      <v-icon title="Aggregation dialog">mdi-chart-bar</v-icon>
-                    </v-btn> -->
 
                     <!-- Include field:value as filter chip -->
                     <v-btn
@@ -162,24 +154,13 @@ limitations under the License.
         </v-col>
       </v-slide-x-reverse-transition>
     </v-row>
-    <v-dialog scrollable v-model="aggregatorDialog" @click:outside="($event) => (this.aggregatorDialog = false)">
-      <!-- <ts-aggregate-dialog
-        :eventKey="eventKey"
-        :eventValue="eventValue"
-        :eventTimestamp="eventTimestamp"
-        :eventTimestampDesc="eventTimestampDesc"
-        :reloadData="aggregatorDialog"
-        @cancel="aggregatorDialog = false"
-      >
-      </ts-aggregate-dialog> -->
-    </v-dialog>
+
     <br />
   </div>
 </template>
 
 <script>
 import EventBus from '../../event-bus.js'
-// import TsAggregateDialog from './AggregateDialog.vue'
 import TsFormatXmlString from './FormatXMLString.vue'
 import TsLinkRedirectWarning from './LinkRedirectWarning.vue'
 import TsComments from './Comments.vue'
@@ -187,7 +168,6 @@ import TsUnfurlDialog from './UnfurlDialog.vue'
 
 export default {
   components: {
-    // TsAggregateDialog,
     TsFormatXmlString,
     TsLinkRedirectWarning,
     TsComments,
@@ -196,23 +176,10 @@ export default {
   props: ['event', 'availableColumns'],
   data() {
     return {
-      aggregatorDialog: false,
-      ignoredAggregatorFields: new Set([
-        'datetime',
-        'message',
-        'path_spec',
-        'strings',
-        'timestamp',
-        'xml_string',
-      ]),
       ignoreFilterChips: new Set([
         'datetime',
         'tags',
       ]),
-      eventKey: '',
-      eventValue: '',
-      eventTimestamp: 0,
-      eventTimestampDesc: '',
       formatXMLString: false,
       redirectWarnDialog: false,
       dfirUnfurlDialog: false,
@@ -367,11 +334,7 @@ export default {
         }
       }
     },
-    loadAggregation(eventKey, eventValue) {
-      this.eventKey = eventKey
-      this.eventValue = eventValue
-      this.aggregatorDialog = true
-    },
+
     copyToClipboard(content) {
       try {
         navigator.clipboard.writeText(content)

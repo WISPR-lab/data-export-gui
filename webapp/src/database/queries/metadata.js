@@ -6,6 +6,7 @@ import * as events from './events.js';
 
 
 export async function getEventMeta() {
+  /* Returns a metadata envelope with field mappings, tag aggregations, and total count; includes empty compatibility stubs for a previous Elasticsearch-based API contract. */
   const db = await getDB();
   if (!db) {
     throw new Error('Database not initialized');
@@ -26,7 +27,6 @@ export async function getEventMeta() {
     );
     totalItems = (countResult[0] && countResult[0].count) || 0;
     
-    // Get tags from events
     try {
       filterLabels = await events.getEventTags();
     } catch (e) {

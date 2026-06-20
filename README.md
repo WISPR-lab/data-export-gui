@@ -1,157 +1,122 @@
-# Takeout Tool
+# LEStrADE 
+**L**ocal **E**ngine for **Str**uctured **A**nalysis of **D**ata **E**xports (named after the minor Sherlock Holmes character, [Inspector Lestrade](https://en.wikipedia.org/wiki/Inspector_Lestrade)) is an open-source visualization tool that helps users understand their account security history using data exports from online platforms.
 
-Data timeline exploration tool for Google Takeout and other social media archives, forked and heavily modified from Google's [Timesketch](https://timesketch.org/).
+Instead of uploading user data files to a server, this project processes everything locally in the browser using, a port of CPython to WebAssembly that runs a full Python environment to the web browser.
 
-Instead of uploading sensitive files to a server, this project processes everything locally by outsourcing parsing to Pyodide, a port of CPython to WebAssembly that runs a full Python environment to the web browser.
-
-
+The Vue frontend is forked and heavily modified from Google's [Timesketch](https://timesketch.org/), specifically the `timesketch/frontend-ng` ([link](https://github.com/google/timesketch/tree/master/timesketch/frontend-ng)) directory. See the *License* section below.
 
 ## Quickstart
 
-**Prerequisites**
-- Node.js 18+
-- npm or brew
-- yarn (npm install --global yarn@1 or brew install yarn)
+You can either visit a hosted version of the static site at https://wispr-lab.github.io/data-export-gui/, or set it up on your own machine.
 
-**Setup**
-
+### Clone & Initialize Submodules (Required)
+This project relies on Git submodules for user-agent parsing. You **must** initialize them first:
 ```bash
 git clone --recurse-submodules https://github.com/WISPR-lab/data-export-gui/
-cd data-export-gui
-cd webapp
-yarn install
-yarn serve
+# or if already cloned:
+git submodule update --init --recursive
 ```
 
-The frontend usually runs on `http://localhost:5001`
+---
+Finish the setup either with or without Docker:
+
+### With Docker
+**Prerequisites**: [Docker](https://www.docker.com/products/cli/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+1. **Build and start the application**:
+   ```bash
+   docker compose up --build
+   ```
+   The web application will be live at `http://localhost:5001`.
+
+2. **Run Python integration tests**:
+   ```bash
+   docker compose run --rm test
+
+   # or run specific tests
+   docker compose run --rm test tests/python/test_device_grouping2.py
+   docker compose run --rm test tests/python/test_device_grouping2.py::test_group_pipeline_outputs
+   ```
+
+---
+
+### Without Docker
+**Prerequisites**:
+* Node.js 18+ with [Yarn v1](https://classic.yarnpkg.com/en/docs/install/)
+* Python 3.12+ (standard CPython)
+* uv (`brew install uv` or `pip install uv`)
+
+1. **Install and run local version of the web app**:
+   ```bash
+   cd webapp
+   yarn install
+   yarn serve
+   ```
+   Under the hood, this runs `sync_assets.sh` which automatically builds the `UA-Extract-purepy` wheel using `uv`.
+   The frontend runs at `http://localhost:5001`.
+
+2. **Install Python dependencies and run tests**:
+   ```bash
+   # from repo root, not /webapp
+   uv sync
+
+   # run all tests
+   uv run pytest tests/python 
+
+   # or run specific tests
+   uv run pytest tests/python/test_device_grouping2.py
+   uv run pytest tests/python/test_device_grouping2.py::test_group_pipeline_outputs
+   ```
 
 ## Architecture
 
-1. UI (JavaScript): The user selects a platform (e.g., Facebook) and drops a ZIP file into the browser.
+To protect user privacy, this tool does not upload user's data files to a server. Instead, it runs a Python environment that processes the database directly inside the browser using **Pyodide** (a port of CPython and its packages to WebAssembly).
+It's probably overcomplicated architecture but I couldn't bear writing a parser in JS... 
 
-2. Unzip (JavaScript): JS unzips the uploaded file in local browser storage and discards files not mentioned in the platform schemas.
+## Repository Structure                                                                                                                                                                                                                    
+* **`webapp/`**: Vue 2 / Vuetify frontend with some JS utility files.                                                                                                                                      
+* **`python_core/`**: Python parsing and database logic (runs inside Pyodide in the browser).                                                                                                                                              
+* **`manifests/`**: Platform YAML configurations defining mappings to ECS.                                                                                                                                                                 
+* **`schema.sql`**: SQLite database schema. Both JS and Pyodide read/write to this DB, but never at the same time.                                                                                                                                                                                               
+* **`tests/`**: Vitest (JS) and Pytest (Python) integration tests.
 
-3. Parsing engine (Python/Pyodide): JavaScript passes each remaining file string AND the schema YAML to functions in `python_core/`. Python handles all the data cleaning and field name standardization.
-
-4. Storage (SQLite/OPFS): Python/Pyodide extracts raw data into SQLite, which is persisted in the browser's Origin Private File System (OPFS). Data is normalized and stored in structured tables for querying.
-
-5. UI (JavaScript): UI elements are rendered from the local SQLite database.
-
-The way I like to think about it, the Python/Pyodide engine pretends to be the "server" in the classic client-server model, even though the data doesn't leave the local machine.
-
-
-## Understanding and writing new schema
-
-
-The platform YAML files in `manifests/` (i.e., `apple.yaml`) provide instructions for the Python engine to map data exports into (a slightly modified version of) the Elastic Common Schema (ECS). The goal of this is to minimize how much of the Python engine in `python_core` we have to rewrite if we want to add support for a new platform or if the platforms change file formats. 
-
-
-A manifest has two main sections:
-
-1. `files`:  physical files to parse (inputs)
-2. `views`: specs for the logical events/states extracted from those files (outputs).
+### Pyodide Flow
+1. Vue worker downloads Pyodide WASM + package wheels (pandas, regex, sqlite3) on load.
+2. After the user imports their data export ZIP file in the UI, it is unzipped locally by JS and files are written to the [Origin Private File System (OPFS)](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system)
+3. Python (`python_core/`) parses the data into a standard representation defined by the YAML schemas in `manifests/`.
+4. Python saves normalized rows to a WASM SQLite database synced to OPFS defined by `schema.sql`.
+5. Vue queries the local SQLite DB to render views.
 
 
+## Supported Platforms
 
-### (1) File Sources
+Currently, the tool includes parsing manifests for:
+* Google - *Fully Supported*
+* Apple/iCloud - *Fully Supported*
 
-Define the physical file once, even if it contains multiple types of events.
+We are working on support for:
+* Facebook - *Beta*
+* Instagram - *Beta*
+* Discord - *Beta*
+* Snapchat - *Beta*
 
-```yaml
-files:
-  - id: "insta_devices"                 # Unique reference ID        
-    path: "path/to/devices.json"        # Relative path in the ZIP
-    parser:
-      format: "json"
-      json_root: "devices_devices[]"
-      drop_duplicates:                  # optional deduplication, follows pandas conventions
-        subset: ["Device ID"]
-        keep: "last"
-  - id: ....
-```
+For instructions on how to request your data exports, see the [How to Request Data Guide on our hosted site](https://wispr-lab.github.io/data-export-gui/#/how-to-request) (or `http://localhost:5001/#/how-to-request` when running locally). 
+We'll put some anonymized sample data up soon.
 
 
-The attributes under `parser:` describe the shape of the file and how the engine should parse it.
+## Security & Privacy
 
-- `format`:
-    - `json`: standard JSON, ok for nested dictionaries within dictionaries, but not nested lists.
-    - `json_label_values`: Special Meta format where data is stored in lists of `{label: "Key", value: "Val"}`.
-    - `jsonl`: newline delimited JSON format, common in Discord
-    - `csv`
-    - `csv_multi`: a very odd file that contains multiple CSV sections separated by titles and newlines, common in Apple
+When you import your data export file, it is never transmitted over the network; all unzipping, parsing, and database transactions happen entirely inside your local browser sandbox. The codebase does not make external API requests containing your data (such as querying a remote service to parse User Agents or geolocate IP addresses).
 
-- `json_root`: (json/json_label_values/jsonl only; optional): The path to the list of objects you want to parse. Use [] to denote a list (e.g., `account_activity_v2[]`).
-- `drop_duplicates`: (optional) logic to clean data at the source level. Follows pandas conventions. Requires:
-    - `subset`: list of columns to check
-    - `keep`: `first`, `last`, or `row_completeness` (keep the row with the most non-null row entries)
+Note that the [site](https://wispr-lab.github.io/data-export-gui/) is hosted via GitHub Pages, which may collect connection logs or track cookies. Furthermore, the Vue app currently loads some CSS assets and Pyodide package wheels from public CDNs, which implies an outbound network request. We are working on bundling these assets from the source and self-hosting our own version of the project soon with better privacy guarantees.
+
+## Contributing
+
+Feel free to submit UI bugs under Issues or post there if you're interested in contributing to the project.
+To add support for a new platform (or augment supported keys for an existing one), follow the instructions in the [Manifests Schema Guide](manifests/README.md). 
 
 
+## License
 
-### (2) Views
-
-A `view` defines how to transform a source into a strem of events/states (vaguely using ECS conventions). You can have multiple views for a single source (e.g., one for "Logins" and one for "Logouts").
-
-```yaml
-views:
-  - file: 
-      id: "insta_devices"           # Must match a file ID
-      where: {source: "status", op: "==", value: "active"}.  # Filtering (optional) only rows that match this condition
-
-    # hardcoded ECS values for every event in this view.
-    static:
-      event.kind: "asset"                           # 'event' (action) or 'asset' (state)
-      event.category: ["authentication", "host"]    # follow ECS conventions
-      event.type: ["info"]                          # follow ECS conventions
-      entity.type: "authenticated_device"
-    
-    # dynamic mappings
-    fields:
-      - {target: "entity.last_seen_timestamp", source: "'Last Login'.timestamp", type: "datetime"}
-      - {target: "user_agent.original", source: "'User Agent'.value", type: "string"}
-```
-
-#### file attributes:
-- `where` selects only rows that match this condition
-    - Simple: i.e., `{source: "event_type", op: "==", value: "login"}`
-    - Complex: Uses logic: any or all with a conditions list. 
-        - Supports operators: `==`, `startswith`, `contains`, `endswith`, `!=`. 
-        - Add more supported operators in `webapp/src/pyparser/base.py`.
-
-#### path traversal for source keys
-JSON (and jsonl) source fields support path traversal for nested dictionaries via dot notation and bracket notation. Use single quotes for keys containing spaces, e.g.:
-- `session.ip_address`
-- `'Device ID details'.first_seen_time`
-- `push_tokens[0].id`: Gets the id of the first item in the list.
-
-#### Static attributes:
-hardcoded ECS (Elastic Common Schema) values for every event in this view.
-- `event.kind`
-    - `event`: points in time (Logins, Messages, Clicks).
-    - `asset`: inventory items (Devices, Contacts). use this for "State" snapshots.
-        - for asset rows, map specific entity identifiers (see Custom Fields below).
-
-
-#### Dynamic field mappings:
-Every very item must have `target` (the standardized ECS field name) and a `source` (the raw data key in the file), and optionally a `type` and `transform`. Path traversal for `source` fields follows conventions above. 
-
-If transform is set to "coalesce" (or if source is a list), the engine will pick the first non-null value.
-- e.g., `{ ... source: ["push_tokens[0].id", "family_id"], transform: "coalesce"}`
-
-
-
-
-#### Custom ECS Fields currently used
-ECS isn't really built for this use case, so we have a couple of custom fields that we're consistently using at the moment
-
-- `device.id.[platform]`: internal device fingerprint (not user ID) for a specific platform --> also + .ad
-- `device.given_name`: user-defined nickname for device (e.g., "Bob's iPhone"), common in Apple
-- `device.imei`: International Mobile Equipment Identity
-- `device.meid`: Mobile Equipment Identifier
-- `entity.type`: for assets. use value `"authenticated_device"` for trusted device lists
-- `entity.[first/last]_seen_timestamp`: for assets, instead of `@timestamp`
-- `url.title`: for title of web page associated with a search/website
-- `client.session.id` and `client.session.type`
-- `user.email.new` and `user.email.old`
-- `device.screen_resolution`
-
+The Vue frontend is forked and heavily modified from Google's [Timesketch](https://timesketch.org/), specifically the `timesketch/frontend-ng` ([link](https://github.com/google/timesketch/tree/master/timesketch/frontend-ng)) directory., which is licensed under the Apache License 2.0. Files that have been modified from the original repository have been documented as such. This project, too, is protected by the same license. See [LICENSE](LICENSE) for details.
 

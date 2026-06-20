@@ -4,7 +4,6 @@ import * as events from './queries/events.js';
 import * as uploads from './queries/uploads.js';
 import * as comments from './queries/comments.js';
 import * as metadata from './queries/metadata.js';
-import * as devices from './queries/devices.js';
 import { loadConfig } from '../utils/config.js';
 
 
@@ -13,6 +12,7 @@ let messageId = 0;
 let activeDbName = 'userdata'; // Track which DB is active ('userdata' mode vs 'demo')
 
 function callPyodideWorker(method, args) {
+  /* Promise wrapper for worker.postMessage; matches response by auto-incrementing id and reconstructs Error objects from serialized error payloads. */
   return new Promise((resolve, reject) => {
     const id = messageId++;
     const handler = (e) => {
@@ -47,6 +47,7 @@ async function getDbPaths() {
 }
 
 export async function getDB() {
+  /* Lazy-creates the sqlite worker; returns an exec-only interface that resolves DB path per-call based on activeDbName. */
   if (!worker) {
     // [Database] Initializing
     worker = new Worker('./sqlite-worker.js');
@@ -137,6 +138,7 @@ export async function closeDB() {
 }
 
 export async function clearAllTables() {
+  /* Dynamically queries sqlite_master for all user tables and DELETEs their rows (not DROP — preserves schema). */
   const db = await getDB();
 
   // Query sqlite_master to get all tables dynamically

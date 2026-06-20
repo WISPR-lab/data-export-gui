@@ -15,6 +15,7 @@ export class OPFSManager {
 
 
   async init(platform) {
+    /* Resolves OPFS subdirectory from config.yaml, verifies it's not root (safety), and loads glob whitelist from Python manifest if platform given. */
     if (this.isInitialized) return;
 
     // 1. Read config and resolve OPFS storage path
@@ -97,9 +98,8 @@ export class OPFSManager {
   }
 
   async processZipUpload(zipFile, platform) {
+    /* Streams zip via fflate into OPFS; only whitelist-matching entries are decompressed and saved. Rejects if any write fails or storageDir is empty after writes report success. */
     await this.init(platform);
-    // [OPFSManager] Processing upload
-
     return new Promise((resolve, reject) => {
       const savedPromises = [];
       let totalSeen = 0;
@@ -177,6 +177,7 @@ export class OPFSManager {
 
 
   async clearTempStorage() {
+    /* Deletes all entries in the temp storage subdirectory only; refuses to operate if storageDir points to OPFS root. */
     try {
       if (!this.isInitialized) {
         await this.init(); // no platform -> skips whitelist, just resolves dirs
@@ -203,6 +204,7 @@ export class OPFSManager {
 
 
   async clearDatabase() {
+    /* Removes the main DB file plus WAL/SHM journals from OPFS root; ignores NotFoundError for missing journals. */
     try {
       if (!this.isInitialized) {
         await this.init();
@@ -231,11 +233,11 @@ export class OPFSManager {
   }
 
   async nukeAll() {
+    /* Recursively deletes everything in OPFS root and resets all instance state. */
     try {
       const root = await navigator.storage.getDirectory();
       const entries = [];
       for await (const [name] of root.entries()) entries.push(name);
-      // [OPFSManager] Nuking OPFS
       for (const name of entries) {
         await root.removeEntry(name, { recursive: true });
       }
@@ -243,7 +245,6 @@ export class OPFSManager {
       this.storageDir = null;
       this.dbFilename = null;
       this.isInitialized = false;
-      // [OPFSManager] OPFS cleared
     } catch (error) {
       console.error('[OPFSManager] Failed to nuke OPFS:', error);
       throw error;
@@ -253,6 +254,7 @@ export class OPFSManager {
 
   
   async _saveFileEntry(filename, fflateFile) {
+    /* Chains fflate ondata chunks into sequential OPFS writes with a 10s stall timeout; verifies non-zero file size on disk after close. */
     console.log(`[OPFSManager] _saveFileEntry START: ${filename}`);
 
     let fileHandle;
@@ -267,7 +269,6 @@ export class OPFSManager {
     let writable;
     try {
       writable = await fileHandle.createWritable();
-      // console.log(`[OPFSManager] Opened writable stream for: ${filename}`);
     } catch (e) {
       console.error(`[OPFSManager] createWritable FAILED for ${filename}:`, e);
       throw e;
@@ -279,9 +280,7 @@ export class OPFSManager {
       let chunkCount = 0;
       let gotFinal = false;
 
-      // Safety timeout — if fflate never calls ondata with final=true
-
-      let timeout;
+      let timeout; // Safety timeout — if fflate never calls ondata with final=true
       const resetTimeout = () => {
         if (timeout) clearTimeout(timeout);
         timeout = setTimeout(() => {
@@ -320,7 +319,6 @@ export class OPFSManager {
             .then(async () => {
               // Verify the file actually persisted
               const verifyFile = await fileHandle.getFile();
-              // [OPFSManager] File write complete
               if (verifyFile.size === 0 && totalBytes > 0) {
                 console.error(`[OPFSManager] FILE IS EMPTY ON DISK despite writing ${totalBytes} bytes!`);
               }
@@ -333,7 +331,6 @@ export class OPFSManager {
         }
       };
 
-      // console.log(`[OPFSManager] Starting fflate decompression for: ${filename}`);
       fflateFile.start();
     });
   }

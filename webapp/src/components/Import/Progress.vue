@@ -23,7 +23,7 @@ Displays status, progress bar, and current step message.
 
 <script>
 export default {
-  name: 'UploadProgressDialog',
+  name: 'ImportProgress',
   props: {
     open: {
       type: Boolean,

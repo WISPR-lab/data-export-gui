@@ -20,6 +20,7 @@ async function getSqlite() {
 }
 
 async function ensureSchema(db, schemaPath, dbPath) {
+  /* Runs schema SQL once per dbPath lifetime (tracked by initializedDbs Set); fetches schema from a relative URL derived from schemaPath. */
   if (initializedDbs.has(dbPath)) return; // Skip if already initialized
   try {
     const fetchPath = schemaPath.startsWith('/') ? `.${schemaPath}` : `./${schemaPath}`;

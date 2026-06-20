@@ -5,7 +5,7 @@ import os
 
 # Add python_core to path
 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(repo_root, 'python_core'))
+sys.path.insert(0, os.path.join(repo_root, "python_core"))
 
 from field_normalization.user_agent import UserAgentParser
 
@@ -29,17 +29,23 @@ print("=" * 80)
 
 for i, ua_string in enumerate(test_cases, 1):
     print(f"\n[Test Case {i}]")
-    print(f"Input UA: {ua_string[:100]}..." if len(ua_string) > 100 else f"Input UA: {ua_string}")
+    print(
+        f"Input UA: {ua_string[:100]}..."
+        if len(ua_string) > 100
+        else f"Input UA: {ua_string}"
+    )
     print()
-    
-    result = parser.parse({'user_agent_original': ua_string}, 
-                           file_info={'manifest_file_id': 'ggl_access_log_activity'})
-    
+
+    result = parser.parse(
+        {"user_agent_original": ua_string},
+        file_info={"manifest_file_id": "ggl_access_log_activity"},
+    )
+
     if result:
         print("Parsed fields:")
         for key in sorted(result.keys()):
             print(f"  {key}: {result[key]}")
     else:
         print("(No fields parsed)")
-    
+
     print("-" * 80)

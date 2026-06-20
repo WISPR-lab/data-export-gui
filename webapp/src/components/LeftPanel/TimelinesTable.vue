@@ -39,7 +39,7 @@ limitations under the License.
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
       <span> <v-icon left>mdi-folder-zip-outline</v-icon> Data Exports </span>
-      <!-- <ts-upload-timeline-form v-if="expanded">
+      <!-- <new-data-export-button v-if="expanded">
         <template v-slot="slotProps">
           <v-btn
             v-if="expanded || allTimelines.length === 0"
@@ -53,7 +53,7 @@ limitations under the License.
             <v-icon title="Add timeline">mdi-plus</v-icon>
           </v-btn>
         </template>
-      </ts-upload-timeline-form>
+      </new-data-export-button>
       <span v-else class="float-right" style="margin-right: 10px">
         <small class="ml-3"
           ><strong>{{ allTimelines.length }}</strong></small
@@ -180,7 +180,7 @@ limitations under the License.
 import EventBus from '../../event-bus.js'
 import DB from '@/database/index.js'
 
-import TsUploadTimelineForm from '../UploadForm/UploadFormButton.vue'
+import NewDataExportButton from '../Import/NewDataExportButton.vue'
 import TsTimelineComponent from '../Explore/TimelineComponent.vue'
 
 export default {
@@ -188,7 +188,7 @@ export default {
     iconOnly: Boolean,
   },
   components: {
-    TsUploadTimelineForm,
+    NewDataExportButton,
     TsTimelineComponent,
   },
   computed: {

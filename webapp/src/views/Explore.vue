@@ -126,7 +126,7 @@ limitations under the License.
             <v-icon v-else title="Show Timelines">mdi-chevron-down</v-icon>
           </v-btn>
           <span class="timeline-header">
-            <ts-upload-timeline-form-button btn-type="small"></ts-upload-timeline-form-button>
+            <new-data-export-button btn-type="small"></new-data-export-button>
             <v-dialog v-model="addManualEvent" width="600">
               <template v-slot:activator="{ on, attrs }">
                 <!-- <v-btn small text rounded color="primary" v-bind="attrs" v-on="on">
@@ -310,11 +310,10 @@ import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.v
 import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
 import TsTimelinePicker from '../components/Explore/TimelinePicker.vue'
 import TsFilterMenu from '../components/Explore/FilterMenu.vue'
-import TsUploadTimelineFormButton from '../components/UploadForm/UploadFormButton.vue'
+import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
 import TsAddManualEvent from '../components/Explore/AddManualEvent.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsSearchHelpCard from '../components/Explore/SearchHelpCard.vue'
-import DeleteAllDataButton from '../components/Delete/DeleteAllDataButton.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -337,11 +336,10 @@ export default {
     TsSearchDropdown,
     TsTimelinePicker,
     TsFilterMenu,
-    TsUploadTimelineFormButton,
+    NewDataExportButton,
     TsAddManualEvent,
     TsEventList,
     TsSearchHelpCard,
-    DeleteAllDataButton,
   },
   props: ['sketchId'],
   data() {
@@ -414,7 +412,6 @@ export default {
       return this.$store.state.activeContext
     },
     activeTimelines() {
-      // Sort alphabetically based on timeline name.
       let timelines = [...this.sketch.timelines]
       return timelines.sort(function (a, b) {
         return a.name.localeCompare(b.name)
@@ -475,14 +472,11 @@ export default {
         this.currentQueryString = searchEvent.queryString
       }
 
-      // Preserve user defined filter instead of resetting, if it exist.
       if (!searchEvent.queryFilter) {
         searchEvent.queryFilter = this.currentQueryFilter
       }
       this.currentQueryFilter = searchEvent.queryFilter
 
-      // Add any chips from the search event and make sure they are not in the
-      // current filter already. E.g. don't add a star filter twice.
       if (searchEvent.chip) {
         const chipExist = this.currentQueryFilter.chips.find((chip) => chip.value === searchEvent.chip.value)
         if (!chipExist) {
@@ -490,11 +484,9 @@ export default {
         }
       }
 
-      // Preserve user defined item count instead of resetting.
       this.currentQueryFilter.size = this.currentItemsPerPage
       this.currentQueryFilter.terminate_after = this.currentItemsPerPage
 
-      // Run the search
       if (searchEvent.doSearch) {
         if (searchEvent.incognito) {
           this.search(true, true)

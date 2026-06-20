@@ -1,6 +1,7 @@
 import { OPFSManager } from '@/storage/opfs_manager.js'
 
 export function initShutdownDetection(store) {
+  /* Pings other tabs via BroadcastChannel; nukes OPFS + localStorage if no tab responds within 500ms (cold start only, skipped on refresh). */
   const shutdownChannel = new BroadcastChannel('shutdown-detection')
   
   // Always respond to pings from other tabs

@@ -1,17 +1,22 @@
 import os
 import hashlib
 
-def exists(path):
-    # checks if a path (file OR directory) exists without triggering os.stat().
-    if not path or path == '/':
+"""
+Firefox pyodide can't handle os.stat(). So this gets around all the file utils that require it. 
+Oh well.
+"""
+
+
+def exists(path: str) -> bool:
+    """checks if a path (file OR directory) exists without triggering os.stat()."""
+    if not path or path == "/":
         return True
-        
-    parent = os.path.dirname(path) or '.'
+
+    parent = os.path.dirname(path) or "."
     filename = os.path.basename(path)
-    
-    # If path is something like "/mnt/data/", basename is empty.
-    # We handle that by checking the parent's parent.
-    if not filename: 
+
+    # If path is something like "/mnt/data/", basename is empty. We handle that by checking the parent's parent.
+    if not filename:
         return exists(parent)
 
     try:
@@ -20,12 +25,13 @@ def exists(path):
     except (FileNotFoundError, OSError):
         return False
 
-def isfile(path):
-    # Checks if path is a file. In your flattened OPFS temp store,  if it's in the list, it's a file.
+
+def isfile(path: str) -> bool:
+    """Checks if path is a file. In your flattened OPFS temp store,  if it's in the list, it's a file."""
     return exists(path)
 
 
-def getsize(path):
+def getsize(path: str) -> int:
     try:
         fd = os.open(path, os.O_RDONLY)
         size = os.lseek(fd, 0, os.SEEK_END)
@@ -34,12 +40,13 @@ def getsize(path):
     except OSError:
         return 0
 
-def read_bytes(path):
+
+def read_bytes(path: str) -> bytes:
     fd = os.open(path, os.O_RDONLY)
     try:
         size = os.lseek(fd, 0, os.SEEK_END)
         os.lseek(fd, 0, os.SEEK_SET)
-        
+
         chunks = []
         bytes_read = 0
         while bytes_read < size:
@@ -48,22 +55,23 @@ def read_bytes(path):
                 break
             chunks.append(chunk)
             bytes_read += len(chunk)
-            
+
         return b"".join(chunks)
     finally:
         os.close(fd)
 
-def read_text(path, encoding='utf-8', errors='replace'):
+
+def read_text(path: str, encoding: str = "utf-8", errors: str = "replace") -> str:
     raw_bytes = read_bytes(path)
     return raw_bytes.decode(encoding, errors=errors)
 
 
-def file_hash(filepath, alg="sha256"):
+def file_hash(filepath: str, alg: str = "sha256") -> str:
     hash_object = hashlib.new(alg)
     fd = os.open(filepath, os.O_RDONLY)
     size = os.lseek(fd, 0, os.SEEK_END)
     os.lseek(fd, 0, os.SEEK_SET)
-    
+
     bytes_read = 0
     while bytes_read < size:
         chunk = os.read(fd, min(65536, size - bytes_read))
@@ -71,6 +79,6 @@ def file_hash(filepath, alg="sha256"):
             break
         hash_object.update(chunk)
         bytes_read += len(chunk)
-        
+
     os.close(fd)
     return hash_object.hexdigest()

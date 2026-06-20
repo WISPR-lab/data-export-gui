@@ -15,12 +15,33 @@ export function getPyodideWorker() {
   return pyodideWorker;
 }
 
-export function callPyodideWorker(command, args) {
+export function callPyodideWorker(command, args, onProgress, timeoutMs) {
+  /* Routes progress events to onProgress callback; rejects with WORKER_TIMEOUT errorType if timeoutMs elapses (default 60s, 0 disables). */
+  const timeoutVal = timeoutMs === undefined ? 60000 : timeoutMs;
   return new Promise((resolve, reject) => {
     const worker = getPyodideWorker();
     const id = workerMessageId++;
+    
+    let timer = null;
+    if (timeoutVal > 0) {
+      timer = setTimeout(() => {
+        worker.removeEventListener('message', handler);
+        const error = new Error(`Worker timeout on ${command}`);
+        error.errorType = 'WORKER_TIMEOUT';
+        reject(error);
+      }, timeoutVal);
+    }
+
     const handler = (event) => {
       if (event.data.id === id) {
+        if (event.data.type === 'progress') {
+          if (onProgress) {
+            onProgress({ stage: event.data.stage, progress: event.data.progress });
+          }
+          return;
+        }
+
+        if (timer) clearTimeout(timer);
         worker.removeEventListener('message', handler);
         if (event.data.success) {
           resolve(event.data.result);
@@ -46,34 +67,12 @@ export function terminatePyodideWorker() {
   }
 }
 
-function postToWorker(command, args) {
-  return new Promise((resolve, reject) => {
-    const worker = getPyodideWorker();
-    const id = workerMessageId++;
-    const timeout = setTimeout(() => {
-      worker.removeEventListener('message', handler);
-      reject(new Error(`Worker timeout on ${command}`));
-    }, 60000);
-    const handler = (event) => {
-      if (event.data.id === id) {
-        clearTimeout(timeout);
-        worker.removeEventListener('message', handler);
-        if (event.data.success) {
-          resolve(event.data.result);
-        } else {
-          const error = new Error(event.data.error);
-          error.errorType = event.data.errorType || 'UNKNOWN_ERROR';
-          reject(error);
-        }
-      }
-    };
-    worker.addEventListener('message', handler);
-    worker.postMessage({ id, command, args });
-  });
-}
 
-export async function executeUpload(file, platform, opfsManager, callbacks = {}) {
-  const { onProgress, onError } = callbacks;
+export async function executeUpload(file, platform, opfsManager, callbacks) {
+  /* Orchestrates ZIP→OPFS extraction (JS side), then delegates extract/map/normalize/group to Pyodide, then cleans temp storage. Attaches uploadId to errors for upstream cleanup. */
+  const cb = callbacks || {};
+  const onProgress = cb.onProgress;
+  const onError = cb.onError;
   let uploadId;
 
   try {
@@ -82,35 +81,9 @@ export async function executeUpload(file, platform, opfsManager, callbacks = {})
     await opfsManager.init(platform);
     await opfsManager.processZipUpload(file, platform);
 
-    // Step 2: Extract data from ZIP
-    if (onProgress) onProgress({ stage: 'extract', progress: 30 });
-    const extractResult = await postToWorker('extract', { platform, givenName: file.name });
-    if (extractResult.status !== 'success') {
-      throw new Error(extractResult.error || 'Extract failed');
-    }
-    uploadId = extractResult.upload_id;
-    if (!uploadId) throw new Error('No upload ID returned');
-
-    // Step 2.5: Semantic mapping
-    if (onProgress) onProgress({ stage: 'semantic_map', progress: 40 });
-    const mapResult = await postToWorker('semantic_map', { platform, uploadId });
-    if (mapResult.status !== 'success') {
-      throw new Error(mapResult.error || 'Semantic mapping failed');
-    }
-
-    // Step 3: Normalize fields
-    if (onProgress) onProgress({ stage: 'normalize', progress: 60 });
-    const normalizeResult = await postToWorker('normalize', { uploadId });
-    if (normalizeResult.status !== 'success') {
-      throw new Error(normalizeResult.error || 'Normalize failed');
-    }
-
-    // Step 4: Device grouping
-    if (onProgress) onProgress({ stage: 'group', progress: 85 });
-    const groupResult = await postToWorker('group', { uploadId });
-    if (groupResult.status !== 'success') {
-      throw new Error(groupResult.error || 'Device grouping failed');
-    }
+    // Consolidated Step: Run entire pipeline in Pyodide (extract, semantic map, normalize, group)
+    const result = await callPyodideWorker('run_pipeline', { platform, givenName: file.name }, onProgress);
+    uploadId = result.upload_id;
 
     // Step 6: Cleanup OPFS
     if (onProgress) onProgress({ stage: 'cleanup', progress: 90 });
@@ -119,9 +92,9 @@ export async function executeUpload(file, platform, opfsManager, callbacks = {})
     return {
       success: true,
       uploadId,
-      events_count: mapResult.events_count || 0,
-      devices_count: mapResult.devices_count || 0,
-      partial_errors: extractResult.partial_errors || []
+      events_count: result.events_count || 0,
+      devices_count: result.devices_count || 0,
+      partial_errors: result.partial_errors || []
     };
   } catch (error) {
     const errorMsg = error.message || String(error);

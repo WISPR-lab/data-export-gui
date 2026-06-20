@@ -45,18 +45,16 @@
       >
         <v-expansion-panel-header class="pa-4" @click="onDeviceExpand">
           <template v-slot:default="{ open }">
-            <device-profile-header :device="dev" :open="open" :ua-masking-text="uaMaskingText" @showJSON="showDeviceJSON" />
+            <profile-header :device="dev" :open="open" :ua-masking-text="uaMaskingText" @showJSON="showDeviceJSON" />
           </template>
         </v-expansion-panel-header>
 
         <v-expansion-panel-content class="grey lighten-5 border-top">
-          <device-profile-dropdown
+          <profile-dropdown
             :device="dev"
             :ua-masking-text="uaMaskingText"
             @change="saveDeviceChanges(dev)"
             @see-all-events="goToExplore(dev)"
-            @unmerge="handleUnmerge(dev, $event)"
-            @batch-unmerge="handleBatchUnmerge(dev, $event)"
             @move-instances="openMoveDialog(dev, $event)"
             @create-profile="openCreateDialog(dev, $event)"
             @showJSON="showDeviceJSON"
@@ -65,14 +63,14 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <device-group-modal 
+    <group-modal 
       v-model="groupDialog" 
       :mode="editMode"
       :selected-instance-ids-to-move="selectedInstanceIdsToMove"
       :existing-profiles="devices"
       :source-profile-id="sourceProfileId"
-      :is-loading="mergeLoading"
-      :error="mergeError"
+      :is-loading="groupLoading"
+      :error="groupError"
       @confirm="confirmGroup"
       @closed="onModalClosed"
     />
@@ -90,29 +88,28 @@
     <p class="text-body-2 text--secondary mb-4">
       Edits you've made to device instances and profiles.
     </p>
-    <user-device-edits-table :history-logs="historyLogs" :devices="devices" />
+    <edits-history-table :history-logs="historyLogs" :devices="devices" />
   </v-container>
 </template>
 
 <script>
-import DeviceProfileDropdown from '@/components/Devices/DeviceProfileDropdown.vue';
-import DeviceProfileHeader from '@/components/Devices/DeviceProfileHeader.vue';
-import DeviceGroupModal from '@/components/Devices/DeviceGroupModal.vue';
+import ProfileDropdown from '@/components/Devices/ProfileDropdown.vue';
+import ProfileHeader from '@/components/Devices/ProfileHeader.vue';
+import GroupModal from '@/components/Devices/GroupModal.vue';
 import JSONModal from '@/components/Devices/JSONModal.vue';
-import UserDeviceEditsTable from '@/components/Devices/UserDeviceEditsTable.vue';
+import EditsHistoryTable from '@/components/Devices/EditsHistoryTable.vue';
 import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
 import { getUserDeviceEdits, moveInstancesToProfile, createProfileWithInstances } from '@/database/queries/user_device_edits.js';
-import { callPyodideWorker } from '@/pyodide/pyodide-client';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'Devices',
   components: {
-    DeviceProfileDropdown,
-    DeviceProfileHeader,
-    DeviceGroupModal,
+    ProfileDropdown,
+    ProfileHeader,
+    GroupModal,
     'json-modal': JSONModal,
-    UserDeviceEditsTable
+    EditsHistoryTable
   },
   data() {
     return {
@@ -120,8 +117,8 @@ export default {
       editMode: 'move', // 'move' or 'create'
       selectedInstanceIdsToMove: [],
       sourceProfileId: '',
-      mergeLoading: false,
-      mergeError: null,
+      groupLoading: false,
+      groupError: null,
       devices: [],
       historyLogs: [],
       showJSONModal: false,
@@ -180,88 +177,25 @@ export default {
         console.error('Failed to save device changes:', err);
       }
     },
-    async handleUnmerge(device, atomicId) {
-      try {
-        const result = await callPyodideWorker('unmerge', {
-          profileId: device.id,
-          atomicId: atomicId
-        });
-        
-        if (result && result.status === 'ok') {
-          // Log unlink action
-          const summaryText = 'Session [ID: ' + atomicId.substring(0, 4) + '...]';
-          await createUserDeviceEdit({
-            action_type: 'move_instances',
-            instance_ids: [atomicId],
-            instance_summaries: [summaryText],
-            source_profile_id: device.id,
-            source_profile_label: this.getProfileLabelById(device.id),
-            target_profile_id: result.new_profile_id || null,
-            target_profile_label: 'New Standalone Profile',
-            reason: 'Unlinked session from profile'
-          });
-          
-          await this.fetchDevices();
-          await this.fetchHistory();
-        } else {
-          console.error('Unmerge failed:', result);
-        }
-      } catch (error) {
-        console.error('Unmerge error:', error);
-      }
-    },
-    async handleBatchUnmerge(device, atomicIds) {
-      try {
-        let successCount = 0;
-        for (const atomicId of atomicIds) {
-          const result = await callPyodideWorker('unmerge', {
-            profileId: device.id,
-            atomicId: atomicId
-          });
-          if (result && result.status === 'ok') {
-            // Log unlink action
-            const summaryText = 'Session [ID: ' + atomicId.substring(0, 4) + '...]';
-            await createUserDeviceEdit({
-              action_type: 'move_instances',
-              instance_ids: [atomicId],
-              instance_summaries: [summaryText],
-              source_profile_id: device.id,
-              source_profile_label: this.getProfileLabelById(device.id),
-              target_profile_id: result.new_profile_id || null,
-              target_profile_label: 'New Standalone Profile',
-              reason: 'Unlinked session from profile (Batch action)'
-            });
-            successCount++;
-          } else {
-            console.error('Batch unmerge failed for atomicId:', atomicId, result);
-          }
-        }
-        if (successCount > 0) {
-          await this.fetchDevices();
-          await this.fetchHistory();
-        }
-      } catch (error) {
-        console.error('Batch unmerge error:', error);
-      }
-    },
+
     openMoveDialog(device, instanceIds) {
       this.editMode = 'move';
       this.selectedInstanceIdsToMove = instanceIds;
       this.sourceProfileId = device.id;
-      this.mergeError = null;
+      this.groupError = null;
       this.groupDialog = true;
     },
     openCreateDialog(device, instanceIds) {
       this.editMode = 'create';
       this.selectedInstanceIdsToMove = instanceIds;
       this.sourceProfileId = device.id;
-      this.mergeError = null;
+      this.groupError = null;
       this.groupDialog = true;
     },
     async confirmGroup(payload) {
       try {
-        this.mergeLoading = true;
-        this.mergeError = null;
+        this.groupLoading = true;
+        this.groupError = null;
 
         let result;
         if (payload.mode === 'move') {
@@ -287,15 +221,15 @@ export default {
           await this.fetchDevices();
           await this.fetchHistory();
         } else if (result) {
-          this.mergeError = result.message || 'Action failed';
+          this.groupError = result.message || 'Action failed';
         } else {
-          this.mergeError = 'Action failed: no response from database';
+          this.groupError = 'Action failed: no response from database';
         }
       } catch (error) {
-        this.mergeError = (error && error.message) || 'Action failed';
+        this.groupError = (error && error.message) || 'Action failed';
         console.log('[confirmGroup] Error:', error);
       } finally {
-        this.mergeLoading = false;
+        this.groupLoading = false;
       }
     },
     onModalClosed() {

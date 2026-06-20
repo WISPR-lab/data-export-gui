@@ -6,11 +6,9 @@ AUTH_EVENT_ACTIONS = {
     "user_logout",
     "session_start",
     "session_end",
-    "password"
+    "password",
 }
-AUTH_EVENT_CATEGORIES = {
-    "authentication", "session"
-}
+AUTH_EVENT_CATEGORIES = {"authentication", "session"}
 AUTH_DEVICE_ATTR_KEYS = {
     "norm__model_identifier",
     "norm__model_name",
@@ -18,7 +16,7 @@ AUTH_DEVICE_ATTR_KEYS = {
     "norm__os_name",
     "norm__os_type",
     # "norm__client_name",
-    # "device_model_identifier", 
+    # "device_model_identifier",
     # "device_model_name",
     # "device_manufacturer",
     # "user_agent_device_model_name",
@@ -26,7 +24,7 @@ AUTH_DEVICE_ATTR_KEYS = {
     # "user_agent_device_model_identifier",
     # "user_agent_os_name",
     # "user_agent_os_type",
-    "user_agent_device_type"
+    "user_agent_device_type",
 }
 
 
@@ -34,17 +32,17 @@ def treat_event_as_auth_device(event_row: dict) -> bool:
     """TODO docs"""
     action = event_row.get("action", "").lower()
     categories = event_row.get("category", [])
-    if isinstance(categories, str) and categories.startswith('['):
+    if isinstance(categories, str) and categories.startswith("["):
         categories = json.loads(categories.strip())
     categories = [str(c).strip().lower() for c in categories]
-    
-    is_auth_event = \
-        any(re.search(re.escape(a), action) for a in AUTH_EVENT_ACTIONS) \
-        or any(c in AUTH_EVENT_CATEGORIES for c in categories)
-    
+
+    is_auth_event = any(
+        re.search(re.escape(a), action) for a in AUTH_EVENT_ACTIONS
+    ) or any(c in AUTH_EVENT_CATEGORIES for c in categories)
+
     # if not is_auth_event:
     #     return False
-    
+
     # now check if has enough attributes
     attrs = event_row.get("attributes", {})
     if isinstance(attrs, str):
@@ -52,9 +50,9 @@ def treat_event_as_auth_device(event_row: dict) -> bool:
             attrs = json.loads(attrs)
         except Exception:
             attrs = {}
-    
+
     attr_keys = {k for k, v in attrs.items() if v is not None and str(v).strip() != ""}
     if attr_keys.intersection(AUTH_DEVICE_ATTR_KEYS):
         return True
-    
+
     return False

@@ -1,10 +1,8 @@
-
 import sys
 import os
+
 sys.path.append(os.path.dirname(__file__))
 from utils.misc import clean_target
-
-
 
 
 def message(event_action, **kwargs):
@@ -21,7 +19,7 @@ def message(event_action, **kwargs):
         "fail": "failed",
     }
 
-    words = cleaned_action.split('_')
+    words = cleaned_action.split("_")
     translated_words = [translations.get(w, w) for w in words]
     base_action = " ".join([w for w in translated_words if w])
 
@@ -40,8 +38,3 @@ def message(event_action, **kwargs):
         result_message = base_action
 
     return result_message
-
-    
-
-
-

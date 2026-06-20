@@ -24,11 +24,10 @@ import store from './store.js'
 import '@/mixins/snackBar'
 
 import vuetify from '@/plugins/vuetify' // path to vuetify export
-import SafeExitButton from '@/components/Delete/SafeExitButton.vue'
+import SafeExitButton from '@/components/SafeExitButton.vue'
 
 require('./assets/main.scss')
 require('./assets/markdown.scss')
-require('./utils/RegisterAppComponents')
 require('./utils/RegisterAppFilters')
 
 // Register global components
