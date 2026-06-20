@@ -19,10 +19,16 @@ def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -
             d[col[0]] = val
     return d
 
+
 class DatabaseSession:
-    """ synchronous context manager for SQLite """
+    """synchronous context manager for SQLite"""
+
     def __init__(
-        self, db_path: str = None, schema_path: str = None, use_dict_factory: bool = False, json_columns: list = None
+        self,
+        db_path: str = None,
+        schema_path: str = None,
+        use_dict_factory: bool = False,
+        json_columns: list = None,
     ) -> None:
         self.db_path_orig = db_path or get_config_value("DB_PATH")
         self.db_path_target = None
@@ -63,7 +69,7 @@ class DatabaseSession:
         return params
 
     def _firefox_workaround_opfs_to_memfs(self) -> str:
-        """ Workaround: Mirror OPFS to internal MEMFS to avoid Firefox stat() crash """
+        """Workaround: Mirror OPFS to internal MEMFS to avoid Firefox stat() crash"""
         os.makedirs("/tmp", exist_ok=True)
 
         if safefileutils.exists(self.db_path_orig):

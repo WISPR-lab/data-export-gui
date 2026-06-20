@@ -59,7 +59,7 @@ def compare_redacted_vals(*vals) -> bool:
 
 
 def get_unredacted_val(vals: list) -> tuple:
-    """ Returns value and/or error message """
+    """Returns value and/or error message"""
     if not compare_redacted_vals(vals):
         return "", "error: values do not match"
     for v in vals:

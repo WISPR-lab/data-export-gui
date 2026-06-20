@@ -10,6 +10,7 @@ from . import profiles
 
 from python_core.utils.pyodide_utils import get_config_value
 
+
 def group(upload_id: str, db_path: str = None) -> None:
     db_path = db_path or get_config_value("DB_PATH")
     json_columns = [
@@ -18,7 +19,7 @@ def group(upload_id: str, db_path: str = None) -> None:
         "upload_ids",
         "file_ids",
         "devices_raw_ids",
-        #"atomic_devices_ids",
+        # "atomic_devices_ids",
         "tags",
         "labels",
     ]

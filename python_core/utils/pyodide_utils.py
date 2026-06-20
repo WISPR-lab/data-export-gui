@@ -1,4 +1,3 @@
-
 def init_pyodide() -> None:
     try:
         from extractors import worker as extractor_worker
@@ -18,7 +17,6 @@ def load_manifests() -> list:
     manifests_dir = builtins.MANIFESTS_DIR
     yaml_files = [f for f in os.listdir(manifests_dir) if f.endswith(".yaml")]
     return yaml_files
-
 
 
 def get_config_value(name: str, default: str = "NONE FOUND"):

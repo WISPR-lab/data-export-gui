@@ -237,6 +237,7 @@ def get_edges(df: pd.DataFrame, run_pass2: bool = None) -> pd.DataFrame:
 
     if run_pass2 is None:
         from python_core.utils.pyodide_utils import get_config_value
+
         run_pass2 = get_config_value("ENABLE_DEVICE_GROUPING_PASS2", False)
 
     pass1_edges, subgraph_df = _pass1_client(events_df)

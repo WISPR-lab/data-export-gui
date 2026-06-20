@@ -9,7 +9,6 @@ import python_core.utils.safe_file_utils as safefileutils
 from python_core.utils.pyodide_utils import get_config_value
 
 
-
 try:
     from manifest import Manifest
     from db_session import DatabaseSession

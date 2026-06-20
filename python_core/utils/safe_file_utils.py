@@ -6,8 +6,9 @@ Firefox pyodide can't handle os.stat(). So this gets around all the file utils t
 Oh well.
 """
 
+
 def exists(path: str) -> bool:
-    """ checks if a path (file OR directory) exists without triggering os.stat()."""
+    """checks if a path (file OR directory) exists without triggering os.stat()."""
     if not path or path == "/":
         return True
 
@@ -26,7 +27,7 @@ def exists(path: str) -> bool:
 
 
 def isfile(path: str) -> bool:
-    """ Checks if path is a file. In your flattened OPFS temp store,  if it's in the list, it's a file."""
+    """Checks if path is a file. In your flattened OPFS temp store,  if it's in the list, it's a file."""
     return exists(path)
 
 
