@@ -115,39 +115,48 @@ os.remove(zip_path)
 }
 
 
+async function installDeps(pyodide) {
+  /* Loads Pyodide builtins first, then micropip-installs the small browser-only list. */
 
+  const packages = [
+    { spec: 'micropip', source: 'builtin' },
+    { spec: 'pyyaml', source: 'builtin' },
+    { spec: 'regex', source: 'builtin' },
+    { spec: 'aiohttp', source: 'builtin' },
+    { spec: 'pytz', source: 'builtin' },
+    { spec: 'pandas', source: 'builtin' },
+    { spec: 'sqlite3', source: 'builtin' },
+    { spec: 'hjson', source: 'micropip' },
+    { spec: 'json5', source: 'micropip' },
+    { spec: 'tenacity', source: 'micropip' },
+    { spec: 'rich==13.7.1', source: 'micropip' },
+    { spec: "typer==0.9.0", source: "micropip" },
+    { spec: 'exrex', source: 'micropip' },
+    { spec: 'beautifulsoup4', source: 'micropip' },
+    { spec: 'packaging', source: 'micropip' },
+  ];
 
-async function loadRequirements(pyInstance, pyCorePath) {
-  try {
-    const requirementsPath = `${pyCorePath}/requirements.txt`;
-    const content = pyInstance.FS.readFile(requirementsPath, { encoding: 'utf8' });
-    return content
-      .split('\n')
-      .map(line => line.split('#')[0].trim())
-      .filter(line => line && !line.startsWith('-'));
-  } catch (error) {
-    console.error(`[Pyodide Worker] Failed to load requirements.txt: ${error.message}`);
-    return [];
-  }
-}
-
-
-
-async function installDeps(pyodide, pyCorePath) {
-  /* Loads builtins first, then micropip-installs remaining requirements.txt entries; posts packageInstallFailure for any that fail. */
-  const builtinModules = ['pyyaml', 'pytz', 'pandas', 'sqlite3', 'regex', 'aiohttp', 'micropip'];
-  await pyodide.loadPackage(builtinModules);
-  const micropip = pyodide.pyimport('micropip');
-  const requirements = await loadRequirements(pyodide, pyCorePath);
   const failedPackages = [];
-  for (const pkg of requirements) {
-    if (!builtinModules.includes(pkg)) {
-      try {
-        await micropip.install(pkg);
-      } catch (error) {
-        console.error(`[Pyodide Worker] Failed to install ${pkg}:`, error.message || String(error));
-        failedPackages.push(pkg);
-      }
+  for (const entry of packages) {
+    if (entry.source !== 'builtin') continue;
+    try {
+      await pyodide.loadPackage(entry.spec);
+    } catch (error) {
+      console.error(`[Pyodide Worker] Failed to load ${entry.spec}:`, error.message || String(error));
+      failedPackages.push(entry.spec);
+    }
+  }
+
+  const micropip = pyodide.pyimport('micropip');
+  for (const entry of packages) {
+    if (entry.source !== 'micropip') {
+      continue;
+    }
+    try {
+      await micropip.install(entry.spec);
+    } catch (error) {
+      console.error(`[Pyodide Worker] Failed to install ${entry.spec}:`, error.message || String(error));
+      failedPackages.push(entry.spec);
     }
   }
   if (failedPackages.length > 0) {
@@ -266,7 +275,7 @@ builtins.IS_FIREFOX = ${isFirefox? 'True' : 'False'}
 
     pyodide.FS.mkdir(config.paths.manifests);
 
-    await installDeps(pyodide, pyCorePath);
+    await installDeps(pyodide);
     await installUAExtract(pyodide);
 
     await showPackages(pyodide);

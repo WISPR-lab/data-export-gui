@@ -68,12 +68,6 @@ Finish the setup either with or without Docker:
    uv run pytest tests/python/test_device_grouping2.py::test_group_pipeline_outputs
    ```
 
-3. **Sync dependency updates to Pyodide**:
-   If you change dependencies inside `pyproject.toml`, update `requirements.txt` to keep the in-browser Pyodide runtime in lockstep:
-   ```bash
-   uv pip compile pyproject.toml -o python_core/requirements.txt --no-header
-   ```
-
 ## Architecture
 
 To protect user privacy, this tool does not upload user's data files to a server. Instead, it runs a Python environment that processes the database directly inside the browser using **Pyodide** (a port of CPython and its packages to WebAssembly).

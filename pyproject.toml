@@ -1,5 +1,5 @@
 [project]
-name = "takeout-tool-core"
+name = "data-export-gui"
 version = "0.1.0"
 description = "Python parsing engine for Takeout Tool (Pyodide compatible)"
 requires-python = "==3.12.*"
