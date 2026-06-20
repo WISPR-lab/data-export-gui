@@ -8,24 +8,17 @@ from . import client_os_upgrades
 from .instances import DeviceInstanceGraph
 from . import profiles
 
-
-def _get_config_value(name):
-    import builtins
-
-    if not hasattr(builtins, name):
-        raise ValueError(f"Config value '{name}' not found in builtins.")
-    return getattr(builtins, name)
-
+from python_core.utils.pyodide_utils import get_config_value
 
 def group(upload_id: str, db_path: str = None) -> None:
-    db_path = db_path or _get_config_value("DB_PATH")
+    db_path = db_path or get_config_value("DB_PATH")
     json_columns = [
         "attributes",
         "origins",
         "upload_ids",
         "file_ids",
         "devices_raw_ids",
-        "atomic_devices_ids",
+        #"atomic_devices_ids",
         "tags",
         "labels",
     ]

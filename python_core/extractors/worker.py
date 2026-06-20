@@ -6,17 +6,8 @@ from datetime import datetime, timezone
 import uuid
 import hashlib
 import python_core.utils.safe_file_utils as safefileutils
+from python_core.utils.pyodide_utils import get_config_value
 
-
-def get_config_value(name):
-    """Get config value from builtins (injected by JS)."""
-    import builtins
-
-    if not hasattr(builtins, name):
-        raise ValueError(
-            f"Config value '{name}' not found in builtins. Ensure config.yaml is loaded."
-        )
-    return getattr(builtins, name)
 
 
 try:
@@ -32,7 +23,7 @@ except ImportError:
     from python_core.errors import FileLevelError
 
 
-def _file_size_bytes(filepath, is_firefox=False):
+def _file_size_bytes(filepath: str, is_firefox: bool = False) -> int:
     if is_firefox:
         return safefileutils.getsize(filepath)
     else:
@@ -41,7 +32,7 @@ def _file_size_bytes(filepath, is_firefox=False):
         return file_size_bytes
 
 
-def _file_hash(filepath, alg="sha256", is_firefox=False):
+def _file_hash(filepath: str, alg: str = "sha256", is_firefox: bool = False) -> str:
     if is_firefox:
         return safefileutils.file_hash(filepath, alg)
     else:
@@ -50,7 +41,7 @@ def _file_hash(filepath, alg="sha256", is_firefox=False):
         return hash_object.hexdigest()
 
 
-def _file_read(filepath, is_firefox=False):
+def _file_read(filepath: str, is_firefox: bool = False) -> str:
     if is_firefox:
         print(f"[Extractor] Reading file with Firefox workaround: {filepath}")
         content = safefileutils.read_text(filepath)
@@ -61,13 +52,13 @@ def _file_read(filepath, is_firefox=False):
 
 
 def extract(
-    platform,
-    given_name,
-    db_path=None,
-    tmp_storage_dir=None,
-    manifest_dir=None,
-    is_firefox=False,
-):
+    platform: str,
+    given_name: str,
+    db_path: str = None,
+    tmp_storage_dir: str = None,
+    manifest_dir: str = None,
+    is_firefox: bool = False,
+) -> dict:
 
     db_path = db_path or get_config_value("DB_PATH")
     tmp_storage_dir = tmp_storage_dir or get_config_value("TEMP_ZIP_DATA_STORAGE")

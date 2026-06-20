@@ -5,6 +5,7 @@ from field_normalization.device import normalize_device_fields
 from field_normalization.geo import normalize_geo_fields
 from field_normalization.origin import determine_origin
 from field_normalization.auth_related_events import treat_event_as_auth_device
+from python_core.utils.pyodide_utils import get_config_value
 
 
 def _normalize(rows, platform, ua_parser, file_map, table=""):
@@ -31,14 +32,7 @@ def _normalize(rows, platform, ua_parser, file_map, table=""):
 
 
 def normalize(upload_id: str, db_path: str = None) -> dict:
-    def _get_config_value(name):
-        import builtins
-
-        if not hasattr(builtins, name):
-            raise ValueError(f"Config value '{name}' not found in builtins.")
-        return getattr(builtins, name)
-
-    db_path = db_path or _get_config_value("DB_PATH")
+    db_path = db_path or get_config_value("DB_PATH")
 
     with DatabaseSession(
         db_path, use_dict_factory=True, json_columns=["attributes", "events_category"]

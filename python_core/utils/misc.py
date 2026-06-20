@@ -1,4 +1,4 @@
-def clean_target(v):
+def clean_target(v: str) -> str:
     if isinstance(v, list):
         return [clean_target(i) for i in v]
     if isinstance(v, str):
@@ -7,7 +7,7 @@ def clean_target(v):
     return ""
 
 
-def is_trivial(x):
+def is_trivial(x) -> bool:
     return (
         (x is None)
         or (isinstance(x, str) and x.strip() == "")

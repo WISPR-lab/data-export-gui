@@ -65,10 +65,10 @@ def convert_to_utc(timestamp, tzinfo=None):
 
 def parse_date(
     date_str: str,
-    fuzzy=True,
-    user_tz="UTC",
-    default_origin_tz="UTC",
-    fail_action="ignore",
+    fuzzy: bool = True,
+    user_tz: str = "UTC",
+    default_origin_tz: str = "UTC",
+    fail_action: str = "ignore",
 ) -> datetime:
     if pd.isna(date_str) or str(date_str).strip().lower() in ["nan", "none", ""]:
         return None
@@ -120,14 +120,14 @@ def parse_date(
 # - - - - - - - - - - - - - - - - - -
 
 
-def is_valid_date(date_str: str, fuzzy=True) -> bool:
+def is_valid_date(date_str: str, fuzzy: bool = True) -> bool:
     return parse_date(date_str, fuzzy) is not None
 
 
 # - - - - - - - - - - - - - - - - - -
 
 
-def get_tzinfo(date: Union[str, datetime], fuzzy=True) -> str:
+def get_tzinfo(date: Union[str, datetime], fuzzy: bool = True) -> str:
     if not isinstance(date, datetime):
         date = parse_date(date, fuzzy, fail_action="raise")
     return date.tzinfo
@@ -137,7 +137,6 @@ def get_tzinfo(date: Union[str, datetime], fuzzy=True) -> str:
 
 
 def unix_ms(dt: datetime) -> int:
-    """Convert datetime to unix timestamp in milliseconds."""
     if dt is None:
         return 0
     if dt.tzinfo is None:

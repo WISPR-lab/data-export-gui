@@ -3,6 +3,7 @@ import os
 import logging
 import json
 import python_core.utils.safe_file_utils as safefileutils
+from python_core.utils.pyodide_utils import get_config_value
 
 
 def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -> dict:
@@ -17,17 +18,6 @@ def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -
         else:
             d[col[0]] = val
     return d
-
-
-def get_config_value(name: str, default: str = "NONE FOUND"):
-    """Reads from builtins namespace (injected by pyodide-worker.js at boot)."""
-    try:
-        import builtins
-
-        return getattr(builtins, name, default)
-    except (ImportError, AttributeError):
-        return default
-
 
 class DatabaseSession:
     """ synchronous context manager for SQLite """

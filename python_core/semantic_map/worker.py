@@ -2,24 +2,12 @@ import json
 from itertools import groupby
 import uuid
 import traceback
-
-
-def get_config_value(name):
-    """Get config value from builtins (injected by JS)."""
-    import builtins
-
-    if not hasattr(builtins, name):
-        raise ValueError(
-            f"Config value '{name}' not found in builtins. Ensure config.yaml is loaded."
-        )
-    return getattr(builtins, name)
-
-
 from manifest import Manifest
 from db_session import DatabaseSession
 import semantic_map.map_utils as map_utils
 import semantic_map.action_message_builder as amb
 from semantic_map.deduplicate_events import deduplicate_events
+from python_core.utils.pyodide_utils import get_config_value
 
 
 def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
