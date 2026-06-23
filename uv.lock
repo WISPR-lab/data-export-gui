@@ -145,6 +145,61 @@ wheels = [
 ]
 
 [[package]]
+name = "data-export-gui"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "beautifulsoup4" },
+    { name = "exrex" },
+    { name = "hjson" },
+    { name = "json5" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "pytz" },
+    { name = "pyyaml" },
+    { name = "regex" },
+    { name = "rich" },
+    { name = "tenacity" },
+    { name = "tqdm" },
+    { name = "typer" },
+    { name = "ua-extract-purepy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9.5" },
+    { name = "beautifulsoup4", specifier = ">=4.12.3" },
+    { name = "exrex", specifier = ">=0.11.0" },
+    { name = "hjson", specifier = ">=3.1.0" },
+    { name = "json5", specifier = ">=0.9.25" },
+    { name = "packaging", specifier = ">=24.0" },
+    { name = "pandas", specifier = ">=2.2.2" },
+    { name = "pytz", specifier = ">=2024.1" },
+    { name = "pyyaml", specifier = ">=6.0.1" },
+    { name = "regex", specifier = ">=2024.5.15" },
+    { name = "rich", specifier = "==13.7.1" },
+    { name = "tenacity", specifier = ">=8.3.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
+    { name = "typer", specifier = "==0.9.0" },
+    { name = "ua-extract-purepy", editable = "UA-Extract-purepy" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.2.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "ruff", specifier = ">=0.15.18" },
+]
+
+[[package]]
 name = "exrex"
 version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -514,65 +569,24 @@ wheels = [
 ]
 
 [[package]]
-name = "takeout-tool-core"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "beautifulsoup4" },
-    { name = "exrex" },
-    { name = "hjson" },
-    { name = "json5" },
-    { name = "packaging" },
-    { name = "pandas" },
-    { name = "pytz" },
-    { name = "pyyaml" },
-    { name = "regex" },
-    { name = "rich" },
-    { name = "tenacity" },
-    { name = "typer" },
-    { name = "ua-extract-purepy" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiohttp", specifier = ">=3.9.5" },
-    { name = "beautifulsoup4", specifier = ">=4.12.3" },
-    { name = "exrex", specifier = ">=0.11.0" },
-    { name = "hjson", specifier = ">=3.1.0" },
-    { name = "json5", specifier = ">=0.9.25" },
-    { name = "packaging", specifier = ">=24.0" },
-    { name = "pandas", specifier = ">=2.2.2" },
-    { name = "pytz", specifier = ">=2024.1" },
-    { name = "pyyaml", specifier = ">=6.0.1" },
-    { name = "regex", specifier = ">=2024.5.15" },
-    { name = "rich", specifier = "==13.7.1" },
-    { name = "tenacity", specifier = ">=8.3.0" },
-    { name = "typer", specifier = "==0.9.0" },
-    { name = "ua-extract-purepy", editable = "UA-Extract-purepy" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.2.0" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-    { name = "ruff", specifier = ">=0.15.18" },
-]
-
-[[package]]
 name = "tenacity"
 version = "9.1.4"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.68.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/87/d7/0535a28b1f5f24f6612fb3ff1e89fb1a8d160fee0f976e0aa6803862134b/tqdm-4.68.3.tar.gz", hash = "sha256:00dfa48452b6b6cfae3dd9885636c23d3422d1ec97c66d96818cbd5e0821d482", size = 170596, upload-time = "2026-06-17T07:36:52.105Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/8e/bb97bb0c71802080bfc8952937d174e49cfc50de5c951dd47b2496f0dcdb/tqdm-4.68.3-py3-none-any.whl", hash = "sha256:39832cc2def2789a6f29df83f172db7416cea70052c0907a57801c5f2fdccb03", size = 78337, upload-time = "2026-06-17T07:36:50.132Z" },
 ]
 
 [[package]]
