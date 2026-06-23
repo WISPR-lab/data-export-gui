@@ -1,15 +1,19 @@
 # LEStrADE 
 **L**ocal **E**ngine for **Str**uctured **A**nalysis of **D**ata **E**xports (named after the minor Sherlock Holmes character, [Inspector Lestrade](https://en.wikipedia.org/wiki/Inspector_Lestrade)) is an open-source visualization tool that helps users understand their account security history using data exports from online platforms.
 
-Instead of uploading user data files to a server, this project processes everything locally in the browser using, a port of CPython to WebAssembly that runs a full Python environment to the web browser.
+Instead of uploading user data files to a server, this project processes everything locally in the browser using Pyodide, a port of CPython to WebAssembly that runs a full Python environment in the web browser.
 
 The Vue frontend is forked and heavily modified from Google's [Timesketch](https://timesketch.org/), specifically the `timesketch/frontend-ng` ([link](https://github.com/google/timesketch/tree/master/timesketch/frontend-ng)) directory. See the *License* section below.
 
-## Quickstart
+## Introduction
 
-You can either visit a hosted version of the static site at https://wispr-lab.github.io/data-export-gui/, or set it up on your own machine.
+You can either visit a hosted version of the static LEStrADE site at https://wispr-lab.github.io/data-export-gui/, or run it locally on your own machine
 
-### Clone & Initialize Submodules (Required)
+This repository _also_ includes a set of evaluation scripts (`entity_resolution_evaluation/`) for measuring how well our **Device Entity Resolution** pipeline (see `python_core/device_grouping2/`) determines if two authentication or session records originate from the same identity. These scripts use two public datasets, FP Stalker and RBA TODO CITE, which together are very large (11GB+). It is unnecessary to download and run these scripts if you are interested in just exploring the web application. If you are interested in reproducing the results of this pipeline evaluation and have sufficient storage, go for it.
+
+
+
+## Clone & Initialize Submodules (Required)
 This project relies on Git submodules for user-agent parsing. You **must** initialize them first:
 ```bash
 git clone --recurse-submodules https://github.com/WISPR-lab/data-export-gui/
@@ -17,28 +21,17 @@ git clone --recurse-submodules https://github.com/WISPR-lab/data-export-gui/
 git submodule update --init --recursive
 ```
 
----
-Finish the setup either with or without Docker:
+## Run Web App
+
+You can visit the hosted version at https://wispr-lab.github.io/data-export-gui or run the app locally on your own machine.
 
 ### With Docker
-**Prerequisites**: [Docker](https://www.docker.com/products/cli/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+**Prerequisites**: [Docker](https://www.docker.com/products/cli/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running. 
 
-1. **Build and start the application**:
-   ```bash
-   docker compose up --build
-   ```
-   The web application will be live at `http://localhost:5001`.
-
-2. **Run Python integration tests**:
-   ```bash
-   docker compose run --rm test
-
-   # or run specific tests
-   docker compose run --rm test tests/python/test_device_grouping2.py
-   docker compose run --rm test tests/python/test_device_grouping2.py::test_group_pipeline_outputs
-   ```
-
----
+```bash
+docker compose up --build web
+```
+The web application will be live at `http://localhost:5001`.
 
 ### Without Docker
 **Prerequisites**:
@@ -55,18 +48,47 @@ Finish the setup either with or without Docker:
    Under the hood, this runs `sync_assets.sh` which automatically builds the `UA-Extract-purepy` wheel using `uv`.
    The frontend runs at `http://localhost:5001`.
 
-2. **Install Python dependencies and run tests**:
+
+
+
+## OPTIONAL: Run _Device Entity Resolution_ Evaluation Scripts
+
+This is optional and requires substantial disk and memory resources; skip it if you only want to run the web app.
+
+### Datasets
+
+| Name | Short citation | URL | # records | Compressed size at download | Uncompressed dataset size |
+|---|---:|---|---:|---:|---:|
+| FP Stalker | [Vastel et al., 2018](https://inria.hal.science/hal-01652021/document) | https://github.com/Spirals-Team/FPStalker <br/> (extension1.txt.tar.gz and extension2.txt.tar.gz)| 15K| 137 MB | ~260 MB| 
+| RBA Logins | [Wiefling et al., 2022](https://dl.acm.org/doi/10.1145/3546069) | https://zenodo.org/records/6782156 | ~33M | 1.1 GB | 9.1 GB |
+
+### Docker & Hardware Configuration
+
+Running these evaluation scripts outside of Docker is not recommended. You must configure Docker to allocate sufficient hardware resources to the container. If using Docker Desktop (macOS/Windows), go to **Settings > Resources** and adjust the limits.
+* **Resource Requirements**:
+  * **Absolute Minimum**: 4 GB RAM, 15 GB free disk space.
+  * **Recommended**: 8+ GB RAM, 25 GB free disk space.
+
+### Run Instructions
+
+1. **Start the container**:
    ```bash
-   # from repo root, not /webapp
-   uv sync
-
-   # run all tests
-   uv run pytest tests/python 
-
-   # or run specific tests
-   uv run pytest tests/python/test_device_grouping2.py
-   uv run pytest tests/python/test_device_grouping2.py::test_group_pipeline_outputs
+   mkdir -p entity_resolution_evaluation/data/{raw,normalized} && docker compose run --rm eval
    ```
+   This will put you in an interactive bash session inside the container (at `/workspace`). The raw datasets will be downloaded to Docker named volume (`data_raw`) mounted at `entity_resolution_evaluation/data/raw` to speed up the SQLite writes.
+
+
+2. Inside the container shell, **download the datasets**:
+   ```bash
+   python -m entity_resolution_evaluation.fetch_data
+   ```
+   *(Autodetects container RAM to tune chunk sizes. Override via `--ram <GB>` if needed).*
+
+3. **Verify data**:
+   ```bash
+   ls -lh entity_resolution_evaluation/data/raw
+   ```
+   Ensure `rba.db` (~8–10 GB) and `fp_stalker.db` (~260 MB) exist.
 
 ## Architecture
 
@@ -114,6 +136,20 @@ Note that the [site](https://wispr-lab.github.io/data-export-gui/) is hosted via
 
 Feel free to submit UI bugs under Issues or post there if you're interested in contributing to the project.
 To add support for a new platform (or augment supported keys for an existing one), follow the instructions in the [Manifests Schema Guide](manifests/README.md). 
+
+### Unit testing
+
+If you make changes to the `python_core` logic and would like to run unit tests, run
+```bash
+# via Docker
+docker compose run --rm test tests/python  # all python tests
+docker compose run --rm test tests/python/test_device_grouping2.py # or a specific test
+
+# without Docker
+uv sync
+uv run pytest tests/python # all python test
+uv run pytest tests/python/test_device_grouping2.py # or a specific test
+```
 
 
 ## License

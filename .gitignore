@@ -105,3 +105,4 @@ docs*
 
 .pytest_cache/*
 .ruff_cache
+entity_resolution_evaluation/data/

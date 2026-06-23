@@ -2,7 +2,7 @@ FROM nikolaik/python-nodejs:python3.12-nodejs18-alpine
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-RUN apk add --no-cache bash git build-base
+RUN apk add --no-cache bash git build-base tar
 
 WORKDIR /workspace
 
