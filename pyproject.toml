@@ -19,6 +19,8 @@ dependencies = [
     "packaging>=24.0",
     "tqdm>=4.67.1",
     "ua-extract-purepy",
+    "duckdb>=1.5.4",
+    "sqlglot>=30.11.0",
 ]
 
 [dependency-groups]

@@ -1,103 +1,85 @@
-import os
-import json
 import urllib.request
-import pandas as pd
+import re
 from pathlib import Path
 import logging
-import subprocess
-import sqlite3
 import zipfile
 import tarfile
 import argparse
 import shutil
 from tqdm import tqdm
+import sqlite3
+import duckdb
+import sqlglot
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-FP_STALKER_URL_1 = "https://raw.githubusercontent.com/Spirals-Team/FPStalker/master/extension1.txt.tar.gz"
-FP_STALKER_URL_2 = "https://raw.githubusercontent.com/Spirals-Team/FPStalker/master/extension2.txt.tar.gz"
-RBA_URL = "https://zenodo.org/records/6782156/files/rba-dataset.zip?download=1"
+EXPECTED_FP_STALKER_ROWS = 15000  
+EXPECTED_RBA_ROWS = 31269264
 
-
-RAW_DATA_DIR = Path(__file__).resolve().parent / "data" / "raw"
-NORMALIZED_DATA_DIR = Path(__file__).resolve().parent / "data" / "normalized"
-RBA_DB = RAW_DATA_DIR / "rba.db"
-FP_STALKER_DB = RAW_DATA_DIR / "fp_stalker.db"
-
-RBA_CHUNKSIZE = 20000  # number of rows per pandas chunk
-RBA_DELETE_ZIP_AFTER_IMPORT = True  # delete the downloaded zip after a successful import
-
-
-def _detect_available_ram_gb():
-    # ponytail: cgroup/sysconf detection is a heuristic that may not reflect swap or dynamic limits.
-    # Upgrade path: use psutil or resource module if robust system monitoring is needed.
-    try:
-        limit_file = Path("/sys/fs/cgroup/memory.max")
-        if limit_file.exists():
-            val = limit_file.read_text().strip()
-            if val != "max":
-                return float(val) / (1024 ** 3)
-    except Exception:
-        pass
-    try:
-        limit_file = Path("/sys/fs/cgroup/memory/memory.limit_in_bytes")
-        if limit_file.exists():
-            val = int(limit_file.read_text().strip())
-            if val < 10**15:
-                return float(val) / (1024 ** 3)
-    except Exception:
-        pass
-    try:
-        return (os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')) / (1024 ** 3)
-    except Exception:
-        pass
-    return None
-
-
-def _chunksize_for_ram(ram_gb):
-    """picks a safe pandas chunksize from available RAM (GB) in container"""
-    if ram_gb is None:
-        return RBA_CHUNKSIZE
-    if ram_gb < 4:
-        return 5000
-    if ram_gb < 8:
-        return 10000
-    if ram_gb < 12:
-        return 25000
-    if ram_gb < 16:
-        return 50000
-    return 100000
+try:
+    import entity_resolution_evaluation.config as cf
+except ImportError:
+    import config as cf
 
 
 def _format_size_gb_mb(path):
+    if not path.exists():
+        return "N/A"
     size = path.stat().st_size
     return f"{size / (1024 ** 3):.2f} GB ({size / (1024 ** 2):.1f} MB)"
 
 
-class DownloadProgress:
-    def __init__(self, name):
-        self.name = name
-        self.pbar = None
+def _download_progress(name):
+    pbar = None
 
-    def __call__(self, count, block_size, total_size):
+    def hook(count, block_size, total_size):
+        nonlocal pbar
         if total_size <= 0:
             return
-        if self.pbar is None:
-            self.pbar = tqdm(total=total_size, unit="B", unit_scale=True, desc=self.name)
+        if pbar is None:
+            pbar = tqdm(total=total_size, unit="B", unit_scale=True, desc=name)
         downloaded = min(count * block_size, total_size)
-        self.pbar.n = downloaded
-        self.pbar.refresh()
+        pbar.n = downloaded
+        pbar.refresh()
         if downloaded >= total_size:
-            self.pbar.close()
+            pbar.close()
+
+    return hook
 
 
 def initialize_dirs():
-    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    NORMALIZED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    cf.RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    cf.NORMALIZED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def db_properly_initialized(db_path, expected_rows=None, table_name=cf.DEFAULT_TABLE_NAME):
+    db_path = Path(db_path)
+    if not db_path.exists() or db_path.stat().st_size == 0:
+        return False
+    try:
+        with duckdb.connect(str(db_path)) as conn:
+            rows = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+            res = rows == expected_rows if expected_rows is not None else rows > 0
+            if not res:
+                return False
+            logging.info("%s is already properly initialized with %d records (%s).", db_path, expected_rows, _format_size_gb_mb(db_path))
+            return True
+    except Exception:
+        return False
 
 
 def hard_refresh():
-    for path in (RAW_DATA_DIR, NORMALIZED_DATA_DIR):
+    try:
+        response = input("WARNING: This will delete all downloaded and processed evaluation data. Proceed? [y/N]: ").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print()
+        response = "n"
+    if response not in ("y", "yes"):
+        logging.info("Aborting hard refresh.")
+        import sys
+        sys.exit(0)
+
+    for path in (cf.RAW_DATA_DIR, cf.NORMALIZED_DATA_DIR):
         if path.exists():
             for child in path.iterdir():
                 if child.is_dir():
@@ -106,16 +88,32 @@ def hard_refresh():
                     child.unlink()
 
 
+def refresh_db():
+    try:
+        response = input("WARNING: This will delete existing database files (rba.duckdb, fp_stalker.duckdb). Proceed? [y/N]: ").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print()
+        response = "n"
+    if response not in ("y", "yes"):
+        logging.info("Aborting database refresh.")
+        import sys
+        sys.exit(0)
+
+    for db_path in (cf.RBA_DB, cf.FP_STALKER_DB):
+        db_path.unlink(missing_ok=True)
+
+
 def download_with_resume(url, dest, retries, error_msg):
     logging.info("Downloading %s to %s...", url, dest)
     dest = Path(dest)
     if dest.exists() and (zipfile.is_zipfile(dest) or tarfile.is_tarfile(dest)):
+        logging.info("%s already exists, skipping download.", dest.name)
         return True
     tmp_dest = dest.with_name(dest.name + ".part")
 
     for attempt in range(retries):
         try:
-            urllib.request.urlretrieve(url, tmp_dest, reporthook=DownloadProgress(dest.name))
+            urllib.request.urlretrieve(url, tmp_dest, reporthook=_download_progress(dest.name))
             tmp_dest.replace(dest)
             logging.info("Download completed successfully.")
             return True
@@ -124,126 +122,141 @@ def download_with_resume(url, dest, retries, error_msg):
                 logging.error(error_msg, retries, e, url, dest)
             else:
                 logging.warning("Attempt %d failed: %s. Retrying...", attempt + 1, e)
-            if tmp_dest.exists():
-                tmp_dest.unlink()
+            tmp_dest.unlink(missing_ok=True)
     return False
 
 
-def fetch_data(retries=3, chunksize=None):
-    if chunksize is None:
-        ram_gb = _detect_available_ram_gb()
-        if ram_gb:
-            logging.info("Auto-detected %.2f GB of available memory.", ram_gb)
-        else:
-            logging.info("Could not auto-detect available memory, using default chunk size.")
-        chunksize = _chunksize_for_ram(ram_gb)
+def mysql_to_sqlite(mysql_sql):
+    expressions = sqlglot.parse(mysql_sql, read="mysql")
+    cleaned = [
+        expr for expr in expressions
+        if isinstance(expr, (sqlglot.exp.Create, sqlglot.exp.Insert))
+    ]
+    sql = ";\n".join(expr.sql(dialect="sqlite") for expr in cleaned)
+    
+    # Strip MySQL-specific character set, charset, and collation keywords that SQLite rejects
+    sql = re.sub(r'(?i)\bCHARACTER\s+SET\s+\w+', '', sql)
+    sql = re.sub(r'(?i)\bDEFAULT\s+CHARSET\s*=\s*\w+', '', sql)
+    sql = re.sub(r'(?i)\bCOLLATE\s+\w+', '', sql)
+    
+    return sql
 
+
+def fetch_data(retries=3):
     initialize_dirs()
 
-    # RBA fetch
-    rba_path = RAW_DATA_DIR / "rba-dataset.zip"
-    if not download_with_resume(
-        RBA_URL, 
-        rba_path, 
-        retries,
-        "Could not download RBA dataset after %d attempts: %s. \n Download data directly from %s, place in %s, and rerun script."
-    ):
-        return
-    
-    # RBA CSV to SQLite (stream from ZIP in chunks; do NOT extract full CSV to disk)
-    if (not RBA_DB.exists() or RBA_DB.stat().st_size == 0) and rba_path.exists():
-        conn = sqlite3.connect(RBA_DB)
-        rba_rows = 0
-        try:
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA synchronous=NORMAL")
-            logging.info("Importing RBA dataset using chunksize %d...", chunksize)
-
-            with zipfile.ZipFile(rba_path) as z:
-                for name in z.namelist():
-                    if name.endswith("rba-dataset.csv"):
-                        with z.open(name) as f:
-                            for i, chunk in enumerate(tqdm(pd.read_csv(f, chunksize=chunksize), desc="RBA import", unit="chunk")):
-                                rba_rows += len(chunk)
-                                chunk.to_sql('rba_data', conn, if_exists='append' if i > 0 else 'replace', index=False)
-                        break
-        finally:
-            conn.close()
-
-
-        logging.info("RBA import done: %d records, %s", rba_rows, _format_size_gb_mb(RBA_DB))
-
-        # remove the downloaded archive to avoid holding both ZIP and DB on disk
-        if RBA_DELETE_ZIP_AFTER_IMPORT:
-            try:
-                rba_path.unlink()
-            except Exception:
-                pass
-
-    # FP Stalker fetch
-    fp_stalker_path_1 = RAW_DATA_DIR / "extension1.txt.tar.gz"
-    fp_stalker_path_2 = RAW_DATA_DIR / "extension2.txt.tar.gz"
-    
-    if not download_with_resume(
-        FP_STALKER_URL_1,
-        fp_stalker_path_1,
-        retries,
-        "Could not download FP Stalker after %d attempts: %s. \n Download data directly from %s, place in %s, and rerun script."
-    ):
-        return
-    
-    if not download_with_resume(
-        FP_STALKER_URL_2,
-        fp_stalker_path_2,
-        retries,
-        "Could not download FP Stalker after %d attempts: %s. \n Download data directly from %s, place in %s, and rerun script."
-    ):
-        return
-
-    # FP Stalker extract and load to SQLite
-    fp_stalker_sql = RAW_DATA_DIR / "tableFingerprints.sql"
-    if not fp_stalker_sql.exists():
-        try:
-            with fp_stalker_sql.open("wb") as out_f:
-                for tar_path in tqdm([fp_stalker_path_1, fp_stalker_path_2], desc="FP Stalker extract", unit="archive"):
-                    subprocess.run(["tar", "-xOzf", str(tar_path)], stdout=out_f, check=True)
-        except Exception as e:
-            logging.error("Error extracting FP Stalker SQL: %s", e)
+    # RBA dataset
+    if not db_properly_initialized(cf.RBA_DB, EXPECTED_RBA_ROWS):
+        rba_path = cf.RAW_DATA_DIR / "rba-dataset.zip"
+        if not download_with_resume(
+            cf.RBA_URL, 
+            rba_path, 
+            retries,
+            "Could not download RBA dataset after %d attempts: %s. \n Download data directly from %s, place in %s, and rerun script."
+        ):
             return
-    if not FP_STALKER_DB.exists() or FP_STALKER_DB.stat().st_size == 0:
-        try:
-            conn = sqlite3.connect(FP_STALKER_DB)
-            with open(fp_stalker_sql) as f:
-                sql = "\n".join(
-                    line for line in f.read().splitlines()
-                    if not line.lstrip().startswith(("SET ", "DELIMITER ", "LOCK TABLES", "UNLOCK TABLES", "USE "))
-                )
-                sql = sql.replace("COLLATE utf8_unicode_ci", "")
-                conn.executescript(sql)
-        finally:
-            conn.close()
+        
+        extracted_csv = cf.RAW_DATA_DIR / "rba-dataset.csv"
+        logging.info("Extracting RBA CSV from ZIP...")
+        with zipfile.ZipFile(rba_path) as z:
+            for name in z.namelist():
+                if name.endswith("rba-dataset.csv"):
+                    z.extract(name, path=cf.RAW_DATA_DIR)
+                    break
+        
+        logging.info("Importing RBA dataset into DuckDB...")
+        with duckdb.connect(str(cf.RBA_DB)) as conn:
+            conn.execute(f"CREATE TABLE {cf.DEFAULT_TABLE_NAME} AS SELECT * FROM read_csv_auto('{extracted_csv}')")
+            rba_rows = conn.execute(f"SELECT COUNT(*) FROM {cf.DEFAULT_TABLE_NAME}").fetchone()[0]
+            logging.info("RBA database contains %d records, %s", rba_rows, _format_size_gb_mb(cf.RBA_DB))
+        
+        extracted_csv.unlink(missing_ok=True)
+        if cf.RBA_DELETE_ZIP_AFTER_IMPORT:
+            rba_path.unlink(missing_ok=True)
 
+    # FP Stalker pipeline
+    if not db_properly_initialized(cf.FP_STALKER_DB, expected_rows=EXPECTED_FP_STALKER_ROWS):
+        fp_stalker_path_1 = cf.RAW_DATA_DIR / "extension1.txt.tar.gz"
+        fp_stalker_path_2 = cf.RAW_DATA_DIR / "extension2.txt.tar.gz"
+        
+        if not download_with_resume(
+            cf.FP_STALKER_URL_1,
+            fp_stalker_path_1,
+            retries,
+            "Could not download FP Stalker after %d attempts: %s. \n Download data directly from %s, place in %s, and rerun script."
+        ):
+            return
+        
+        if not download_with_resume(
+            cf.FP_STALKER_URL_2,
+            fp_stalker_path_2,
+            retries,
+            "Could not download FP Stalker after %d attempts: %s. \n Download data directly from %s, place in %s, and rerun script."
+        ):
+            return
+    
+        cf.FP_STALKER_TMP_SQL.unlink(missing_ok=True)
+        cf.FP_STALKER_TMP_SQLITE.unlink(missing_ok=True)
+        cf.FP_STALKER_DB.unlink(missing_ok=True)
+
+        logging.info("Extracting FP Stalker SQL...")
+        try:
+            with cf.FP_STALKER_TMP_SQL.open("wb") as out_f:
+                for tar_path in [fp_stalker_path_1, fp_stalker_path_2]:
+                    with tarfile.open(tar_path, "r:gz") as tar:
+                        for member in tar.getmembers():
+                            if member.isfile():
+                                f = tar.extractfile(member)
+                                if f:
+                                    out_f.write(f.read())
+        except Exception as e:
+            logging.error("Failed to extract FP Stalker SQL: %s", e)
+            return
+
+        logging.info("Importing FP Stalker MySQL to SQLite...")
+        try:
+            with sqlite3.connect(cf.FP_STALKER_TMP_SQLITE) as conn_sqlite:
+                with open(cf.FP_STALKER_TMP_SQL) as f:
+                    mysql_sql = f.read()
+                sql = mysql_to_sqlite(mysql_sql)
+                conn_sqlite.executescript(sql)
+                logging.info("FP Stalker SQLite database created at %s, %s", cf.FP_STALKER_TMP_SQLITE, _format_size_gb_mb(cf.FP_STALKER_TMP_SQLITE))
+        except Exception as e:
+            logging.error("Failed to import FP Stalker MySQL to SQLite: %s", e)
+            return
+        
+        logging.info("Importing FP Stalker SQLite to DuckDB...")
+        try:
+            with duckdb.connect(str(cf.FP_STALKER_DB)) as conn_duck:
+                conn_duck.execute("INSTALL sqlite;")
+                conn_duck.execute("LOAD sqlite;")
+                conn_duck.execute(f"CALL sqlite_attach('{cf.FP_STALKER_TMP_SQLITE}')")
+                conn_duck.execute(f"CREATE TABLE {cf.DEFAULT_TABLE_NAME} AS SELECT * FROM temp_fp_stalker.extensionDataScheme")
+                fp_stalker_rows = conn_duck.execute(f"SELECT COUNT(*) FROM {cf.DEFAULT_TABLE_NAME}").fetchone()[0]
+                logging.info("FP Stalker database contains %d records, %s", fp_stalker_rows, _format_size_gb_mb(cf.FP_STALKER_DB))
+        except Exception as e:
+            logging.error("Failed to import FP Stalker SQLite to DuckDB: %s", e)
+            return
+        
+        cf.FP_STALKER_TMP_SQL.unlink(missing_ok=True)
+        cf.FP_STALKER_TMP_SQLITE.unlink(missing_ok=True)
 
     logging.info(
         "Done. %s = %s; %s = %s",
-        RBA_DB.name,
-        _format_size_gb_mb(RBA_DB),
-        FP_STALKER_DB.name,
-        _format_size_gb_mb(FP_STALKER_DB),
+        cf.RBA_DB.name,
+        _format_size_gb_mb(cf.RBA_DB),
+        cf.FP_STALKER_DB.name,
+        _format_size_gb_mb(cf.FP_STALKER_DB),
     )
-
-    
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch and materialize evaluation datasets")
-    parser.add_argument("--chunksize", "--chunk-size", "-c", dest="chunksize", type=int, default=None, help="Pandas chunk size (number of rows to load at a time)")
     parser.add_argument("--hard-refresh", action="store_true", help="Delete generated evaluation data before fetching")
+    parser.add_argument("--refresh-db", action="store_true", help="Delete existing database files before fetching")
     args = parser.parse_args()
     if args.hard_refresh:
         hard_refresh()
-    fetch_data(chunksize=args.chunksize)
-
-
-
-
+    elif args.refresh_db:
+        refresh_db()
+    fetch_data()
