@@ -244,12 +244,12 @@ export default new Vuex.Store({
       if (!inputLabel || !num) {
         return
       }
-      let allLabels = context.state.meta.filter_labels
-      let label = allLabels.find(label => label.tag === inputLabel);
+      let allLabels = [...context.state.meta.filter_labels]
+      let label = allLabels.find(label => (label.label === inputLabel) || (label.tag === inputLabel));
       if (label !== undefined) {
         label.count += num
       } else {
-        allLabels.push({ tag: inputLabel, count: num })
+        allLabels.push({ label: inputLabel, tag: inputLabel, count: num })
       }
       allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)

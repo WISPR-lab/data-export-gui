@@ -37,7 +37,7 @@ limitations under the License.
       @click="expanded = !expanded"
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
-      <span> <v-icon left>mdi-tag-multiple-outline</v-icon> Tags </span>
+      <span> <v-icon left>mdi-tag-multiple-outline</v-icon> Tags & Starred </span>
 
       <span class="float-right" style="margin-right: 10px">
         <small
@@ -82,7 +82,9 @@ export default {
     },
     filteredLabels() {
       if (!this.meta.filter_labels) return []
-      return this.meta.filter_labels.filter((label) => label && typeof label.tag === 'string' && !label.tag.startsWith('__ts_fact'))
+      return this.meta.filter_labels.filter(function (label) {
+        return label && typeof label.label === 'string' && !label.label.startsWith('__ts_fact')
+      })
     },
   },
 }
