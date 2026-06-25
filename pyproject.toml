@@ -21,6 +21,7 @@ dependencies = [
     "ua-extract-purepy",
     "duckdb>=1.5.4",
     "sqlglot>=30.11.0",
+    "ipykernel>=7.3.0",
 ]
 
 [dependency-groups]

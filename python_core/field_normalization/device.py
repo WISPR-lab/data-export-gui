@@ -6,7 +6,7 @@ def _infer_manufacturer_from_model(model_name: str) -> str | None:
     if not model_name:
         return None
     model_name = model_name.strip()
-    for manufacturer, patterns in dl.COMPILED_MANUFACTURER_MODEL_MAP.items():
+    for manufacturer, patterns in dl.MANUFACTURER_PATTERNS.items():
         for pattern in patterns:
             if pattern.match(model_name):
                 return manufacturer
@@ -21,14 +21,14 @@ def _has_version_or_variant(name: str) -> bool:
 
 
 def _generic_model_name(name: str) -> bool:
-    return not name or name.strip().lower() in dl.GENERIC_MODEL_NAMES
+    return not name or name.strip().lower() in dl.GENERIC_MODELS
 
 
 def _get_val(attrs: dict, key: str, preference="first") -> str | None:
     # By default, return the first non-empty value for the given key or its "user_agent_" variant.
     #
     # - preference == "non-generic" --> default to the non-generic value in list, where "generic" is defined heuristically
-    #   as the value in the "GENERIC MODELS NAMES" list (like 'phone' or 'smartphone') and/or lacks
+    #   as the value in the "GENERIC MODELS" list (like 'phone' or 'smartphone') and/or lacks
     #   version/variant info (i.e., iphone 7 vs iphone).
     # - preference == "longest" --> returns longest string
     if preference not in {"first", "non_generic", "longest"}:
@@ -105,8 +105,8 @@ def normalize_device_fields(attrs: dict) -> dict:
     if not manufacturer:
         manufacturer = _infer_manufacturer_from_model(model_name)
     if manufacturer:
-        if manufacturer.lower() not in dl.ALL_MFRS_LOWER:
-            for _mfr, pattern in dl.COMPILED_MANUFACTURER_ALIASES_MAP.items():
+        if manufacturer.lower() not in dl.BRANDS_ALIASES_LOWER:
+            for _mfr, pattern in dl.BRAND_ALIASES.items():
                 if pattern.search(manufacturer):
                     manufacturer = _mfr
                     break
@@ -116,11 +116,20 @@ def normalize_device_fields(attrs: dict) -> dict:
         _get_val(attrs, "os_version", preference="longest")
     )
     os_type = _get_val(attrs, "os_type")
-    os_name = _get_val(attrs, "os_name") or inferred_os_name or os_type
+    
+    os_name_raw = _get_val(attrs, "os_name") or inferred_os_name or os_type
+    os_name = os_name_raw
+    if os_name_raw:
+        for clean_name, pattern in dl.OS_NAME_PATTERNS.items():
+            if pattern.search(os_name_raw):
+                os_name = clean_name
+                break
+
     if os_name:
-        _os_type = dl.OS_TYPE_MAP.get(os_name.lower())
-        if _os_type:
-            os_type = _os_type
+        for resolved_type, pattern in dl.OS_TYPE_PATTERNS.items():
+            if pattern.search(os_name):
+                os_type = resolved_type
+                break
 
     client_name = _composite_client_name(attrs)
 

@@ -1,6 +1,6 @@
 import re
 from ua_extract import DeviceDetector
-from python_core.field_normalization.device_lookup import OS_TYPE_MAP
+from python_core.field_normalization.device_lookup import OS_TYPE_PATTERNS
 
 
 class UserAgentParser:
@@ -71,7 +71,7 @@ class UserAgentParser:
             attrs["user_agent_uses_mobile_browser"] = True
         if dd.os_name():
             attrs["user_agent_os_name"] = dd.os_name()
-            attrs["user_agent_os_type"] = OS_TYPE_MAP.get(dd.os_name().lower(), "")
+            attrs["user_agent_os_type"] = OS_TYPE_PATTERNS.get(dd.os_name().lower(), "")
         if dd.os_version():
             attrs["user_agent_os_version"] = dd.os_version()
         if dd.device_model():

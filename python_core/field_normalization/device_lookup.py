@@ -1,29 +1,80 @@
 import re
 
-OS_TYPE_MAP = {
-    "ios": "ios",
-    "ipados": "ios",
-    "android": "android",
-    "android tv": "android",
-    "fire os": "android",
-    "wear os": "android",
-    "kaios": "android",
-    "mac": "macos",
-    "mac os": "macos",
-    "macos": "macos",
-    "mac os x": "macos",
-    "windows": "windows",
-    "windows ce": "windows",
-    "windows mobile": "windows",
-    "windows phone": "windows",
-    "windows rt": "windows",
-    "linux": "linux",
-    "ubuntu": "linux",
-    "debian": "linux",
-    "fedora": "linux",
-    "centos": "linux",
-    "chrome os": "linux",
-    "chromium os": "linux",
+
+# ----------------
+_OS_NAME_PATTERNS = {
+    "mac": r"mac\s*os\s*x|macos|mac",
+    "windows phone": r"win(dows)?\s*phone",
+    "windows": r"windows\s*nt|windows\s*ce",
+    "linux": r"gnu/linux|linux",
+}
+
+OS_NAME_PATTERNS = { key: re.compile(pat, re.IGNORECASE) for key, pat in _OS_NAME_PATTERNS.items() }
+
+# ----------------
+
+_OS_TYPE_PATTERNS = {
+    "ios": r"ios|ipados",
+    "android": r"android|fire\s*os|wear\s*os|kaios",
+    "macos": r"mac|macos|osx",
+    "windows": r"windows?|win\s*phone",
+    "linux": r"linux|ubuntu|debian|fedora|centos|chrome\s*os|chromium\s*os",
+}
+
+OS_TYPE_PATTERNS = { key: re.compile(pattern, re.IGNORECASE) for key, pattern in _OS_TYPE_PATTERNS.items() }
+
+# ----------------
+
+_MANUFACTURER_PATTERNS = {
+    "Apple": [
+        r"^i(Phone|Pad|Pod|Mac)",
+        r"^Mac(Book|Mini|Pro|Studio|intosh)",
+        r"^Apple Watch",
+    ],
+    "Google": [r"^Chromecast"],
+}
+
+MANUFACTURER_PATTERNS = { mfr: [re.compile(pat, re.IGNORECASE) for pat in pats] for mfr, pats in _MANUFACTURER_PATTERNS.items() }
+
+# ----------------
+
+_BRAND_ALIASES = {
+    "Apple": r"apple",
+    "Samsung": r"samsung|^sm$",
+    "LG": r"\blg\b|^lge$",
+    "Motorola": r"motorola|\bmoto\b",
+    "Google": r"google",
+    "Xiaomi": r"xiaomi|poco|redmi",
+    "Huawei": r"huawei|honor",
+    "OPPO": r"oppo",
+    "Vivo": r"\bvivo\b",
+    "OnePlus": r"oneplus",
+    "Sony": r"sony|ericsson",
+    "HTC": r"\bhtc\b",
+    "ASUS": r"asus|asustek",
+    "Nokia": r"nokia|hmd",
+    "Lenovo": r"lenovo",
+    "Amazon": r"amazon",
+    "Microsoft": r"microsoft",
+}
+
+BRAND_ALIASES = { mfr: re.compile(pat, re.IGNORECASE) for mfr, pat in _BRAND_ALIASES.items()}
+
+BRANDS_ALIASES_LOWER = {brand.lower() for brand in _BRAND_ALIASES.keys()}
+
+# ----------------
+
+
+GENERIC_MODELS = {
+    "other",
+    "unknown",
+    "phone",
+    "smartphone",
+    "tablet",
+    "android",
+    "iphone",
+    "ipad",
+    "",
 }
 
 VARIANT_SUFFIXES = {
@@ -201,81 +252,4 @@ APPLE_MODELS = {
     "iPod5,1": "iPod touch (5th gen)",
     "iPod7,1": "iPod touch (6th gen)",
     "iPod9,1": "iPod touch (7th gen)",
-}
-
-
-MANUFACTURER_MODEL_MAP = {
-    "Apple": [
-        r"^i(Phone|Pad|Pod|Mac)",
-        r"^Mac(Book|Mini|Pro|Studio)",
-        r"^Apple Watch",
-    ],
-    "Samsung": [r"^Galaxy", r"^Galaxy Watch", r"^(SM-|GT-|SGH-|SCH-|SPH-)"],
-    "Google": [r"^(Pixel|Nexus)"],
-    "OnePlus": [r"^OnePlus", r"^(IN2\d{3}|HD1\d{3}|KB2\d{3}|LE2\d{3})"],
-    "Xiaomi": [r"^(Redmi|Mi\s)", r"^POCO", r"^M\d{4}[A-Z]{1,2}[GC]$"],
-    "Motorola": [r"^(Moto|Motorola)", r"^XT\d{4}"],
-    "HTC": [r"^HTC"],
-    "Sony": [r"^Sony|^Xperia", r"^G\d{4}$", r"^XQ-[A-Z0-9]+"],
-    "Huawei": [r"^Huawei|^Honor", r"^(VOG-|ELE-|LYA-|CLT-|MAR-|ANE-)"],
-    "OPPO": [r"^OPPO", r"^(CPH\d{4}|PDX\d{4})"],
-    "Vivo": [r"^Vivo", r"^V\d{4}$"],
-    "Realme": [r"^Realme", r"^RMX\d{4}"],
-    "Nokia": [r"^Nokia", r"^TA-\d{4}"],
-    "Fitbit": [r"^Fitbit"],
-    "Garmin": [r"^Garmin"],
-    "Microsoft": [r"^Surface"],
-    "Amazon": [r"^Fire", r"^KF[A-Z]{4}"],
-    "Dell": [r"^Dell"],
-    "HP": [r"^HP"],
-    "Lenovo": [r"^Lenovo"],
-    "ASUS": [r"^ASUS"],
-    "Acer": [r"^Acer"],
-    "MSI": [r"^MSI"],
-}
-
-COMPILED_MANUFACTURER_MODEL_MAP = {
-    mfr: [re.compile(pat, re.IGNORECASE) for pat in pats]
-    for mfr, pats in MANUFACTURER_MODEL_MAP.items()
-}
-
-
-MANUFACTURER_ALIASES_MAP = {
-    "Apple": r"apple",
-    "Samsung": r"samsung|^sm$",
-    "LG": r"\blg\b|^lge$",
-    "Motorola": r"motorola|\bmoto\b",
-    "Google": r"google",
-    "Xiaomi": r"xiaomi|poco|redmi",
-    "Huawei": r"huawei|honor",
-    "OPPO": r"oppo",
-    "Vivo": r"\bvivo\b",
-    "OnePlus": r"oneplus",
-    "Sony": r"sony|ericsson",
-    "HTC": r"\bhtc\b",
-    "ASUS": r"asus|asustek",
-    "Nokia": r"nokia|hmd",
-    "Lenovo": r"lenovo",
-    "Amazon": r"amazon",
-    "Microsoft": r"microsoft",
-}
-
-COMPILED_MANUFACTURER_ALIASES_MAP = {
-    mfr: re.compile(pat, re.IGNORECASE) for mfr, pat in MANUFACTURER_ALIASES_MAP.items()
-}
-
-ALL_MFRS = set(MANUFACTURER_MODEL_MAP.keys()) | set(MANUFACTURER_ALIASES_MAP.keys())
-ALL_MFRS_LOWER = set(mfr.lower() for mfr in ALL_MFRS)
-
-
-GENERIC_MODEL_NAMES = {
-    "other",
-    "unknown",
-    "phone",
-    "smartphone",
-    "tablet",
-    "android",
-    "iphone",
-    "ipad",
-    "",
 }
