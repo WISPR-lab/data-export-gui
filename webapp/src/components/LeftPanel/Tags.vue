@@ -82,7 +82,7 @@ export default {
     },
     filteredLabels() {
       if (!this.meta.filter_labels) return []
-      return this.meta.filter_labels.filter((label) => !label.tag.startsWith('__ts_fact'))
+      return this.meta.filter_labels.filter((label) => label && typeof label.tag === 'string' && !label.tag.startsWith('__ts_fact'))
     },
   },
 }

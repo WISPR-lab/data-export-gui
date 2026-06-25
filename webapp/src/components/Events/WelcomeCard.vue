@@ -77,7 +77,7 @@ export default {
     showTags() {
       if (!this.$store.state.tags || !this.$store.state.meta.filter_labels) return false
       const filteredLabels = this.$store.state.meta.filter_labels.filter(
-        (labelObj) => !labelObj.label.startsWith('__ts_fact')
+        (labelObj) => labelObj && typeof labelObj.label === 'string' && !labelObj.label.startsWith('__ts_fact')
       )
       return [...this.$store.state.tags, ...filteredLabels].length > 0
     },

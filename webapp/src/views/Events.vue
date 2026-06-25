@@ -397,7 +397,7 @@ export default {
       return !!(this.project.dataExports && this.project.dataExports.length)
     },
     filteredLabels() {
-      return this.$store.state.meta.filter_labels.filter((label) => !label.label.startsWith('__'))
+      return this.$store.state.meta.filter_labels.filter((label) => label && typeof label.label === 'string' && !label.label.startsWith('__'))
     },
     currentSearchNode() {
       return this.$store.state.currentSearchNode

@@ -94,7 +94,7 @@ limitations under the License.
           @toggleDrawer="toggleDrawer()"
         ></saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
-        <ts-i-p-addresses :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-i-p-addresses>
+        <i-p-addresses :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></i-p-addresses>
         <tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></tags>
         <!-- <search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></search-templates> -->
         

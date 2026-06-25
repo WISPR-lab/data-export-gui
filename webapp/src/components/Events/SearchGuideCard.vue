@@ -51,8 +51,8 @@ limitations under the License.
                   <tr>
                     <td>Search an exact phrase</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('&quot;Successful login&quot;')">
-                        <code>"Successful login"</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('&quot;Login&quot;')">
+                        <code>"Login"</code>
                       </a>
                     </td>
                   </tr>

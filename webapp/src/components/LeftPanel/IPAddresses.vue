@@ -44,7 +44,7 @@ limitations under the License.
 
     <v-expand-transition>
       <div v-show="expanded && ipAddresses.length" class="pl-8 pr-4 pb-4">
-        <ts-i-p-addresses-list></ts-i-p-addresses-list>
+        <i-p-addresses-list></i-p-addresses-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>

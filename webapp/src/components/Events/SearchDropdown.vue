@@ -127,7 +127,7 @@ export default {
     },
     filteredMetaLabels() {
       return this.meta.filter_labels.filter(
-        (label) => !label.label.startsWith('__ts_fact')
+        (label) => label && typeof label.label === 'string' && !label.label.startsWith('__ts_fact')
       );
     },
     all() {
