@@ -151,8 +151,8 @@ limitations under the License.
         hide-overlay
         persistent
         no-click-animation
-        v-model="showTimelineView"
-        @click:outside="showTimelineView = false"
+        v-model="showContextSearch"
+        @click:outside="showContextSearch = false"
         scrollable
       >
         <v-card>
@@ -174,19 +174,19 @@ limitations under the License.
 
             <v-spacer></v-spacer>
 
-            <v-btn icon :disabled="timelineViewHeight > 40" @click="increaseTimelineViewHeight()">
+            <v-btn icon :disabled="contextSearchHeight > 40" @click="increaseContextSearchHeight()">
               <v-icon>mdi-chevron-up</v-icon>
             </v-btn>
-            <v-btn icon :disabled="timelineViewHeight === 0" @click="decreaseTimelineViewHeight()">
+            <v-btn icon :disabled="contextSearchHeight === 0" @click="decreaseContextSearchHeight()">
               <v-icon>mdi-chevron-down</v-icon>
             </v-btn>
-            <v-btn icon @click="showTimelineView = false">
+            <v-btn icon @click="showContextSearch = false">
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </v-toolbar>
           <v-divider></v-divider>
           <v-expand-transition>
-            <v-card-text :style="{ height: timelineViewHeight + 'vh' }" v-show="!minimizeTimelineView">
+            <v-card-text :style="{ height: contextSearchHeight + 'vh' }" v-show="!minimizeContextSearch">
               <ts-event-list :query-request="queryRequest" :highlight-event="currentContextEvent"></ts-event-list>
             </v-card-text>
           </v-expand-transition>
@@ -253,10 +253,10 @@ export default {
       showPrivacySettings: false,
       showFirstTimeModal: false,
       // Context
-      timelineViewHeight: 60,
-      showTimelineView: false,
+      contextSearchHeight: 60,
+      showContextSearch: false,
       currentContextEvent: {},
-      minimizeTimelineView: false,
+      minimizeContextSearch: false,
       queryRequest: {},
       contextStartTime: null,
       contextEndTime: null,
@@ -374,32 +374,32 @@ export default {
       let queryRequest = this.generateContextQuery(this.currentContextEvent)
       queryRequest.doSearch = true
       EventBus.$emit('setQueryAndFilter', queryRequest)
-      this.showTimelineView = false
+      this.showContextSearch = false
     },
     showContextWindow(event) {
       this.currentContextEvent = event
       this.queryRequest = this.generateContextQuery(event)
-      this.showTimelineView = true
+      this.showContextSearch = true
     },
-    increaseTimelineViewHeight: function () {
-      this.minimizeTimelineView = false
-      if (this.timelineViewHeight > 70) {
+    increaseContextSearchHeight: function () {
+      this.minimizeContextSearch = false
+      if (this.contextSearchHeight > 70) {
         return
       }
-      this.timelineViewHeight += 30
+      this.contextSearchHeight += 30
     },
-    decreaseTimelineViewHeight: function () {
-      this.minimizeTimelineView = false
-      if (this.timelineViewHeight < 50) {
-        this.minimizeTimelineView = true
-        this.timelineViewHeight = 0
+    decreaseContextSearchHeight: function () {
+      this.minimizeContextSearch = false
+      if (this.contextSearchHeight < 50) {
+        this.minimizeContextSearch = true
+        this.contextSearchHeight = 0
         return
       }
-      this.timelineViewHeight -= 30
+      this.contextSearchHeight -= 30
     },
-    closeTimelineView: function () {
-      this.minimizeTimelineView = true
-      this.timelineViewHeight = 0
+    closeContextSearch: function () {
+      this.minimizeContextSearch = true
+      this.contextSearchHeight = 0
     },
 
     toggleTheme: function () {
