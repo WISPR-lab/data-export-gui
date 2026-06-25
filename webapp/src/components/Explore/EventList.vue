@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <div>
     <v-alert
@@ -137,7 +138,7 @@ limitations under the License.
         id="tsEventTable"
         v-model="selectedEvents"
         :headers="headers"
-        :items="DEBUG_filteredEventList"
+        :items="eventList.objects"
         :footer-props="{ 'items-per-page-options': [10, 40, 80, 100, 200, 500], 'show-current-page': true }"
         :loading="searchInProgress"
         :options.sync="tableOptions"
@@ -326,22 +327,6 @@ limitations under the License.
 
                 </v-menu>
 
-                <v-btn x-small outlined color="error" @click="deleteSelectedEvents">
-                  <v-icon left>mdi-trash-can-outline</v-icon>
-                  Delete Selected
-                </v-btn>
-
-                <!-- DEBUG: Hide selected events (temporary UI-only) -->
-                <v-btn x-small outlined @click="DEBUG_hideSelectedEvents()" color="orange">
-                  <v-icon left>mdi-eye-off</v-icon>
-                  [DEBUG] Hide Selected
-                </v-btn>
-
-                <!-- DEBUG: Show hidden count and reset button -->
-                <v-btn v-if="DEBUG_hiddenEventIds.size > 0" x-small outlined @click="DEBUG_resetHiddenEvents()" color="warning">
-                  <v-icon left>mdi-refresh</v-icon>
-                  [DEBUG] Unhide All ({{ DEBUG_hiddenEventIds.size }} hidden)
-                </v-btn>
               </div>
 
               <v-spacer></v-spacer>
@@ -669,8 +654,6 @@ export default {
       sortOrderAsc: true,
       summaryCollapsed: false,
       showBanner: false,
-      // DEBUG: Temporary hide functionality
-      DEBUG_hiddenEventIds: new Set(),
       isFirstSearch: true,
     }
   },
@@ -794,13 +777,7 @@ export default {
       // console.log('[EventList.headers] Generated headers:', baseHeaders)
       return baseHeaders
     },
-    // DEBUG: Filtered event list (removes hidden event IDs)
-    DEBUG_filteredEventList() {
-      if (this.DEBUG_hiddenEventIds.size === 0) {
-        return this.eventList.objects
-      }
-      return this.eventList.objects.filter(item => !this.DEBUG_hiddenEventIds.has(item._id))
-    },
+
     activeContext() {
       return this.$store.state.activeContext
     },
@@ -821,19 +798,7 @@ export default {
           this.summaryCollapsed = !this.summaryCollapsed;
           localStorage.setItem('aiSummaryCollapsed', String(this.summaryCollapsed));
     },
-    async deleteSelectedEvents() {
-      if (!confirm(`Delete ${this.selectedEvents.length} events?`)) return
-      const ids = this.selectedEvents.map(e => e._id)
-      try {
-        await DB.deleteEvents(ids)
-        this.selectedEvents = []
-        this.search(true)
-        this.$store.dispatch('setSnackBar', { message: 'Events deleted', color: 'success', timeout: 3000 })
-      } catch (e) {
-        console.error(e)
-        this.$store.dispatch('setSnackBar', { message: 'Delete failed', color: 'error', timeout: 3000 })
-      }
-    },
+
     sortEvents(sortDesc) {
       // sortDesc is the value of Vuetify's sort-desc (true = descending, false = ascending)
       if (sortDesc) {
@@ -1185,24 +1150,7 @@ export default {
           .filter(tl => this.$store.state.enabledTimelines.includes(tl.id))
           .some(tl => tl.status === 'processing')
     },
-    // DEBUG: Hide selected events from UI (temporary, not persisted)
-    DEBUG_hideSelectedEvents() {
-      // Add selected event IDs to the hidden set and reassign to trigger reactivity
-      const newHidden = new Set(this.DEBUG_hiddenEventIds)
-      this.selectedEvents.forEach(event => {
-        newHidden.add(event._id)
-      })
-      this.DEBUG_hiddenEventIds = newHidden
-      // Clear the selection
-      this.selectedEvents = []
-      console.log('[DEBUG] Hidden events. Total hidden:', this.DEBUG_hiddenEventIds.size)
-    },
-    // DEBUG: Reset hidden events
-    DEBUG_resetHiddenEvents() {
-      // Clear all hidden events
-      console.log('[DEBUG] Resetting hidden events. Was hidden:', this.DEBUG_hiddenEventIds.size)
-      this.DEBUG_hiddenEventIds = new Set()
-    },
+
   },
   watch: {
     tableOptions: {
