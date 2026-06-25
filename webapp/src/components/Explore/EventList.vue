@@ -283,17 +283,6 @@ limitations under the License.
                         <v-list-item-group>
                           <v-list-item :ripple="false">
                             <v-list-item-action>
-                              <v-switch dense v-model="displayOptions.showEmojis"></v-switch>
-                            </v-list-item-action>
-                            <v-list-item-content>
-                              <v-list-item-title>Emojis</v-list-item-title>
-                              <v-list-item-subtitle>Show emojis</v-list-item-subtitle>
-                            </v-list-item-content>
-                          </v-list-item>
-                        </v-list-item-group>
-                        <v-list-item-group>
-                          <v-list-item :ripple="false">
-                            <v-list-item-action>
                               <v-switch dense v-model="displayOptions.showTimelineName"></v-switch>
                             </v-list-item-action>
                             <v-list-item-content>
@@ -471,18 +460,7 @@ limitations under the License.
                 >
                   <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
-                <!-- Emojis -->
-                <span v-if="displayOptions.showEmojis && (field.text === 'message' || (index === 4 && headers[3].value === '_source.comment')) && item._source.__ts_emojis">
-                <!-- <span v-if="displayOptions.showEmojis && index === 3 && item._source.__ts_emojis"> -->
-                  <span
-                    class="mr-2"
-                    v-for="emoji in item._source.__ts_emojis"
-                    :key="emoji"
-                    v-html="emoji + ';'"
-                    :title="meta.emojis && meta.emojis[emoji]"
-                  >
-                  </span>
-                </span>
+                
                 <span>{{ item._source[field.text] }}</span>
               </span>
             </div>
@@ -682,7 +660,6 @@ export default {
       displayOptions: {
         isCompact: false,
         showTags: true,
-        showEmojis: true,
         showMillis: false,
         showTimelineName: true,
         showSourceFile: false,
