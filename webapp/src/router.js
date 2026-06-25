@@ -21,7 +21,7 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 
 import Home from './views/Home.vue'
-import Canvas from './views/Canvas.vue'
+import Events from './views/Events.vue'
 import Project from './views/Project.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
@@ -54,7 +54,7 @@ const routes = [
       {
         path: 'events',
         name: 'DemoEvents',
-        component: Canvas,
+        component: Events,
         props: { projectId: 1 },
       },
       {
@@ -84,7 +84,7 @@ const routes = [
       {
         path: 'events',
         name: 'Events',
-        component: Canvas,
+        component: Events,
         props: { projectId: 1 },
       },
       {

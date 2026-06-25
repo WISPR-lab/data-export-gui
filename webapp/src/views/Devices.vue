@@ -122,7 +122,7 @@ export default {
       historyLogs: [],
       showJSONModal: false,
       selectedDeviceForJSON: null,
-      showDemoCompletionModal: false,
+
       uaMaskingText: {
         "mac_ipad": "To prevent fingerprinting, browsers on Apple iPads & Macs use generic User-Agents that hide the exact model and iOS version. Some iPads are misclassified as Macs.",
         "iphone": "To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the exact model.",
@@ -130,16 +130,7 @@ export default {
       }
     }
   },
-  watch: {
-    '$store.state.demoInProgress'(newVal, oldVal) {
-      if (oldVal && !newVal && this.$store.state.demoMode) {
-        console.log('[Devices] Demo completed, showing completion modal');
-        this.$nextTick(() => {
-          this.showDemoCompletionModal = true
-        })
-      }
-    }
-  },
+
   async mounted() {
     await this.fetchDevices();
     await this.fetchHistory();
@@ -300,24 +291,7 @@ export default {
       console.log('[Devices] Resuming demo');
       require('@/demo/DemoController.js');
     },
-    goToUpload() {
-      console.log('[Devices] User chose to upload data');
-      this.showDemoCompletionModal = false
-      this.$store.dispatch('clearDemoState')
-      this.$store.commit('SET_DEMO_MODE', false)
-      this.$router.push('/')
-    },
-    returnToHome() {
-      console.log('[Devices] User chose to return home');
-      this.showDemoCompletionModal = false
-      this.$store.dispatch('clearDemoState')
-      this.$store.commit('SET_DEMO_MODE', false)
-      this.$router.push('/')
-    },
-    exploreMoreDemo() {
-      console.log('[Devices] User chose to explore more');
-      this.showDemoCompletionModal = false
-    }
+
   }
 };
 </script>
