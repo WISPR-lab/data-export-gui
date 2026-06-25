@@ -18,7 +18,7 @@ class DemoController {
   }
 
   async basicInitialize(store) {
-    this._setAllTimelinesVisible(store)
+    this._setAllExportsVisible(store)
     this._clearSearch()
     this._forceCollapseAllRows()
     this._closeAllMenus()
@@ -87,7 +87,7 @@ class DemoController {
   }
 
   onStart(store) {
-      this._setAllTimelinesVisible(store)
+      this._setAllExportsVisible(store)
       // run async cleanup in background to prevent blocking the boot sequence
       this._clearAllTags(store).catch(e => console.error('[DemoController] Failed to clear tags on start:', e))
   }
@@ -236,7 +236,7 @@ class DemoController {
   // --- Helper Methods ---
 
   _setFirstTimelineVisible(store, isVisible) {
-    const firstTl = store.state.project.timelines[0]
+    const firstTl = store.state.project.dataExports[0]
     if (!firstTl) return
     
     const isCurrentlyVisible = store.state.enabledDataExports.includes(firstTl.id)
@@ -247,8 +247,8 @@ class DemoController {
     }
   }
 
-  _setAllTimelinesVisible(store) {
-    const allTlIds = store.state.project.timelines.map(t => t.id)
+  _setAllExportsVisible(store) {
+    const allTlIds = store.state.project.dataExports.map(t => t.id)
     if (allTlIds.length > 0) {
       store.commit('SET_ENABLED_DATA_EXPORTS', allTlIds)
     }

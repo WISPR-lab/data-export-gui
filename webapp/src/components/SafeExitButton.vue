@@ -1,5 +1,5 @@
 <!-- SAFE EXIT BUTTON -->
-
+<!-- Added for wispr-lab/data-export-gui -->
 <template>
   <div v-if="!demoMode" class="safe-exit-button">
     <v-tooltip left>

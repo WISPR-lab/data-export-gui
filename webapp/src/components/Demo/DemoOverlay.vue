@@ -284,11 +284,11 @@ export default {
       }
 
       // "Force Menu Open" logic for Step 3
-      // ONLY trigger if we are actively on the HIDE_TIMELINE_DATA step
-      if (this.active && this.currentStepId === 'HIDE_TIMELINE_DATA') {
+      // ONLY trigger if we are actively on the HIDE_DATA_EXPORT step
+      if (this.active && this.currentStepId === 'HIDE_DATA_EXPORT') {
           const menuVisible = document.querySelector('.menuable__content__active')
           if (!menuVisible) {
-              const menuActivator = document.querySelector('#tsTimelineChipMenu')
+              const menuActivator = document.querySelector('#tsDataExportChipMenu')
               if (menuActivator) {
                   console.log('[DemoOverlay] Menu closed during Step 3, re-opening');
                   menuActivator.click()

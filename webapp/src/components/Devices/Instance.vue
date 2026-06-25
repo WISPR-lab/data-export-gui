@@ -27,7 +27,6 @@
         />
       </div>
 
-      <!-- OS & Timeline -->
       <div class="flex-grow-1 text-truncate">
         <div class="text-body-2 font-weight-medium text--primary d-flex align-center">
           <span>{{ getHeaderLabel }}</span>

@@ -18,7 +18,7 @@ limitations under the License.
   <span>
     <data-export-chip
       v-for="dataExport in allDataExports"
-      class="mr-2 mb-3 timeline-chip"
+      class="mr-2 mb-3 data-export-chip"
       :key="dataExport.id + dataExport.name"
       :data-export="dataExport"
       :is-selected="isSelected(dataExport)"
@@ -52,22 +52,15 @@ export default {
       return this.$store.state.project
     },
     allDataExports() {
-      // Sort alphabetically based on timeline name.
-      let timelines = [...this.project.dataExports]
-      timelines = timelines.sort(function (a, b) {
+      // Sort alphabetically based on data export name.
+      let exports = [...this.project.dataExports]
+      exports = exports.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
       if (!this.showAll) {
-        timelines = timelines.slice(0, 20)
+        exports = exports.slice(0, 20)
       }
-      return timelines
-    },
-    activeDataExports() {
-      // Sort alphabetically based on timeline name.
-      let timelines = [...this.project.dataExports]
-      return timelines.sort(function (a, b) {
-        return a.name.localeCompare(b.name)
-      })
+      return exports
     },
     isEmptyState() {
       return this.countPerDataExport === undefined
@@ -100,13 +93,13 @@ export default {
         await this.$store.dispatch('updateProject', this.project.id)
         this.syncSelectedDataExports()
       } catch (e) {
-        console.error('[TimelinePicker] Failed to delete upload:', e)
+        console.error('[DataExportPicker] Failed to delete upload:', e)
       } finally {
         this.isLoading = false
       }
     },
     async save(dataExport, dataExportName = false) {
-      // Only show the progress bar if renaming the timeline
+      // Only show the progress bar if renaming the data export
       if (dataExportName) {
         this.isLoading = true
       }
@@ -119,7 +112,7 @@ export default {
         await this.$store.dispatch('updateProject', this.project.id)
         this.syncSelectedDataExports()
       } catch (e) {
-        console.error('[TimelinePicker] Failed to update upload:', e)
+        console.error('[DataExportPicker] Failed to update upload:', e)
       } finally {
         if (dataExportName) {
           this.isLoading = false
@@ -132,7 +125,7 @@ export default {
     toggleDataExport(dataExport) {
       this.$store.dispatch('toggleEnabledDataExport', dataExport.id)
       if (this.$store.state.demoMode) {
-        EventBus.$emit('demo:action', 'timeline-toggled')
+        EventBus.$emit('demo:action', 'data-export-toggled')
       }
     },
     toggleTheme() {
@@ -142,25 +135,26 @@ export default {
       if (!this.currentQueryFilter || !this.currentQueryFilter.uploadIds) {
         return
       }
+      const dataExports = this.project.dataExports || []
       if (this.currentQueryFilter.uploadIds.includes('_all')) {
-        this.updateEnabledDataExportsIfChanged(this.activeDataExports.map((tl) => tl.id))
+        this.updateEnabledDataExportsIfChanged(dataExports.map((de) => de.id))
         return
       }
       let newArray = []
       this.currentQueryFilter.uploadIds.forEach((uploadId) => {
-        // In browser version, uploadIds are timeline IDs (strings or numbers)
-        let timeline = this.activeDataExports.find((t) => {
-          return String(t.id) === String(uploadId)
+        // In browser version, uploadIds are data export IDs (strings or numbers)
+        let dataExport = dataExports.find((de) => {
+          return String(de.id) === String(uploadId)
         })
-        if (timeline) {
-          newArray.push(timeline)
+        if (dataExport) {
+          newArray.push(dataExport)
         }
       })
-      this.updateEnabledDataExportsIfChanged(newArray.map((tl) => tl.id))
+      this.updateEnabledDataExportsIfChanged(newArray.map((de) => de.id))
     },
-    updateEnabledDataExportsIfChanged(newTimelineIds) {
-      if (!_.isEqual(newTimelineIds, this.$store.state.enabledDataExports)) {
-        this.$store.dispatch('updateEnabledDataExports', newTimelineIds)
+    updateEnabledDataExportsIfChanged(newDataExportIds) {
+      if (!_.isEqual(newDataExportIds, this.$store.state.enabledDataExports)) {
+        this.$store.dispatch('updateEnabledDataExports', newDataExportIds)
       }
     },
   },
@@ -178,7 +172,7 @@ export default {
 
 <!-- CSS scoped to this component only -->
 <style scoped lang="scss">
-.timeline-chip {
+.data-export-chip {
   display: inline-block;
 }
 </style>

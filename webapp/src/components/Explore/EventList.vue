@@ -451,18 +451,18 @@ limitations under the License.
             </div>
           </template>
 
-          <!-- Timeline name field -->
+          <!-- Data Export name field -->
           <template v-slot:item.data_export_name="{ item }">
             <!-- <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em"> -->
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getDataExportColor(item)">
-              <span class="timeline-name-ellipsis" style="width: 130px; text-align: center">{{
+              <span class="export-name-ellipsis" style="width: 130px; text-align: center">{{
                 getDataExport(item).name
               }}</span></v-chip>
           </template>
 
           <template v-slot:item.source_file="{ item }">
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-if="item._source.filename">
-              <span class="timeline-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">
+              <span class="export-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">
                 {{ item._source.filename }}
               </span>
             </v-chip>
@@ -473,15 +473,15 @@ limitations under the License.
             <v-chip 
               v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0"
               :style="getTimeBubbleColor()"
-              class="pr-1 timeline-chip"
+              class="pr-1 data-export-chip"
             >
               <div class="chip-content">
-                <span class="timeline-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
+                <span class="export-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
               </div>
             </v-chip>
-            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 timeline-chip">
+            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 data-export-chip">
               <div class="chip-content">
-                <span class="timeline-name-ellipsis"></span>
+                <span class="export-name-ellipsis"></span>
               </div>
             </v-chip>
           </template>
@@ -758,7 +758,7 @@ export default {
         width: '200',
         sortable: false,
       })
-      // Add timeline name based on configuration
+      // Add export name based on configuration
       if (this.displayOptions.showDataExportName) {
         baseHeaders.push({
           value: 'data_export_name',
@@ -873,11 +873,11 @@ export default {
     },
     getDataExport: function (event) {
       // Browser model: events have data_export_id directly
-      const timelineId = event._source.data_export_id
-      const dataExport = this.project.dataExports.find((tl) => tl.id === timelineId)
+      const exportId = event._source.data_export_id
+      const dataExport = this.project.dataExports.find((de) => de.id === exportId)
       if (!dataExport) {
-        console.warn('[EventList.getDataExport] Timeline not found for id:', timelineId)
-        return { name: 'Unknown Data Export', id: timelineId, color: '#999' }
+        console.warn('[EventList.getDataExport] Data export not found for id:', exportId)
+        return { name: 'Unknown Data Export', id: exportId, color: '#999' }
       }
       return dataExport
     },
@@ -915,8 +915,8 @@ export default {
       return profile.model || ''
     },
     getAllUploadIds: function () {
-      // Browser model: return timeline IDs directly
-      return this.project.dataExports.map((tl) => tl.id)
+      // Browser model: return IDs directly
+      return this.project.dataExports.map((de) => de.id)
     },
     search: async function (resetPagination = true, incognito = false, parent = false) {
       // Exit early if there are no uploadIds selected
@@ -925,7 +925,7 @@ export default {
         return
       }
 
-      // Expand '_all' to all timeline IDs (handle both array ['_all'] and string '_all')
+      // Expand '_all' to all IDs (handle both array ['_all'] and string '_all')
       const uploadIds = this.currentQueryFilter.uploadIds;
       if (
         uploadIds === '_all' || 
@@ -935,7 +935,7 @@ export default {
         this.currentQueryFilter.uploadIds = allUploadIds;
       }
 
-      // Allow searches with empty query string (shows all events from selected timelines)
+      // Allow searches with empty query string (shows all events from selected data exports)
       this.searchInProgress = true
       this.selectedEvents = []
       this.eventList = emptyEventList()
@@ -970,7 +970,7 @@ export default {
 
         this.updateShowBanner()
         this.$emit('countPerDataExport', this.eventList.meta.count_per_data_export)
-        EventBus.$emit('updateCountPerTimeline', this.eventList.meta.count_per_data_export)
+        EventBus.$emit('updateCountPerExport', this.eventList.meta.count_per_data_export)
         
         this.addTimeBubbles()
         
@@ -1141,11 +1141,11 @@ export default {
       this.saveSearchMenu = false
     },
     updateShowBanner: function() {
-      // Show banner only when processing timelines are enabled and at
-      // least one enabled timeline is in "processing" state.
+      // Show banner only when processing data exports are enabled and at
+      // least one enabled export is in "processing" state.
       // Browser model: status is a string, not an array
       this.showBanner =
-        !!this.settings.showProcessingTimelineEvents &&
+        !!this.settings.showProcessingData &&
         this.project.dataExports
           .filter(tl => this.$store.state.enabledDataExports.includes(tl.id))
           .some(tl => tl.status === 'processing')
@@ -1190,7 +1190,7 @@ export default {
       },
       deep: true,
     },
-    'settings.showProcessingTimelineEvents': {
+    'settings.showProcessingData': {
       handler() {
         this.updateShowBanner()
       },

@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <v-card class="pa-4" min-height="800px">
     <v-card-title>Settings</v-card-title>
@@ -103,23 +105,6 @@ limitations under the License.
           >
         </v-list-item-content>
       </v-list-item>
-
-      <!-- Setting: Searching processing timelines -->
-      <v-list-item v-if="systemSettings.SEARCH_PROCESSING_TIMELINES">
-        <v-list-item-action>
-          <v-switch
-            v-model="settings.showProcessingTimelineEvents"
-            color="primary"
-            @change="saveSettings()"
-          ></v-switch>
-        </v-list-item-action>
-        <v-list-item-content>
-          <v-list-item-title>Include Processing Events</v-list-item-title>
-          <v-list-item-subtitle
-          >Allows queries to include events from timelines still being <strong>processed</strong>.</v-list-item-subtitle
-          >
-        </v-list-item-content>
-      </v-list-item>
     </v-list>
   </v-card>
 </template>
@@ -131,7 +116,7 @@ const DEFAULT_SETTINGS = {
   aiPoweredFeaturesMain: false,
   eventSummarization: false,
   generateQuery: false,
-  showProcessingTimelineEvents: false,
+  showProcessingData: false,
 }
 export default {
   data() {
@@ -141,7 +126,7 @@ export default {
         aiPoweredFeaturesMain: false,
         eventSummarization: false,
         generateQuery: false,
-        showProcessingTimelineEvents: false,
+        showProcessingData: false,
       },
     }
   },

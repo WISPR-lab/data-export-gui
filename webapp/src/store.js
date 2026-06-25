@@ -35,7 +35,7 @@ const defaultState = () => {
   }
 
   let userSettings = {
-    showProcessingTimelineEvents: false,
+    showProcessingData: false,
     showLeftPanel: true,
     aiPoweredFeaturesMain: false,
     eventSummarization: false,
@@ -124,14 +124,14 @@ export default new Vuex.Store({
       Vue.set(state, 'enabledDataExports', payload)
     },
     ADD_ENABLED_DATA_EXPORTS(state, payload) {
-      const freshEnabledTimelines = [...state.enabledDataExports, ...payload]
-      Vue.set(state, 'enabledDataExports', freshEnabledTimelines)
+      const freshEnabledDataExports = [...state.enabledDataExports, ...payload]
+      Vue.set(state, 'enabledDataExports', freshEnabledDataExports)
     },
     REMOVE_ENABLED_DATA_EXPORTS(state, payload) {
       Vue.set(
         state,
         'enabledDataExports',
-        state.enabledDataExports.filter((tl) => !payload.includes(tl))
+        state.enabledDataExports.filter((de) => !payload.includes(de))
       )
     },
     TOGGLE_ENABLED_DATA_EXPORT(state, payload) {
@@ -139,11 +139,11 @@ export default new Vuex.Store({
         Vue.set(
           state,
           'enabledDataExports',
-          state.enabledDataExports.filter((tl) => payload !== tl)
+          state.enabledDataExports.filter((de) => payload !== de)
         )
       } else {
-        const freshEnabledTimelines = [...state.enabledDataExports, payload]
-        Vue.set(state, 'enabledDataExports', freshEnabledTimelines)
+        const freshEnabledDataExports = [...state.enabledDataExports, payload]
+        Vue.set(state, 'enabledDataExports', freshEnabledDataExports)
       }
     },
 
@@ -231,7 +231,7 @@ export default new Vuex.Store({
         name: projectName,
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
-        timelines: []
+        dataExports: []
       }
       
       try {
@@ -272,17 +272,17 @@ export default new Vuex.Store({
         timeout: snackbar.timeout,
       })
     },
-    enableTimeline(context, timeline) {
-      context.commit('ADD_ENABLED_DATA_EXPORTS', [timeline])
+    enableDataExport(context, dataExport) {
+      context.commit('ADD_ENABLED_DATA_EXPORTS', [dataExport])
     },
-    disableTimeline(context, timeline) {
-      context.commit('REMOVE_ENABLED_DATA_EXPORTS', [timeline])
+    disableDataExport(context, dataExport) {
+      context.commit('REMOVE_ENABLED_DATA_EXPORTS', [dataExport])
     },
     updateEnabledDataExports(context, enabledDataExports) {
       context.commit('SET_ENABLED_DATA_EXPORTS', enabledDataExports)
     },
-    toggleEnabledDataExport(context, timelineId) {
-      context.commit('TOGGLE_ENABLED_DATA_EXPORT', timelineId)
+    toggleEnabledDataExport(context, dataExportId) {
+      context.commit('TOGGLE_ENABLED_DATA_EXPORT', dataExportId)
     },
     setDemoMode(context, demoMode) {
       context.commit('SET_DEMO_MODE', demoMode)

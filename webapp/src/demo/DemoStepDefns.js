@@ -14,45 +14,45 @@ export const getStepDefinitions = () => [
     }
   },
   {
-    id: 'OPEN_TIMELINE_MENU',
+    id: 'OPEN_MENU',
     view: 'explore',
-    visibleElements: '.timeline-chip:first-child',
-    clickableElement: '#tsTimelineChipMenu',
+    visibleElements: '.data-export-chip:first-child',
+    clickableElement: '#tsDataExportChipMenu',
     title: 'Data Export Visibility',
     content: 'Each chip represents a different data export you\'ve uploaded. Let\'s start by opening the menu.',
-    action: 'timeline-menu-opened',
+    action: 'menu-opened',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         await controller._clearAllTags(store).catch(e => console.error(e))
     }
   },
   {
-    id: 'HIDE_TIMELINE_DATA',
+    id: 'HIDE_DATA_EXPORT',
     view: 'explore',
-    visibleElements: ['.timeline-chip:first-child', '.menuable__content__active'],
-    clickableElement: '#tsTimelineVisibilityToggle',
+    visibleElements: ['.data-export-chip:first-child', '.menuable__content__active'],
+    clickableElement: '#exportVisibilityToggle',
     title: 'Data Export Visibility',
     content: 'You can temporarily hide this export to focus on other data.',
-    action: 'timeline-toggled',
+    action: 'export-visibility-toggled',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         await controller._clearAllTags(store).catch(e => console.error(e))
         // Ensure menu is open if they skipped to here
         const menuVisible = document.querySelector('.menuable__content__active')
         if (!menuVisible) {
-            controller._secureClick('#tsTimelineChipMenu')
+            controller._secureClick('#tsDataExportChipMenu')
         }
     }
   },
   {
     id: 'SHOW_TIMELINE_DATA',
     view: 'explore',
-    visibleElements: '.timeline-chip:first-child',
-    clickableElement: '.timeline-chip:first-child',
-    blockedElements: ['#tsTimelineChipMenu'],
+    visibleElements: '.data-export-chip:first-child',
+    clickableElement: '.data-export-chip:first-child',
+    blockedElements: ['#tsDataExportChipMenu'],
     title: 'Data Export Visibility',
     content: 'You can bring it back anytime by clicking on the chip. Try re-enabling it.',
-    action: 'timeline-toggled',
+    action: 'export-visibility-toggled',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         await controller._clearAllTags(store).catch(e => console.error(e))
@@ -62,9 +62,9 @@ export const getStepDefinitions = () => [
   {
     id: 'SHOW_TIMELINE_DATA2',
     view: 'explore',
-    visibleElements: '.timeline-chip:first-child',
+    visibleElements: '.data-export-chip:first-child',
     clickableElement: '',
-    blockedElements: ['#tsTimelineChipMenu', '.timeline-chip:first-child'],
+    blockedElements: ['#tsDataExportChipMenu', '.data-export-chip:first-child'],
     title: 'Data Export Visibility',
     content: 'Done! Let\'s take a closer look at your data.',
     action: 'next-click',

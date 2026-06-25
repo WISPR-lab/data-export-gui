@@ -13,74 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <!--
-  A generic timeline component that provides common timeline related
-  functionality and allows customization of the template. That way a timeline
+  A generic export component that provides common export related
+  functionality and allows customization of the template. That way a export
   can be represented as a chip or a table row.
 -->
+
 <template>
   <span v-if="dataExport && dataExport.id">
-    <!--<v-dialog v-if="!dataExportAvailable" v-model="dialogStatus" width="600">
-      <template v-slot:activator="{ on, attrs }">
-        <slot
-          name="processing"
-          :dataExportStatus="dataExportStatus"
-          :events="{
-            on,
-          }"
-        > </slot>
-      </template>
-      <v-card>
-        <v-app-bar flat dense>Importing events to data export "{{ dataExport.name }}"</v-app-bar>
-        <div class="pa-5">
-          <ul>
-            <li v-if="dataExportStatus === 'processing' || dataExportStatus === 'ready'">
-              <strong>Number of events: </strong>
-              {{ allIndexedEvents | compactNumber }}
-            </li>
-            <li>
-              <strong>Created at: </strong>{{ dataExport.created_at | shortDateTime }}
-              <small>({{ dataExport.created_at | timeSince }})</small>
-            </li>
-          </ul>
-          <br />
-            <v-card-title>{{ eventsPerSecond.slice(-1)[0] }} events/s</v-card-title>
-            <v-sparkline
-              :value="eventsPerSecond"
-              :gradient="sparkline.gradient"
-              :smooth="sparkline.radius || false"
-              :padding="sparkline.padding"
-              :line-width="sparkline.width"
-              :stroke-linecap="sparkline.lineCap"
-              :gradient-direction="sparkline.gradientDirection"
-              :fill="sparkline.fill"
-              :type="sparkline.type"
-              :auto-line-width="sparkline.autoLineWidth"
-              auto-draw
-            >
-            </v-sparkline>
-            <v-sheet class="py-4 px-3">
-              <v-progress-linear color="light-blue" height="25" :value="percentComplete" rounded>
-                {{ percentComplete }}% (complete {{ processingETA() }})
-              </v-progress-linear>
-            </v-sheet>
-          </v-card>
-          <v-card v-else outlined class="pa-3"> Waiting for processing to begin.. </v-card>
-        </div>
-        <v-divider></v-divider>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="dialogStatus = false"> Close </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog> -->
 
     <v-menu
       offset-y
       max-width="385"
       :close-on-content-click="false"
       content-class="menu-with-gap"
-      ref="timelineChipMenuRef"
+      ref="dataExportChipMenuRef"
       @input="onMenuToggle"
     >
       <template v-slot:activator="{ on }">
@@ -122,7 +70,7 @@ limitations under the License.
             </v-card>
           </v-dialog>
 
-          <v-list-item id="tsTimelineVisibilityToggle" v-if="dataExportAvailable" @click="$emit('toggle', dataExport)">
+          <v-list-item id="exportVisibilityToggle" v-if="dataExportAvailable" @click="$emit('toggle', dataExport)">
             <v-list-item-action>
               <v-icon v-if="isSelected">mdi-eye-off</v-icon>
               <v-icon v-else>mdi-eye</v-icon>
@@ -135,7 +83,7 @@ limitations under the License.
             <v-list-item-action>
               <v-icon>mdi-checkbox-marked-circle-minus-outline</v-icon>
             </v-list-item-action>
-            <v-list-item-subtitle>Unselect other timelines</v-list-item-subtitle>
+            <v-list-item-subtitle>Unselect other data exports</v-list-item-subtitle>
           </v-list-item>
 
           <v-dialog v-model="dialogStatus" width="800">
@@ -275,12 +223,10 @@ export default {
   props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   data() {
     return {
-      // autoRefresh: false, // COMMENTED OUT: No polling in browser model
       allIndexedEvents: 0, // all indexed events from ready and processed datasources
       totalEvents: null,
       dialogStatus: false,
       dialogRename: false,
-      // datasources: [],
       documentMetadata: [], // Browser model: uploaded files from document_metadata table
       eventsPerSecond: [],
       dataExportName: [...this.dataExport.name],
@@ -353,7 +299,7 @@ export default {
       return (
         this.dataExport.status === 'ready' ||
         this.dataExport.status === 'fail' ||
-        (this.settings.showProcessingTimelineEvents && this.dataExport.status === 'processing')
+        (this.settings.showProcessingData && this.dataExport.status === 'processing')
       )
     },
     dataExportChipColor() {
@@ -401,7 +347,7 @@ export default {
     // },
     onMenuToggle(isOpen) {
       if (isOpen && this.$store.state.demoMode) {
-        EventBus.$emit('demo:action', 'timeline-menu-opened')
+        EventBus.$emit('demo:action', 'menu-opened')
       }
     },
     toggleDataExport() {
@@ -418,83 +364,12 @@ export default {
       try {
         this.documentMetadata = await DB.getUploadedFiles(this.dataExport.id)
       } catch (e) {
-        console.error('[TimelineComponent] Failed to load uploaded files:', e)
+        console.error('[DataExportComponent] Failed to load uploaded files:', e)
         this.documentMetadata = []
       }
     },
-
-    // fetchData() {
-    //   BrowserDB.getSketchTimeline(this.project.id, this.dataExport.id)
-    //     .then((response) => {
-    //       this.dataExportStatus = response.data.objects[0].status[0].status
-    //       this.datasources = response.data.objects[0].datasources
-    //       // This is a naive approach and is misleading if there are multiple
-    //       // datasources importing at the same time, or multiple timelines importing to
-    //       // the same index.
-    //       //
-    //       // NOTE (browser model): upload_id is stored on every event at import time.
-    //       // Source file attribution is queryable via the uploaded_files JOIN in events.js.
-    //       //
-    //       let tmpAllIndexedEvents = this.allIndexedEvents
-    //       this.allIndexedEvents = response.data.meta.lines_indexed
-    //       let deltaEvents = this.allIndexedEvents - tmpAllIndexedEvents
-
-    //       if (deltaEvents < 10000 && deltaEvents > 0) {
-    //         this.eventsPerSecond.push(Math.floor(deltaEvents / 5))
-    //       }
-
-    //       if (this.dataExportStatus !== 'ready' && this.dataExportStatus !== 'fail') {
-    //         this.autoRefresh = true
-    //       } else {
-    //         this.autoRefresh = false
-    //         this.$store.dispatch('updateProject', this.project.id).then(() => {
-    //           if (this.dataExportStatus === 'ready'
-    //             && !this.$store.state.enabledDataExports.includes(this.dataExport.id)
-    //             && !this.settings.showProcessingTimelineEvents
-    //           ) {
-    //             this.$emit('toggle', response.data.objects[0])
-    //           }
-    //         })
-    //       }
-    //     })
-    //     .catch((e) => {
-    //       console.log(e)
-    //     })
-    // },
-    dataSourceStatus(datasource) {
-      // COMMENTED OUT: Server-only method - not applicable to browser model
-      // Support legacy datasources that don't have a status set.
-      // if (!datasource.status[0]) {
-      //   return 'ready'
-      // }
-      // return datasource.status[0].status
-    },
-
-    datasourceStatusColors(datasource) {
-      // COMMENTED OUT: Server-only method - not applicable to browser model
-      // Support legacy datasources that don't have a status set.
-      // if (!datasource.status[0]) {
-      //   return 'ready'
-      // }
-      // if (datasource.status[0].status === 'ready' || datasource.status == []) {
-      //   return 'success'
-      // } else if (datasource.status[0].status === 'processing') {
-      //   return 'info'
-      // } else if (datasource.status[0].status === 'queueing') {
-      //   return 'warning'
-      // }
-      // status = fail
-      // return 'error'
-    },
-    totalEventsDatasource(fileOnDisk) {
-      // COMMENTED OUT: Server-only method - not applicable to browser model
-      // return this.datasources.find((x) => x.file_on_disk === fileOnDisk).total_file_events
-    },
   },
   created() {
-    // TODO: Move to computed
-    // Defensive checks: timeline may not have status yet if sketch hasn't fully loaded
-    // Browser model: status is a string, not an array
     if (!this.dataExport || !this.dataExport.status) {
       return
     }
@@ -504,33 +379,12 @@ export default {
     clearInterval(this.t)
     this.t = false
   },
-  // COMMENTED OUT: No polling in browser model
-  // watch: {
-  //   autoRefresh(val) {
-  //     if (val && !this.t) {
-  //       this.t = setInterval(
-  //         function () {
-  //           this.fetchData()
-  //         }.bind(this),
-  //         5000
-  //       )
-  //     } else {
-  //       clearInterval(this.t)
-  //       this.t = false
-  //     }
-  //   },
-  //   timeline() {
-  //     if (this.dataExport.datasources.length > this.datasources.length) {
-  //       this.fetchData()
-  //     }
-  //   },
-  // },
 }
 </script>
 
 <!-- CSS scoped to this component only -->
 <style scoped lang="scss">
-.timeline-chip {
+.data-export-chip {
   .right {
     margin-left: auto;
   }
@@ -544,11 +398,11 @@ export default {
   }
 }
 
-.v-chip.timeline-chip.failed {
+.v-chip.data-export-chip.failed {
   cursor: auto;
 }
 
-.v-chip.timeline-chip.failed:hover:before {
+.v-chip.data-export-chip.failed:hover:before {
   opacity: 0;
 }
 

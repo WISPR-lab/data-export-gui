@@ -104,7 +104,7 @@ limitations under the License.
             >
               <template v-slot:processing="slotProps">
                 <div class="chip-content" :style="dataExportStyle(slotProps.dataExportStatus, isEnabled(item))">
-                  <span class="timeline-name-ellipsis">{{ item.name }}</span>
+                  <span class="export-name-ellipsis">{{ item.name }}</span>
                   <span class="right">
                     <span v-if="slotProps.dataExportStatus === 'processing'" class="ml-3 mr-3">
                       <v-progress-circular small indeterminate color="grey" :size="17" :width="2"></v-progress-circular>
@@ -137,7 +137,7 @@ limitations under the License.
 
                   <v-tooltip bottom :disabled="item.name.length < 40" open-delay="200">
                     <template v-slot:activator="{ on: onTooltip }">
-                      <span v-on="onTooltip" class="timeline-name-ellipsis" style="cursor: default">{{
+                      <span v-on="onTooltip" class="export-name-ellipsis" style="cursor: default">{{
                         item.name
                       }}</span>
                     </template>
@@ -196,27 +196,19 @@ export default {
       return this.$store.state.project
     },
     allDataExports() {
-      // Sort alphabetically based on timeline name.
-      let timelines = [...this.project.dataExports]
-      timelines.sort(function (a, b) {
+      // Sort alphabetically based on name.
+      let dataExports = [...this.project.dataExports]
+      dataExports.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
-      return timelines
-    },
-    activeDataExports() {
-      // Sort alphabetically based on timeline name.
-      let timelineList = this.project.dataExports || []
-      let timelines = [...timelineList]
-      return timelines.sort(function (a, b) {
-        return a.name.localeCompare(b.name)
-      })
+      return dataExports
     },
     settings() {
       return this.$store.state.settings
     },
   },
   watch: {
-    'settings.showProcessingTimelineEvents': function (newValue, oldValue) {
+    'settings.showProcessingData': function (newValue, oldValue) {
       this.updateEnabledDataExports(oldValue === undefined)
     },
   },
@@ -231,31 +223,31 @@ export default {
       this.$store.dispatch('updateEnabledDataExports', [dataExport.id])
     },
     updateEnabledDataExports(isNewSelection) {
-      let timelines = this.activeDataExports
+      let exports = this.allDataExports
 
       if (isNewSelection) {
-        if (!this.settings.showProcessingTimelineEvents) {
-          timelines = timelines.filter((tl) => tl.status[0].status !== 'processing')
+        if (!this.settings.showProcessingData) {
+          exports = exports.filter((de) => de.status[0].status !== 'processing')
         }
       } else {
-        timelines = timelines.filter((tl) => this.$store.state.enabledDataExports.includes(tl.id))
-        if (this.settings.showProcessingTimelineEvents) {
-          this.activeDataExports.forEach((tl) => {
-            if (!timelines.includes(tl) && tl.status[0].status === 'processing') {
-              timelines.push(tl)
+        exports = exports.filter((de) => this.$store.state.enabledDataExports.includes(de.id))
+        if (this.settings.showProcessingData) {
+          this.allDataExports.forEach((de) => {
+            if (!exports.includes(de) && de.status[0].status === 'processing') {
+              exports.push(de)
             }
           })
-          timelines.sort((a, b) => a.id - b.id)
+          exports.sort((a, b) => a.id - b.id)
         }
       }
 
-      let timelineIds = timelines.map((tl) => tl.id)
+      let exportIDs = exports.map((de) => de.id)
 
-      this.$store.dispatch('updateEnabledDataExports', timelineIds)
+      this.$store.dispatch('updateEnabledDataExports', exportIDs)
     },
     dataExportStyle(dataExportStatus, isSelected) {
       let statusList = ['ready']
-      if (this.settings.showProcessingTimelineEvents) {
+      if (this.settings.showProcessingData) {
         statusList.push('processing')
       }
       const greyOut = statusList.includes(dataExportStatus) && !isSelected
@@ -263,7 +255,7 @@ export default {
         opacity: greyOut ? '50%' : '100%',
       }
     },
-    updateCountPerTimeline(countPerDataExport) {
+    updateCountPerExport(countPerDataExport) {
       this.countPerDataExport = countPerDataExport
     },
     getCount(dataExport) {
@@ -311,10 +303,10 @@ export default {
     this.updateEnabledDataExports(true)
   },
   mounted() {
-    EventBus.$on('updateCountPerTimeline', this.updateCountPerTimeline)
+    EventBus.$on('updateCountPerExport', this.updateCountPerExport)
   },
   beforeDestroy() {
-    EventBus.$off('updateCountPerTimeline')
+    EventBus.$off('updateCountPerExport')
   },
 }
 </script>
@@ -330,7 +322,7 @@ export default {
   width:340px;
 }
 
-.timeline-name.disabled {
+.export-name.disabled {
   text-decoration: line-through;
 }
 .right {
@@ -340,7 +332,7 @@ export default {
   max-width: 50%;
 }
 
-.timeline-name-ellipsis {
+.export-name-ellipsis {
   width: 50%;
 }
 

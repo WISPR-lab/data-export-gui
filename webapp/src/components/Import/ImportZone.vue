@@ -55,7 +55,7 @@ It replaces the generic UploadForm for the new workflow.
           <!-- Timeline Name -->
           <div class="mb-4">
             <v-text-field
-              v-model="timelineName"
+              v-model="dataExportName"
               label="Data Export Name"
               outlined
               dense
@@ -118,7 +118,7 @@ export default {
     return {
       dialog: true,
       selectedFile: null,
-      timelineName: '',
+      dataExportName: '',
       nameRules: [
         (v) => !!v || 'Data export name is required',
         (v) => (v && v.length <= 255) || 'Name must be less than 255 characters',
@@ -138,7 +138,7 @@ export default {
       return (
         this.selectedFile &&
         this.fileValid &&
-        this.timelineName.trim().length > 0 &&
+        this.dataExportName.trim().length > 0 &&
         !this.isUploading
       );
     },
@@ -173,7 +173,7 @@ export default {
     },
   },
   mounted() {
-    this.suggestTimelineName();
+    this.suggestDEName();
   },
   methods: {
     onFileSelected(file) {
@@ -189,20 +189,20 @@ export default {
       this.fileValid = validation.valid;
 
       if (this.fileValid) {
-        this.timelineName = stripZipExtension(file.name);
+        this.dataExportName = stripZipExtension(file.name);
       }
     },
     clearFile() {
       this.selectedFile = null;
-      this.timelineName = '';
+      this.dataExportName = '';
       this.fileValid = false;
       this.localErrors = [];
     },
-    async suggestTimelineName() {
+    async suggestDEName() {
       // Python extractor auto-generates names on upload
       // Just use platform name as placeholder
-      if (!this.timelineName || this.timelineName === '') {
-        this.timelineName = this.selectedPlatform;
+      if (!this.dataExportName || this.dataExportName === '') {
+        this.dataExportName = this.selectedPlatform;
       }
     },
     async submitUpload() {

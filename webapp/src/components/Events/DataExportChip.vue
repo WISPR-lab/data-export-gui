@@ -26,7 +26,7 @@ limitations under the License.
   >
     <template v-slot:processing="slotProps">
       <v-chip v-on="slotProps.events.on" :style="dataExportStyle(slotProps.dataExportStatus)">
-        <span class="timeline-name-ellipsis">{{ dataExport.name }}</span>
+        <span class="export-name-ellipsis">{{ dataExport.name }}</span>
         <span class="ml-1">
           <v-progress-circular small indeterminate color="grey" :size="20" :width="1"></v-progress-circular>
         </span>
@@ -36,7 +36,7 @@ limitations under the License.
       <v-chip
         @click="slotProps.events.toggleDataExport"
         :style="dataExportStyle(slotProps.dataExportStatus)"
-        class="pr-1 timeline-chip"
+        class="pr-1 data-export-chip"
         :class="[{ failed: slotProps.dataExportFailed }, $vuetify.theme.dark ? 'dark-highlight' : 'light-highlight']"
         :ripple="!slotProps.dataExportFailed"
       >
@@ -49,7 +49,7 @@ limitations under the License.
           <v-tooltip bottom :disabled="dataExport.name.length < 30" open-delay="200">
             <template v-slot:activator="{ on: onTooltip, attrs }">
               <span
-                class="timeline-name-ellipsis"
+                class="export-name-ellipsis"
                 :class="{ disabled: !isSelected && (slotProps.dataExportStatus === 'processing' || slotProps.dataExportStatus === 'ready') }"
                 v-bind="attrs"
                 v-on="onTooltip"
@@ -68,14 +68,14 @@ limitations under the License.
               {{ eventsCount | compactNumber }}
             </span>
             <v-btn 
-              id="tsTimelineChipMenu" 
+              id="tsDataExportChipMenu" 
               class="ma-1" 
               x-small 
               icon 
               v-on="slotProps.events.menuOn" 
               @click.stop
             >
-              <v-icon title="Manage Timeline"> mdi-dots-vertical </v-icon>
+              <v-icon title="Manage Data Export"> mdi-dots-vertical </v-icon>
             </v-btn>
           </span>
         </div>
@@ -107,7 +107,7 @@ export default {
 
 <!-- CSS scoped to this component only -->
 <style scoped lang="scss">
-.timeline-chip {
+.data-export-chip {
   .right {
     margin-left: auto;
   }
@@ -120,11 +120,11 @@ export default {
     width: 300px;
   }
 }
-.v-chip.timeline-chip.failed {
+.v-chip.data-export-chip.failed {
   cursor: auto;
 }
 
-.v-chip.timeline-chip.failed:hover:before {
+.v-chip.data-export-chip.failed:hover:before {
   opacity: 0;
 }
 

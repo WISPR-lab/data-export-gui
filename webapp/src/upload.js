@@ -74,7 +74,7 @@ export async function processUpload(file, platform, projectId, store) {
         name: 'Local Takeout Workspace',
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
-        timelines: uploads.uploads || []
+        dataExports: uploads.uploads || []
       };
       
       const meta = await DB.getEventMeta();

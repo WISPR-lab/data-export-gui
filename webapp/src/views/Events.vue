@@ -405,9 +405,9 @@ export default {
     activeContext() {
       return this.$store.state.activeContext
     },
-    activeDataExports() {
-      let timelines = [...this.project.dataExports]
-      return timelines.sort(function (a, b) {
+    allDataExports() {
+      let dataExports = [...this.project.dataExports]
+      return dataExports.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
     },
@@ -787,7 +787,7 @@ export default {
     enableAllDataExports() {
       this.$store.dispatch(
         'updateEnabledDataExports',
-        this.activeDataExports.map((tl) => tl.id)
+        this.allDataExports.map((tl) => tl.id)
       )
     },
     disableAllDataExports() {
@@ -815,7 +815,7 @@ export default {
 
     this.params = {
       viewId: this.$route.query.view,
-      indexName: this.$route.query.timeline,
+      exportId: this.$route.query.export || this.$route.query.timeline,
       resultLimit: this.$route.query.limit,
       queryString: this.$route.query.q,
     }
@@ -830,13 +830,13 @@ export default {
       doSearch = true
     }
 
-    if (this.params.indexName) {
+    if (this.params.exportId) {
       if (!this.params.queryString) {
         this.currentQueryString = '*'
       }
 
       let dataExport = this.project.dataExports.find((dataExport) => {
-        return dataExport.id === parseInt(this.params.indexName, 10)
+        return dataExport.id === parseInt(this.params.exportId, 10)
       })
       if (dataExport) {
         this.currentQueryFilter.uploadIds = [dataExport.id]
