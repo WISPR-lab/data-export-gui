@@ -276,10 +276,10 @@ export default {
       }
       return count
     },
-    async save(dataExport, newTimelineName = false) {
+    async save(dataExport, dataExportName = false) {
       try {
         await DB.updateUpload(dataExport.id, {
-          given_name: newTimelineName || dataExport.name,
+          given_name: dataExportName || dataExport.name,
           description: dataExport.description,
           color: dataExport.color
         })

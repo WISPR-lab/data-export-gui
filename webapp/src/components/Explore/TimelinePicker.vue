@@ -105,15 +105,15 @@ export default {
         this.isLoading = false
       }
     },
-    async save(dataExport, newTimelineName = false) {
+    async save(dataExport, dataExportName = false) {
       // Only show the progress bar if renaming the timeline
-      if (newTimelineName) {
+      if (dataExportName) {
         this.isLoading = true
       }
       
       try {
         await DB.updateUpload(dataExport.id, {
-          given_name: newTimelineName || dataExport.name,
+          given_name: dataExport.name,
           color: dataExport.color
         })
         await this.$store.dispatch('updateProject', this.project.id)
@@ -121,7 +121,7 @@ export default {
       } catch (e) {
         console.error('[TimelinePicker] Failed to update upload:', e)
       } finally {
-        if (newTimelineName) {
+        if (dataExportName) {
           this.isLoading = false
         }
       }

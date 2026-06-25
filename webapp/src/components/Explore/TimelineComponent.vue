@@ -111,12 +111,12 @@ limitations under the License.
               <v-form @submit.prevent="rename()">
                 <h3>Rename timeline</h3>
                 <br />
-                <v-text-field clearable outlined dense autofocus v-model="newTimelineName" @focus="$event.target.select()" :rules="timelineNameRules">
+                <v-text-field clearable outlined dense autofocus v-model="dataExportName" @focus="$event.target.select()" :rules="timelineNameRules">
                 </v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
                   <v-btn text @click="dialogRename = false"> Cancel </v-btn>
-                  <v-btn :disabled="!newTimelineName || newTimelineName.length > 255" color="primary" text @click="rename()"> Save </v-btn>
+                  <v-btn :disabled="!dataExportName || dataExportName.length > 255" color="primary" text @click="rename()"> Save </v-btn>
                 </v-card-actions>
               </v-form>
             </v-card>
@@ -285,7 +285,7 @@ export default {
       // datasources: [],
       documentMetadata: [], // Browser model: uploaded files from document_metadata table
       eventsPerSecond: [],
-      newTimelineName: [...this.dataExport.name],
+      dataExportName: [...this.dataExport.name],
       sparkline: {
         width: 2,
         radius: 10,
@@ -375,7 +375,7 @@ export default {
     },
     rename() {
       this.dialogRename = false
-      this.$emit('save', this.dataExport, this.newTimelineName)
+      this.$emit('save', this.dataExport, this.dataExport.name)
     },
     remove() {
       this.$emit('remove', this.dataExport)
@@ -500,20 +500,6 @@ export default {
     if (!this.dataExport || !this.dataExport.status) {
       return
     }
-    
-    // this.datasources = this.dataExport.datasources || [] // COMMENTED OUT: Server-only, use documentMetadata instead
-    let timelineStat = (this.meta && this.meta.stats_per_data_export) ? this.meta.stats_per_data_export[this.dataExport.id] : null
-
-    // COMMENTED OUT: No polling in browser model
-    // if (this.dataExportStatus === 'processing') {
-    //   this.autoRefresh = true
-    // } else {
-    //   this.autoRefresh = false
-    //   if (timelineStat) {
-    //     this.allIndexedEvents = timelineStat['count']
-    //   }
-    // }
-    this.newTimelineName = this.dataExport.name
     this.loadDocumentMetadata()
   },
   beforeDestroy() {

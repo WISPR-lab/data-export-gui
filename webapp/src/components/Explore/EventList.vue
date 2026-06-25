@@ -284,7 +284,7 @@ limitations under the License.
                         <v-list-item-group>
                           <v-list-item :ripple="false">
                             <v-list-item-action>
-                              <v-switch dense v-model="displayOptions.showTimelineName"></v-switch>
+                              <v-switch dense v-model="displayOptions.showDataExportName"></v-switch>
                             </v-list-item-action>
                             <v-list-item-content>
                               <v-list-item-title>Data export name</v-list-item-title>
@@ -646,7 +646,7 @@ export default {
         isCompact: false,
         showTags: true,
         showMillis: false,
-        showTimelineName: true,
+        showDataExportName: true,
         showSourceFile: false,
       },
       showHistogram: false,
@@ -759,7 +759,7 @@ export default {
         sortable: false,
       })
       // Add timeline name based on configuration
-      if (this.displayOptions.showTimelineName) {
+      if (this.displayOptions.showDataExportName) {
         baseHeaders.push({
           value: 'data_export_name',
           align: 'end',

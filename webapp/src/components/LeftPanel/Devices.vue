@@ -40,6 +40,8 @@ limitations under the License.
 </template>
 
 <script>
+import EventBus from '@/event-bus.js'
+
 export default {
   props: {
     iconOnly: Boolean,

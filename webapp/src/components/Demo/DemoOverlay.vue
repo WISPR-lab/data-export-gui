@@ -278,7 +278,7 @@ export default {
         const rect = clickableEl.getBoundingClientRect()
         if (!this.clickableAreaBox || this.clickableAreaBox.x !== rect.x || this.clickableAreaBox.y !== rect.y) {
           this.clickableAreaBox = rect
-        }{ name: 'Home' }
+        }
       } else {
         this.clickableAreaBox = null
       }

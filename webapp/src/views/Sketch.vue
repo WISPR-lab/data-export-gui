@@ -199,21 +199,18 @@ limitations under the License.
 <script>
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
-import DB from '../database/index.js'
 import PageHeader from '../components/Navigation/PageHeader.vue'
 
 import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
 import TsIPAddresses from '../components/LeftPanel/IPAddresses.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
-import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
 import TsRenameSketch from '../components/RenameSketch.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
 import TsDevices from '../components/LeftPanel/Devices.vue'
-import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
 import TsSettingsDialog from '../components/SettingsDialog.vue'
 import DeleteDataButton from '../components/DeleteDataButton.vue'
 import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
@@ -226,13 +223,11 @@ export default {
     TsDataTypes,
     TsIPAddresses,
     TsTags,
-    TsSearchTemplates,
     NewDataExportButton,
     TsRenameSketch,
     TsSearch,
     TsTimelinesTable,
     TsDevices,
-    PrivacySettingsItem,
     TsEventList,
     TsSettingsDialog,
     DeleteDataButton,
@@ -338,17 +333,6 @@ export default {
       console.log('[Project] User skipped demo');
       this.$store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT');
       this.showFirstTimeModal = false;
-    },
-    deleteProject: async function () {
-      if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
-        try {
-          await wipeAllData()
-          this.$router.push({ name: 'Home' })
-        } catch (e) {
-          console.error('[Project] Failed to delete all data:', e)
-          alert('Failed to delete data. See console for details.')
-        }
-      }
     },
     handleUploadData() {
       this.$router.push('/')

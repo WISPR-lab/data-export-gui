@@ -1,5 +1,5 @@
 import { OPFSManager } from '@/storage/opfs_manager.js';
-import { classifyError, ERROR_TYPES } from '@/constants/error_types';
+import { ERROR_TYPES } from '@/constants/error_types';
 import DB from '@/database/index.js';
 import { executeUpload } from '@/pyodide/pyodide-client.js';
 

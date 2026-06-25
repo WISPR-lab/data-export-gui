@@ -100,7 +100,6 @@ import JSONModal from '@/components/Devices/JSONModal.vue';
 import EditsHistoryTable from '@/components/Devices/EditsHistoryTable.vue';
 import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
 import { getUserDeviceEdits, moveInstancesToProfile, createProfileWithInstances } from '@/database/queries/user_device_edits.js';
-import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'Devices',
@@ -299,7 +298,7 @@ export default {
     },
     resumeDemo() {
       console.log('[Devices] Resuming demo');
-      const DemoController = require('@/demo/DemoController.js').default
+      require('@/demo/DemoController.js');
     },
     goToUpload() {
       console.log('[Devices] User chose to upload data');

@@ -305,9 +305,6 @@ import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
 
-import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
-import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
-import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
 import TsTimelinePicker from '../components/Explore/TimelinePicker.vue'
 import TsFilterMenu from '../components/Explore/FilterMenu.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
@@ -331,9 +328,6 @@ export default {
     dragscroll,
   },
   components: {
-    TsSearchHistoryTree,
-    TsSearchHistoryButtons,
-    TsSearchDropdown,
     TsTimelinePicker,
     TsFilterMenu,
     NewDataExportButton,
