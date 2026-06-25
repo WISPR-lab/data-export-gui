@@ -156,7 +156,7 @@ limitations under the License.
               id="tsTimelinePicker"
               :current-query-filter="currentQueryFilter"
               :count-per-index="countPerIndex"
-              :count-per-timeline="countPerDataExport"
+              :count-per-data-export="countPerDataExport"
             ></ts-timeline-picker>
           </div>
         </v-expand-transition>

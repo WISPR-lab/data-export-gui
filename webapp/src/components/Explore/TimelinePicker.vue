@@ -17,13 +17,13 @@ limitations under the License.
 <template>
   <span>
     <ts-timeline-chip
-      v-for="timeline in allDataExports"
+      v-for="dataExport in allDataExports"
       class="mr-2 mb-3 timeline-chip"
       :key="dataExport.id + dataExport.name"
-      :data-export="timeline"
-      :is-selected="isSelected(timeline)"
+      :data-export="dataExport"
+      :is-selected="isSelected(dataExport)"
       :is-empty-state="isEmptyState"
-      :events-count="getCount(timeline)"
+      :events-count="getCount(dataExport)"
       @remove="remove"
       @save="save"
       @toggle="toggleDataExport"

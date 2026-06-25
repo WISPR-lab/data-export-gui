@@ -19,7 +19,7 @@ limitations under the License.
   can be represented as a chip or a table row.
 -->
 <template>
-  <span v-if="timeline && dataExport.id">
+  <span v-if="dataExport && dataExport.id">
     <!--<v-dialog v-if="!dataExportAvailable" v-model="dialogStatus" width="600">
       <template v-slot:activator="{ on, attrs }">
         <slot
@@ -39,8 +39,8 @@ limitations under the License.
               {{ allIndexedEvents | compactNumber }}
             </li>
             <li>
-              <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
-              <small>({{ timeline.created_at | timeSince }})</small>
+              <strong>Created at: </strong>{{ dataExport.created_at | shortDateTime }}
+              <small>({{ dataExport.created_at | timeSince }})</small>
             </li>
           </ul>
           <br />
@@ -122,7 +122,7 @@ limitations under the License.
             </v-card>
           </v-dialog>
 
-          <v-list-item id="tsTimelineVisibilityToggle" v-if="dataExportAvailable" @click="$emit('toggle', timeline)">
+          <v-list-item id="tsTimelineVisibilityToggle" v-if="dataExportAvailable" @click="$emit('toggle', dataExport)">
             <v-list-item-action>
               <v-icon v-if="isSelected">mdi-eye-off</v-icon>
               <v-icon v-else>mdi-eye</v-icon>
@@ -131,7 +131,7 @@ limitations under the License.
             <v-list-item-subtitle v-else>Re-enable</v-list-item-subtitle>
           </v-list-item>
 
-          <v-list-item v-if="dataExportAvailable" @click="$emit('disableAllOtherDataExports', timeline)">
+          <v-list-item v-if="dataExportAvailable" @click="$emit('disableAllOtherDataExports', dataExport)">
             <v-list-item-action>
               <v-icon>mdi-checkbox-marked-circle-minus-outline</v-icon>
             </v-list-item-action>
@@ -153,12 +153,12 @@ limitations under the License.
                   <li><strong>Upload name: </strong>{{ dataExport.name }}</li>
                   <li v-if="dataExport.status === 'processing' || dataExport.status === 'ready'">
                     <strong>Number of events: </strong>
-                    {{ timeline.event_count | compactNumber }}
+                    {{ dataExport.event_count | compactNumber }}
                   </li>
-                  <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
+                  <!-- <li><strong>Created by: </strong>{{ dataExport.user.username }}</li> -->
                   <li>
-                    <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
-                    <small>({{ timeline.created_at | timeSince }})</small>
+                    <strong>Created at: </strong>{{ dataExport.created_at | shortDateTime }}
+                    <small>({{ dataExport.created_at | timeSince }})</small>
                   </li>
                   <li><strong>Number of files uploaded: </strong>{{ documentMetadata.length }}</li>
                   <v-spacer class="ma-5"></v-spacer>
@@ -217,12 +217,12 @@ limitations under the License.
                   <li><strong>Status: </strong>{{ dataExport.status }}</li>
                   <li>
                     <strong>Number of events: </strong>
-                    {{ timeline.event_count | compactNumber }}
+                    {{ dataExport.event_count | compactNumber }}
                   </li>
-                  <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
+                  <!-- <li><strong>Created by: </strong>{{ dataExport.user.username }}</li> -->
                   <li>
-                    <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
-                    <small>({{ timeline.created_at | timeSince }})</small>
+                    <strong>Created at: </strong>{{ dataExport.created_at | shortDateTime }}
+                    <small>({{ dataExport.created_at | timeSince }})</small>
                   </li>
                 </ul>
               </v-card-text>
@@ -274,7 +274,7 @@ const gradients = [
 ]
 
 export default {
-  props: ['timeline', 'eventsCount', 'isSelected', 'isEmptyState'],
+  props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   data() {
     return {
       // autoRefresh: false, // COMMENTED OUT: No polling in browser model

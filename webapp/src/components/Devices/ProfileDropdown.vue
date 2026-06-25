@@ -4,7 +4,7 @@
     <!-- 1. Device Details Table (at the very top, transparent background) -->
     <div v-if="profileAttributesTable.length > 0" class="mb-6">
       <div class="text-subtitle-1 font-weight-medium text--primary mb-3">Device Details</div>
-      <device-attributes-table :attributes="profileAttributesTable" />
+      <attributes-table :attributes="profileAttributesTable" />
     </div>
 
     <!-- 2. Name & Notes Inputs -->

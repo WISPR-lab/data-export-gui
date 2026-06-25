@@ -15,7 +15,7 @@ limitations under the License.
 -->
 <template>
   <ts-timeline-component
-    :data-export="timeline"
+    :data-export="dataExport"
     :eventsCount="eventsCount"
     :isSelected="isSelected"
     :isEmptyState="isEmptyState"
@@ -89,7 +89,7 @@ limitations under the License.
 import TsTimelineComponent from './TimelineComponent.vue'
 
 export default {
-  props: ['timeline', 'eventsCount', 'isSelected', 'isEmptyState'],
+  props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   components: {
     TsTimelineComponent,
   },
