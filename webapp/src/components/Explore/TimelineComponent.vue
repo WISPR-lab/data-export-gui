@@ -259,10 +259,8 @@ limitations under the License.
 
 <script>
 import Vue from 'vue'
-import _ from 'lodash'
 import DB from '@/database/index.js'
 import EventBus from '@/event-bus.js'
-import { VSpacer } from 'vuetify/lib';
 
 const gradients = [
   ['#222'],

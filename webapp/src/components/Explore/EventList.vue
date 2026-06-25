@@ -421,9 +421,8 @@ limitations under the License.
           </template>
 
           <!-- Generic slot for any field type. Adds tags and emojis to the first column. -->
-          <template v-for="(field, index) in headers" v-slot:[getFieldName(field.text)]="{ item }">
+          <template v-for="(field, index) in headers" :slot="getFieldName(field.text)" slot-scope="{ item }" :key="field.text">
             <div
-              :key="field.text"
               class="ts-event-field-container"
               style="cursor: pointer"
               @click="toggleDetailedEvent(item)"
