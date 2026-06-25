@@ -53,7 +53,7 @@ const defaultState = () => {
   }
 
   return {
-    sketch: {},
+    project: {},
     meta: {
       attributes: {},
       filter_labels: [],
@@ -63,9 +63,8 @@ const defaultState = () => {
     tags: [],
     localTimezoneAbbr: getLocalTimezoneAbbr(),
     settings: userSettings,
-    eventActions: [],
     currentSearchNode: null,
-    enabledTimelines: [],
+    enabledDataExports: [],
     snackbar: {
       active: false,
       color: '',
@@ -97,8 +96,8 @@ const state = defaultState()
 export default new Vuex.Store({
   state,
   mutations: {
-    SET_SKETCH(state, payload) {
-      Vue.set(state, 'sketch', payload.objects[0])
+    SET_PROJECT(state, payload) {
+      Vue.set(state, 'project', payload.objects[0])
       Vue.set(state, 'meta', payload.meta)
     },
 
@@ -121,30 +120,30 @@ export default new Vuex.Store({
     RESET_STATE(state, payload) {
       Object.assign(state, defaultState('local-user'))
     },
-    SET_ENABLED_TIMELINES(state, payload) {
-      Vue.set(state, 'enabledTimelines', payload)
+    SET_ENABLED_DATA_EXPORTS(state, payload) {
+      Vue.set(state, 'enabledDataExports', payload)
     },
-    ADD_ENABLED_TIMELINES(state, payload) {
-      const freshEnabledTimelines = [...state.enabledTimelines, ...payload]
-      Vue.set(state, 'enabledTimelines', freshEnabledTimelines)
+    ADD_ENABLED_DATA_EXPORTS(state, payload) {
+      const freshEnabledTimelines = [...state.enabledDataExports, ...payload]
+      Vue.set(state, 'enabledDataExports', freshEnabledTimelines)
     },
-    REMOVE_ENABLED_TIMELINES(state, payload) {
+    REMOVE_ENABLED_DATA_EXPORTS(state, payload) {
       Vue.set(
         state,
-        'enabledTimelines',
-        state.enabledTimelines.filter((tl) => !payload.includes(tl))
+        'enabledDataExports',
+        state.enabledDataExports.filter((tl) => !payload.includes(tl))
       )
     },
-    TOGGLE_ENABLED_TIMELINE(state, payload) {
-      if (state.enabledTimelines.includes(payload)) {
+    TOGGLE_ENABLED_DATA_EXPORT(state, payload) {
+      if (state.enabledDataExports.includes(payload)) {
         Vue.set(
           state,
-          'enabledTimelines',
-          state.enabledTimelines.filter((tl) => payload !== tl)
+          'enabledDataExports',
+          state.enabledDataExports.filter((tl) => payload !== tl)
         )
       } else {
-        const freshEnabledTimelines = [...state.enabledTimelines, payload]
-        Vue.set(state, 'enabledTimelines', freshEnabledTimelines)
+        const freshEnabledTimelines = [...state.enabledDataExports, payload]
+        Vue.set(state, 'enabledDataExports', freshEnabledTimelines)
       }
     },
 
@@ -216,35 +215,35 @@ export default new Vuex.Store({
     },
   },
   actions: {
-    async updateSketch(context, sketchId) {
+    async updateProject(context, projectId) {
       if (!window.crossOriginIsolated) {
-        console.warn('[Store.updateSketch] security headers missing. skippng db init.');
+        console.warn('[Store.updateProject] security headers missing. skippng db init.');
         return;
       }
 
-      let sketchName = localStorage.getItem('sketchName') || 'My Data'
+      let projectName = localStorage.getItem('projectName') || 'My Data'
       if (context.state.demoMode) {
-        sketchName = 'Instagram Demo Data'
+        projectName = 'Instagram Demo Data'
       }
       
-      const virtualSketch = {
+      const virtualProject = {
         id: context.state.demoMode ? 2 : 1,
-        name: sketchName,
+        name: projectName,
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
         timelines: []
       }
       
       try {
-        console.log('[Store.updateSketch] Fetching uploads from database...');
+        console.log('[Store.updateProject] Fetching uploads from database...');
         const uploads = await DB.getUploads()
-        console.log('[Store.updateSketch] Received uploads:', uploads.uploads);
-        const sketch = { ...virtualSketch, timelines: uploads.uploads || [] }
+        console.log('[Store.updateProject] Received uploads:', uploads.uploads);
+        const project = { ...virtualProject, dataExports: uploads.uploads || [] }
         const meta = await DB.getEventMeta()
-        console.log('[Store.updateSketch] Committing SET_SKETCH with timelines:', sketch.timelines.map(t => ({ id: t.id, name: t.name, color: t.color })));
-        context.commit('SET_SKETCH', { objects: [sketch], meta })
+        console.log('[Store.updateProject] Committing SET_PROJECT with dataExports:', project.dataExports.map(t => ({ id: t.id, name: t.name, color: t.color })));
+        context.commit('SET_PROJECT', { objects: [project], meta })
       } catch (e) {
-        console.error('[Store] updateSketch error:', e)
+        console.error('[Store] updateProject error:', e)
       }
     },
     resetState(context) {
@@ -274,16 +273,16 @@ export default new Vuex.Store({
       })
     },
     enableTimeline(context, timeline) {
-      context.commit('ADD_ENABLED_TIMELINES', [timeline])
+      context.commit('ADD_ENABLED_DATA_EXPORTS', [timeline])
     },
     disableTimeline(context, timeline) {
-      context.commit('REMOVE_ENABLED_TIMELINES', [timeline])
+      context.commit('REMOVE_ENABLED_DATA_EXPORTS', [timeline])
     },
-    updateEnabledTimelines(context, enabledTimelines) {
-      context.commit('SET_ENABLED_TIMELINES', enabledTimelines)
+    updateEnabledDataExports(context, enabledDataExports) {
+      context.commit('SET_ENABLED_DATA_EXPORTS', enabledDataExports)
     },
-    toggleEnabledTimeline(context, timelineId) {
-      context.commit('TOGGLE_ENABLED_TIMELINE', timelineId)
+    toggleEnabledDataExport(context, timelineId) {
+      context.commit('TOGGLE_ENABLED_DATA_EXPORT', timelineId)
     },
     setDemoMode(context, demoMode) {
       context.commit('SET_DEMO_MODE', demoMode)
@@ -300,7 +299,7 @@ export default new Vuex.Store({
     clearDemoState(context) {
       // Clear UI state when switching out of demo mode to prevent filter leakage
       context.commit('SET_EVENT_LABELS', [])
-      context.commit('SET_ENABLED_TIMELINES', [])
+      context.commit('SET_ENABLED_DATA_EXPORTS', [])
       // Reset demo progress
       context.commit('SET_DEMO_IN_PROGRESS', false)
       context.commit('SET_DEMO_STEP', 0)

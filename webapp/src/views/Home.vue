@@ -31,7 +31,7 @@
           <v-btn
             large
             color="primary"
-            @click="goToSketch"
+            @click="goToProject"
           >
             <v-icon left>mdi-play</v-icon>
             Explore your data
@@ -203,7 +203,7 @@ export default {
     }
   },
   methods: {
-    goToSketch() {
+    goToProject() {
       this.$router.push({ name: 'Explore' })
     },
   },

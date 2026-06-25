@@ -81,7 +81,7 @@ limitations under the License.
       <strong>Showing context for event:</strong>
       <v-sheet class="d-flex flex-wrap mt-1 mb-5">
         <v-sheet class="flex-1-0">
-          <span style="width: 200px" v-bind:style="getTimelineColor(highlightEvent)" class="datetime-table-cell pa-2">
+          <span style="width: 200px" v-bind:style="getDataExportColor(highlightEvent)" class="datetime-table-cell pa-2">
             <span v-if="(highlightEvent._source.primary_timestamp !== null && highlightEvent._source.primary_timestamp !== '') || (highlightEvent._source.timestamp !== null && highlightEvent._source.timestamp !== '')">
               {{ highlightEvent._source.primary_timestamp | formatTimestamp | toISO8601 }}
             </span>
@@ -409,7 +409,7 @@ limitations under the License.
 
           <!-- Datetime field with action buttons -->
           <template v-slot:item._source.primary_timestamp="{ item }">
-            <!-- <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell"> -->
+            <!-- <div v-bind:style="getDataExportColor(item)" class="datetime-table-cell"> -->
             <div class="datetime-table-cell">
               <span v-if="(item._source.primary_timestamp !== null && item._source.primary_timestamp !== '')">
                 <!-- {{ item._source.primary_timestamp }} -->
@@ -452,11 +452,11 @@ limitations under the License.
           </template>
 
           <!-- Timeline name field -->
-          <template v-slot:item.timeline_name="{ item }">
+          <template v-slot:item.data_export_name="{ item }">
             <!-- <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em"> -->
-            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getTimelineColor(item)">
+            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getDataExportColor(item)">
               <span class="timeline-name-ellipsis" style="width: 130px; text-align: center">{{
-                getTimeline(item).name
+                getDataExport(item).name
               }}</span></v-chip>
           </template>
 
@@ -551,7 +551,7 @@ const defaultQueryFilter = () => {
 const emptyEventList = () => {
   return {
     meta: {
-      count_per_timeline: {},
+      count_per_data_export: {},
       num_events: 0,
       num_states: 0,
       has_next_page: false,
@@ -663,8 +663,8 @@ export default {
       const uniqueEvents = this.eventList.meta.summary_unique_event_count
       return `[experimental] This summary is based on the message field on your current page (${totalEvents} rows, ${uniqueEvents} unique message fields).`
     },
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     meta() {
       return this.$store.state.meta
@@ -761,7 +761,7 @@ export default {
       // Add timeline name based on configuration
       if (this.displayOptions.showTimelineName) {
         baseHeaders.push({
-          value: 'timeline_name',
+          value: 'data_export_name',
           align: 'end',
           sortable: false,
         })
@@ -789,7 +789,7 @@ export default {
     },
     availableColumns() {
       if (!this.meta || !this.meta.mappings) return [];
-      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'timeline_id', 'event_outcome'];
+      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'data_export_id', 'event_outcome'];
       return this.meta.mappings.filter(m => !excluded.includes(m.field));
     },
   },
@@ -871,19 +871,19 @@ export default {
         }
       })
     },
-    getTimeline: function (event) {
-      // Browser model: events have timeline_id directly
-      const timelineId = event._source.timeline_id
-      const timeline = this.sketch.timelines.find((tl) => tl.id === timelineId)
-      if (!timeline) {
-        console.warn('[EventList.getTimeline] Timeline not found for id:', timelineId)
+    getDataExport: function (event) {
+      // Browser model: events have data_export_id directly
+      const timelineId = event._source.data_export_id
+      const dataExport = this.project.dataExports.find((tl) => tl.id === timelineId)
+      if (!dataExport) {
+        console.warn('[EventList.getDataExport] Timeline not found for id:', timelineId)
         return { name: 'Unknown Data Export', id: timelineId, color: '#999' }
       }
-      return timeline
+      return dataExport
     },
-    getTimelineColor(event) {
-      let timeline = this.getTimeline(event)
-      let backgroundColor = timeline.color || '#999'
+    getDataExportColor(event) {
+      let dataExport = this.getDataExport(event)
+      let backgroundColor = dataExport.color || '#999'
       if (!backgroundColor.startsWith('#')) {
         backgroundColor = '#' + backgroundColor
       }
@@ -916,7 +916,7 @@ export default {
     },
     getAllUploadIds: function () {
       // Browser model: return timeline IDs directly
-      return this.sketch.timelines.map((tl) => tl.id)
+      return this.project.dataExports.map((tl) => tl.id)
     },
     search: async function (resetPagination = true, incognito = false, parent = false) {
       // Exit early if there are no uploadIds selected
@@ -955,10 +955,10 @@ export default {
 
         // Response has unwrapped format:
         // - objects: array of {_id, _source} wrapped events
-        // - meta: metadata including count_per_timeline, total_count, etc.
+        // - meta: metadata including count_per_data_export, total_count, etc.
         this.eventList.objects = response.objects || []
         this.eventList.meta = response.meta || {
-          count_per_timeline: {},
+          count_per_data_export: {},
           total_count: 0,
         }
         
@@ -969,8 +969,8 @@ export default {
         this.eventList.meta.query_time_ms = Date.now() - startTime
 
         this.updateShowBanner()
-        this.$emit('countPerTimeline', this.eventList.meta.count_per_timeline)
-        EventBus.$emit('updateCountPerTimeline', this.eventList.meta.count_per_timeline)
+        this.$emit('countPerDataExport', this.eventList.meta.count_per_data_export)
+        EventBus.$emit('updateCountPerTimeline', this.eventList.meta.count_per_data_export)
         
         this.addTimeBubbles()
         
@@ -990,7 +990,7 @@ export default {
     //     query: this.currentQueryString,
     //     filter: this.currentQueryFilter,
     //   }
-    //   BrowserDB.llmRequest(this.sketch.id, 'llm_summarize', formData)
+    //   BrowserDB.llmRequest(this.project.id, 'llm_summarize', formData)
     //     .then((response) => {
     //       this.$set(this.eventList.meta, 'summary', response.data.response)
     //       this.$set(this.eventList.meta, 'summary_event_count', response.data.summary_event_count)
@@ -1146,8 +1146,8 @@ export default {
       // Browser model: status is a string, not an array
       this.showBanner =
         !!this.settings.showProcessingTimelineEvents &&
-        this.sketch.timelines
-          .filter(tl => this.$store.state.enabledTimelines.includes(tl.id))
+        this.project.dataExports
+          .filter(tl => this.$store.state.enabledDataExports.includes(tl.id))
           .some(tl => tl.status === 'processing')
     },
 

@@ -22,7 +22,7 @@ limitations under the License.
 <template>
   <div>
     <div v-show="currentRouteName === 'Explore' || currentRouteName === 'DemoExplore'">
-      <explore :sketch-id="sketchId"></explore>
+      <explore :project-id="projectId"></explore>
     </div>
   </div>
 </template>
@@ -31,7 +31,7 @@ limitations under the License.
 import Explore from './Explore.vue'
 export default {
   props: [
-    'sketchId', 
+    'projectId', 
     'storyId', 
     'ruleId', 
     'aggregationId'

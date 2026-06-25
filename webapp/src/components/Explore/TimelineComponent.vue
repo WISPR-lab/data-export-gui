@@ -19,22 +19,22 @@ limitations under the License.
   can be represented as a chip or a table row.
 -->
 <template>
-  <span v-if="timeline && timeline.id">
-    <!--<v-dialog v-if="!timelineAvailable" v-model="dialogStatus" width="600">
+  <span v-if="timeline && dataExport.id">
+    <!--<v-dialog v-if="!dataExportAvailable" v-model="dialogStatus" width="600">
       <template v-slot:activator="{ on, attrs }">
         <slot
           name="processing"
-          :timelineStatus="timelineStatus"
+          :dataExportStatus="dataExportStatus"
           :events="{
             on,
           }"
         > </slot>
       </template>
       <v-card>
-        <v-app-bar flat dense>Importing events to timeline "{{ timeline.name }}"</v-app-bar>
+        <v-app-bar flat dense>Importing events to timeline "{{ dataExport.name }}"</v-app-bar>
         <div class="pa-5">
           <ul>
-            <li v-if="timelineStatus === 'processing' || timelineStatus === 'ready'">
+            <li v-if="dataExportStatus === 'processing' || dataExportStatus === 'ready'">
               <strong>Number of events: </strong>
               {{ allIndexedEvents | compactNumber }}
             </li>
@@ -86,11 +86,11 @@ limitations under the License.
       <template v-slot:activator="{ on }">
         <slot
           name="processed"
-          :timelineFailed="timelineFailed"
-          :timelineChipColor="timelineChipColor"
-          :timelineStatus="timeline.status"
+          :dataExportFailed="dataExportFailed"
+          :dataExportChipColor="dataExportChipColor"
+          :dataExportStatus="dataExport.status"
           :events="{
-            toggleTimeline,
+            toggleDataExport,
             openDialog,
             menuOn: on,
           }"
@@ -122,7 +122,7 @@ limitations under the License.
             </v-card>
           </v-dialog>
 
-          <v-list-item id="tsTimelineVisibilityToggle" v-if="timelineAvailable" @click="$emit('toggle', timeline)">
+          <v-list-item id="tsTimelineVisibilityToggle" v-if="dataExportAvailable" @click="$emit('toggle', timeline)">
             <v-list-item-action>
               <v-icon v-if="isSelected">mdi-eye-off</v-icon>
               <v-icon v-else>mdi-eye</v-icon>
@@ -131,7 +131,7 @@ limitations under the License.
             <v-list-item-subtitle v-else>Re-enable</v-list-item-subtitle>
           </v-list-item>
 
-          <v-list-item v-if="timelineAvailable" @click="$emit('disableAllOtherTimelines', timeline)">
+          <v-list-item v-if="dataExportAvailable" @click="$emit('disableAllOtherDataExports', timeline)">
             <v-list-item-action>
               <v-icon>mdi-checkbox-marked-circle-minus-outline</v-icon>
             </v-list-item-action>
@@ -150,8 +150,8 @@ limitations under the License.
             <v-card>
               <div class="pa-4">
                 <ul style="list-style-type: none">
-                  <li><strong>Upload name: </strong>{{ timeline.name }}</li>
-                  <li v-if="timeline.status === 'processing' || timeline.status === 'ready'">
+                  <li><strong>Upload name: </strong>{{ dataExport.name }}</li>
+                  <li v-if="dataExport.status === 'processing' || dataExport.status === 'ready'">
                     <strong>Number of events: </strong>
                     {{ timeline.event_count | compactNumber }}
                   </li>
@@ -200,7 +200,7 @@ limitations under the License.
           </v-dialog>
 
 
-          <v-list-item v-if="timelineAvailable" style="cursor: pointer" @click="deleteConfirmation = true">
+          <v-list-item v-if="dataExportAvailable" style="cursor: pointer" @click="deleteConfirmation = true">
             <v-list-item-action>
               <v-icon>mdi-trash-can-outline</v-icon>
             </v-list-item-action>
@@ -213,8 +213,8 @@ limitations under the License.
               </v-card-title>
               <v-card-text>
                 <ul style="list-style-type: none">
-                  <li><strong>Name: </strong>{{ timeline.name }}</li>
-                  <li><strong>Status: </strong>{{ timeline.status }}</li>
+                  <li><strong>Name: </strong>{{ dataExport.name }}</li>
+                  <li><strong>Status: </strong>{{ dataExport.status }}</li>
                   <li>
                     <strong>Number of events: </strong>
                     {{ timeline.event_count | compactNumber }}
@@ -234,10 +234,10 @@ limitations under the License.
             </v-card>
           </v-dialog>
         </v-list>
-        <div v-if="!timelineFailed" class="px-4">
+        <div v-if="!dataExportFailed" class="px-4">
           <v-color-picker
             @update:color="updateColor"
-            :value="'#' + timeline.color"
+            :value="'#' + dataExport.color"
             :show-swatches="!showCustomColorPicker"
             :swatches="colorPickerSwatches"
             :hide-canvas="!showCustomColorPicker"
@@ -285,7 +285,7 @@ export default {
       // datasources: [],
       documentMetadata: [], // Browser model: uploaded files from document_metadata table
       eventsPerSecond: [],
-      newTimelineName: [...this.timeline.name],
+      newTimelineName: [...this.dataExport.name],
       sparkline: {
         width: 2,
         radius: 10,
@@ -319,7 +319,7 @@ export default {
       return this.$store.state.meta
     },
     // datasourceErrors() {
-    //   const datasources = this.timeline && this.timeline.datasources ? this.timeline.datasources : []
+    //   const datasources = this.dataExport && this.dataExport.datasources ? this.dataExport.datasources : []
     //   return datasources.filter((datasource) => datasource.error_message)
     // },
     // datasourcesProcessing() {
@@ -328,8 +328,8 @@ export default {
     //       this.dataSourceStatus(datasource) === 'processing' || this.dataSourceStatus(datasource) === 'queueing'
     //   )
     // },
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     // totalEventsToIndex() {
     //   return this.datasources
@@ -344,26 +344,26 @@ export default {
     //   return Math.floor((this.secondsSinceStart() / this.secondsToComplete) * 100) || 0
     // },
     iconStatus() {
-      if (this.timeline.status === 'ready') return 'mdi-information-outline'
-      if (this.timeline.status === 'processing') return 'mdi-circle-slice-7'
+      if (this.dataExport.status === 'ready') return 'mdi-information-outline'
+      if (this.dataExport.status === 'processing') return 'mdi-circle-slice-7'
       return 'mdi-alert-circle-outline'
     },
-    timelineFailed() {
-      return this.timeline.status === 'fail'
+    dataExportFailed() {
+      return this.dataExport.status === 'fail'
     },
-    timelineAvailable() {
+    dataExportAvailable() {
       return (
-        this.timeline.status === 'ready' ||
-        this.timeline.status === 'fail' ||
-        (this.settings.showProcessingTimelineEvents && this.timeline.status === 'processing')
+        this.dataExport.status === 'ready' ||
+        this.dataExport.status === 'fail' ||
+        (this.settings.showProcessingTimelineEvents && this.dataExport.status === 'processing')
       )
     },
-    timelineChipColor() {
-      if (!this.timeline || !this.timeline.color) return '#5E75C2'
-      if (!this.timeline.color.startsWith('#')) {
-        return '#' + this.timeline.color
+    dataExportChipColor() {
+      if (!this.dataExport || !this.dataExport.color) return '#5E75C2'
+      if (!this.dataExport.color.startsWith('#')) {
+        return '#' + this.dataExport.color
       }
-      return this.timeline.color
+      return this.dataExport.color
     },
     settings() {
       return this.$store.state.settings
@@ -375,10 +375,10 @@ export default {
     },
     rename() {
       this.dialogRename = false
-      this.$emit('save', this.timeline, this.newTimelineName)
+      this.$emit('save', this.dataExport, this.newTimelineName)
     },
     remove() {
-      this.$emit('remove', this.timeline)
+      this.$emit('remove', this.dataExport)
       this.deleteConfirmation = false
       this.successSnackBar('Timeline deleted')
     },
@@ -406,19 +406,19 @@ export default {
         EventBus.$emit('demo:action', 'timeline-menu-opened')
       }
     },
-    toggleTimeline() {
-      if (!this.timelineFailed) {
-        this.$emit('toggle', this.timeline)
+    toggleDataExport() {
+      if (!this.dataExportFailed) {
+        this.$emit('toggle', this.dataExport)
       }
     },
     // Browser model: no server, so no need for debounce
     updateColor(color) {
-      Vue.set(this.timeline, 'color', color.hex.substring(1))
-      this.$emit('save', this.timeline)
+      Vue.set(this.dataExport, 'color', color.hex.substring(1))
+      this.$emit('save', this.dataExport)
     },
     async loadDocumentMetadata() {
       try {
-        this.documentMetadata = await DB.getUploadedFiles(this.timeline.id)
+        this.documentMetadata = await DB.getUploadedFiles(this.dataExport.id)
       } catch (e) {
         console.error('[TimelineComponent] Failed to load uploaded files:', e)
         this.documentMetadata = []
@@ -426,9 +426,9 @@ export default {
     },
 
     // fetchData() {
-    //   BrowserDB.getSketchTimeline(this.sketch.id, this.timeline.id)
+    //   BrowserDB.getSketchTimeline(this.project.id, this.dataExport.id)
     //     .then((response) => {
-    //       this.timelineStatus = response.data.objects[0].status[0].status
+    //       this.dataExportStatus = response.data.objects[0].status[0].status
     //       this.datasources = response.data.objects[0].datasources
     //       // This is a naive approach and is misleading if there are multiple
     //       // datasources importing at the same time, or multiple timelines importing to
@@ -445,13 +445,13 @@ export default {
     //         this.eventsPerSecond.push(Math.floor(deltaEvents / 5))
     //       }
 
-    //       if (this.timelineStatus !== 'ready' && this.timelineStatus !== 'fail') {
+    //       if (this.dataExportStatus !== 'ready' && this.dataExportStatus !== 'fail') {
     //         this.autoRefresh = true
     //       } else {
     //         this.autoRefresh = false
-    //         this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-    //           if (this.timelineStatus === 'ready'
-    //             && !this.$store.state.enabledTimelines.includes(this.timeline.id)
+    //         this.$store.dispatch('updateProject', this.project.id).then(() => {
+    //           if (this.dataExportStatus === 'ready'
+    //             && !this.$store.state.enabledDataExports.includes(this.dataExport.id)
     //             && !this.settings.showProcessingTimelineEvents
     //           ) {
     //             this.$emit('toggle', response.data.objects[0])
@@ -497,15 +497,15 @@ export default {
     // TODO: Move to computed
     // Defensive checks: timeline may not have status yet if sketch hasn't fully loaded
     // Browser model: status is a string, not an array
-    if (!this.timeline || !this.timeline.status) {
+    if (!this.dataExport || !this.dataExport.status) {
       return
     }
     
-    // this.datasources = this.timeline.datasources || [] // COMMENTED OUT: Server-only, use documentMetadata instead
-    let timelineStat = (this.meta && this.meta.stats_per_timeline) ? this.meta.stats_per_timeline[this.timeline.id] : null
+    // this.datasources = this.dataExport.datasources || [] // COMMENTED OUT: Server-only, use documentMetadata instead
+    let timelineStat = (this.meta && this.meta.stats_per_data_export) ? this.meta.stats_per_data_export[this.dataExport.id] : null
 
     // COMMENTED OUT: No polling in browser model
-    // if (this.timelineStatus === 'processing') {
+    // if (this.dataExportStatus === 'processing') {
     //   this.autoRefresh = true
     // } else {
     //   this.autoRefresh = false
@@ -513,7 +513,7 @@ export default {
     //     this.allIndexedEvents = timelineStat['count']
     //   }
     // }
-    this.newTimelineName = this.timeline.name
+    this.newTimelineName = this.dataExport.name
     this.loadDocumentMetadata()
   },
   beforeDestroy() {
@@ -536,7 +536,7 @@ export default {
   //     }
   //   },
   //   timeline() {
-  //     if (this.timeline.datasources.length > this.datasources.length) {
+  //     if (this.dataExport.datasources.length > this.datasources.length) {
   //       this.fetchData()
   //     }
   //   },

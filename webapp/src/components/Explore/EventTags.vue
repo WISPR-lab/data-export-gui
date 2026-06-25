@@ -35,8 +35,8 @@ limitations under the License.
 export default {
   props: ['item', 'tagConfig', 'showDetails'],
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     sortedTags() {
       if (!this.item._source.tags) return []

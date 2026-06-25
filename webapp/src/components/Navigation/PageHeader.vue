@@ -17,14 +17,14 @@
           <div v-if="demoMode" class="blue white--text px-3 py-1 rounded font-weight-bold" style="font-size: 0.85em; letter-spacing: 0.5px;">
             INTERACTIVE DEMO
           </div>
-          <v-hover v-else-if="sketch && sketch.name" v-slot="{ hover }">
+          <v-hover v-else-if="project && project.name" v-slot="{ hover }">
             <div class="d-flex align-center">
               <div
                 @dblclick="$emit('rename-project')"
                 style="font-size: 1.1em; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;"
-                :title="sketch.name"
+                :title="project.name"
               >
-                <span class="font-weight-bold">Project:</span>&nbsp; {{ sketch.name }}
+                <span class="font-weight-bold">Project:</span>&nbsp; {{ project.name }}
               </div>
               <v-icon title="Rename Project" small class="ml-3" v-if="hover" @click="$emit('rename-project')">mdi-pencil</v-icon>
             </div>
@@ -98,8 +98,8 @@ export default {
     },
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     demoMode() {
       return this.$store.state.demoMode

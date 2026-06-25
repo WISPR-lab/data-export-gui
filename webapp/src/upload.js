@@ -12,7 +12,7 @@ function log(...args) {
 function logError(...args) { console.error('[UploadService]', ...args); }
 
 
-export async function processUpload(file, platform, sketchId, store) {
+export async function processUpload(file, platform, projectId, store) {
   /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. */
   const startTime = Date.now();
   const summary = {
@@ -69,7 +69,7 @@ export async function processUpload(file, platform, sketchId, store) {
     
     try {
       const uploads = await DB.getUploads();
-      const virtualSketch = {
+      const virtualProject = {
         id: 1,
         name: 'Local Takeout Workspace',
         description: 'Browser-only processing',
@@ -78,7 +78,7 @@ export async function processUpload(file, platform, sketchId, store) {
       };
       
       const meta = await DB.getEventMeta();
-      store.commit('SET_SKETCH', { objects: [virtualSketch], meta });
+      store.commit('SET_PROJECT', { objects: [virtualProject], meta });
       summary.success = true;
       store.commit('COMPLETE_UPLOAD', summary);
       log('Upload complete');

@@ -17,21 +17,21 @@ limitations under the License.
 <template>
   <span>
     <ts-timeline-chip
-      v-for="timeline in allTimelines"
+      v-for="timeline in allDataExports"
       class="mr-2 mb-3 timeline-chip"
-      :key="timeline.id + timeline.name"
-      :timeline="timeline"
+      :key="dataExport.id + dataExport.name"
+      :data-export="timeline"
       :is-selected="isSelected(timeline)"
       :is-empty-state="isEmptyState"
       :events-count="getCount(timeline)"
       @remove="remove"
       @save="save"
-      @toggle="toggleTimeline"
-      @disableAllOtherTimelines="disableAllOtherTimelines"
+      @toggle="toggleDataExport"
+      @disableAllOtherDataExports="disableAllOtherDataExports"
     ></ts-timeline-chip>
-    <span v-if="allTimelines.length > 20">
+    <span v-if="allDataExports.length > 20">
       <v-btn text small @click="showAll = !showAll"
-        >{{ showAll ? 'Show less' : 'Show all' }} ({{ sketch.timelines.length }})</v-btn
+        >{{ showAll ? 'Show less' : 'Show all' }} ({{ project.dataExports.length }})</v-btn
       >
     </span>
   </span>
@@ -46,14 +46,14 @@ import _ from 'lodash'
 
 export default {
   components: { TsTimelineChip },
-  props: ['currentQueryFilter', 'countPerIndex', 'countPerTimeline'],
+  props: ['currentQueryFilter', 'countPerIndex', 'countPerDataExport'],
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
-    allTimelines() {
+    allDataExports() {
       // Sort alphabetically based on timeline name.
-      let timelines = [...this.sketch.timelines]
+      let timelines = [...this.project.dataExports]
       timelines = timelines.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
@@ -62,15 +62,15 @@ export default {
       }
       return timelines
     },
-    activeTimelines() {
+    activeDataExports() {
       // Sort alphabetically based on timeline name.
-      let timelines = [...this.sketch.timelines]
+      let timelines = [...this.project.dataExports]
       return timelines.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
     },
     isEmptyState() {
-      return this.countPerTimeline === undefined
+      return this.countPerDataExport === undefined
     },
   },
   data() {
@@ -81,43 +81,43 @@ export default {
     }
   },
   methods: {
-    isSelected(timeline) {
-      return this.$store.state.enabledTimelines.includes(timeline.id)
+    isSelected(dataExport) {
+      return this.$store.state.enabledDataExports.includes(dataExport.id)
     },
-    getCount(timeline) {
-      if (this.countPerTimeline) {
-        const count = this.countPerTimeline[timeline.id]
+    getCount(dataExport) {
+      if (this.countPerDataExport) {
+        const count = this.countPerDataExport[dataExport.id]
         if (typeof count === 'number') {
           return count
         }
       }
       return 0
     },
-    async remove(timeline) {
+    async remove(dataExport) {
       this.isLoading = true
       try {
-        await DB.deleteUpload(timeline.id)
-        await this.$store.dispatch('updateSketch', this.sketch.id)
-        this.syncSelectedTimelines()
+        await DB.deleteUpload(dataExport.id)
+        await this.$store.dispatch('updateProject', this.project.id)
+        this.syncSelectedDataExports()
       } catch (e) {
         console.error('[TimelinePicker] Failed to delete upload:', e)
       } finally {
         this.isLoading = false
       }
     },
-    async save(timeline, newTimelineName = false) {
+    async save(dataExport, newTimelineName = false) {
       // Only show the progress bar if renaming the timeline
       if (newTimelineName) {
         this.isLoading = true
       }
       
       try {
-        await DB.updateUpload(timeline.id, {
-          given_name: newTimelineName || timeline.name,
-          color: timeline.color
+        await DB.updateUpload(dataExport.id, {
+          given_name: newTimelineName || dataExport.name,
+          color: dataExport.color
         })
-        await this.$store.dispatch('updateSketch', this.sketch.id)
-        this.syncSelectedTimelines()
+        await this.$store.dispatch('updateProject', this.project.id)
+        this.syncSelectedDataExports()
       } catch (e) {
         console.error('[TimelinePicker] Failed to update upload:', e)
       } finally {
@@ -126,11 +126,11 @@ export default {
         }
       }
     },
-    disableAllOtherTimelines(timeline) {
-      this.$store.dispatch('updateEnabledTimelines', [timeline.id])
+    disableAllOtherDataExports(dataExport) {
+      this.$store.dispatch('updateEnabledDataExports', [dataExport.id])
     },
-    toggleTimeline(timeline) {
-      this.$store.dispatch('toggleEnabledTimeline', timeline.id)
+    toggleDataExport(dataExport) {
+      this.$store.dispatch('toggleEnabledDataExport', dataExport.id)
       if (this.$store.state.demoMode) {
         EventBus.$emit('demo:action', 'timeline-toggled')
       }
@@ -138,29 +138,29 @@ export default {
     toggleTheme() {
       this.isDarkTheme = !this.isDarkTheme
     },
-    syncSelectedTimelines() {
+    syncSelectedDataExports() {
       if (!this.currentQueryFilter || !this.currentQueryFilter.uploadIds) {
         return
       }
       if (this.currentQueryFilter.uploadIds.includes('_all')) {
-        this.updateEnabledTimelinesIfChanged(this.activeTimelines.map((tl) => tl.id))
+        this.updateEnabledDataExportsIfChanged(this.activeDataExports.map((tl) => tl.id))
         return
       }
       let newArray = []
       this.currentQueryFilter.uploadIds.forEach((uploadId) => {
         // In browser version, uploadIds are timeline IDs (strings or numbers)
-        let timeline = this.activeTimelines.find((t) => {
+        let timeline = this.activeDataExports.find((t) => {
           return String(t.id) === String(uploadId)
         })
         if (timeline) {
           newArray.push(timeline)
         }
       })
-      this.updateEnabledTimelinesIfChanged(newArray.map((tl) => tl.id))
+      this.updateEnabledDataExportsIfChanged(newArray.map((tl) => tl.id))
     },
-    updateEnabledTimelinesIfChanged(newTimelineIds) {
-      if (!_.isEqual(newTimelineIds, this.$store.state.enabledTimelines)) {
-        this.$store.dispatch('updateEnabledTimelines', newTimelineIds)
+    updateEnabledDataExportsIfChanged(newTimelineIds) {
+      if (!_.isEqual(newTimelineIds, this.$store.state.enabledDataExports)) {
+        this.$store.dispatch('updateEnabledDataExports', newTimelineIds)
       }
     },
   },
@@ -169,7 +169,7 @@ export default {
   },
   watch: {
     'currentQueryFilter.uploadIds'(val) {
-      this.syncSelectedTimelines()
+      this.syncSelectedDataExports()
     },
     deep: true,
   },

@@ -23,11 +23,11 @@ limitations under the License.
     <welcome-dialog v-model="showFirstTimeModal" @skip="skipDemo" @start="startDemo"></welcome-dialog>
 
     <!-- Progress indicator when loading sketch data -->
-    <v-progress-linear v-if="loadingSketch" indeterminate color="primary"></v-progress-linear>
+    <v-progress-linear v-if="loadingProject" indeterminate color="primary"></v-progress-linear>
 
-    <div v-if="sketch.id && !loadingSketch" style="height: 70vh">
+    <div v-if="project.id && !loadingProject" style="height: 70vh">
       <!-- Empty state -->
-      <v-container v-if="!hasTimelines && !loadingSketch && !isArchived" fill-height fluid>
+      <v-container v-if="!hasTimelines && !loadingProject && !isArchived" fill-height fluid>
         <v-row align="center" justify="center">
           <v-sheet class="pa-4" style="background: transparent">
             <center>
@@ -41,9 +41,9 @@ limitations under the License.
 
 
       <!-- Rename sketch dialog -->
-      <v-dialog v-model="renameSketchDialog" width="600">
+      <v-dialog v-model="renameProjectDialog" width="600">
         <v-card class="pa-4">
-          <ts-rename-sketch @close="renameSketchDialog = false"></ts-rename-sketch>
+          <ts-rename-sketch @close="renameProjectDialog = false"></ts-rename-sketch>
         </v-card>
       </v-dialog>
 
@@ -56,12 +56,12 @@ limitations under the License.
 
       <!-- Top horizontal toolbar -->
       <page-header
-        v-if="!loadingSketch"
+        v-if="!loadingProject"
         app
         clipped-left
-        :show-drawer="hasTimelines && !loadingSketch && !isArchived"
+        :show-drawer="hasTimelines && !loadingProject && !isArchived"
         @toggle-drawer="toggleDrawer()"
-        @rename-project="renameSketchDialog = true"
+        @rename-project="renameProjectDialog = true"
       ></page-header>
 
       <!-- Left panel -->
@@ -128,10 +128,10 @@ limitations under the License.
       <!-- Main (canvas) view -->
       <v-main class="notransition">
         <!-- Scenario context -->
-        <!--<ts-scenario-navigation v-if="sketch.status && hasTimelines && !isArchived"></ts-scenario-navigation>-->
+        <!--<ts-scenario-navigation v-if="project.status && hasTimelines && !isArchived"></ts-scenario-navigation>-->
         <!-- <ts-question-card
           v-if="
-            sketch.status &&
+            project.status &&
             hasTimelines &&
             !isArchived &&
             systemSettings.DFIQ_ENABLED &&
@@ -140,7 +140,7 @@ limitations under the License.
         ></ts-question-card> -->
 
         <router-view
-          v-if="sketch.status && hasTimelines && !isArchived"
+          v-if="project.status && hasTimelines && !isArchived"
           @setTitle="(title) => (this.title = title)"
           class="mt-4"
         ></router-view>
@@ -219,7 +219,7 @@ import DeleteDataButton from '../components/DeleteDataButton.vue'
 import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
 
 export default {
-  props: ['sketchId'],
+  props: ['projectId'],
   components: {
     PageHeader,
     TsSavedSearches,
@@ -240,7 +240,7 @@ export default {
   },
   data() {
     return {
-      showSketchMetadata: false,
+      showProjectMetadata: false,
       navigationDrawer: {
         width: 350,
       },
@@ -250,10 +250,10 @@ export default {
       showLeftPanel: true,
       leftPanelTab: 0,
       leftPanelTabItems: ['EXPLORE', 'INVESTIGATE'],
-      renameSketchDialog: false,
+      renameProjectDialog: false,
       showHidden: false,
       shareDialog: false,
-      loadingSketch: false,
+      loadingProject: false,
 
       showPrivacySettings: false,
       showFirstTimeModal: false,
@@ -273,16 +273,16 @@ export default {
     }
   },
   mounted() {
-    this.loadingSketch = true
+    this.loadingProject = true
 
-    this.$store.dispatch('updateSketch', this.sketchId)
+    this.$store.dispatch('updateProject', this.projectId)
       .then(() => {
-        this.loadingSketch = false
+        this.loadingProject = false
         this.checkShowDemoModal()
       })
       .catch(error => {
-        console.error('[Sketch] Critical error:', error)
-        this.loadingSketch = false
+        console.error('[Project] Critical error:', error)
+        this.loadingProject = false
       })
 
     EventBus.$on('showContextWindow', this.showContextWindow)
@@ -291,8 +291,8 @@ export default {
     EventBus.$off('showContextWindow')
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     meta() {
       return this.$store.state.meta
@@ -301,16 +301,16 @@ export default {
       return this.$store.state.settings
     },
     isArchived() {
-      if (!this.sketch.status || !this.sketch.status.length) {
+      if (!this.project.status || !this.project.status.length) {
         return false
       }
-      return this.sketch.status[0].status === 'archived'
+      return this.project.status[0].status === 'archived'
     },
     currentUser() {
       return this.$store.state.currentUser
     },
     hasTimelines() {
-      return !!(this.sketch.timelines && this.sketch.timelines.length)
+      return !!(this.project.dataExports && this.project.dataExports.length)
     },
     currentRouteName() {
       return this.$route.name
@@ -325,27 +325,27 @@ export default {
   methods: {
     checkShowDemoModal() {
       const isRegularExploreRoute = this.$route.name === 'Explore'
-      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasTimelines && !this.loadingSketch) {
+      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasTimelines && !this.loadingProject) {
         this.showFirstTimeModal = true;
       }
     },
     startDemo() {
-      console.log('[Sketch] User clicked "Try Demo"');
+      console.log('[Project] User clicked "Try Demo"');
       this.showFirstTimeModal = false;
       this.$router.push('/demo/explore');
     },
     skipDemo() {
-      console.log('[Sketch] User skipped demo');
+      console.log('[Project] User skipped demo');
       this.$store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT');
       this.showFirstTimeModal = false;
     },
-    deleteSketch: async function () {
+    deleteProject: async function () {
       if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
         try {
           await wipeAllData()
           this.$router.push({ name: 'Home' })
         } catch (e) {
-          console.error('[Sketch] Failed to delete all data:', e)
+          console.error('[Project] Failed to delete all data:', e)
           alert('Failed to delete data. See console for details.')
         }
       }
@@ -357,7 +357,7 @@ export default {
       this.$router.push('/')
     },
     startInteractiveDemo() {
-      console.log('[Sketch] Starting interactive demo');
+      console.log('[Project] Starting interactive demo');
       this.$router.push('/demo/explore')
     },
     generateContextQuery(event) {
@@ -440,8 +440,8 @@ export default {
       }
     },
     updateDocumentTitle: function() {
-      if (this.sketch && this.sketch.name && this.sketch.id) {
-        document.title = `[${this.sketch.id}] ${this.sketch.name}`;
+      if (this.project && this.project.name && this.project.id) {
+        document.title = `[${this.project.id}] ${this.project.name}`;
       } else {
         document.title = 'Timesketch';
       }

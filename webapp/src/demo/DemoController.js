@@ -236,21 +236,21 @@ class DemoController {
   // --- Helper Methods ---
 
   _setFirstTimelineVisible(store, isVisible) {
-    const firstTl = store.state.sketch.timelines[0]
+    const firstTl = store.state.project.timelines[0]
     if (!firstTl) return
     
-    const isCurrentlyVisible = store.state.enabledTimelines.includes(firstTl.id)
+    const isCurrentlyVisible = store.state.enabledDataExports.includes(firstTl.id)
     if (isVisible && !isCurrentlyVisible) {
-      store.commit('ADD_ENABLED_TIMELINES', [firstTl.id])
+      store.commit('ADD_ENABLED_DATA_EXPORTS', [firstTl.id])
     } else if (!isVisible && isCurrentlyVisible) {
-      store.commit('REMOVE_ENABLED_TIMELINES', [firstTl.id])
+      store.commit('REMOVE_ENABLED_DATA_EXPORTS', [firstTl.id])
     }
   }
 
   _setAllTimelinesVisible(store) {
-    const allTlIds = store.state.sketch.timelines.map(t => t.id)
+    const allTlIds = store.state.project.timelines.map(t => t.id)
     if (allTlIds.length > 0) {
-      store.commit('SET_ENABLED_TIMELINES', allTlIds)
+      store.commit('SET_ENABLED_DATA_EXPORTS', allTlIds)
     }
   }
 

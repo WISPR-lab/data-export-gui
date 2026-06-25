@@ -45,7 +45,7 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.event_kind,
       e.file_ids,
       e.raw_data_ids,
-      u.given_name AS timeline_name, 
+      u.given_name AS data_export_name, 
       u.platform AS platform,
       COALESCE(ei.device_profiles_data, '[]') AS device_profiles_data,
       die.device_instance_id
@@ -70,7 +70,7 @@ export async function searchEvents(queryString = '', filter = {}) {
     console.log(`[searchEvents] With params: ${JSON.stringify(allParams)}`);
     
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
-    const countPerTimeline = await _getEventsCountPerTimeline(db, whereClause, whereParams);
+    const countPerDataExport = await _getEventsCountPerTimeline(db, whereClause, whereParams);
     
     // Batch resolve files and line numbers
     const allFileIds = new Set();
@@ -153,7 +153,7 @@ export async function searchEvents(queryString = '', filter = {}) {
       objects,
       meta: {
         total_count: totalCount,
-        count_per_timeline: countPerTimeline,
+        count_per_data_export: countPerDataExport,
       }
     };
   } catch (error) {
@@ -396,8 +396,8 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
     event_kind: row.event_kind,
     tags,
     labels,
-    timeline_name: row.timeline_name,
-    timeline_id: row.upload_id,
+    data_export_name: row.data_export_name,
+    data_export_id: row.upload_id,
     platform: row.platform,
     filename: filenames[0] || '',
     filenames,

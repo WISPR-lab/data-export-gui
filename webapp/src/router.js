@@ -49,19 +49,19 @@ const routes = [
     // Demo layout
     path: '/demo',
     component: Sketch,
-    props: { sketchId: 1 },
+    props: { projectId: 1 },
     children: [
       {
         path: 'explore',
         name: 'DemoExplore',
         component: Canvas,
-        props: { sketchId: 1 },
+        props: { projectId: 1 },
       },
       {
         path: 'devices',
         name: 'DemoDevices',
         component: Devices,
-        props: { sketchId: 1 },
+        props: { projectId: 1 },
       },
     ],
   },
@@ -79,19 +79,19 @@ const routes = [
     // App layout (wrapper for all sketch views)
     path: '/',
     component: Sketch,
-    props: { sketchId: 1 },
+    props: { projectId: 1 },
     children: [
       {
         path: 'explore',
         name: 'Explore',
         component: Canvas,
-        props: { sketchId: 1 },
+        props: { projectId: 1 },
       },
       {
         path: 'devices',
         name: 'Devices',
         component: Devices,
-        props: { sketchId: 1 },
+        props: { projectId: 1 },
       },
     ],
   },
@@ -123,7 +123,7 @@ router.beforeEach(async (to, from, next) => {
       
       try {
         await demoDatabaseLoader.initializeDemoDb()
-        await store.dispatch('updateSketch', 1)
+        await store.dispatch('updateProject', 1)
       } catch (e) {
         console.error('[Router] Demo initialization failed:', e)
       }
@@ -140,7 +140,7 @@ router.beforeEach(async (to, from, next) => {
       store.commit('SET_DEMO_MODE', false)
       store.commit('SET_CURRENT_DB', 'userdata')
       DB.setActiveDatabase('userdata')
-      await store.dispatch('updateSketch', 1)
+      await store.dispatch('updateProject', 1)
     }
   }
   next()

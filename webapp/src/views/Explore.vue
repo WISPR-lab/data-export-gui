@@ -156,7 +156,7 @@ limitations under the License.
               id="tsTimelinePicker"
               :current-query-filter="currentQueryFilter"
               :count-per-index="countPerIndex"
-              :count-per-timeline="countPerTimeline"
+              :count-per-timeline="countPerDataExport"
             ></ts-timeline-picker>
           </div>
         </v-expand-transition>
@@ -294,7 +294,7 @@ limitations under the License.
         id="tsEventList"
         :query-request="activeQueryRequest"
         @countPerIndex="updateCountPerIndex($event)"
-        @countPerTimeline="updateCountPerTimeline($event)"
+        @countPerDataExport="updateCountPerTimeline($event)"
       ></ts-event-list>
     </v-card>
   </v-container>
@@ -341,11 +341,11 @@ export default {
     TsEventList,
     TsSearchHelpCard,
   },
-  props: ['sketchId'],
+  props: ['projectId'],
   data() {
     return {
       countPerIndex: {},
-      countPerTimeline: {},
+      countPerDataExport: {},
       currentItemsPerPage: 40,
       timeFilterMenu: false,
       selectedFields: [{ field: 'message', type: 'text' }],
@@ -378,11 +378,11 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
-    enabledTimelines() {
-      return this.$store.state.enabledTimelines
+    enabledDataExports() {
+      return this.$store.state.enabledDataExports
     },
     meta() {
       return this.$store.state.meta
@@ -400,7 +400,7 @@ export default {
       return this.$store.state.tourWasOffered
     },
     hasTimelines() {
-      return !!(this.sketch.timelines && this.sketch.timelines.length)
+      return !!(this.project.dataExports && this.project.dataExports.length)
     },
     filteredLabels() {
       return this.$store.state.meta.filter_labels.filter((label) => !label.label.startsWith('__'))
@@ -411,8 +411,8 @@ export default {
     activeContext() {
       return this.$store.state.activeContext
     },
-    activeTimelines() {
-      let timelines = [...this.sketch.timelines]
+    activeDataExports() {
+      let timelines = [...this.project.dataExports]
       return timelines.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
@@ -422,8 +422,8 @@ export default {
     },
   },
   watch: {
-    enabledTimelines: function () {
-      this.updateEnabledTimelines(this.enabledTimelines)
+    enabledDataExports: function () {
+      this.updateEnabledDataExports(this.enabledDataExports)
     },
     hasTimelines(newVal) {
       if (newVal && this.$route.name === 'DemoExplore') {
@@ -455,7 +455,7 @@ export default {
       this.countPerIndex = count
     },
     updateCountPerTimeline: function (count) {
-      this.countPerTimeline = count
+      this.countPerDataExport = count
     },
     toggleSearchHistory: function () {
       this.showSearchHistory = !this.showSearchHistory
@@ -466,7 +466,7 @@ export default {
     setQueryAndFilter: function (searchEvent) {
       const isDemo = this.$route.name === 'DemoExplore' || this.$route.name === 'DemoDevices'
       if (this.$route.name !== 'Explore' && !isDemo) {
-        this.$router.push({ name: 'Explore', params: { sketchId: this.sketch.id } })
+        this.$router.push({ name: 'Explore', params: { projectId: this.project.id } })
       }
       if (searchEvent.queryString) {
         this.currentQueryString = searchEvent.queryString
@@ -513,14 +513,14 @@ export default {
     //   this.showSearchDropdown = false
 
     //   if (this.$route.name !== 'Explore') {
-    //     this.$router.push({ name: 'Explore', params: { sketchId: this.sketch.id } })
+    //     this.$router.push({ name: 'Explore', params: { projectId: this.project.id } })
     //   }
 
     //   if (viewId !== parseInt(viewId, 10) && typeof viewId !== 'string') {
     //     viewId = viewId.id
     //   }
 
-    //   BrowserDB.getView(this.sketchId, viewId)
+    //   BrowserDB.getView(this.projectId, viewId)
     //     .then((response) => {
     //       let view = response.data.objects[0]
     //       this.currentQueryString = view.query_string
@@ -577,8 +577,8 @@ export default {
 
       this.currentQueryFilter.chips = [startChip, endChip]
 
-      // Use timeline_id from event source (browser model doesn't have indices_metadata)
-      const timelineId = this.contextEvent._source.timeline_id || this.contextEvent._source.__ts_timeline_id
+      // Use data_export_id from event source (browser model doesn't have indices_metadata)
+      const timelineId = this.contextEvent._source.data_export_id || this.contextEvent._source.__ts_data_export_id
       if (timelineId) {
         this.currentQueryFilter.uploadIds = [timelineId]
       }
@@ -591,7 +591,7 @@ export default {
       this.currentQueryFilter = JSON.parse(JSON.stringify(this.originalContext.queryFilter))
       this.search()
     },
-    updateEnabledTimelines: function (timelineIds) {
+    updateEnabledDataExports: function (timelineIds) {
       this.currentQueryFilter.uploadIds = timelineIds
       this.search()
     },
@@ -752,7 +752,7 @@ export default {
       this.selectedFields = this.currentQueryFilter.fields
       if (this.currentQueryFilter.uploadIds[0] === '_all' || this.currentQueryFilter.uploadIds === '_all') {
         // Dexie-native: just use timeline IDs
-        let allIds = this.sketch.timelines.map(timeline => timeline.id)
+        let allIds = this.project.dataExports.map(dataExport => dataExport.id)
         this.currentQueryFilter.uploadIds = allIds
       }
       let chips = this.currentQueryFilter.chips
@@ -792,12 +792,12 @@ export default {
     },
     enableAllTimelines() {
       this.$store.dispatch(
-        'updateEnabledTimelines',
-        this.activeTimelines.map((tl) => tl.id)
+        'updateEnabledDataExports',
+        this.activeDataExports.map((tl) => tl.id)
       )
     },
     disableAllTimelines() {
-      this.$store.dispatch('updateEnabledTimelines', [])
+      this.$store.dispatch('updateEnabledDataExports', [])
     },
   },
   mounted() {
@@ -841,11 +841,11 @@ export default {
         this.currentQueryString = '*'
       }
 
-      let timeline = this.sketch.timelines.find((timeline) => {
-        return timeline.id === parseInt(this.params.indexName, 10)
+      let dataExport = this.project.dataExports.find((dataExport) => {
+        return dataExport.id === parseInt(this.params.indexName, 10)
       })
-      if (timeline) {
-        this.currentQueryFilter.uploadIds = [timeline.id]
+      if (dataExport) {
+        this.currentQueryFilter.uploadIds = [dataExport.id]
       }
       doSearch = true
     }

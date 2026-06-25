@@ -210,8 +210,8 @@ export default {
         return;
       }
 
-      const sketchId = this.$store.state.sketch.id;
-      if (!sketchId) {
+      const projectId = this.$store.state.project.id;
+      if (!projectId) {
         this.localErrors.push('No active project found');
         return;
       }
@@ -220,7 +220,7 @@ export default {
         await processUpload(
           this.selectedFile,
           this.selectedPlatform,
-          sketchId,
+          projectId,
           this.$store
         );
       } catch (error) {

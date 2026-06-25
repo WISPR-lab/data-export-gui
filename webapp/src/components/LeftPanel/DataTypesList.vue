@@ -82,8 +82,8 @@ export default {
     await this.loadMessages()
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     // eventActions() {
     //   return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
@@ -93,7 +93,7 @@ export default {
     },
   },
   watch: {
-    sketch: {
+    project: {
       async handler() {
         await this.loadMessages()
       },

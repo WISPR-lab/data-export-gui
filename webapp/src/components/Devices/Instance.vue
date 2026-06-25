@@ -52,8 +52,8 @@
         </div>
         <div class="text-body-2 text--secondary">
           <span v-if="getOSLabel">{{ getOSLabel }}</span>
-          <span v-if="getTimelineString && getOSLabel" class="ml-2 mr-2">&bull;</span>
-          <span v-if="getTimelineString">Active {{ getTimelineString }}</span>
+          <span v-if="getDataExportString && getOSLabel" class="ml-2 mr-2">&bull;</span>
+          <span v-if="getDataExportString">Active {{ getDataExportString }}</span>
         </div>
       </div>
       <!-- Actions -->
@@ -172,7 +172,7 @@ export default {
       }
       return titleCase(os);
     },
-    getTimelineString() {
+    getDataExportString() {
       if (!this.instance.first_seen || !this.instance.last_seen) return '';
       const start = new Date(this.instance.first_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       const end = new Date(this.instance.last_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
