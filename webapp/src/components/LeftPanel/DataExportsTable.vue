@@ -322,9 +322,6 @@ export default {
   width:340px;
 }
 
-.export-name.disabled {
-  text-decoration: line-through;
-}
 .right {
   align-items: center;
   display: flex;
