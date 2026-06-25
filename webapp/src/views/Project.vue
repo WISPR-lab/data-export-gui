@@ -105,11 +105,7 @@ limitations under the License.
           <delete-data-button btnType="leftPanel"></delete-data-button>
         </div>
         
-        <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
       </v-navigation-drawer>
-
-      <!-- Privacy Settings Modal -->
-      <!-- <privacy-settings-modal v-model="showPrivacySettings"></privacy-settings-modal> -->
 
       <!-- Right panel -->
       <v-navigation-drawer v-if="showRightSidePanel" fixed right width="600" style="box-shadow: 0 10px 15px -3px #888">
@@ -139,11 +135,13 @@ limitations under the License.
           "
         ></ts-question-card> -->
 
-        <router-view
-          v-if="project.status && hasDataExports && !isArchived"
-          @setTitle="(title) => (this.title = title)"
-          class="mt-4"
-        ></router-view>
+        <keep-alive>
+          <router-view
+            v-if="project.status && hasDataExports && !isArchived"
+            @setTitle="(title) => (this.title = title)"
+            class="mt-4"
+          ></router-view>
+        </keep-alive>
       </v-main>
 
       <!-- Context search -->
@@ -250,7 +248,6 @@ export default {
       shareDialog: false,
       loadingProject: false,
 
-      showPrivacySettings: false,
       showFirstTimeModal: false,
       // Context
       contextSearchHeight: 60,

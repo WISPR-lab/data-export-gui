@@ -123,17 +123,7 @@ export default new Vuex.Store({
     SET_ENABLED_DATA_EXPORTS(state, payload) {
       Vue.set(state, 'enabledDataExports', payload)
     },
-    ADD_ENABLED_DATA_EXPORTS(state, payload) {
-      const freshEnabledDataExports = [...state.enabledDataExports, ...payload]
-      Vue.set(state, 'enabledDataExports', freshEnabledDataExports)
-    },
-    REMOVE_ENABLED_DATA_EXPORTS(state, payload) {
-      Vue.set(
-        state,
-        'enabledDataExports',
-        state.enabledDataExports.filter((de) => !payload.includes(de))
-      )
-    },
+
     TOGGLE_ENABLED_DATA_EXPORT(state, payload) {
       if (state.enabledDataExports.includes(payload)) {
         Vue.set(
@@ -272,12 +262,7 @@ export default new Vuex.Store({
         timeout: snackbar.timeout,
       })
     },
-    enableDataExport(context, dataExport) {
-      context.commit('ADD_ENABLED_DATA_EXPORTS', [dataExport])
-    },
-    disableDataExport(context, dataExport) {
-      context.commit('REMOVE_ENABLED_DATA_EXPORTS', [dataExport])
-    },
+
     updateEnabledDataExports(context, enabledDataExports) {
       context.commit('SET_ENABLED_DATA_EXPORTS', enabledDataExports)
     },

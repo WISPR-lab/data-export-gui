@@ -162,10 +162,12 @@ export default {
     EventBus.$on('isDarkTheme', this.toggleTheme)
   },
   watch: {
-    'currentQueryFilter.uploadIds'(val) {
-      this.syncSelectedDataExports()
+    'currentQueryFilter.uploadIds': {
+      handler(val) {
+        this.syncSelectedDataExports()
+      },
+      deep: true,
     },
-    deep: true,
   },
 }
 </script>
