@@ -21,14 +21,14 @@ limitations under the License.
 -->
 <template>
   <div>
-    <div v-show="currentRouteName === 'Explore' || currentRouteName === 'DemoExplore'">
-      <explore :project-id="projectId"></explore>
+    <div v-show="currentRouteName === 'Events' || currentRouteName === 'DemoEvents'">
+      <events :project-id="projectId"></events>
     </div>
   </div>
 </template>
 
 <script>
-import Explore from './Explore.vue'
+import Events from './Events.vue'
 export default {
   props: [
     'projectId', 
@@ -37,7 +37,7 @@ export default {
     'aggregationId'
   ],
   components: {
-    Explore,
+    Events,
   },
   computed: {
     currentRouteName() {

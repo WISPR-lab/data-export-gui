@@ -57,7 +57,7 @@ export default {
       eventData.queryString = 'client_ip:' + '"' + client_ip + '"'
       EventBus.$emit('setQueryAndFilter', eventData)
       if (this.$route.name !== 'Explore' && this.$route.name !== 'DemoExplore') {
-        const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+        const target = this.$store.state.demoMode ? '/demo/events' : '/events'
         this.$router.push(target)
       }
     },

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <template>
-  <ts-timeline-component
+  <data-export-component
     :data-export="dataExport"
     :eventsCount="eventsCount"
     :isSelected="isSelected"
@@ -81,17 +81,17 @@ limitations under the License.
         </div>
       </v-chip>
     </template>
-  </ts-timeline-component>
+  </data-export-component>
 </template>
 
 <script>
 
-import TsTimelineComponent from './TimelineComponent.vue'
+import DataExportComponent from './DataExportComponent.vue'
 
 export default {
   props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   components: {
-    TsTimelineComponent,
+    DataExportComponent,
   },
   methods: {
     dataExportStyle(dataExportStatus) {

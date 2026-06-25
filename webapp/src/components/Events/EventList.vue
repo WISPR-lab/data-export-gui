@@ -68,12 +68,12 @@ limitations under the License.
     </div>
 
     <div v-if="!eventList.objects.length && !searchInProgress && currentQueryString" class="ml-3">
-      <ts-search-not-found-card
+      <search-not-found-card
         :currentQueryString="currentQueryString"
         :filterChips="filterChips"
         :disableSaveSearch="disableSaveSearch"
         @save-search-clicked="saveSearchMenu = true"
-      ></ts-search-not-found-card>
+      ></search-not-found-card>
     </div>
 
     <!-- DISABLED: Row highlighting feature
@@ -98,7 +98,7 @@ limitations under the License.
     </div>
     -->
 
-    <div class="ts-event-list-container">
+    <div class="event-list-container">
       <v-card
         v-if="(eventList.objects.length > 0 || searchInProgress) && userSettings.eventSummarization && !eventList.meta.summaryError"
         class="ts-ai-summary-card"
@@ -323,7 +323,7 @@ limitations under the License.
                     </v-btn>
                   </template>
 
-                  <ts-event-tag-dialog :events="selectedEvents" @close="showEventTagMenu = false"></ts-event-tag-dialog>
+                  <event-tag-dialog :events="selectedEvents" @close="showEventTagMenu = false"></event-tag-dialog>
 
                 </v-menu>
 
@@ -531,11 +531,11 @@ import EventBus from '@/event-bus.js'
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
 import TsEventTagMenu from './EventTagMenu.vue'
-import TsEventTagDialog from './EventTagDialog.vue'
+import EventTagDialog from './EventTagDialog.vue'
 import TsEventActionMenu from './EventActionMenu.vue'
 import TsEventTags from './EventTags.vue'
 import WelcomeCard from './WelcomeCard.vue'
-import TsSearchNotFoundCard from './SearchNotFoundCard.vue'
+import SearchNotFoundCard from './SearchNotFoundCard.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -565,11 +565,11 @@ export default {
     TsBarChart,
     TsEventDetail,
     TsEventTagMenu,
-    TsEventTagDialog,
+    EventTagDialog,
     TsEventActionMenu,
     TsEventTags,
     WelcomeCard,
-    TsSearchNotFoundCard,
+    SearchNotFoundCard,
   },
   props: {
     queryRequest: {
@@ -1434,7 +1434,7 @@ th:first-child {
   }
 }
 
-.ts-event-list-container {
+.event-list-container {
   display: flex;
   flex-direction: column;
   width: 100%;

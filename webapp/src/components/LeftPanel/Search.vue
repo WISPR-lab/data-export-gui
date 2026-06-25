@@ -52,7 +52,7 @@ export default {
   },
   methods: {
     navigateToExplore() {
-      const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+      const target = this.$store.state.demoMode ? '/demo/events' : '/events'
       if (this.$route.path !== target) {
         this.$router.push(target)
       }

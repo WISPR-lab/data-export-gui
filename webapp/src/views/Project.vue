@@ -27,7 +27,7 @@ limitations under the License.
 
     <div v-if="project.id && !loadingProject" style="height: 70vh">
       <!-- Empty state -->
-      <v-container v-if="!hasTimelines && !loadingProject && !isArchived" fill-height fluid>
+      <v-container v-if="!hasDataExports && !loadingProject && !isArchived" fill-height fluid>
         <v-row align="center" justify="center">
           <v-sheet class="pa-4" style="background: transparent">
             <center>
@@ -43,13 +43,13 @@ limitations under the License.
       <!-- Rename sketch dialog -->
       <v-dialog v-model="renameProjectDialog" width="600">
         <v-card class="pa-4">
-          <ts-rename-sketch @close="renameProjectDialog = false"></ts-rename-sketch>
+          <rename-project @close="renameProjectDialog = false"></rename-project>
         </v-card>
       </v-dialog>
 
       <!-- Settings dialog -->
       <v-dialog v-model="showSettingsDialog" width="700px">
-        <ts-settings-dialog></ts-settings-dialog>
+        <settings-dialog></settings-dialog>
       </v-dialog>
 
 
@@ -59,14 +59,14 @@ limitations under the License.
         v-if="!loadingProject"
         app
         clipped-left
-        :show-drawer="hasTimelines && !loadingProject && !isArchived"
+        :show-drawer="hasDataExports && !loadingProject && !isArchived"
         @toggle-drawer="toggleDrawer()"
         @rename-project="renameProjectDialog = true"
       ></page-header>
 
       <!-- Left panel -->
       <v-navigation-drawer
-        v-if="hasTimelines"
+        v-if="hasDataExports"
         v-model="showLeftPanel"
         app
         clipped
@@ -78,8 +78,8 @@ limitations under the License.
         <div id="tsMainViewsSection">
           <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Views</div>
           
-          <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
-          <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
+          <search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></search>
+          <devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></devices>
         </div>
 
         <v-divider v-if="!isMiniDrawer" class="mb-2"></v-divider>
@@ -87,16 +87,16 @@ limitations under the License.
         <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Your Data</div>
         
         <v-divider v-if="!isMiniDrawer" class="mt-2"></v-divider>
-        <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
-        <ts-saved-searches
+        <data-exports-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></data-exports-table>
+        <saved-searches
           v-if="meta && meta.views"
           :icon-only="isMiniDrawer"
           @toggleDrawer="toggleDrawer()"
-        ></ts-saved-searches>
+        ></saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
         <ts-i-p-addresses :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-i-p-addresses>
-        <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
-        <!-- <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates> -->
+        <tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></tags>
+        <!-- <search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></search-templates> -->
         
         
         <div class="pa-4">
@@ -128,11 +128,11 @@ limitations under the License.
       <!-- Main (canvas) view -->
       <v-main class="notransition">
         <!-- Scenario context -->
-        <!--<ts-scenario-navigation v-if="project.status && hasTimelines && !isArchived"></ts-scenario-navigation>-->
+        <!--<ts-scenario-navigation v-if="project.status && hasDataExports && !isArchived"></ts-scenario-navigation>-->
         <!-- <ts-question-card
           v-if="
             project.status &&
-            hasTimelines &&
+            hasDataExports &&
             !isArchived &&
             systemSettings.DFIQ_ENABLED &&
             !questionCardExclusionRoutes.includes(currentRouteName)
@@ -140,7 +140,7 @@ limitations under the License.
         ></ts-question-card> -->
 
         <router-view
-          v-if="project.status && hasTimelines && !isArchived"
+          v-if="project.status && hasDataExports && !isArchived"
           @setTitle="(title) => (this.title = title)"
           class="mt-4"
         ></router-view>
@@ -187,7 +187,7 @@ limitations under the License.
           <v-divider></v-divider>
           <v-expand-transition>
             <v-card-text :style="{ height: contextSearchHeight + 'vh' }" v-show="!minimizeContextSearch">
-              <ts-event-list :query-request="queryRequest" :highlight-event="currentContextEvent"></ts-event-list>
+              <event-list :query-request="queryRequest" :highlight-event="currentContextEvent"></event-list>
             </v-card-text>
           </v-expand-transition>
         </v-card>
@@ -201,17 +201,17 @@ import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
 import PageHeader from '../components/Navigation/PageHeader.vue'
 
-import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
+import SavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
-import TsIPAddresses from '../components/LeftPanel/IPAddresses.vue'
-import TsTags from '../components/LeftPanel/Tags.vue'
-import TsSearch from '../components/LeftPanel/Search.vue'
+import IPAddresses from '../components/LeftPanel/IPAddresses.vue'
+import Tags from '../components/LeftPanel/Tags.vue'
+import Search from '../components/LeftPanel/Search.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
-import TsRenameSketch from '../components/RenameSketch.vue'
-import TsEventList from '../components/Explore/EventList.vue'
-import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
-import TsDevices from '../components/LeftPanel/Devices.vue'
-import TsSettingsDialog from '../components/SettingsDialog.vue'
+import RenameProject from '../components/RenameProject.vue'
+import EventList from '../components/Events/EventList.vue'
+import DataExportsTable from '../components/LeftPanel/DataExportsTable.vue'
+import Devices from '../components/LeftPanel/Devices.vue'
+import SettingsDialog from '../components/SettingsDialog.vue'
 import DeleteDataButton from '../components/DeleteDataButton.vue'
 import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
 
@@ -219,17 +219,17 @@ export default {
   props: ['projectId'],
   components: {
     PageHeader,
-    TsSavedSearches,
+    SavedSearches,
     TsDataTypes,
-    TsIPAddresses,
-    TsTags,
+    IPAddresses,
+    Tags,
     NewDataExportButton,
-    TsRenameSketch,
-    TsSearch,
-    TsTimelinesTable,
-    TsDevices,
-    TsEventList,
-    TsSettingsDialog,
+    RenameProject,
+    Search,
+    DataExportsTable,
+    Devices,
+    EventList,
+    SettingsDialog,
     DeleteDataButton,
     WelcomeDialog,
   },
@@ -304,7 +304,7 @@ export default {
     currentUser() {
       return this.$store.state.currentUser
     },
-    hasTimelines() {
+    hasDataExports() {
       return !!(this.project.dataExports && this.project.dataExports.length)
     },
     currentRouteName() {
@@ -320,14 +320,14 @@ export default {
   methods: {
     checkShowDemoModal() {
       const isRegularExploreRoute = this.$route.name === 'Explore'
-      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasTimelines && !this.loadingProject) {
+      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasDataExports && !this.loadingProject) {
         this.showFirstTimeModal = true;
       }
     },
     startDemo() {
       console.log('[Project] User clicked "Try Demo"');
       this.showFirstTimeModal = false;
-      this.$router.push('/demo/explore');
+      this.$router.push('/demo/events');
     },
     skipDemo() {
       console.log('[Project] User skipped demo');
@@ -342,7 +342,7 @@ export default {
     },
     startInteractiveDemo() {
       console.log('[Project] Starting interactive demo');
-      this.$router.push('/demo/explore')
+      this.$router.push('/demo/events')
     },
     generateContextQuery(event) {
       let timestampMillis = this.$options.filters.formatTimestamp(event._source.primary_timestamp)
@@ -437,7 +437,7 @@ export default {
         this.updateDocumentTitle();
       }
     },
-    hasTimelines(newVal, oldVal) {
+    hasDataExports(newVal, oldVal) {
       if (oldVal === 0 && newVal > 0) {
         this.showLeftPanel = true
       }

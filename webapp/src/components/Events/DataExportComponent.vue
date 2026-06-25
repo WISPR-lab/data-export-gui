@@ -31,7 +31,7 @@ limitations under the License.
         > </slot>
       </template>
       <v-card>
-        <v-app-bar flat dense>Importing events to timeline "{{ dataExport.name }}"</v-app-bar>
+        <v-app-bar flat dense>Importing events to data export "{{ dataExport.name }}"</v-app-bar>
         <div class="pa-5">
           <ul>
             <li v-if="dataExportStatus === 'processing' || dataExportStatus === 'ready'">
@@ -109,9 +109,9 @@ limitations under the License.
             </template>
             <v-card class="pa-4">
               <v-form @submit.prevent="rename()">
-                <h3>Rename timeline</h3>
+                <h3>Rename data export</h3>
                 <br />
-                <v-text-field clearable outlined dense autofocus v-model="dataExportName" @focus="$event.target.select()" :rules="timelineNameRules">
+                <v-text-field clearable outlined dense autofocus v-model="dataExportName" @focus="$event.target.select()" :rules="dataExportNameRules">
                 </v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
@@ -209,7 +209,7 @@ limitations under the License.
           <v-dialog v-model="deleteConfirmation" max-width="500">
             <v-card>
               <v-card-title>
-                <v-icon color="red" class="mr-2 ml-n3">mdi-alert-octagon-outline</v-icon> Delete Timeline?
+                <v-icon color="red" class="mr-2 ml-n3">mdi-alert-octagon-outline</v-icon> Delete Data Export?
               </v-card-title>
               <v-card-text>
                 <ul style="list-style-type: none">
@@ -306,9 +306,9 @@ export default {
         ['#DEBBFF', '#9AB0FB', '#CFFBE2'],
       ],
       deleteConfirmation: false,
-      timelineNameRules: [
-        (v) => !!v || 'Timeline name is required.',
-        (v) => (v && v.length <= 255) || 'Timeline name is too long.',
+      dataExportNameRules: [
+        (v) => !!v || 'Data export name is required.',
+        (v) => (v && v.length <= 255) || 'Data export name is too long.',
       ],
     }
   },
@@ -378,7 +378,7 @@ export default {
     remove() {
       this.$emit('remove', this.dataExport)
       this.deleteConfirmation = false
-      this.successSnackBar('Timeline deleted')
+      this.successSnackBar('Data export deleted')
     },
     // secondsSinceStart() {
     //   if (!this.datasourcesProcessing.length) {

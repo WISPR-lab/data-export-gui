@@ -118,7 +118,7 @@ limitations under the License.
         <v-col v-if="showTags" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
           <div class="pa-4">
             <h5><v-icon left>mdi-tag-multiple-outline</v-icon> Tags</h5>
-            <ts-tags-list></ts-tags-list>
+            <tags-list></tags-list>
           </div>
         </v-col>
         <v-col v-if="false && showDataTypes" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
@@ -130,7 +130,7 @@ limitations under the License.
         <v-col v-if="showSavedSearches" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
           <div class="pa-4">
             <h5><v-icon left>mdi-content-save-outline</v-icon> Saved Searches</h5>
-            <ts-saved-searches-list></ts-saved-searches-list>
+            <saved-searches-list></saved-searches-list>
           </div>
         </v-col>
       </v-row>
@@ -147,12 +147,12 @@ limitations under the License.
 <script>
 import EventBus from '../../event-bus.js'
 
-import TsTagsList from '../LeftPanel/TagsList.vue'
+import TagsList from '../LeftPanel/TagsList.vue'
 import TsDataTypesList from '../LeftPanel/DataTypesList.vue'
-import TsSavedSearchesList from '../LeftPanel/SavedSearchesList.vue'
+import SavedSearchesList from '../LeftPanel/SavedSearchesList.vue'
 
 export default {
-  name: 'TsSearchGuideCard',
+  name: 'SearchGuideCard',
   props: {
     flat: {
       type: Boolean,
@@ -172,9 +172,9 @@ export default {
     },
   },
   components: {
-    TsTagsList,
+    TagsList,
     TsDataTypesList,
-    TsSavedSearchesList,
+    SavedSearchesList,
   },
   computed: {
     firstOfCurrentMonth() {

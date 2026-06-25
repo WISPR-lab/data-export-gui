@@ -26,7 +26,7 @@ limitations under the License.
     <v-card flat class="pa-3 pt-0 mt-n3" color="transparent">
       <v-card class="d-flex align-start mb-1" id="tsSearchBar" outlined>
         <!-- <v-sheet class="mt-2">
-          <ts-search-history-buttons @toggleSearchHistory="toggleSearchHistory()"></ts-search-history-buttons>
+          <search-history-buttons @toggleSearchHistory="toggleSearchHistory()"></search-history-buttons>
         </v-sheet> -->
 
         <v-menu v-model="showSearchDropdown" offset-y attach :close-on-content-click="false" :close-on-click="true">
@@ -55,7 +55,7 @@ limitations under the License.
             </v-text-field>
           </template>
 
-          <!-- <ts-search-dropdown
+          <!-- <search-dropdown
             v-click-outside="onClickOutside"
             :selected-labels="selectedLabels"
             :query-string="currentQueryString"
@@ -66,7 +66,7 @@ limitations under the License.
             @node-click="jumpInHistory"
             @setQueryAndFilter="setQueryAndFilter"
           >
-          </ts-search-dropdown> -->
+          </search-dropdown> -->
         </v-menu>
       </v-card>
 
@@ -102,30 +102,30 @@ limitations under the License.
             class="pa-md-4 no-scrollbars"
             style="overflow: scroll; white-space: nowrap; max-height: 500px; min-height: 100px"
           >
-            <!-- <ts-search-history-tree
+            <!-- <search-history-tree
               @node-click="jumpInHistory"
               :show-history="showSearchHistory"
               v-bind:style="{ transform: 'scale(' + zoomLevel + ')' }"
               style="transform-origin: top left"
-            ></ts-search-history-tree> -->
+            ></search-history-tree> -->
           </div>
         </v-card>
       </div>
 
       <!-- Search Help Dialog -->
       <v-dialog v-model="showSearchHelp" max-width="1800" scrollable>
-        <ts-search-help-card :flat="true" @close-dialog="showSearchHelp = false"></ts-search-help-card>
+        <search-help-card :flat="true" @close-dialog="showSearchHelp = false"></search-help-card>
       </v-dialog>
 
 
-      <!-- Timeline picker -->
+      <!-- Data export picker -->
       <div>
         <v-toolbar flat dense style="background-color: transparent" class="mt-n3">
-          <v-btn small icon @click="showTimelines = !showTimelines">
-            <v-icon v-if="showTimelines" title="Hide Timelines">mdi-chevron-up</v-icon>
-            <v-icon v-else title="Show Timelines">mdi-chevron-down</v-icon>
+          <v-btn small icon @click="showDataExports = !showDataExports">
+            <v-icon v-if="showDataExports" title="Hide Data Exports">mdi-chevron-up</v-icon>
+            <v-icon v-else title="Show Data Exports">mdi-chevron-down</v-icon>
           </v-btn>
-          <span class="timeline-header">
+          <span class="data-export-header">
             <new-data-export-button btn-type="small"></new-data-export-button>
             <v-dialog v-model="addManualEvent" width="600">
               <template v-slot:activator="{ on, attrs }">
@@ -140,24 +140,24 @@ limitations under the License.
                 :datetimeProp="datetimeManualEvent"
               ></ts-add-manual-event>
             </v-dialog>
-            <v-btn small text rounded color="primary" @click.stop="enableAllTimelines()">
+            <v-btn small text rounded color="primary" @click.stop="enableAllDataExports()">
               <v-icon left small>mdi-eye</v-icon>
               <span>Select all</span>
             </v-btn>
-            <v-btn small text rounded color="primary" @click.stop="disableAllTimelines()">
+            <v-btn small text rounded color="primary" @click.stop="disableAllDataExports()">
               <v-icon left small>mdi-eye-off</v-icon>
               <span>Unselect all</span>
             </v-btn>
           </span>
         </v-toolbar>
         <v-expand-transition>
-          <div v-show="showTimelines">
-            <ts-timeline-picker
-              id="tsTimelinePicker"
+          <div v-show="showDataExports">
+            <data-export-picker
+              id="dataExportPicker"
               :current-query-filter="currentQueryFilter"
               :count-per-index="countPerIndex"
               :count-per-data-export="countPerDataExport"
-            ></ts-timeline-picker>
+            ></data-export-picker>
           </div>
         </v-expand-transition>
       </div>
@@ -199,7 +199,7 @@ limitations under the License.
                         <v-list-item-subtitle>Edit filter</v-list-item-subtitle>
                       </v-list-item>
                     </template>
-                    <ts-filter-menu app :selected-chip="chip" @updateChip="updateChip($event, chip)"></ts-filter-menu>
+                    <filter-menu app :selected-chip="chip" @updateChip="updateChip($event, chip)"></filter-menu>
                   </v-menu>
                   <v-list-item @click="copyFilterChip(chip)">
                     <v-list-item-action>
@@ -245,7 +245,7 @@ limitations under the License.
                 </v-btn>
               </template>
 
-              <ts-filter-menu app @cancel="timeFilterMenu = false" @addChip="addChip"></ts-filter-menu>
+              <filter-menu app @cancel="timeFilterMenu = false" @addChip="addChip"></filter-menu>
             </v-menu>
           </span>
         </div>
@@ -290,12 +290,12 @@ limitations under the License.
 
     <!-- Eventlist -->
     <v-card flat class="mt-5 mx-3" color="transparent">
-      <ts-event-list
+      <event-list
         id="tsEventList"
         :query-request="activeQueryRequest"
         @countPerIndex="updateCountPerIndex($event)"
-        @countPerDataExport="updateCountPerTimeline($event)"
-      ></ts-event-list>
+        @countPerDataExport="updateCountPerDataExport($event)"
+      ></event-list>
     </v-card>
   </v-container>
 </template>
@@ -305,12 +305,12 @@ import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
 
-import TsTimelinePicker from '../components/Explore/TimelinePicker.vue'
-import TsFilterMenu from '../components/Explore/FilterMenu.vue'
+import DataExportPicker from '../components/Events/DataExportPicker.vue'
+import FilterMenu from '../components/Events/FilterMenu.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
-import TsAddManualEvent from '../components/Explore/AddManualEvent.vue'
-import TsEventList from '../components/Explore/EventList.vue'
-import TsSearchHelpCard from '../components/Explore/SearchHelpCard.vue'
+import TsAddManualEvent from '../components/Events/AddManualEvent.vue'
+import EventList from '../components/Events/EventList.vue'
+import SearchHelpCard from '../components/Events/SearchHelpCard.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -328,12 +328,12 @@ export default {
     dragscroll,
   },
   components: {
-    TsTimelinePicker,
-    TsFilterMenu,
+    DataExportPicker,
+    FilterMenu,
     NewDataExportButton,
     TsAddManualEvent,
-    TsEventList,
-    TsSearchHelpCard,
+    EventList,
+    SearchHelpCard,
   },
   props: ['projectId'],
   data() {
@@ -368,7 +368,7 @@ export default {
         { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
         { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
       ],
-      showTimelines: true,
+      showDataExports: true,
     }
   },
   computed: {
@@ -393,7 +393,7 @@ export default {
     tourWasOffered() {
       return this.$store.state.tourWasOffered
     },
-    hasTimelines() {
+    hasDataExports() {
       return !!(this.project.dataExports && this.project.dataExports.length)
     },
     filteredLabels() {
@@ -419,8 +419,8 @@ export default {
     enabledDataExports: function () {
       this.updateEnabledDataExports(this.enabledDataExports)
     },
-    hasTimelines(newVal) {
-      if (newVal && this.$route.name === 'DemoExplore') {
+    hasDataExports(newVal) {
+      if (newVal && this.$route.name === 'DemoEvents') {
         console.log('[Explore] Data loaded for DemoExplore, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
@@ -428,7 +428,7 @@ export default {
       }
     },
     $route(to) {
-      if (to.name === 'DemoExplore' && this.hasTimelines) {
+      if (to.name === 'DemoEvents' && this.hasDataExports) {
         console.log('[Explore] Route changed to DemoExplore, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
@@ -448,7 +448,7 @@ export default {
     updateCountPerIndex: function (count) {
       this.countPerIndex = count
     },
-    updateCountPerTimeline: function (count) {
+    updateCountPerDataExport: function (count) {
       this.countPerDataExport = count
     },
     toggleSearchHistory: function () {
@@ -458,9 +458,9 @@ export default {
       }
     },
     setQueryAndFilter: function (searchEvent) {
-      const isDemo = this.$route.name === 'DemoExplore' || this.$route.name === 'DemoDevices'
+      const isDemo = this.$route.name === 'DemoEvents' || this.$route.name === 'DemoDevices'
       if (this.$route.name !== 'Explore' && !isDemo) {
-        this.$router.push({ name: 'Explore', params: { projectId: this.project.id } })
+        this.$router.push({ name: 'Events', params: { projectId: this.project.id } })
       }
       if (searchEvent.queryString) {
         this.currentQueryString = searchEvent.queryString
@@ -507,7 +507,7 @@ export default {
     //   this.showSearchDropdown = false
 
     //   if (this.$route.name !== 'Explore') {
-    //     this.$router.push({ name: 'Explore', params: { projectId: this.project.id } })
+    //     this.$router.push({ name: 'Events', params: { projectId: this.project.id } })
     //   }
 
     //   if (viewId !== parseInt(viewId, 10) && typeof viewId !== 'string') {
@@ -572,9 +572,9 @@ export default {
       this.currentQueryFilter.chips = [startChip, endChip]
 
       // Use data_export_id from event source (browser model doesn't have indices_metadata)
-      const timelineId = this.contextEvent._source.data_export_id || this.contextEvent._source.__ts_data_export_id
-      if (timelineId) {
-        this.currentQueryFilter.uploadIds = [timelineId]
+      const dataExportId = this.contextEvent._source.data_export_id || this.contextEvent._source.__ts_data_export_id
+      if (dataExportId) {
+        this.currentQueryFilter.uploadIds = [dataExportId]
       }
       this.currentQueryFilter.size = numContextEvents
       this.search()
@@ -585,8 +585,8 @@ export default {
       this.currentQueryFilter = JSON.parse(JSON.stringify(this.originalContext.queryFilter))
       this.search()
     },
-    updateEnabledDataExports: function (timelineIds) {
-      this.currentQueryFilter.uploadIds = timelineIds
+    updateEnabledDataExports: function (dataExportIds) {
+      this.currentQueryFilter.uploadIds = dataExportIds
       this.search()
     },
     toggleChip: function (chip) {
@@ -784,13 +784,13 @@ export default {
         this.showSearchDropdown = false
       }
     },
-    enableAllTimelines() {
+    enableAllDataExports() {
       this.$store.dispatch(
         'updateEnabledDataExports',
         this.activeDataExports.map((tl) => tl.id)
       )
     },
-    disableAllTimelines() {
+    disableAllDataExports() {
       this.$store.dispatch('updateEnabledDataExports', [])
     },
   },
@@ -799,7 +799,7 @@ export default {
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
     
     // Auto-start demo if in DemoExplore route
-    if (this.$route.name === 'DemoExplore' && this.hasTimelines) {
+    if (this.$route.name === 'DemoEvents' && this.hasDataExports) {
       console.log('[Explore] Auto-starting demo on mount');
       this.$nextTick(() => {
         this.startDemo();
@@ -886,7 +886,7 @@ export default {
   max-width: 400px;
 }
 
-.expanded .timeline-header {
+.expanded .data-export-header {
   .v-icon.open-indicator {
     display: inline;
   }
@@ -894,7 +894,7 @@ export default {
     display: none;
   }
 }
-.timeline-header {
+.data-export-header {
   display: flex;
   align-items: center;
 

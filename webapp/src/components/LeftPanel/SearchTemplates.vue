@@ -58,11 +58,11 @@ limitations under the License.
           </template>
 
           <template v-slot:default="props">
-            <ts-search-template
+            <search-template
               v-for="searchtemplate in props.items"
               :key="searchtemplate.id"
               :searchtemplate="searchtemplate"
-            ></ts-search-template>
+            ></search-template>
           </template>
         </v-data-iterator>
       </div>
@@ -72,14 +72,14 @@ limitations under the License.
 </template>
 
 <script>
-import TsSearchTemplate from './SearchTemplate.vue'
+import SearchTemplate from './SearchTemplate.vue'
 
 export default {
   props: {
     iconOnly: Boolean,
   },
   components: {
-    TsSearchTemplate,
+    SearchTemplate,
   },
   data: function () {
     return {

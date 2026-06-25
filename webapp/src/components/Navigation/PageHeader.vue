@@ -35,7 +35,7 @@
       <!-- Desktop Navigation (shown on md and up) -->
       <div class="header-nav d-none d-md-flex">
         <v-btn text router-link to="/" class="nav-link">Home</v-btn>
-        <v-btn text router-link to="/explore" class="nav-link">Explore My Data</v-btn>
+        <v-btn text router-link to="/events" class="nav-link">Explore My Data</v-btn>
         
         <!-- Tutorials Dropdown (Help Docs) -->
         <v-menu offset-y open-on-hover>
@@ -52,7 +52,7 @@
               </v-list-item-icon>
               <v-list-item-title>How to Request Your Data</v-list-item-title>
             </v-list-item>
-            <v-list-item to="/demo/explore" class="interactive-demo-link">
+            <v-list-item to="/demo/events" class="interactive-demo-link">
               <v-list-item-icon>
                 <v-icon>mdi-play-circle</v-icon>
               </v-list-item-icon>

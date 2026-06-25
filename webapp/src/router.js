@@ -22,7 +22,7 @@ import VueRouter from 'vue-router'
 
 import Home from './views/Home.vue'
 import Canvas from './views/Canvas.vue'
-import Sketch from './views/Sketch.vue'
+import Sketch from './views/Project.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
@@ -48,12 +48,12 @@ const routes = [
   {
     // Demo layout
     path: '/demo',
-    component: Sketch,
+    component: Project,
     props: { projectId: 1 },
     children: [
       {
-        path: 'explore',
-        name: 'DemoExplore',
+        path: 'events',
+        name: 'DemoEvents',
         component: Canvas,
         props: { projectId: 1 },
       },
@@ -78,12 +78,12 @@ const routes = [
   {
     // App layout (wrapper for all sketch views)
     path: '/',
-    component: Sketch,
+    component: Project,
     props: { projectId: 1 },
     children: [
       {
-        path: 'explore',
-        name: 'Explore',
+        path: 'events',
+        name: 'Events',
         component: Canvas,
         props: { projectId: 1 },
       },
@@ -147,7 +147,7 @@ router.beforeEach(async (to, from, next) => {
 })
 
 router.afterEach((to, from) => {
-  // Warmup Pyodide when user navigates to /explore
+  // Warmup Pyodide when user navigates to /events
   if (to.path.includes('explore')) {
     if (!warmupPromise) {
       warmupPromise = callPyodideWorker('warmup', {}).catch(err => {

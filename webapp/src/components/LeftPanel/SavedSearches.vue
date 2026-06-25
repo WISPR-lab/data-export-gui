@@ -43,7 +43,7 @@ limitations under the License.
 
     <v-expand-transition>
       <div v-show="expanded && meta.views.length">
-        <ts-saved-searches-list></ts-saved-searches-list>
+        <saved-searches-list></saved-searches-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>
@@ -51,14 +51,14 @@ limitations under the License.
 </template>
 
 <script>
-import TsSavedSearchesList from './SavedSearchesList.vue'
+import SavedSearchesList from './SavedSearchesList.vue'
 
 export default {
   props: {
     iconOnly: Boolean,
   },
   components: {
-    TsSavedSearchesList,
+    SavedSearchesList,
   },
   data: function () {
     return {

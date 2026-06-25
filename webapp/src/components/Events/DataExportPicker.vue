@@ -16,7 +16,7 @@ limitations under the License.
 <!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <span>
-    <ts-timeline-chip
+    <data-export-chip
       v-for="dataExport in allDataExports"
       class="mr-2 mb-3 timeline-chip"
       :key="dataExport.id + dataExport.name"
@@ -28,7 +28,7 @@ limitations under the License.
       @save="save"
       @toggle="toggleDataExport"
       @disableAllOtherDataExports="disableAllOtherDataExports"
-    ></ts-timeline-chip>
+    ></data-export-chip>
     <span v-if="allDataExports.length > 20">
       <v-btn text small @click="showAll = !showAll"
         >{{ showAll ? 'Show less' : 'Show all' }} ({{ project.dataExports.length }})</v-btn
@@ -38,14 +38,14 @@ limitations under the License.
 </template>
 
 <script>
-import TsTimelineChip from './TimelineChip.vue'
+import DataExportChip from './DataExportChip.vue'
 import EventBus from '../../event-bus.js'
 import DB from '@/database/index.js'
 
 import _ from 'lodash'
 
 export default {
-  components: { TsTimelineChip },
+  components: { DataExportChip },
   props: ['currentQueryFilter', 'countPerIndex', 'countPerDataExport'],
   computed: {
     project() {

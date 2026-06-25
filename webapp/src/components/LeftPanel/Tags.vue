@@ -48,7 +48,7 @@ limitations under the License.
 
     <v-expand-transition>
       <div v-show="expanded && ((tags || []).length || (filteredLabels || []).length)">
-        <ts-tags-list></ts-tags-list>
+        <tags-list></tags-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>
@@ -56,14 +56,14 @@ limitations under the License.
 </template>
 
 <script>
-import TsTagsList from './TagsList.vue'
+import TagsList from './TagsList.vue'
 
 export default {
   props: {
     iconOnly: Boolean,
   },
   components: {
-    TsTagsList,
+    TagsList,
   },
   data: function () {
     return {

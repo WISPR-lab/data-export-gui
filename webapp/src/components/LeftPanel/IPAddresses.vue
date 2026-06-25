@@ -52,7 +52,7 @@ limitations under the License.
 </template>
 
 <script>
-import TsIPAddressesList from './IPAddressesList.vue'
+import IPAddressesList from './IPAddressesList.vue'
 import DB from '@/database/index.js'
 
 export default {
@@ -60,7 +60,7 @@ export default {
     iconOnly: Boolean,
   },
   components: {
-    TsIPAddressesList,
+    IPAddressesList,
   },
   data: function () {
     return {

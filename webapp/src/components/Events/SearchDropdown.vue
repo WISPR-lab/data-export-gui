@@ -81,19 +81,19 @@ limitations under the License.
 
       <v-col v-if="matches.labels.length || matches.tags.length" cols="3">
         <h5 class="mt-3 ml-5">Tags</h5>
-        <ts-tags-list></ts-tags-list>
+        <tags-list></tags-list>
       </v-col>
     </v-row>
   </v-card>
 </template>
 
 <script>
-import TsTagsList from '../LeftPanel/TagsList.vue'
+import TagsList from '../LeftPanel/TagsList.vue'
 import DB from '@/database/index.js'
 
 export default {
   components: {
-    TsTagsList,
+    TagsList,
   },
   props: ['selectedLabels', 'queryString'],
   data() {

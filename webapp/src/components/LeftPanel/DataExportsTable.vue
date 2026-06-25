@@ -92,7 +92,7 @@ limitations under the License.
           :search="search"
         >
           <template v-slot:item.name="{ item }">
-            <ts-timeline-component
+            <data-export-component
               class="mb-1 mt-1"
               :key="item.id + item.name"
               :is-selected="isEnabled(item)"
@@ -167,7 +167,7 @@ limitations under the License.
                   </span>
                 </div>
               </template>
-            </ts-timeline-component>
+            </data-export-component>
           </template>
         </v-data-table>
       </div>
@@ -181,7 +181,7 @@ import EventBus from '../../event-bus.js'
 import DB from '@/database/index.js'
 
 import NewDataExportButton from '../Import/NewDataExportButton.vue'
-import TsTimelineComponent from '../Explore/TimelineComponent.vue'
+import DataExportComponent from '../Events/DataExportComponent.vue'
 
 export default {
   props: {
@@ -189,7 +189,7 @@ export default {
   },
   components: {
     NewDataExportButton,
-    TsTimelineComponent,
+    DataExportComponent,
   },
   computed: {
     project() {
