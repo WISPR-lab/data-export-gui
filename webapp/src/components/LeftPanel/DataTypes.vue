@@ -79,12 +79,12 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
   },
   watch: {
-    sketch: {
+    project: {
       async handler() {
         await this.loadEventMessages()
       },

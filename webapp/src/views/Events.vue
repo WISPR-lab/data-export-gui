@@ -26,7 +26,7 @@ limitations under the License.
     <v-card flat class="pa-3 pt-0 mt-n3" color="transparent">
       <v-card class="d-flex align-start mb-1" id="tsSearchBar" outlined>
         <!-- <v-sheet class="mt-2">
-          <ts-search-history-buttons @toggleSearchHistory="toggleSearchHistory()"></ts-search-history-buttons>
+          <search-history-buttons @toggleSearchHistory="toggleSearchHistory()"></search-history-buttons>
         </v-sheet> -->
 
         <v-menu v-model="showSearchDropdown" offset-y attach :close-on-content-click="false" :close-on-click="true">
@@ -55,7 +55,7 @@ limitations under the License.
             </v-text-field>
           </template>
 
-          <!-- <ts-search-dropdown
+          <!-- <search-dropdown
             v-click-outside="onClickOutside"
             :selected-labels="selectedLabels"
             :query-string="currentQueryString"
@@ -66,7 +66,7 @@ limitations under the License.
             @node-click="jumpInHistory"
             @setQueryAndFilter="setQueryAndFilter"
           >
-          </ts-search-dropdown> -->
+          </search-dropdown> -->
         </v-menu>
       </v-card>
 
@@ -102,30 +102,30 @@ limitations under the License.
             class="pa-md-4 no-scrollbars"
             style="overflow: scroll; white-space: nowrap; max-height: 500px; min-height: 100px"
           >
-            <!-- <ts-search-history-tree
+            <!-- <search-history-tree
               @node-click="jumpInHistory"
               :show-history="showSearchHistory"
               v-bind:style="{ transform: 'scale(' + zoomLevel + ')' }"
               style="transform-origin: top left"
-            ></ts-search-history-tree> -->
+            ></search-history-tree> -->
           </div>
         </v-card>
       </div>
 
       <!-- Search Help Dialog -->
       <v-dialog v-model="showSearchHelp" max-width="1800" scrollable>
-        <ts-search-help-card :flat="true" @close-dialog="showSearchHelp = false"></ts-search-help-card>
+        <search-help-card :flat="true" @close-dialog="showSearchHelp = false"></search-help-card>
       </v-dialog>
 
 
-      <!-- Timeline picker -->
+      <!-- Data export picker -->
       <div>
         <v-toolbar flat dense style="background-color: transparent" class="mt-n3">
-          <v-btn small icon @click="showTimelines = !showTimelines">
-            <v-icon v-if="showTimelines" title="Hide Timelines">mdi-chevron-up</v-icon>
-            <v-icon v-else title="Show Timelines">mdi-chevron-down</v-icon>
+          <v-btn small icon @click="showDataExports = !showDataExports">
+            <v-icon v-if="showDataExports" title="Hide Data Exports">mdi-chevron-up</v-icon>
+            <v-icon v-else title="Show Data Exports">mdi-chevron-down</v-icon>
           </v-btn>
-          <span class="timeline-header">
+          <span class="data-export-header">
             <new-data-export-button btn-type="small"></new-data-export-button>
             <v-dialog v-model="addManualEvent" width="600">
               <template v-slot:activator="{ on, attrs }">
@@ -140,24 +140,24 @@ limitations under the License.
                 :datetimeProp="datetimeManualEvent"
               ></ts-add-manual-event>
             </v-dialog>
-            <v-btn small text rounded color="primary" @click.stop="enableAllTimelines()">
+            <v-btn small text rounded color="primary" @click.stop="enableAllDataExports()">
               <v-icon left small>mdi-eye</v-icon>
               <span>Select all</span>
             </v-btn>
-            <v-btn small text rounded color="primary" @click.stop="disableAllTimelines()">
+            <v-btn small text rounded color="primary" @click.stop="disableAllDataExports()">
               <v-icon left small>mdi-eye-off</v-icon>
               <span>Unselect all</span>
             </v-btn>
           </span>
         </v-toolbar>
         <v-expand-transition>
-          <div v-show="showTimelines">
-            <ts-timeline-picker
-              id="tsTimelinePicker"
+          <div v-show="showDataExports">
+            <data-export-picker
+              id="dataExportPicker"
               :current-query-filter="currentQueryFilter"
               :count-per-index="countPerIndex"
-              :count-per-timeline="countPerTimeline"
-            ></ts-timeline-picker>
+              :count-per-data-export="countPerDataExport"
+            ></data-export-picker>
           </div>
         </v-expand-transition>
       </div>
@@ -199,7 +199,7 @@ limitations under the License.
                         <v-list-item-subtitle>Edit filter</v-list-item-subtitle>
                       </v-list-item>
                     </template>
-                    <ts-filter-menu app :selected-chip="chip" @updateChip="updateChip($event, chip)"></ts-filter-menu>
+                    <filter-menu app :selected-chip="chip" @updateChip="updateChip($event, chip)"></filter-menu>
                   </v-menu>
                   <v-list-item @click="copyFilterChip(chip)">
                     <v-list-item-action>
@@ -245,7 +245,7 @@ limitations under the License.
                 </v-btn>
               </template>
 
-              <ts-filter-menu app @cancel="timeFilterMenu = false" @addChip="addChip"></ts-filter-menu>
+              <filter-menu app @cancel="timeFilterMenu = false" @addChip="addChip"></filter-menu>
             </v-menu>
           </span>
         </div>
@@ -290,12 +290,12 @@ limitations under the License.
 
     <!-- Eventlist -->
     <v-card flat class="mt-5 mx-3" color="transparent">
-      <ts-event-list
+      <event-list
         id="tsEventList"
         :query-request="activeQueryRequest"
         @countPerIndex="updateCountPerIndex($event)"
-        @countPerTimeline="updateCountPerTimeline($event)"
-      ></ts-event-list>
+        @countPerDataExport="updateCountPerDataExport($event)"
+      ></event-list>
     </v-card>
   </v-container>
 </template>
@@ -305,15 +305,12 @@ import EventBus from '../event-bus.js'
 
 import { dragscroll } from 'vue-dragscroll'
 
-import TsSearchHistoryTree from '../components/Explore/SearchHistoryTree.vue'
-import TsSearchHistoryButtons from '../components/Explore/SearchHistoryButtons.vue'
-import TsSearchDropdown from '../components/Explore/SearchDropdown.vue'
-import TsTimelinePicker from '../components/Explore/TimelinePicker.vue'
-import TsFilterMenu from '../components/Explore/FilterMenu.vue'
+import DataExportPicker from '../components/Events/DataExportPicker.vue'
+import FilterMenu from '../components/Events/FilterMenu.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
-import TsAddManualEvent from '../components/Explore/AddManualEvent.vue'
-import TsEventList from '../components/Explore/EventList.vue'
-import TsSearchHelpCard from '../components/Explore/SearchHelpCard.vue'
+import TsAddManualEvent from '../components/Events/AddManualEvent.vue'
+import EventList from '../components/Events/EventList.vue'
+import SearchHelpCard from '../components/Events/SearchHelpCard.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -331,21 +328,18 @@ export default {
     dragscroll,
   },
   components: {
-    TsSearchHistoryTree,
-    TsSearchHistoryButtons,
-    TsSearchDropdown,
-    TsTimelinePicker,
-    TsFilterMenu,
+    DataExportPicker,
+    FilterMenu,
     NewDataExportButton,
     TsAddManualEvent,
-    TsEventList,
-    TsSearchHelpCard,
+    EventList,
+    SearchHelpCard,
   },
-  props: ['sketchId'],
+  props: ['projectId'],
   data() {
     return {
       countPerIndex: {},
-      countPerTimeline: {},
+      countPerDataExport: {},
       currentItemsPerPage: 40,
       timeFilterMenu: false,
       selectedFields: [{ field: 'message', type: 'text' }],
@@ -374,15 +368,15 @@ export default {
         { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
         { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
       ],
-      showTimelines: true,
+      showDataExports: true,
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
-    enabledTimelines() {
-      return this.$store.state.enabledTimelines
+    enabledDataExports() {
+      return this.$store.state.enabledDataExports
     },
     meta() {
       return this.$store.state.meta
@@ -399,11 +393,11 @@ export default {
     tourWasOffered() {
       return this.$store.state.tourWasOffered
     },
-    hasTimelines() {
-      return !!(this.sketch.timelines && this.sketch.timelines.length)
+    hasDataExports() {
+      return !!(this.project.dataExports && this.project.dataExports.length)
     },
     filteredLabels() {
-      return this.$store.state.meta.filter_labels.filter((label) => !label.label.startsWith('__'))
+      return this.$store.state.meta.filter_labels.filter((label) => label && typeof label.label === 'string' && !label.label.startsWith('__'))
     },
     currentSearchNode() {
       return this.$store.state.currentSearchNode
@@ -411,9 +405,9 @@ export default {
     activeContext() {
       return this.$store.state.activeContext
     },
-    activeTimelines() {
-      let timelines = [...this.sketch.timelines]
-      return timelines.sort(function (a, b) {
+    allDataExports() {
+      let dataExports = [...this.project.dataExports]
+      return dataExports.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
     },
@@ -422,20 +416,20 @@ export default {
     },
   },
   watch: {
-    enabledTimelines: function () {
-      this.updateEnabledTimelines(this.enabledTimelines)
+    enabledDataExports: function () {
+      this.updateEnabledDataExports(this.enabledDataExports)
     },
-    hasTimelines(newVal) {
-      if (newVal && this.$route.name === 'DemoExplore') {
-        console.log('[Explore] Data loaded for DemoExplore, auto-starting demo');
+    hasDataExports(newVal) {
+      if (newVal && this.$route.name === 'DemoEvents') {
+        console.log('[Events] Data loaded for DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
       }
     },
     $route(to) {
-      if (to.name === 'DemoExplore' && this.hasTimelines) {
-        console.log('[Explore] Route changed to DemoExplore, auto-starting demo');
+      if (to.name === 'DemoEvents' && this.hasDataExports) {
+        console.log('[Events] Route changed to DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
@@ -447,15 +441,15 @@ export default {
       return this.quickTags.find((el) => el.tag === tag)
     },
     startDemo() {
-      console.log('[Explore] Starting interactive demo');
+      console.log('[Events] Starting interactive demo');
       const DemoController = require('@/demo/DemoController.js').default
       DemoController.start(this.$store)
     },
     updateCountPerIndex: function (count) {
       this.countPerIndex = count
     },
-    updateCountPerTimeline: function (count) {
-      this.countPerTimeline = count
+    updateCountPerDataExport: function (count) {
+      this.countPerDataExport = count
     },
     toggleSearchHistory: function () {
       this.showSearchHistory = !this.showSearchHistory
@@ -464,9 +458,9 @@ export default {
       }
     },
     setQueryAndFilter: function (searchEvent) {
-      const isDemo = this.$route.name === 'DemoExplore' || this.$route.name === 'DemoDevices'
-      if (this.$route.name !== 'Explore' && !isDemo) {
-        this.$router.push({ name: 'Explore', params: { sketchId: this.sketch.id } })
+      const isDemo = this.$route.name === 'DemoEvents' || this.$route.name === 'DemoDevices'
+      if (this.$route.name !== 'Events' && !isDemo) {
+        this.$router.push({ name: 'Events', params: { projectId: this.project.id } })
       }
       if (searchEvent.queryString) {
         this.currentQueryString = searchEvent.queryString
@@ -512,15 +506,15 @@ export default {
     // searchView: function (viewId) {
     //   this.showSearchDropdown = false
 
-    //   if (this.$route.name !== 'Explore') {
-    //     this.$router.push({ name: 'Explore', params: { sketchId: this.sketch.id } })
+    //   if (this.$route.name !== 'Events') {
+    //     this.$router.push({ name: 'Events', params: { projectId: this.project.id } })
     //   }
 
     //   if (viewId !== parseInt(viewId, 10) && typeof viewId !== 'string') {
     //     viewId = viewId.id
     //   }
 
-    //   BrowserDB.getView(this.sketchId, viewId)
+    //   BrowserDB.getView(this.projectId, viewId)
     //     .then((response) => {
     //       let view = response.data.objects[0]
     //       this.currentQueryString = view.query_string
@@ -577,10 +571,10 @@ export default {
 
       this.currentQueryFilter.chips = [startChip, endChip]
 
-      // Use timeline_id from event source (browser model doesn't have indices_metadata)
-      const timelineId = this.contextEvent._source.timeline_id || this.contextEvent._source.__ts_timeline_id
-      if (timelineId) {
-        this.currentQueryFilter.uploadIds = [timelineId]
+      // Use data_export_id from event source (browser model doesn't have indices_metadata)
+      const dataExportId = this.contextEvent._source.data_export_id || this.contextEvent._source.__ts_data_export_id
+      if (dataExportId) {
+        this.currentQueryFilter.uploadIds = [dataExportId]
       }
       this.currentQueryFilter.size = numContextEvents
       this.search()
@@ -591,8 +585,8 @@ export default {
       this.currentQueryFilter = JSON.parse(JSON.stringify(this.originalContext.queryFilter))
       this.search()
     },
-    updateEnabledTimelines: function (timelineIds) {
-      this.currentQueryFilter.uploadIds = timelineIds
+    updateEnabledDataExports: function (dataExportIds) {
+      this.currentQueryFilter.uploadIds = dataExportIds
       this.search()
     },
     toggleChip: function (chip) {
@@ -752,7 +746,7 @@ export default {
       this.selectedFields = this.currentQueryFilter.fields
       if (this.currentQueryFilter.uploadIds[0] === '_all' || this.currentQueryFilter.uploadIds === '_all') {
         // Dexie-native: just use timeline IDs
-        let allIds = this.sketch.timelines.map(timeline => timeline.id)
+        let allIds = this.project.dataExports.map(dataExport => dataExport.id)
         this.currentQueryFilter.uploadIds = allIds
       }
       let chips = this.currentQueryFilter.chips
@@ -790,23 +784,23 @@ export default {
         this.showSearchDropdown = false
       }
     },
-    enableAllTimelines() {
+    enableAllDataExports() {
       this.$store.dispatch(
-        'updateEnabledTimelines',
-        this.activeTimelines.map((tl) => tl.id)
+        'updateEnabledDataExports',
+        this.allDataExports.map((tl) => tl.id)
       )
     },
-    disableAllTimelines() {
-      this.$store.dispatch('updateEnabledTimelines', [])
+    disableAllDataExports() {
+      this.$store.dispatch('updateEnabledDataExports', [])
     },
   },
   mounted() {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
     
-    // Auto-start demo if in DemoExplore route
-    if (this.$route.name === 'DemoExplore' && this.hasTimelines) {
-      console.log('[Explore] Auto-starting demo on mount');
+    // Auto-start demo if in DemoEvents route
+    if (this.$route.name === 'DemoEvents' && this.hasDataExports) {
+      console.log('[Events] Auto-starting demo on mount');
       this.$nextTick(() => {
         this.startDemo();
       });
@@ -821,7 +815,7 @@ export default {
 
     this.params = {
       viewId: this.$route.query.view,
-      indexName: this.$route.query.timeline,
+      exportId: this.$route.query.export || this.$route.query.timeline,
       resultLimit: this.$route.query.limit,
       queryString: this.$route.query.q,
     }
@@ -836,16 +830,16 @@ export default {
       doSearch = true
     }
 
-    if (this.params.indexName) {
+    if (this.params.exportId) {
       if (!this.params.queryString) {
         this.currentQueryString = '*'
       }
 
-      let timeline = this.sketch.timelines.find((timeline) => {
-        return timeline.id === parseInt(this.params.indexName, 10)
+      let dataExport = this.project.dataExports.find((dataExport) => {
+        return dataExport.id === parseInt(this.params.exportId, 10)
       })
-      if (timeline) {
-        this.currentQueryFilter.uploadIds = [timeline.id]
+      if (dataExport) {
+        this.currentQueryFilter.uploadIds = [dataExport.id]
       }
       doSearch = true
     }
@@ -892,7 +886,7 @@ export default {
   max-width: 400px;
 }
 
-.expanded .timeline-header {
+.expanded .data-export-header {
   .v-icon.open-indicator {
     display: inline;
   }
@@ -900,7 +894,7 @@ export default {
     display: none;
   }
 }
-.timeline-header {
+.data-export-header {
   display: flex;
   align-items: center;
 

@@ -68,12 +68,12 @@ limitations under the License.
     </div>
 
     <div v-if="!eventList.objects.length && !searchInProgress && currentQueryString" class="ml-3">
-      <ts-search-not-found-card
+      <search-not-found-card
         :currentQueryString="currentQueryString"
         :filterChips="filterChips"
         :disableSaveSearch="disableSaveSearch"
         @save-search-clicked="saveSearchMenu = true"
-      ></ts-search-not-found-card>
+      ></search-not-found-card>
     </div>
 
     <!-- DISABLED: Row highlighting feature
@@ -98,7 +98,7 @@ limitations under the License.
     </div>
     -->
 
-    <div class="ts-event-list-container">
+    <div class="event-list-container">
       <v-card
         v-if="(eventList.objects.length > 0 || searchInProgress) && userSettings.eventSummarization && !eventList.meta.summaryError"
         class="ts-ai-summary-card"
@@ -323,7 +323,7 @@ limitations under the License.
                     </v-btn>
                   </template>
 
-                  <ts-event-tag-dialog :events="selectedEvents" @close="showEventTagMenu = false"></ts-event-tag-dialog>
+                  <event-tag-dialog :events="selectedEvents" @close="showEventTagMenu = false"></event-tag-dialog>
 
                 </v-menu>
 
@@ -451,7 +451,7 @@ limitations under the License.
             </div>
           </template>
 
-          <!-- Data Export name field -->
+          <!-- export name field -->
           <template v-slot:item.data_export_name="{ item }">
             <!-- <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em"> -->
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getDataExportColor(item)">
@@ -531,11 +531,11 @@ import EventBus from '@/event-bus.js'
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
 import TsEventTagMenu from './EventTagMenu.vue'
-import TsEventTagDialog from './EventTagDialog.vue'
+import EventTagDialog from './EventTagDialog.vue'
 import TsEventActionMenu from './EventActionMenu.vue'
 import TsEventTags from './EventTags.vue'
 import WelcomeCard from './WelcomeCard.vue'
-import TsSearchNotFoundCard from './SearchNotFoundCard.vue'
+import SearchNotFoundCard from './SearchNotFoundCard.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -565,11 +565,11 @@ export default {
     TsBarChart,
     TsEventDetail,
     TsEventTagMenu,
-    TsEventTagDialog,
+    EventTagDialog,
     TsEventActionMenu,
     TsEventTags,
     WelcomeCard,
-    TsSearchNotFoundCard,
+    SearchNotFoundCard,
   },
   props: {
     queryRequest: {
@@ -873,11 +873,11 @@ export default {
     },
     getDataExport: function (event) {
       // Browser model: events have data_export_id directly
-      const exportId = event._source.data_export_id
-      const dataExport = this.project.dataExports.find((de) => de.id === exportId)
+      const deID = event._source.data_export_id
+      const dataExport = this.project.dataExports.find((de) => de.id === deID)
       if (!dataExport) {
-        console.warn('[EventList.getDataExport] Data export not found for id:', exportId)
-        return { name: 'Unknown Data Export', id: exportId, color: '#999' }
+        console.warn('[EventList.getDataExport] Data export not found for id:', deID)
+        return { name: 'Unknown Data Export', id: deID, color: '#999' }
       }
       return dataExport
     },
@@ -925,7 +925,7 @@ export default {
         return
       }
 
-      // Expand '_all' to all IDs (handle both array ['_all'] and string '_all')
+      // Expand '_all' to all data export IDs (handle both array ['_all'] and string '_all')
       const uploadIds = this.currentQueryFilter.uploadIds;
       if (
         uploadIds === '_all' || 
@@ -935,7 +935,7 @@ export default {
         this.currentQueryFilter.uploadIds = allUploadIds;
       }
 
-      // Allow searches with empty query string (shows all events from selected data exports)
+      // Allow searches with empty query string (shows all events from selected data export)
       this.searchInProgress = true
       this.selectedEvents = []
       this.eventList = emptyEventList()
@@ -985,24 +985,6 @@ export default {
         this.searchInProgress = false
       }
     },
-    // fetchEventSummary: function() {
-    //   const formData = {
-    //     query: this.currentQueryString,
-    //     filter: this.currentQueryFilter,
-    //   }
-    //   BrowserDB.llmRequest(this.project.id, 'llm_summarize', formData)
-    //     .then((response) => {
-    //       this.$set(this.eventList.meta, 'summary', response.data.response)
-    //       this.$set(this.eventList.meta, 'summary_event_count', response.data.summary_event_count)
-    //       this.$set(this.eventList.meta, 'summary_unique_event_count', response.data.summary_unique_event_count)
-    //       this.isSummaryLoading = false
-    //     })
-    //     .catch((error) => {
-    //       console.error("Error fetching event summary:", error)
-    //       this.$set(this.eventList.meta, 'summaryError', true)
-    //       this.isSummaryLoading = false
-    //     })
-    // },
     exportSearchResult: function () {
       // TODO: Implement CSV export for browser model
       this.exportDialog = false
@@ -1141,7 +1123,7 @@ export default {
       this.saveSearchMenu = false
     },
     updateShowBanner: function() {
-      // Show banner only when processing data exports are enabled and at
+      // Show banner only when processing a are enabled and at
       // least one enabled export is in "processing" state.
       // Browser model: status is a string, not an array
       this.showBanner =
@@ -1434,7 +1416,7 @@ th:first-child {
   }
 }
 
-.ts-event-list-container {
+.event-list-container {
   display: flex;
   flex-direction: column;
   width: 100%;

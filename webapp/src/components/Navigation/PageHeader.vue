@@ -17,14 +17,14 @@
           <div v-if="demoMode" class="blue white--text px-3 py-1 rounded font-weight-bold" style="font-size: 0.85em; letter-spacing: 0.5px;">
             INTERACTIVE DEMO
           </div>
-          <v-hover v-else-if="sketch && sketch.name" v-slot="{ hover }">
+          <v-hover v-else-if="project && project.name" v-slot="{ hover }">
             <div class="d-flex align-center">
               <div
                 @dblclick="$emit('rename-project')"
                 style="font-size: 1.1em; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;"
-                :title="sketch.name"
+                :title="project.name"
               >
-                <span class="font-weight-bold">Project:</span>&nbsp; {{ sketch.name }}
+                <span class="font-weight-bold">Project:</span>&nbsp; {{ project.name }}
               </div>
               <v-icon title="Rename Project" small class="ml-3" v-if="hover" @click="$emit('rename-project')">mdi-pencil</v-icon>
             </div>
@@ -35,7 +35,7 @@
       <!-- Desktop Navigation (shown on md and up) -->
       <div class="header-nav d-none d-md-flex">
         <v-btn text router-link to="/" class="nav-link">Home</v-btn>
-        <v-btn text router-link to="/explore" class="nav-link">Explore My Data</v-btn>
+        <v-btn text router-link to="/events" class="nav-link">Explore My Data</v-btn>
         
         <!-- Tutorials Dropdown (Help Docs) -->
         <v-menu offset-y open-on-hover>
@@ -52,7 +52,7 @@
               </v-list-item-icon>
               <v-list-item-title>How to Request Your Data</v-list-item-title>
             </v-list-item>
-            <v-list-item to="/demo/explore" class="interactive-demo-link">
+            <v-list-item to="/demo/events" class="interactive-demo-link">
               <v-list-item-icon>
                 <v-icon>mdi-play-circle</v-icon>
               </v-list-item-icon>
@@ -98,14 +98,14 @@ export default {
     },
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     demoMode() {
       return this.$store.state.demoMode
     },
     isProjectInfoVisible() {
-      const allowedRoutes = ['Explore', 'Devices', 'DemoExplore', 'DemoDevices']
+      const allowedRoutes = ['Events', 'Devices', 'DemoEvents', 'DemoDevices']
       return allowedRoutes.includes(this.$route.name)
     },
   },

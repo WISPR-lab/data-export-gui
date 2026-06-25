@@ -20,17 +20,17 @@ limitations under the License.
       <v-icon title="Modify tags" v-else v-bind="attrs" v-on="on" class="ml-1">mdi-tag-plus-outline</v-icon>
     </template>
 
-    <ts-event-tag-dialog :events="[event]" @close="showMenu = false"></ts-event-tag-dialog>
+    <event-tag-dialog :events="[event]" @close="showMenu = false"></event-tag-dialog>
 
   </v-menu>
 </template>
 
 <script>
-import TsEventTagDialog from './EventTagDialog.vue'
+import EventTagDialog from './EventTagDialog.vue'
 
 export default {
   components: {
-    TsEventTagDialog
+    EventTagDialog
   },
   props: ['event'],
   data() {

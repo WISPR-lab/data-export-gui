@@ -55,13 +55,13 @@ It replaces the generic UploadForm for the new workflow.
           <!-- Timeline Name -->
           <div class="mb-4">
             <v-text-field
-              v-model="timelineName"
-              label="Timeline Name"
+              v-model="dataExportName"
+              label="Data Export Name"
               outlined
               dense
               required
               :rules="nameRules"
-              placeholder="e.g. My Timeline"
+              placeholder="e.g. My Data Export"
             ></v-text-field>
           </div>
         </v-card-text>
@@ -118,9 +118,9 @@ export default {
     return {
       dialog: true,
       selectedFile: null,
-      timelineName: '',
+      dataExportName: '',
       nameRules: [
-        (v) => !!v || 'Timeline name is required',
+        (v) => !!v || 'Data export name is required',
         (v) => (v && v.length <= 255) || 'Name must be less than 255 characters',
       ],
       localErrors: [],
@@ -138,7 +138,7 @@ export default {
       return (
         this.selectedFile &&
         this.fileValid &&
-        this.timelineName.trim().length > 0 &&
+        this.dataExportName.trim().length > 0 &&
         !this.isUploading
       );
     },
@@ -173,7 +173,7 @@ export default {
     },
   },
   mounted() {
-    this.suggestTimelineName();
+    this.suggestDEName();
   },
   methods: {
     onFileSelected(file) {
@@ -189,20 +189,20 @@ export default {
       this.fileValid = validation.valid;
 
       if (this.fileValid) {
-        this.timelineName = stripZipExtension(file.name);
+        this.dataExportName = stripZipExtension(file.name);
       }
     },
     clearFile() {
       this.selectedFile = null;
-      this.timelineName = '';
+      this.dataExportName = '';
       this.fileValid = false;
       this.localErrors = [];
     },
-    async suggestTimelineName() {
+    async suggestDEName() {
       // Python extractor auto-generates names on upload
       // Just use platform name as placeholder
-      if (!this.timelineName || this.timelineName === '') {
-        this.timelineName = this.selectedPlatform;
+      if (!this.dataExportName || this.dataExportName === '') {
+        this.dataExportName = this.selectedPlatform;
       }
     },
     async submitUpload() {
@@ -210,9 +210,9 @@ export default {
         return;
       }
 
-      const sketchId = this.$store.state.sketch.id;
-      if (!sketchId) {
-        this.localErrors.push('No active sketch found');
+      const projectId = this.$store.state.project.id;
+      if (!projectId) {
+        this.localErrors.push('No active project found');
         return;
       }
 
@@ -220,7 +220,7 @@ export default {
         await processUpload(
           this.selectedFile,
           this.selectedPlatform,
-          sketchId,
+          projectId,
           this.$store
         );
       } catch (error) {

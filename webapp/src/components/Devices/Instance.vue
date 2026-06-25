@@ -27,7 +27,6 @@
         />
       </div>
 
-      <!-- OS & Timeline -->
       <div class="flex-grow-1 text-truncate">
         <div class="text-body-2 font-weight-medium text--primary d-flex align-center">
           <span>{{ getHeaderLabel }}</span>
@@ -52,8 +51,8 @@
         </div>
         <div class="text-body-2 text--secondary">
           <span v-if="getOSLabel">{{ getOSLabel }}</span>
-          <span v-if="getTimelineString && getOSLabel" class="ml-2 mr-2">&bull;</span>
-          <span v-if="getTimelineString">Active {{ getTimelineString }}</span>
+          <span v-if="getDataExportString && getOSLabel" class="ml-2 mr-2">&bull;</span>
+          <span v-if="getDataExportString">Active {{ getDataExportString }}</span>
         </div>
       </div>
       <!-- Actions -->
@@ -63,7 +62,7 @@
           text
           small
           color="primary"
-          @click.stop="goToExplore"
+          @click.stop="goToEvents"
           title="View events for this instance"
         >
           {{ instance.event_count }} Events
@@ -172,7 +171,7 @@ export default {
       }
       return titleCase(os);
     },
-    getTimelineString() {
+    getDataExportString() {
       if (!this.instance.first_seen || !this.instance.last_seen) return '';
       const start = new Date(this.instance.first_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       const end = new Date(this.instance.last_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -180,9 +179,9 @@ export default {
     }
   },
   methods: {
-    goToExplore() {
+    goToEvents() {
       const queryString = `device_instance_id:${this.instance.id}`;
-      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore';
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
       this.$router.push({
         name: routeName,
         query: { q: queryString }

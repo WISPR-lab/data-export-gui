@@ -42,7 +42,7 @@ limitations under the License.
       <!-- <new-data-export-button v-if="expanded">
         <template v-slot="slotProps">
           <v-btn
-            v-if="expanded || allTimelines.length === 0"
+            v-if="expanded || allDataExports.length === 0"
             icon
             text
             class="float-right mt-n1 mr-n1"
@@ -50,28 +50,28 @@ limitations under the License.
             v-on="slotProps.on"
             @click.stop=""
           >
-            <v-icon title="Add timeline">mdi-plus</v-icon>
+            <v-icon title="Add data export">mdi-plus</v-icon>
           </v-btn>
         </template>
       </new-data-export-button>
       <span v-else class="float-right" style="margin-right: 10px">
         <small class="ml-3"
-          ><strong>{{ allTimelines.length }}</strong></small
+          ><strong>{{ allDataExports.length }}</strong></small
         >
       </span> -->
       <span class="float-right" style="margin-right: 10px">
         <small class="ml-3"
-          ><strong>{{ allTimelines.length }}</strong></small
+          ><strong>{{ allDataExports.length }}</strong></small
         >
       </span>
     </div>
     <v-expand-transition>
       <div v-show="expanded">
         <v-text-field
-          v-if="allTimelines.length >= paginationThreshold"
+          v-if="allDataExports.length >= paginationThreshold"
           class="ma-3"
           v-model="search"
-          label="Filter timelines"
+          label="Filter data exports"
           single-line
           clearable
           hide-details
@@ -81,10 +81,10 @@ limitations under the License.
         ></v-text-field>
         <v-data-table
           class="data-table"
-          :hide-default-footer="allTimelines.length <= paginationThreshold"
+          :hide-default-footer="allDataExports.length <= paginationThreshold"
           :hide-default-header="true"
           v-model="selected"
-          :items="allTimelines"
+          :items="allDataExports"
           :headers="headers"
           item-key="id"
           dense
@@ -92,30 +92,30 @@ limitations under the License.
           :search="search"
         >
           <template v-slot:item.name="{ item }">
-            <ts-timeline-component
+            <data-export-component
               class="mb-1 mt-1"
               :key="item.id + item.name"
               :is-selected="isEnabled(item)"
-              @toggle="toggleTimeline"
+              @toggle="toggleDataExport"
               @save="save"
-              @remove="removeTimeline"
-              @disableAllOtherTimelines="disableAllOtherTimelines"
-              :timeline="item"
+              @remove="removeDataExport"
+              @disableAllOtherDataExports="disableAllOtherDataExports"
+              :data-export="item"
             >
               <template v-slot:processing="slotProps">
-                <div class="chip-content" :style="timelineStyle(slotProps.timelineStatus, isEnabled(item))">
-                  <span class="timeline-name-ellipsis">{{ item.name }}</span>
+                <div class="chip-content" :style="dataExportStyle(slotProps.dataExportStatus, isEnabled(item))">
+                  <span class="export-name-ellipsis">{{ item.name }}</span>
                   <span class="right">
-                    <span v-if="slotProps.timelineStatus === 'processing'" class="ml-3 mr-3">
+                    <span v-if="slotProps.dataExportStatus === 'processing'" class="ml-3 mr-3">
                       <v-progress-circular small indeterminate color="grey" :size="17" :width="2"></v-progress-circular>
                     </span>
                   </span>
                 </div>
               </template>
               <template v-slot:processed="slotProps">
-                <div class="chip-content" :style="timelineStyle(slotProps.timelineStatus, isEnabled(item))">
+                <div class="chip-content" :style="dataExportStyle(slotProps.dataExportStatus, isEnabled(item))">
                   <v-icon
-                    v-if="slotProps.timelineFailed"
+                    v-if="slotProps.dataExportFailed"
                     title="Import failed; click for details"
                     @click="slotProps.events.openDialog"
                     left
@@ -126,9 +126,9 @@ limitations under the License.
                     mdi-alert-circle-outline
                   </v-icon>
                   <v-icon
-                    v-if="!slotProps.timelineFailed"
+                    v-if="!slotProps.dataExportFailed"
                     left
-                    :color="slotProps.timelineChipColor"
+                    :color="slotProps.dataExportChipColor"
                     size="26"
                     class="ml-n2"
                   >
@@ -137,7 +137,7 @@ limitations under the License.
 
                   <v-tooltip bottom :disabled="item.name.length < 40" open-delay="200">
                     <template v-slot:activator="{ on: onTooltip }">
-                      <span v-on="onTooltip" class="timeline-name-ellipsis" style="cursor: default">{{
+                      <span v-on="onTooltip" class="export-name-ellipsis" style="cursor: default">{{
                         item.name
                       }}</span>
                     </template>
@@ -145,18 +145,18 @@ limitations under the License.
                   </v-tooltip>
 
                   <span class="right">
-                    <span v-if="slotProps.timelineStatus === 'processing'" class="ml-3 mr-3">
+                    <span v-if="slotProps.dataExportStatus === 'processing'" class="ml-3 mr-3">
                         <v-progress-circular small indeterminate color="grey" :size="17" :width="2"></v-progress-circular>
                     </span>
-                    <span v-if="!slotProps.timelineFailed" class="events-count mr-1" x-small>
+                    <span v-if="!slotProps.dataExportFailed" class="events-count mr-1" x-small>
                       {{ getCount(item) | compactNumber }}
                     </span>
                     <v-btn
-                      v-if="!slotProps.timelineFailed"
+                      v-if="!slotProps.dataExportFailed"
                       class="ma-1"
                       x-small
                       icon
-                      @click="slotProps.events.toggleTimeline"
+                      @click="slotProps.events.toggleDataExport"
                     >
                       <v-icon v-if="isEnabled(item)"> mdi-eye </v-icon>
                       <v-icon v-else> mdi-eye-off </v-icon>
@@ -167,7 +167,7 @@ limitations under the License.
                   </span>
                 </div>
               </template>
-            </ts-timeline-component>
+            </data-export-component>
           </template>
         </v-data-table>
       </div>
@@ -181,7 +181,7 @@ import EventBus from '../../event-bus.js'
 import DB from '@/database/index.js'
 
 import NewDataExportButton from '../Import/NewDataExportButton.vue'
-import TsTimelineComponent from '../Explore/TimelineComponent.vue'
+import DataExportComponent from '../Events/DataExportComponent.vue'
 
 export default {
   props: {
@@ -189,109 +189,101 @@ export default {
   },
   components: {
     NewDataExportButton,
-    TsTimelineComponent,
+    DataExportComponent,
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
-    allTimelines() {
-      // Sort alphabetically based on timeline name.
-      let timelines = [...this.sketch.timelines]
-      timelines.sort(function (a, b) {
+    allDataExports() {
+      // Sort alphabetically based on name.
+      let dataExports = [...this.project.dataExports]
+      dataExports.sort(function (a, b) {
         return a.name.localeCompare(b.name)
       })
-      return timelines
-    },
-    activeTimelines() {
-      // Sort alphabetically based on timeline name.
-      let timelineList = this.sketch.timelines || []
-      let timelines = [...timelineList]
-      return timelines.sort(function (a, b) {
-        return a.name.localeCompare(b.name)
-      })
+      return dataExports
     },
     settings() {
       return this.$store.state.settings
     },
   },
   watch: {
-    'settings.showProcessingTimelineEvents': function (newValue, oldValue) {
-      this.updateEnabledTimelines(oldValue === undefined)
+    'settings.showProcessingData': function (newValue, oldValue) {
+      this.updateEnabledDataExports(oldValue === undefined)
     },
   },
   methods: {
-    isEnabled(timeline) {
-      return this.$store.state.enabledTimelines.includes(timeline.id)
+    isEnabled(dataExport) {
+      return this.$store.state.enabledDataExports.includes(dataExport.id)
     },
-    toggleTimeline(timeline) {
-      this.$store.dispatch('toggleEnabledTimeline', timeline.id)
+    toggleDataExport(dataExport) {
+      this.$store.dispatch('toggleEnabledDataExport', dataExport.id)
     },
-    disableAllOtherTimelines(timeline) {
-      this.$store.dispatch('updateEnabledTimelines', [timeline.id])
+    disableAllOtherDataExports(dataExport) {
+      this.$store.dispatch('updateEnabledDataExports', [dataExport.id])
     },
-    updateEnabledTimelines(isNewSelection) {
-      let timelines = this.activeTimelines
+    updateEnabledDataExports(isNewSelection) {
+      let exports = this.allDataExports
 
       if (isNewSelection) {
-        if (!this.settings.showProcessingTimelineEvents) {
-          timelines = timelines.filter((tl) => tl.status[0].status !== 'processing')
+        if (!this.settings.showProcessingData) {
+          exports = exports.filter((de) => de.status[0].status !== 'processing')
         }
       } else {
-        timelines = timelines.filter((tl) => this.$store.state.enabledTimelines.includes(tl.id))
-        if (this.settings.showProcessingTimelineEvents) {
-          this.activeTimelines.forEach((tl) => {
-            if (!timelines.includes(tl) && tl.status[0].status === 'processing') {
-              timelines.push(tl)
+        exports = exports.filter((de) => this.$store.state.enabledDataExports.includes(de.id))
+        if (this.settings.showProcessingData) {
+          this.allDataExports.forEach((de) => {
+            if (!exports.includes(de) && de.status[0].status === 'processing') {
+              exports.push(de)
             }
           })
-          timelines.sort((a, b) => a.id - b.id)
+          exports.sort((a, b) => a.id - b.id)
         }
       }
 
-      let timelineIds = timelines.map((tl) => tl.id)
+      let exportIDs = exports.map((de) => de.id)
 
-      this.$store.dispatch('updateEnabledTimelines', timelineIds)
+      this.$store.dispatch('updateEnabledDataExports', exportIDs)
     },
-    timelineStyle(timelineStatus, isSelected) {
+    dataExportStyle(dataExportStatus, isSelected) {
       let statusList = ['ready']
-      if (this.settings.showProcessingTimelineEvents) {
+      if (this.settings.showProcessingData) {
         statusList.push('processing')
       }
-      const greyOut = statusList.includes(timelineStatus) && !isSelected
+      const greyOut = statusList.includes(dataExportStatus) && !isSelected
       return {
         opacity: greyOut ? '50%' : '100%',
       }
     },
-    updateCountPerTimeline(countPerTimeline) {
-      this.countPerTimeline = countPerTimeline
+    updateCountPerExport(countPerDataExport) {
+      this.countPerDataExport = countPerDataExport
     },
-    getCount(timeline) {
+    getCount(dataExport) {
       let count = 0
-      if (this.countPerTimeline) {
-        count = this.countPerTimeline[timeline.id]
+      if (this.countPerDataExport) {
+        count = this.countPerDataExport[dataExport.id]
         if (typeof count === 'number') {
           return count
         }
       }
       return count
     },
-    async save(timeline, newTimelineName = false) {
+    async save(dataExport, dataExportName = false) {
       try {
-        await DB.updateUpload(timeline.id, {
-          given_name: newTimelineName || timeline.name,
-          description: timeline.description,
-          color: timeline.color
+        await DB.updateUpload(dataExport.id, {
+          given_name: dataExportName || dataExport.name,
+          description: dataExport.description,
+          color: dataExport.color
         })
-        await this.$store.dispatch('updateSketch', this.sketch.id)
+        await this.$store.dispatch('updateProject', this.project.id)
       } catch (e) {
         console.error('[TimelinesTable] Failed to update upload:', e)
       }
     },
-    async removeTimeline(timeline) {
+    async removeDataExport(dataExport) {
       try {
-        await DB.deleteUpload(timeline.id)
-        await this.$store.dispatch('updateSketch', this.sketch.id)
+        await DB.deleteUpload(dataExport.id)
+        await this.$store.dispatch('updateProject', this.project.id)
       } catch (e) {
         console.error('[TimelinesTable] Failed to delete upload:', e)
       }
@@ -299,7 +291,7 @@ export default {
   },
   data: function () {
     return {
-      countPerTimeline: {},
+      countPerDataExport: {},
       expanded: false,
       selected: [],
       search: '',
@@ -308,13 +300,13 @@ export default {
     }
   },
   created() {
-    this.updateEnabledTimelines(true)
+    this.updateEnabledDataExports(true)
   },
   mounted() {
-    EventBus.$on('updateCountPerTimeline', this.updateCountPerTimeline)
+    EventBus.$on('updateCountPerExport', this.updateCountPerExport)
   },
   beforeDestroy() {
-    EventBus.$off('updateCountPerTimeline')
+    EventBus.$off('updateCountPerExport')
   },
 }
 </script>
@@ -330,7 +322,7 @@ export default {
   width:340px;
 }
 
-.timeline-name.disabled {
+.export-name.disabled {
   text-decoration: line-through;
 }
 .right {
@@ -340,7 +332,7 @@ export default {
   max-width: 50%;
 }
 
-.timeline-name-ellipsis {
+.export-name-ellipsis {
   width: 50%;
 }
 

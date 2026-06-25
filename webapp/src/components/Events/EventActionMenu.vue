@@ -55,8 +55,8 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     settings() {
       return this.$store.state.settings

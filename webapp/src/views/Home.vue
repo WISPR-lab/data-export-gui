@@ -7,7 +7,7 @@
         <img :src="LestradeLogo" alt="LEStrADE Logo" height="80" class="mr-2" />
         <h1 class="text-h4 secondary--text mb-4">
           <!-- <span class="font-weight-black">L</span>ocal <span class="font-weight-black">E</span>ngine for <span class="font-weight-black">Str</span>uctured <span class="font-weight-black">A</span>nalysis of <span class="font-weight-black">D</span>ata <span class="font-weight-black">E</span>xports -->
-          <!-- Visualize your account security status in one timeline. -->
+          <!-- Visualize your account security status in one place. -->
         </h1>
         <p class="text-h5 secondary--text mb-8 font-weight-regular">
           <strong>L</strong>ocal <strong>E</strong>ngine for <strong>Str</strong>uctured <strong>A</strong>nalysis of <strong>D</strong>ata <strong>E</strong>xports
@@ -31,7 +31,7 @@
           <v-btn
             large
             color="primary"
-            @click="goToSketch"
+            @click="goToProject"
           >
             <v-icon left>mdi-play</v-icon>
             Explore your data
@@ -88,7 +88,7 @@
             <v-col cols="12" sm="6" class="d-flex flex-column justify-center align-start">
               <ul class="text-body1 secondary--text mb-0"> <!-- style="list-style-type: disc; padding-left: 1.5rem;">-->
                 <li>Extract security-related data from complex files.</li>
-                <li>Display events in a searchable timeline.</li>
+                <li>Display events in a searchable interface.</li>
                 <li>Isolate logged-in devices and IP addresses.</li>
                 <li>Flag and annotate suspicious events and devices.</li>
                 <li>Compare data from multiple platforms.</li>
@@ -203,8 +203,8 @@ export default {
     }
   },
   methods: {
-    goToSketch() {
-      this.$router.push({ name: 'Explore' })
+    goToProject() {
+      this.$router.push({ name: 'Events' })
     },
   },
 }

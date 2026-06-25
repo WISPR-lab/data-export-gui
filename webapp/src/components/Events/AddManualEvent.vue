@@ -139,7 +139,7 @@ export default {
       if (this.datetime === null || this.message === null || this.timestampDesc === null) {
         return
       }
-      let sketchId = this.$store.state.sketch.id
+      let projectId = this.$store.state.project.id
       let config = {
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export default {
         .reduce((_, attribute) => {
           attributes[attribute.name] = attribute.value
         }, attributes)
-      BrowserDB.createEvent(sketchId, this.datetime, this.message, this.timestampDesc, attributes, config)
+      BrowserDB.createEvent(projectId, this.datetime, this.message, this.timestampDesc, attributes, config)
         .then((response) => {
           this.clearAndCancel()
         })

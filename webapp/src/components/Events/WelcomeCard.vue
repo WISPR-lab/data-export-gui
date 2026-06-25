@@ -18,7 +18,7 @@ limitations under the License.
 
 
 <template>
-  <ts-search-guide-card
+  <search-guide-card
     :flat="inDialog"
     :show-tags="showTags"
     :show-data-types="showDataTypes"
@@ -38,15 +38,15 @@ limitations under the License.
         <v-divider></v-divider>
       </div>
     </template>
-  </ts-search-guide-card>
+  </search-guide-card>
 </template>
 
 <script>
-import TsSearchGuideCard from './SearchGuideCard.vue'
+import SearchGuideCard from './SearchGuideCard.vue'
 import DB from '@/database/index.js'
 
 export default {
-  name: 'TsExploreWelcomeCard',
+  name: 'WelcomeCard',
   props: {
     inDialog: {
       type: Boolean,
@@ -54,7 +54,7 @@ export default {
     },
   },
   components: {
-    TsSearchGuideCard,
+    SearchGuideCard,
   },
   data() {
     return {
@@ -77,7 +77,7 @@ export default {
     showTags() {
       if (!this.$store.state.tags || !this.$store.state.meta.filter_labels) return false
       const filteredLabels = this.$store.state.meta.filter_labels.filter(
-        (labelObj) => !labelObj.label.startsWith('__ts_fact')
+        (labelObj) => labelObj && typeof labelObj.label === 'string' && !labelObj.label.startsWith('__ts_fact')
       )
       return [...this.$store.state.tags, ...filteredLabels].length > 0
     },

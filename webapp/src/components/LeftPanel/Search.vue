@@ -19,7 +19,7 @@ limitations under the License.
     v-if="iconOnly"
     class="pa-4"
     style="cursor: pointer"
-    @click="navigateToExplore"
+    @click="navigateToEvents"
   >
     <v-icon :color="isActive ? 'primary' : ''">mdi-timeline-clock-outline</v-icon>
   </div>
@@ -29,7 +29,7 @@ limitations under the License.
     <div
       class="pa-4"
       style="cursor: pointer"
-      @click="navigateToExplore"
+      @click="navigateToEvents"
       :class="[
         $vuetify.theme.dark ? 'dark-hover' : 'light-hover',
         isActive ? 'active-view' : ''
@@ -47,12 +47,12 @@ export default {
   },
   computed: {
     isActive() {
-      return this.$route.name === 'Explore' || this.$route.name === 'DemoExplore'
+      return this.$route.name === 'Events' || this.$route.name === 'DemoEvents'
     }
   },
   methods: {
-    navigateToExplore() {
-      const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+    navigateToEvents() {
+      const target = this.$store.state.demoMode ? '/demo/events' : '/events'
       if (this.$route.path !== target) {
         this.$router.push(target)
       }

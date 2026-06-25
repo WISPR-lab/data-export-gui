@@ -25,17 +25,17 @@ limitations under the License.
         outlined
         dense
         autofocus
-        v-model="newSketchName"
+        v-model="newProjectName"
         @focus="$event.target.select()"
         clearable
         counter="50"
-        :rules="sketchNameRules"
+        :rules="projectNameRules"
       >
       </v-text-field>
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn text @click="closeDialog()"> Cancel </v-btn>
-        <v-btn :disabled="!newSketchName || newSketchName.length > 50" text color="primary" @click="renameSketch()">
+        <v-btn :disabled="!newProjectName || newProjectName.length > 50" text color="primary" @click="renameSketch()">
           Save
         </v-btn>
       </v-card-actions>
@@ -45,42 +45,42 @@ limitations under the License.
 
 <script>
 export default {
-  props: ['sketchId'],
+  props: ['projectId'],
   data() {
     return {
-      newSketchName: '',
-      sketchNameRules: [
-        (v) => !!v || 'Sketch name is required.',
-        (v) => (v && v.length <= 50) || 'Sketch name is too long.',
+      newProjectName: '',
+      projectNameRules: [
+        (v) => !!v || 'Project name is required.',
+        (v) => (v && v.length <= 50) || 'Project name is too long.',
       ],
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
   },
   methods: {
     renameSketch() {
       // Update virtual sketch name in localStorage
-      localStorage.setItem('sketchName', this.newSketchName)
+      localStorage.setItem('projectName', this.newProjectName)
       
       // Update Vuex state
-      const updatedSketch = { ...this.sketch, name: this.newSketchName }
-      this.$store.commit('SET_SKETCH', { 
-        objects: [updatedSketch], 
+      const updatedProject = { ...this.project, name: this.newProjectName }
+      this.$store.commit('SET_PROJECT', { 
+        objects: [updatedProject], 
         meta: this.$store.state.meta 
       })
       
       this.$emit('close')
     },
     closeDialog: function () {
-      this.newSketchName = this.sketch.name
+      this.newProjectName = this.project.name
       this.$emit('close')
     },
   },
   created() {
-    this.newSketchName = this.sketch.name
+    this.newProjectName = this.project.name
   },
 }
 </script>

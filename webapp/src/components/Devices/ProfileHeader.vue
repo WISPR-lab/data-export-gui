@@ -119,9 +119,9 @@ export default {
     }
   },
   methods: {
-    goToExplore() {
+    goToEvents() {
       const queryString = `device_profiles_data:${this.device.id}`;
-      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore';
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
       this.$router.push({
         name: routeName,
         query: { q: queryString }
