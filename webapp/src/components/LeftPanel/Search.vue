@@ -61,10 +61,4 @@ export default {
 }
 </script>
 
-<style scoped lang="scss">
-.active-view {
-  background-color: rgba(25, 118, 210, 0.05);
-  font-weight: 500;
-}
-</style>
 
