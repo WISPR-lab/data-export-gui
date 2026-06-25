@@ -1068,11 +1068,13 @@ export default {
       
       if (isStarred) {
         event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
+        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: -1 })
         DB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       } else {
         event._source.labels.push('__ts_star')
+        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: 1 })
         DB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
@@ -1098,6 +1100,11 @@ export default {
           netStarCountChange++
         }
       })
+      
+      // Update global store reactive count
+      if (netStarCountChange !== 0) {
+        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: netStarCountChange })
+      }
       
       // Persist changes to database
       if (eventsToStar.length > 0) {

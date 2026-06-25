@@ -17,7 +17,7 @@ export default {
   name: 'formatLabelText',
   filter: function (input) {
     if (input === '__ts_star' || input === 'label : __ts_star') {
-      return 'All starred events'
+      return 'Starred'
     }
     if (input === '__ts_comment' || input === 'label : __ts_comment') {
       return 'All commented events'
