@@ -43,7 +43,7 @@ def group(upload_id: str, db_path: str = None) -> None:
                 ].values.tolist(),
             )
 
-        upgrade_edges = client_os_upgrades.get_edges(df)
+        upgrade_edges = client_os_upgrades.get_edges(df[df["table"] == "events"])
         if not upgrade_edges.empty:
             upgrade_edges["upload_id"] = upload_id
             conn.executemany(

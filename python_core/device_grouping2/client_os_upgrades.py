@@ -231,8 +231,7 @@ def _pass2_os(
 
 
 def get_edges(df: pd.DataFrame, run_pass2: bool = None) -> pd.DataFrame:
-    events_df = df[df["table"] == "events"]
-    if events_df.empty:
+    if df.empty:
         return pd.DataFrame(columns=["id_a", "id_b", "type", "provenance"])
 
     if run_pass2 is None:
@@ -240,7 +239,7 @@ def get_edges(df: pd.DataFrame, run_pass2: bool = None) -> pd.DataFrame:
 
         run_pass2 = get_config_value("ENABLE_DEVICE_GROUPING_PASS2", False)
 
-    pass1_edges, subgraph_df = _pass1_client(events_df)
+    pass1_edges, subgraph_df = _pass1_client(df)
     if run_pass2:
         pass2_edges, _ = _pass2_os(subgraph_df)
         combined = pd.concat([pass1_edges, pass2_edges], ignore_index=True)
