@@ -54,7 +54,7 @@
             :device="dev"
             :ua-masking-text="uaMaskingText"
             @change="saveDeviceChanges(dev)"
-            @see-all-events="goToExplore(dev)"
+            @see-all-events="goToEvents(dev)"
             @move-instances="openMoveDialog(dev, $event)"
             @create-profile="openCreateDialog(dev, $event)"
             @showJSON="showDeviceJSON"
@@ -288,9 +288,9 @@ export default {
         EventBus.$emit('demo:action', 'device-expanded')
       }
     },
-    goToExplore(device) {
+    goToEvents(device) {
       const queryString = `device_profiles_data:${device.id}`;
-      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore'
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events'
       this.$router.push({
         name: routeName,
         query: { q: queryString }

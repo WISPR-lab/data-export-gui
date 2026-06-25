@@ -62,7 +62,7 @@
           text
           small
           color="primary"
-          @click.stop="goToExplore"
+          @click.stop="goToEvents"
           title="View events for this instance"
         >
           {{ instance.event_count }} Events
@@ -179,9 +179,9 @@ export default {
     }
   },
   methods: {
-    goToExplore() {
+    goToEvents() {
       const queryString = `device_instance_id:${this.instance.id}`;
-      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore';
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
       this.$router.push({
         name: routeName,
         query: { q: queryString }

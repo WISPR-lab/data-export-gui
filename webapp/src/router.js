@@ -22,7 +22,7 @@ import VueRouter from 'vue-router'
 
 import Home from './views/Home.vue'
 import Canvas from './views/Canvas.vue'
-import Sketch from './views/Project.vue'
+import Project from './views/Project.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
@@ -129,8 +129,8 @@ router.beforeEach(async (to, from, next) => {
       }
     }
     
-    // Auto-start demo state if visiting demo explore
-    if (to.name === 'DemoExplore') {
+    // Auto-start demo state if visiting demo events
+    if (to.name === 'DemoEvents') {
       store.commit('SET_DEMO_IN_PROGRESS', true)
       store.commit('SET_DEMO_STEP', 1)
     }
@@ -148,7 +148,7 @@ router.beforeEach(async (to, from, next) => {
 
 router.afterEach((to, from) => {
   // Warmup Pyodide when user navigates to /events
-  if (to.path.includes('explore')) {
+  if (to.path.includes('events')) {
     if (!warmupPromise) {
       warmupPromise = callPyodideWorker('warmup', {}).catch(err => {
         console.warn('[Router] Pyodide warmup error:', err);

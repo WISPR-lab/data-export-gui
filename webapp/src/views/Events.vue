@@ -421,7 +421,7 @@ export default {
     },
     hasDataExports(newVal) {
       if (newVal && this.$route.name === 'DemoEvents') {
-        console.log('[Explore] Data loaded for DemoExplore, auto-starting demo');
+        console.log('[Events] Data loaded for DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
@@ -429,7 +429,7 @@ export default {
     },
     $route(to) {
       if (to.name === 'DemoEvents' && this.hasDataExports) {
-        console.log('[Explore] Route changed to DemoExplore, auto-starting demo');
+        console.log('[Events] Route changed to DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
@@ -441,7 +441,7 @@ export default {
       return this.quickTags.find((el) => el.tag === tag)
     },
     startDemo() {
-      console.log('[Explore] Starting interactive demo');
+      console.log('[Events] Starting interactive demo');
       const DemoController = require('@/demo/DemoController.js').default
       DemoController.start(this.$store)
     },
@@ -459,7 +459,7 @@ export default {
     },
     setQueryAndFilter: function (searchEvent) {
       const isDemo = this.$route.name === 'DemoEvents' || this.$route.name === 'DemoDevices'
-      if (this.$route.name !== 'Explore' && !isDemo) {
+      if (this.$route.name !== 'Events' && !isDemo) {
         this.$router.push({ name: 'Events', params: { projectId: this.project.id } })
       }
       if (searchEvent.queryString) {
@@ -506,7 +506,7 @@ export default {
     // searchView: function (viewId) {
     //   this.showSearchDropdown = false
 
-    //   if (this.$route.name !== 'Explore') {
+    //   if (this.$route.name !== 'Events') {
     //     this.$router.push({ name: 'Events', params: { projectId: this.project.id } })
     //   }
 
@@ -798,9 +798,9 @@ export default {
     this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
     
-    // Auto-start demo if in DemoExplore route
+    // Auto-start demo if in DemoEvents route
     if (this.$route.name === 'DemoEvents' && this.hasDataExports) {
-      console.log('[Explore] Auto-starting demo on mount');
+      console.log('[Events] Auto-starting demo on mount');
       this.$nextTick(() => {
         this.startDemo();
       });

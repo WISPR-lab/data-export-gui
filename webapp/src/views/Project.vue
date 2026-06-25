@@ -319,8 +319,8 @@ export default {
   },
   methods: {
     checkShowDemoModal() {
-      const isRegularExploreRoute = this.$route.name === 'Explore'
-      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasDataExports && !this.loadingProject) {
+      const isRegularEventsRoute = this.$route.name === 'Events'
+      if (isRegularEventsRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasDataExports && !this.loadingProject) {
         this.showFirstTimeModal = true;
       }
     },
