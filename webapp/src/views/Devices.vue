@@ -298,7 +298,6 @@ export default {
 
 <style scoped>
 .min-h-100 { min-height: 100vh; }
-.white { background-color: #ffffff !important; }
 .border { border: 1px solid rgba(0,0,0,0.12) !important; }
 .border-top { border-top: 1px solid rgba(0,0,0,0.12) !important; }
 
