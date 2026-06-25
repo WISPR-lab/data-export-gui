@@ -22,7 +22,7 @@ limitations under the License.
       dismissible
       type="info"
     >
-      Data may be incomplete. Some timelines are still loading.
+      Data may be incomplete. Some data exports are still loading.
     </v-alert>
 
     <v-dialog v-model="exportDialog" width="700">
@@ -287,8 +287,8 @@ limitations under the License.
                               <v-switch dense v-model="displayOptions.showTimelineName"></v-switch>
                             </v-list-item-action>
                             <v-list-item-content>
-                              <v-list-item-title>Timeline name</v-list-item-title>
-                              <v-list-item-subtitle>Show timeline name</v-list-item-subtitle>
+                              <v-list-item-title>Data export name</v-list-item-title>
+                              <v-list-item-subtitle>Show data export name</v-list-item-subtitle>
                             </v-list-item-content>
                           </v-list-item>
                         </v-list-item-group>
@@ -877,7 +877,7 @@ export default {
       const timeline = this.sketch.timelines.find((tl) => tl.id === timelineId)
       if (!timeline) {
         console.warn('[EventList.getTimeline] Timeline not found for id:', timelineId)
-        return { name: 'Unknown Timeline', id: timelineId, color: '#999' }
+        return { name: 'Unknown Data Export', id: timelineId, color: '#999' }
       }
       return timeline
     },

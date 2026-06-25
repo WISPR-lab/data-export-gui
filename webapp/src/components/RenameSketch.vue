@@ -50,8 +50,8 @@ export default {
     return {
       newSketchName: '',
       sketchNameRules: [
-        (v) => !!v || 'Sketch name is required.',
-        (v) => (v && v.length <= 50) || 'Sketch name is too long.',
+        (v) => !!v || 'Project name is required.',
+        (v) => (v && v.length <= 50) || 'Project name is too long.',
       ],
     }
   },

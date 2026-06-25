@@ -56,12 +56,12 @@ It replaces the generic UploadForm for the new workflow.
           <div class="mb-4">
             <v-text-field
               v-model="timelineName"
-              label="Timeline Name"
+              label="Data Export Name"
               outlined
               dense
               required
               :rules="nameRules"
-              placeholder="e.g. My Timeline"
+              placeholder="e.g. My Data Export"
             ></v-text-field>
           </div>
         </v-card-text>
@@ -120,7 +120,7 @@ export default {
       selectedFile: null,
       timelineName: '',
       nameRules: [
-        (v) => !!v || 'Timeline name is required',
+        (v) => !!v || 'Data export name is required',
         (v) => (v && v.length <= 255) || 'Name must be less than 255 characters',
       ],
       localErrors: [],
@@ -212,7 +212,7 @@ export default {
 
       const sketchId = this.$store.state.sketch.id;
       if (!sketchId) {
-        this.localErrors.push('No active sketch found');
+        this.localErrors.push('No active project found');
         return;
       }
 

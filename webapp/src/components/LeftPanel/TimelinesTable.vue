@@ -50,7 +50,7 @@ limitations under the License.
             v-on="slotProps.on"
             @click.stop=""
           >
-            <v-icon title="Add timeline">mdi-plus</v-icon>
+            <v-icon title="Add data export">mdi-plus</v-icon>
           </v-btn>
         </template>
       </new-data-export-button>
@@ -71,7 +71,7 @@ limitations under the License.
           v-if="allTimelines.length >= paginationThreshold"
           class="ma-3"
           v-model="search"
-          label="Filter timelines"
+          label="Filter data exports"
           single-line
           clearable
           hide-details
