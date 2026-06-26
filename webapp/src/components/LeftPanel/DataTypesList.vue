@@ -114,8 +114,13 @@ export default {
     setQueryAndFilter(action) {
       let eventData = {}
       eventData.doSearch = true
-      // eventData.queryString = 'event_action:' + '"' + action + '"'
-      eventData.queryString = 'message:' + '"' + action + '"'
+      eventData.chip = {
+        field: 'message',
+        value: action,
+        type: 'term',
+        operator: 'must',
+        active: true,
+      }
       EventBus.$emit('setQueryAndFilter', eventData)
       if (this.$store.state.demoMode) {
         EventBus.$emit('demo:action', 'event-type-clicked')

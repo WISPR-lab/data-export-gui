@@ -254,34 +254,74 @@ limitations under the License.
         <div v-if="filterChips.length" class="mt-1">
           <v-chip-group column>
             <span v-for="(chip, index) in filterChips" :key="index + chip.value">
-              <v-tooltip top :disabled="formatChipDisplay(chip).length < 33" open-delay="300">
-                <template v-slot:activator="{ on: onTooltip, attrs }">
-                  <v-chip
-                    outlined
-                    close
-                    close-icon="mdi-close"
-                    @click:close="removeChip(chip)"
-                    @click="copyFilterChip(chip)"
-                    v-bind="attrs"
-                    v-on="onTooltip"
-                  >
-                    <v-icon v-if="chip.value === '__ts_star'" left small color="amber">mdi-star</v-icon>
-                    <v-icon v-if="chip.value === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
-                    <v-icon v-if="getQuickTag(chip.value)" left small :color="getQuickTag(chip.value).color">{{
-                      getQuickTag(chip.value).label
-                    }}</v-icon>
-                    <span v-if="chip.operator === 'must_not'" class="filter-chip-truncate">
-                      <span style="color: red">NOT </span>
-                      {{ formatChipDisplay(chip) }}
-                    </span>
-                    <span v-else class="filter-chip-truncate">
-                      {{ formatChipDisplay(chip) }}
-                    </span>
-                  </v-chip>
+              <v-menu offset-y content-class="menu-with-gap">
+                <template v-slot:activator="{ on: onMenu }">
+                  <v-tooltip top :disabled="formatChipDisplay(chip).length < 33" open-delay="300">
+                    <template v-slot:activator="{ on: onTooltip, attrs }">
+                      <v-chip
+                        outlined
+                        close
+                        close-icon="mdi-close"
+                        @click:close="removeChip(chip)"
+                        v-on="{ ...onMenu, ...onTooltip }"
+                        v-bind="attrs"
+                      >
+                        <v-icon v-if="chip.value === '__ts_star'" left small color="amber">mdi-star</v-icon>
+                        <v-icon v-if="chip.value === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
+                        <v-icon v-if="getQuickTag(chip.value)" left small :color="getQuickTag(chip.value).color">{{
+                          getQuickTag(chip.value).label
+                        }}</v-icon>
+                        <span v-bind:style="[chip.active === false ? { 'text-decoration': 'line-through', opacity: '50%' } : '']">
+                          <span v-if="chip.operator === 'must_not'" class="filter-chip-truncate">
+                            <span style="color: red">NOT </span>
+                            {{ formatChipDisplay(chip) }}
+                          </span>
+                          <span v-else class="filter-chip-truncate">
+                            {{ formatChipDisplay(chip) }}
+                          </span>
+                        </span>
+                      </v-chip>
+                    </template>
+                    <span>{{ chip.value }}</span>
+                  </v-tooltip>
                 </template>
-                <span>{{ chip.value }}</span>
-              </v-tooltip>
-              <v-btn v-if="index + 1 < timeFilterChips.length" icon small style="margin-top: 2px" class="mr-2">AND</v-btn>
+                <v-card>
+                  <v-list dense>
+                    <v-list-item @click="toggleChip(chip)">
+                      <v-list-item-action class="mr-3">
+                        <v-icon v-if="chip.active !== false">mdi-eye-off</v-icon>
+                        <v-icon v-else>mdi-eye</v-icon>
+                      </v-list-item-action>
+                      <v-list-item-subtitle>
+                        <span v-if="chip.active !== false">Temporarily disable</span>
+                        <span v-else>Re-enable</span>
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item @click="toggleChipOperator(chip)">
+                      <v-list-item-action class="mr-3">
+                        <v-icon>mdi-swap-horizontal</v-icon>
+                      </v-list-item-action>
+                      <v-list-item-subtitle>
+                        <span v-if="chip.operator === 'must_not'">Change to MUST</span>
+                        <span v-else>Change to NOT</span>
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item @click="copyFilterChip(chip)">
+                      <v-list-item-action class="mr-3">
+                        <v-icon>mdi-content-copy</v-icon>
+                      </v-list-item-action>
+                      <v-list-item-subtitle>Copy filter</v-list-item-subtitle>
+                    </v-list-item>
+                    <v-list-item @click="removeChip(chip)">
+                      <v-list-item-action class="mr-3">
+                        <v-icon>mdi-delete</v-icon>
+                      </v-list-item-action>
+                      <v-list-item-subtitle>Remove filter</v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-card>
+              </v-menu>
+              <v-btn v-if="index + 1 < filterChips.length" icon small style="margin-top: 2px" class="mr-2">AND</v-btn>
             </span>
           </v-chip-group>
         </div>
@@ -472,7 +512,9 @@ export default {
       this.currentQueryFilter = searchEvent.queryFilter
 
       if (searchEvent.chip) {
-        const chipExist = this.currentQueryFilter.chips.find((chip) => chip.value === searchEvent.chip.value)
+        const chipExist = this.currentQueryFilter.chips.find(function (chip) {
+          return chip.field === searchEvent.chip.field && chip.value === searchEvent.chip.value
+        })
         if (!chipExist) {
           this.currentQueryFilter.chips.push(searchEvent.chip)
         }
@@ -491,6 +533,9 @@ export default {
     },
 
     search: function (resetPagination = true, incognito = false, parent = false) {
+      // Parse key-value pairs from this.currentQueryString and promote them to chips
+      this.promoteQueryStringToChips()
+
       let queryRequest = {}
       queryRequest['queryString'] = this.currentQueryString
       queryRequest['queryFilter'] = this.currentQueryFilter
@@ -596,6 +641,65 @@ export default {
       }
       chip.active = !chip.active
       this.search()
+    },
+    toggleChipOperator: function (chip) {
+      if (chip.operator === 'must_not') {
+        chip.operator = 'must'
+      } else {
+        chip.operator = 'must_not'
+      }
+      this.search()
+    },
+    promoteQueryStringToChips: function () {
+      if (!this.currentQueryString) return
+
+      // Regex to match key-value pairs, e.g. key:value or key:"value" or key:'value'
+      const regex = /\b([\w_.]+):(?:"([^"]+)"|'([^']+)'|([^\s]+))/gi
+      let newQueryString = this.currentQueryString
+      const self = this
+
+      newQueryString = newQueryString.replace(regex, function (match, key, doubleQuoteVal, singleQuoteVal, plainVal) {
+        const val = doubleQuoteVal || singleQuoteVal || plainVal
+        
+        // TODO: Add support for negation prefixes (e.g. NOT key:value or -key:value)
+        // This will be implemented by the undergraduate student working on the negation feature.
+        const isNegated = false
+
+        let type = 'term'
+        let field = key
+        let value = val
+        if (key.toLowerCase() === 'tag') {
+          type = 'tag'
+          field = 'tag'
+        } else if (key.toLowerCase() === 'label') {
+          type = 'label'
+          field = ''
+        }
+
+        const chip = {
+          field: field,
+          value: value,
+          type: type,
+          operator: isNegated ? 'must_not' : 'must',
+          active: true
+        }
+
+        if (!self.currentQueryFilter.chips) {
+          self.currentQueryFilter.chips = []
+        }
+
+        const exists = self.currentQueryFilter.chips.some(function (c) {
+          return c.field === chip.field && c.value === chip.value && c.type === chip.type && c.operator === chip.operator
+        })
+
+        if (!exists) {
+          self.currentQueryFilter.chips.push(chip)
+        }
+
+        return ''
+      })
+
+      this.currentQueryString = newQueryString.replace(/\s+/g, ' ').trim()
     },
     formatTimeValue(isoString) {
       if (!isoString) return ''
