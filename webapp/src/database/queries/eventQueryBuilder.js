@@ -254,8 +254,13 @@ function otherChipConditions(chips = [], stringColumns = []) {
       params.push(`%"${escapedValue}"%`);
     } else if (chip.type === 'term' && chip.field) {
       const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringColumns);
-      conditions.push(...termConds);
-      params.push(...termParams);
+      if (chip.operator === 'must_not'){
+        conditions.push(`NOT (${termConds.join(' OR ')})`);
+        params.push(...termParams);
+      } else {
+        conditions.push(...termConds);
+        params.push(...termParams);
+      }
     }
   });
 
