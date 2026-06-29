@@ -163,7 +163,6 @@ limitations under the License.
                 @toggle="toggleChip"
                 @toggle-operator="toggleChipOperator"
               ></filter-chip>
-              <v-btn v-if="index + 1 < filterChips.length" icon small style="margin-top: 2px" class="mr-2">AND</v-btn>
             </span>
           </v-chip-group>
         </div>

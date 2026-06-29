@@ -103,7 +103,7 @@ function astToConditions(ast, stringColumns) {
 
     if (left.conditions.length > 0 && right.conditions.length > 0) {
       return {
-        conditions: [`(${left.conditions.join(` ${op} `)} ${op} ${right.conditions.join(` ${op} `)})`],
+        conditions: [`(${left.conditions[0]} ${op} ${right.conditions[0]})`],
         params: [...left.params, ...right.params]
       };
     } else if (left.conditions.length > 0) {
@@ -117,7 +117,7 @@ function astToConditions(ast, stringColumns) {
     const inner = astToConditions(ast.operand, stringColumns);
     if (inner.conditions.length > 0) {
       return {
-        conditions: [`NOT (${inner.conditions.join(' OR ')})`],
+        conditions: [`NOT (${inner.conditions[0]})`],
         params: inner.params
       };
     }
@@ -248,23 +248,21 @@ function otherChipConditions(chips = [], stringColumns = []) {
   activeFilterChips.forEach(chip => {
     const escapedValue = escapeLikePattern(chip.value);
     
-    let cond = '';
-    let termParams = [];
     if (chip.type === 'tag') {
-      cond = `json_extract(e.tags, '$') LIKE ?`;
-      termParams = [`%"${escapedValue}"%`];
+      conditions.push(`json_extract(e.tags, '$') LIKE ?`);
+      params.push(`%"${escapedValue}"%`);
     } else if (chip.type === 'label') {
-      cond = `json_extract(e.labels, '$') LIKE ?`;
-      termParams = [`%"${escapedValue}"%`];
+      conditions.push(`json_extract(e.labels, '$') LIKE ?`);
+      params.push(`%"${escapedValue}"%`);
     } else if (chip.type === 'term' && chip.field) {
       const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringColumns);
       if (termConds.length > 0) {
-        if (chip.operator === 'must_not'){
-        conditions.push(`NOT (${termConds.join(' OR ')})`);
-      } else {
-        conditions.push(...termConds); // ... AND ...
-      }
-      params.push(...termParams);
+        if (chip.operator === 'must_not') {
+          conditions.push(`NOT (${termConds[0]})`);
+        } else {
+          conditions.push(termConds[0]);
+        }
+        params.push(...termParams);
       }
     }
   });
