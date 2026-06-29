@@ -24,7 +24,7 @@ export async function searchEvents(queryString = '', filter = {}) {
   /* Builds WHERE/ORDER/PAGINATION, batch-resolves file refs and raw_data line numbers, returns Elasticsearch-shaped {_id, _index, _source} hit objects. */
   const db = await getDB();
   
-  const stringColumns = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id'];
+  const stringColumns = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id', 'u.platform'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
