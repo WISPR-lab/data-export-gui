@@ -1,3 +1,4 @@
+/* global importScripts, jsyaml, loadPyodide */
 // pyodide-worker.js
 // SOURCE: webapp/src/pyodide-worker.js
 // NOTE: This file is automatically copied to public/ during build (npm run sync-assets).
@@ -313,7 +314,7 @@ async function initPyodideWithRetry() {
       // Race between init and timeout
       const result = await Promise.race([
         initPyodide(),
-        new Promise((_, reject) =>
+        new Promise((resolve, reject) =>
           setTimeout(
             () => reject(new Error('Pyodide initialization timeout')),
             INIT_TIMEOUT
@@ -399,7 +400,7 @@ self.onmessage = async (event) => {
     try {
       await Promise.race([
         pyodideReadyPromise,
-        new Promise((_, reject) =>
+        new Promise((resolve, reject) =>
           setTimeout(() => reject(new Error('Worker timeout waiting for Pyodide')), 60000)
         )
       ]);
