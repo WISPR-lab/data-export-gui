@@ -24,51 +24,10 @@ limitations under the License.
 
     <!-- Search and Filters -->
     <v-card flat class="pa-3 pt-0 mt-n3" color="transparent">
-      <v-card class="d-flex align-start mb-1" id="tsSearchBar" outlined>
-        <!-- <v-sheet class="mt-2">
-          <search-history-buttons @toggleSearchHistory="toggleSearchHistory()"></search-history-buttons>
-        </v-sheet> -->
-
-        <v-menu v-model="showSearchDropdown" offset-y attach :close-on-content-click="false" :close-on-click="true">
-          <template v-slot:activator="{ on, attrs }">
-            <v-text-field
-              v-model="currentQueryString"
-              hide-details
-              label="Search"
-              placeholder="Search"
-              single-line
-              dense
-              flat
-              solo
-              class="pa-2"
-              id="tsSearchInput"
-              @keyup.enter="search()"
-              @click="showSearchDropdown = true"
-              ref="searchInput"
-              v-bind="attrs"
-              v-on="on"
-            >
-              <template v-slot:append>
-                <v-icon title="Run search" @click="search()" class="mr-3">mdi-magnify</v-icon>
-                <v-icon title="Show search examples" id="tsSearchHelpButton" @click="showSearchHelp = true">mdi-help-circle-outline</v-icon>
-              </template>
-            </v-text-field>
-          </template>
-
-          <!-- <search-dropdown
-            v-click-outside="onClickOutside"
-            :selected-labels="selectedLabels"
-            :query-string="currentQueryString"
-            @setActiveView="searchView"
-            @addChip="addChip"
-            @updateLabelChips="updateLabelChips()"
-            @close-on-click="showSearchDropdown = false"
-            @node-click="jumpInHistory"
-            @setQueryAndFilter="setQueryAndFilter"
-          >
-          </search-dropdown> -->
-        </v-menu>
-      </v-card>
+      <search-bar
+        v-model="currentQueryString"
+        @search="handleSearchBarSearch"
+      ></search-bar>
 
       <!-- Search History -->
       <div class="mt-4">
@@ -112,10 +71,7 @@ limitations under the License.
         </v-card>
       </div>
 
-      <!-- Search Help Dialog -->
-      <v-dialog v-model="showSearchHelp" max-width="1800" scrollable>
-        <search-help-card :flat="true" @close-dialog="showSearchHelp = false"></search-help-card>
-      </v-dialog>
+      <!-- Search help dialog has been moved to SearchBar component -->
 
 
       <!-- Data export picker -->
@@ -167,65 +123,12 @@ limitations under the License.
         <!-- Time filter chips -->
         <div>
           <span v-for="(chip, index) in timeFilterChips" :key="index + chip.value">
-            <v-menu offset-y content-class="menu-with-gap">
-              <template v-slot:activator="{ on }">
-                <v-chip outlined v-on="on">
-                  <v-icon left small> mdi-clock-outline </v-icon>
-                  <span v-bind:style="[!chip.active ? { 'text-decoration': 'line-through', opacity: '50%' } : '']">
-                    <span>{{ formatTimeValue(chip.value.split(',')[0]) }}</span>
-                    <span v-if="chip.type === 'datetime_range' && chip.value.split(',')[0] !== chip.value.split(',')[1]">
-                      &rarr; {{ formatTimeValue(chip.value.split(',')[1]) }}</span
-                    >
-                  </span>
-                </v-chip>
-              </template>
-              <v-card>
-                <v-list>
-                  <!-- Edit timefilter menu -->
-                  <v-menu
-                    offset-y
-                    :close-on-content-click="false"
-                    :close-on-click="true"
-                    nudge-top="70"
-                    content-class="menu-with-gap"
-                    allow-overflow
-                    style="overflow: visible"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-list-item v-bind="attrs" v-on="on">
-                        <v-list-item-action>
-                          <v-icon>mdi-square-edit-outline</v-icon>
-                        </v-list-item-action>
-                        <v-list-item-subtitle>Edit filter</v-list-item-subtitle>
-                      </v-list-item>
-                    </template>
-                    <filter-menu app :selected-chip="chip" @updateChip="updateChip($event, chip)"></filter-menu>
-                  </v-menu>
-                  <v-list-item @click="copyFilterChip(chip)">
-                    <v-list-item-action>
-                      <v-icon>mdi-content-copy</v-icon>
-                    </v-list-item-action>
-                    <v-list-item-subtitle>Copy filter</v-list-item-subtitle>
-                  </v-list-item>
-                  <v-list-item @click="toggleChip(chip)">
-                    <v-list-item-action>
-                      <v-icon v-if="chip.active">mdi-eye-off</v-icon>
-                      <v-icon v-else>mdi-eye</v-icon>
-                    </v-list-item-action>
-                    <v-list-item-subtitle
-                      ><span v-if="chip.active">Temporarily disable</span
-                      ><span v-else>Re-enable</span></v-list-item-subtitle
-                    >
-                  </v-list-item>
-                  <v-list-item @click="removeChip(chip)">
-                    <v-list-item-action>
-                      <v-icon>mdi-delete</v-icon>
-                    </v-list-item-action>
-                    <v-list-item-subtitle>Remove filter</v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-              </v-card>
-            </v-menu>
+            <filter-chip
+              :chip="chip"
+              @remove="removeChip"
+              @toggle="toggleChip"
+              @update="updateChip"
+            ></filter-chip>
             <v-btn v-if="index + 1 < timeFilterChips.length" icon small style="margin-top: 2px" class="mr-2">OR</v-btn>
           </span>
           <span>
@@ -254,34 +157,13 @@ limitations under the License.
         <div v-if="filterChips.length" class="mt-1">
           <v-chip-group column>
             <span v-for="(chip, index) in filterChips" :key="index + chip.value">
-              <v-tooltip top :disabled="formatChipDisplay(chip).length < 33" open-delay="300">
-                <template v-slot:activator="{ on: onTooltip, attrs }">
-                  <v-chip
-                    outlined
-                    close
-                    close-icon="mdi-close"
-                    @click:close="removeChip(chip)"
-                    @click="copyFilterChip(chip)"
-                    v-bind="attrs"
-                    v-on="onTooltip"
-                  >
-                    <v-icon v-if="chip.value === '__ts_star'" left small color="amber">mdi-star</v-icon>
-                    <v-icon v-if="chip.value === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
-                    <v-icon v-if="getQuickTag(chip.value)" left small :color="getQuickTag(chip.value).color">{{
-                      getQuickTag(chip.value).label
-                    }}</v-icon>
-                    <span v-if="chip.operator === 'must_not'" class="filter-chip-truncate">
-                      <span style="color: red">NOT </span>
-                      {{ formatChipDisplay(chip) }}
-                    </span>
-                    <span v-else class="filter-chip-truncate">
-                      {{ formatChipDisplay(chip) }}
-                    </span>
-                  </v-chip>
-                </template>
-                <span>{{ chip.value }}</span>
-              </v-tooltip>
-              <v-btn v-if="index + 1 < timeFilterChips.length" icon small style="margin-top: 2px" class="mr-2">AND</v-btn>
+              <filter-chip
+                :chip="chip"
+                @remove="removeChip"
+                @toggle="toggleChip"
+                @toggle-operator="toggleChipOperator"
+              ></filter-chip>
+              <v-btn v-if="index + 1 < filterChips.length" icon small style="margin-top: 2px" class="mr-2">AND</v-btn>
             </span>
           </v-chip-group>
         </div>
@@ -310,7 +192,8 @@ import FilterMenu from '../components/Events/FilterMenu.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
 import TsAddManualEvent from '../components/Events/AddManualEvent.vue'
 import EventList from '../components/Events/EventList.vue'
-import SearchHelpCard from '../components/Events/SearchHelpCard.vue'
+import SearchBar from '../components/Events/SearchBar.vue'
+import FilterChip from '../components/Events/FilterChip.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -333,7 +216,8 @@ export default {
     NewDataExportButton,
     TsAddManualEvent,
     EventList,
-    SearchHelpCard,
+    SearchBar,
+    FilterChip,
   },
   props: ['projectId'],
   data() {
@@ -349,13 +233,11 @@ export default {
       params: {},
       contextEvent: false,
       originalContext: false,
-      showSearchDropdown: false,
       activeQueryRequest: {},
       currentQueryString: '',
       currentQueryFilter: defaultQueryFilter(),
       selectedLabels: [],
       showSearchHistory: false,
-      showSearchHelp: false,
 
       zoomLevel: 0.7,
       zoomOrigin: {
@@ -472,7 +354,9 @@ export default {
       this.currentQueryFilter = searchEvent.queryFilter
 
       if (searchEvent.chip) {
-        const chipExist = this.currentQueryFilter.chips.find((chip) => chip.value === searchEvent.chip.value)
+        const chipExist = this.currentQueryFilter.chips.find(function (chip) {
+          return chip.field === searchEvent.chip.field && chip.value === searchEvent.chip.value
+        })
         if (!chipExist) {
           this.currentQueryFilter.chips.push(searchEvent.chip)
         }
@@ -498,10 +382,26 @@ export default {
       queryRequest['incognito'] = incognito
       queryRequest['parent'] = parent
       this.activeQueryRequest = queryRequest
-      this.showSearchDropdown = false
       if (this.$store.state.demoMode) {
         EventBus.$emit('demo:action', 'search-executed')
       }
+    },
+    handleSearchBarSearch(event) {
+      this.currentQueryString = event.queryString
+      if (event.promotedChips && event.promotedChips.length > 0) {
+        if (!this.currentQueryFilter.chips) {
+          this.currentQueryFilter.chips = []
+        }
+        event.promotedChips.forEach(function (chip) {
+          const exists = this.currentQueryFilter.chips.some(function (c) {
+            return c.field === chip.field && c.value === chip.value && c.type === chip.type && c.operator === chip.operator
+          })
+          if (!exists) {
+            this.currentQueryFilter.chips.push(chip)
+          }
+        }.bind(this))
+      }
+      this.search()
     },
     // searchView: function (viewId) {
     //   this.showSearchDropdown = false
@@ -597,69 +497,16 @@ export default {
       chip.active = !chip.active
       this.search()
     },
-    formatTimeValue(isoString) {
-      if (!isoString) return ''
-      // Check if it's date-only (no time component)
-      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(isoString)
-      const dayjs = require('@/plugins/dayjs').default
-      const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-      // Only show time if the string contains a time component
-      if (isDateOnly) {
-        return isoString // Return date only
-      }
-      return dayjs(isoString).tz(userTz).format('YYYY-MM-DD h:mm A')
-    },
-    copyFilterChip(chip) {
-      let textToCopy = ''
-      // Different handling based on chip type
-      if (chip && chip.type && chip.type.startsWith('datetime')) {
-        // For datetime chips, just copy the value
-        textToCopy = chip.value
+    toggleChipOperator: function (chip) {
+      if (chip.operator === 'must_not') {
+        chip.operator = 'must'
       } else {
-        // For other chips, copy both field and value
-        textToCopy =
-          chip.operator === 'must_not'
-            ? `NOT ${chip.field ? `${chip.field}:` : ''}"${chip.value}"`
-            : `${chip.field ? `${chip.field}:` : ''}"${chip.value}"`
+        chip.operator = 'must_not'
       }
-      // Copy to clipboard
-      navigator.clipboard
-        .writeText(textToCopy)
-        .then(() => {
-          this.infoSnackBar('Copied to clipboard!')
-        })
-        .catch((e) => {
-          this.errorSnackBar('Failed to copy to clipboard.')
-          console.error(e)
-        })
+      this.search()
     },
-    formatChipDisplay(chip) {
-      // Format datetime_range chips nicely
-      if (chip && chip.type === 'datetime_range' && chip.value) {
-        const dayjs = require('@/plugins/dayjs').default
-        const parts = chip.value.split(',')
-        const startStr = parts[0]
-        const endStr = parts[1]
-        if (!startStr) return chip.value
-        
-        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-        const start = dayjs(startStr).tz(userTz)
-        const end = endStr ? dayjs(endStr).tz(userTz) : null
-        
-        // If same day, show "DD MMM YYYY" format
-        if (end && start.format('YYYY-MM-DD') === end.format('YYYY-MM-DD')) {
-          return start.format('DD MMM YYYY')
-        }
-        // If different days, show range
-        if (end) {
-          return `${start.format('DD MMM')} - ${end.format('DD MMM YYYY')}`
-        }
-        // Single day
-        return start.format('DD MMM YYYY')
-      }
-      // For other chips, return as is
-      return chip.field ? `${chip.field} : ${chip.value}` : chip.value
-    },
+
+
     removeChip: function (chip, search = true) {
       let chipIndex = this.currentQueryFilter.chips.findIndex((c) => c.value === chip.value)
       this.currentQueryFilter.chips.splice(chipIndex, 1)
@@ -775,7 +622,7 @@ export default {
     },
     closeSearchDropdown: function (targetElement) {
       // Prevent dropdown to close when the search input field is clicked.
-      if (targetElement !== this.$refs.searchInput && targetElement.getAttribute('data-explore-element') === null) {
+      if ((!this.$refs.searchInput || targetElement !== this.$refs.searchInput) && targetElement.getAttribute('data-explore-element') === null) {
         this.showSearchDropdown = false
       }
     },
@@ -795,7 +642,6 @@ export default {
     },
   },
   mounted() {
-    this.$refs.searchInput.focus()
     EventBus.$on('setQueryAndFilter', this.setQueryAndFilter)
     
     // Auto-start demo if in DemoEvents route

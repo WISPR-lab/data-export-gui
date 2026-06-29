@@ -179,16 +179,15 @@ function datetimeChipCondition(chips = []) {
   if (!Array.isArray(chips) || chips.length === 0) {
     return { conditions: [], params: [] };
   }
-
-  const datetimeChips = chips.filter(chip => chip && chip.type && chip.type.startsWith('datetime'));
-  if (datetimeChips.length === 0) {
+  const activeDatetimeChips = chips.filter(chip => chip && chip.type && chip.type.startsWith('datetime') && chip.active !== false);
+  if (activeDatetimeChips.length === 0) {
     return { conditions: [], params: [] };
   }
 
   const timeConditions = [];
   const params = [];
 
-  datetimeChips.forEach(chip => {
+  activeDatetimeChips.forEach(chip => {
     const parts = chip.value.split(',');
     const startStr = parts[0];
     const endStr = parts[1];
@@ -232,34 +231,37 @@ function otherChipConditions(chips = [], stringColumns = []) {
     return { conditions: [], params: [] };
   }
 
-  const filterChips = chips.filter(
-    chip => chip && chip.type && (chip.type === 'tag' || chip.type === 'term' || chip.type === 'label')
+  const activeFilterChips = chips.filter(
+    chip => chip && chip.type && (chip.type === 'tag' || chip.type === 'term' || chip.type === 'label') && chip.active !== false
   );
 
-  if (filterChips.length === 0) {
+  if (activeFilterChips.length === 0) {
     return { conditions: [], params: [] };
   }
 
   const conditions = [];
   const params = [];
 
-  filterChips.forEach(chip => {
+  activeFilterChips.forEach(chip => {
     const escapedValue = escapeLikePattern(chip.value);
     
+    let cond = '';
+    let termParams = [];
     if (chip.type === 'tag') {
-      conditions.push(`json_extract(e.tags, '$') LIKE ?`);
-      params.push(`%"${escapedValue}"%`);
+      cond = `json_extract(e.tags, '$') LIKE ?`;
+      termParams = [`%"${escapedValue}"%`];
     } else if (chip.type === 'label') {
-      conditions.push(`json_extract(e.labels, '$') LIKE ?`);
-      params.push(`%"${escapedValue}"%`);
+      cond = `json_extract(e.labels, '$') LIKE ?`;
+      termParams = [`%"${escapedValue}"%`];
     } else if (chip.type === 'term' && chip.field) {
       const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringColumns);
-      if (chip.operator === 'must_not'){
+      if (termConds.length > 0) {
+        if (chip.operator === 'must_not'){
         conditions.push(`NOT (${termConds.join(' OR ')})`);
-        params.push(...termParams);
       } else {
-        conditions.push(...termConds);
-        params.push(...termParams);
+        conditions.push(...termConds); // ... AND ...
+      }
+      params.push(...termParams);
       }
     }
   });
