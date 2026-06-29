@@ -1,4 +1,4 @@
-import { parse as parseLucene } from 'lucene-query-parser';
+import { parse as parseLiqe } from 'liqe';
 
 
 
@@ -86,43 +86,46 @@ function stringLeaf(field, value, stringColumns) {
 
 
 function astToConditions(ast, stringColumns) {
-  /* Recursively walks a Lucene AST (AND/OR/NOT/leaf) and converts each node to SQL conditions with parameterized bindings. */
+  /* Recursively walks a Liqe AST and converts each node to SQL conditions with parameterized bindings. */
   if (!ast) return { conditions: [], params: [] };
 
-  if (ast.left && !ast.operator_type) {
-    return astToConditions(ast.left, stringColumns);
-  }
-
-  if (ast.term !== undefined) {
-    const field = ast.field && ast.field !== '<implicit>' ? ast.field : null;
-    const value = wildcardToLike(ast.term);
+  if (ast.type === 'Tag') {
+    const field = ast.field && ast.field.type === 'Field' ? ast.field.name : null;
+    const val = ast.expression && ast.expression.value !== undefined ? ast.expression.value : '';
+    const value = wildcardToLike(val);
     return stringLeaf(field, value, stringColumns);
   }
 
-  if (ast.operator_type === 'OR') {
+  if (ast.type === 'LogicalExpression') {
     const left = astToConditions(ast.left, stringColumns);
     const right = astToConditions(ast.right, stringColumns);
-    return {
-      conditions: [`(${left.conditions.join(' OR ')} OR ${right.conditions.join(' OR ')})`],
-      params: [...left.params, ...right.params]
-    };
+    const op = ast.operator && ast.operator.operator ? ast.operator.operator : 'AND';
+
+    if (left.conditions.length > 0 && right.conditions.length > 0) {
+      return {
+        conditions: [`(${left.conditions.join(` ${op} `)} ${op} ${right.conditions.join(` ${op} `)})`],
+        params: [...left.params, ...right.params]
+      };
+    } else if (left.conditions.length > 0) {
+      return left;
+    } else {
+      return right;
+    }
   }
 
-  if (ast.operator_type === 'AND') {
-    const left = astToConditions(ast.left, stringColumns);
-    const right = astToConditions(ast.right, stringColumns);
-    return {
-      conditions: [`(${left.conditions.join(' AND ')} AND ${right.conditions.join(' AND ')})`],
-      params: [...left.params, ...right.params]
-    };
+  if (ast.type === 'UnaryOperator') {
+    const inner = astToConditions(ast.operand, stringColumns);
+    if (inner.conditions.length > 0) {
+      return {
+        conditions: [`NOT (${inner.conditions.join(' OR ')})`],
+        params: inner.params
+      };
+    }
+    return inner;
   }
 
-  if (ast.operator_type === 'NOT') {
-    const inner = astToConditions(ast.term, stringColumns);
-    return {
-      conditions: [`NOT (${inner.conditions.join(' AND ')})`],
-      params: inner.params
-    };
+  if (ast.type === 'ParenthesizedExpression') {
+    return astToConditions(ast.expression, stringColumns);
   }
 
   return { conditions: [], params: [] };
@@ -137,7 +140,7 @@ export function stringConditions(queryString, stringColumns) {
   }
 
   try {
-    const ast = parseLucene(queryString);
+    const ast = parseLiqe(queryString);
     return astToConditions(ast, stringColumns);
   } catch (error) {
     console.warn('[stringConditions] Parse error, falling back to literal search:', error);
