@@ -262,6 +262,7 @@ function otherChipConditions(chips = [], stringColumns = []) {
         conditions.push(...termConds); // ... AND ...
       }
       params.push(...termParams);
+      }
     }
   });
 
