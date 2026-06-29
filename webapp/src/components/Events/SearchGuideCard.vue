@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <v-card :outlined="!flat" :class="{ 'ma-4': !flat }">
     <!-- Header Section -->
@@ -57,10 +58,14 @@ limitations under the License.
                     </td>
                   </tr>
                   <tr>
-                    <td>Wildcard search (prefix/suffix)</td>
+                    <td>Wildcard search (prefix/suffix/contains)</td>
                     <td>
                       <a href="#" @click.prevent="emitSetQueryAndFilter('event_action:password*')">
                         <code>event_action:password*</code>
+                      </a>
+                      <br/>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:*error*')">
+                        <code>message:*error*</code>
                       </a>
                     </td>
                   </tr>
@@ -83,12 +88,12 @@ limitations under the License.
                   <tr>
                     <td>Boolean NOT search</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:login NOT message:attempt')">
-                        <code>message:login NOT message:attempt</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('NOT client.ip:192.168.1.1')">
+                        <code>NOT client.ip:192.168.1.1</code>
                       </a>
                       <br/>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('login -attempt')">
-                        <code>login -attempt</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('-platform:google')">
+                        <code>-platform:google</code>
                       </a>
                     </td>
                   </tr>
