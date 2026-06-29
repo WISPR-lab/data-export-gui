@@ -230,7 +230,12 @@ def _pass2_os(
     return edges[["id_a", "id_b", "type", "provenance"]], pairs
 
 
-def get_edges(df: pd.DataFrame, run_pass2: bool = None) -> pd.DataFrame:
+def get_edges(
+    df: pd.DataFrame,
+    run_pass2: bool = None,
+    max_days_client: int = MAX_DAYS_CLIENT_DIFF,
+    max_days_os: int = MAX_DAYS_OS_DIFF,
+) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame(columns=["id_a", "id_b", "type", "provenance"])
 
@@ -239,9 +244,9 @@ def get_edges(df: pd.DataFrame, run_pass2: bool = None) -> pd.DataFrame:
 
         run_pass2 = get_config_value("ENABLE_DEVICE_GROUPING_PASS2", False)
 
-    pass1_edges, subgraph_df = _pass1_client(df)
+    pass1_edges, subgraph_df = _pass1_client(df, max_days=max_days_client)
     if run_pass2:
-        pass2_edges, _ = _pass2_os(subgraph_df)
+        pass2_edges, _ = _pass2_os(subgraph_df, max_days=max_days_os)
         combined = pd.concat([pass1_edges, pass2_edges], ignore_index=True)
     else:
         combined = pass1_edges
