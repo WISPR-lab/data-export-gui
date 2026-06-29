@@ -254,16 +254,13 @@ function otherChipConditions(chips = [], stringColumns = []) {
       cond = `json_extract(e.labels, '$') LIKE ?`;
       termParams = [`%"${escapedValue}"%`];
     } else if (chip.type === 'term' && chip.field) {
-      const { conditions: termConds, params: tParams } = stringLeaf(chip.field, escapedValue, stringColumns);
+      const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringColumns);
       if (termConds.length > 0) {
-        cond = termConds.join(' AND ');
-        termParams = tParams;
+        if (chip.operator === 'must_not'){
+        conditions.push(`NOT (${termConds.join(' OR ')})`);
+      } else {
+        conditions.push(...termConds); // ... AND ...
       }
-    }
-    
-    if (cond) {
-      // TODO: Add support for negated must_not operators in SQLite.
-      conditions.push(cond);
       params.push(...termParams);
     }
   });
