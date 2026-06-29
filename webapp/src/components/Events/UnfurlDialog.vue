@@ -60,7 +60,6 @@ limitations under the License.
 </template>
 
 <script>
-import DB from '@/database/index.js'
 import cytoscape from 'cytoscape'
 import dagre from 'cytoscape-dagre'
 

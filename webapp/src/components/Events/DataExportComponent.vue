@@ -13,84 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <!--
-  A generic timeline component that provides common timeline related
-  functionality and allows customization of the template. That way a timeline
+  A generic export component that provides common export related
+  functionality and allows customization of the template. That way a export
   can be represented as a chip or a table row.
 -->
+
 <template>
-  <span v-if="timeline && timeline.id">
-    <!--<v-dialog v-if="!timelineAvailable" v-model="dialogStatus" width="600">
-      <template v-slot:activator="{ on, attrs }">
-        <slot
-          name="processing"
-          :timelineStatus="timelineStatus"
-          :events="{
-            on,
-          }"
-        > </slot>
-      </template>
-      <v-card>
-        <v-app-bar flat dense>Importing events to timeline "{{ timeline.name }}"</v-app-bar>
-        <div class="pa-5">
-          <ul>
-            <li v-if="timelineStatus === 'processing' || timelineStatus === 'ready'">
-              <strong>Number of events: </strong>
-              {{ allIndexedEvents | compactNumber }}
-            </li>
-            <li>
-              <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
-              <small>({{ timeline.created_at | timeSince }})</small>
-            </li>
-          </ul>
-          <br />
-            <v-card-title>{{ eventsPerSecond.slice(-1)[0] }} events/s</v-card-title>
-            <v-sparkline
-              :value="eventsPerSecond"
-              :gradient="sparkline.gradient"
-              :smooth="sparkline.radius || false"
-              :padding="sparkline.padding"
-              :line-width="sparkline.width"
-              :stroke-linecap="sparkline.lineCap"
-              :gradient-direction="sparkline.gradientDirection"
-              :fill="sparkline.fill"
-              :type="sparkline.type"
-              :auto-line-width="sparkline.autoLineWidth"
-              auto-draw
-            >
-            </v-sparkline>
-            <v-sheet class="py-4 px-3">
-              <v-progress-linear color="light-blue" height="25" :value="percentComplete" rounded>
-                {{ percentComplete }}% (complete {{ processingETA() }})
-              </v-progress-linear>
-            </v-sheet>
-          </v-card>
-          <v-card v-else outlined class="pa-3"> Waiting for processing to begin.. </v-card>
-        </div>
-        <v-divider></v-divider>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="dialogStatus = false"> Close </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog> -->
+  <span v-if="dataExport && dataExport.id">
 
     <v-menu
       offset-y
       max-width="385"
       :close-on-content-click="false"
       content-class="menu-with-gap"
-      ref="timelineChipMenuRef"
+      ref="dataExportChipMenuRef"
       @input="onMenuToggle"
     >
       <template v-slot:activator="{ on }">
         <slot
           name="processed"
-          :timelineFailed="timelineFailed"
-          :timelineChipColor="timelineChipColor"
-          :timelineStatus="timeline.status"
+          :dataExportFailed="dataExportFailed"
+          :dataExportChipColor="dataExportChipColor"
+          :dataExportStatus="dataExport.status"
           :events="{
-            toggleTimeline,
+            toggleDataExport,
             openDialog,
             menuOn: on,
           }"
@@ -109,20 +57,20 @@ limitations under the License.
             </template>
             <v-card class="pa-4">
               <v-form @submit.prevent="rename()">
-                <h3>Rename timeline</h3>
+                <h3>Rename data export</h3>
                 <br />
-                <v-text-field clearable outlined dense autofocus v-model="newTimelineName" @focus="$event.target.select()" :rules="timelineNameRules">
+                <v-text-field clearable outlined dense autofocus v-model="dataExportName" @focus="$event.target.select()" :rules="dataExportNameRules">
                 </v-text-field>
                 <v-card-actions>
                   <v-spacer></v-spacer>
                   <v-btn text @click="dialogRename = false"> Cancel </v-btn>
-                  <v-btn :disabled="!newTimelineName || newTimelineName.length > 255" color="primary" text @click="rename()"> Save </v-btn>
+                  <v-btn :disabled="!dataExportName || dataExportName.length > 255" color="primary" text @click="rename()"> Save </v-btn>
                 </v-card-actions>
               </v-form>
             </v-card>
           </v-dialog>
 
-          <v-list-item id="tsTimelineVisibilityToggle" v-if="timelineAvailable" @click="$emit('toggle', timeline)">
+          <v-list-item id="exportVisibilityToggle" v-if="dataExportAvailable" @click="$emit('toggle', dataExport)">
             <v-list-item-action>
               <v-icon v-if="isSelected">mdi-eye-off</v-icon>
               <v-icon v-else>mdi-eye</v-icon>
@@ -131,11 +79,11 @@ limitations under the License.
             <v-list-item-subtitle v-else>Re-enable</v-list-item-subtitle>
           </v-list-item>
 
-          <v-list-item v-if="timelineAvailable" @click="$emit('disableAllOtherTimelines', timeline)">
+          <v-list-item v-if="dataExportAvailable" @click="$emit('disableAllOtherDataExports', dataExport)">
             <v-list-item-action>
               <v-icon>mdi-checkbox-marked-circle-minus-outline</v-icon>
             </v-list-item-action>
-            <v-list-item-subtitle>Unselect other timelines</v-list-item-subtitle>
+            <v-list-item-subtitle>Unselect other data exports</v-list-item-subtitle>
           </v-list-item>
 
           <v-dialog v-model="dialogStatus" width="800">
@@ -150,15 +98,15 @@ limitations under the License.
             <v-card>
               <div class="pa-4">
                 <ul style="list-style-type: none">
-                  <li><strong>Upload name: </strong>{{ timeline.name }}</li>
-                  <li v-if="timeline.status === 'processing' || timeline.status === 'ready'">
+                  <li><strong>Upload name: </strong>{{ dataExport.name }}</li>
+                  <li v-if="dataExport.status === 'processing' || dataExport.status === 'ready'">
                     <strong>Number of events: </strong>
-                    {{ timeline.event_count | compactNumber }}
+                    {{ dataExport.event_count | compactNumber }}
                   </li>
-                  <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
+                  <!-- <li><strong>Created by: </strong>{{ dataExport.user.username }}</li> -->
                   <li>
-                    <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
-                    <small>({{ timeline.created_at | timeSince }})</small>
+                    <strong>Created at: </strong>{{ dataExport.created_at | shortDateTime }}
+                    <small>({{ dataExport.created_at | timeSince }})</small>
                   </li>
                   <li><strong>Number of files uploaded: </strong>{{ documentMetadata.length }}</li>
                   <v-spacer class="ma-5"></v-spacer>
@@ -200,7 +148,7 @@ limitations under the License.
           </v-dialog>
 
 
-          <v-list-item v-if="timelineAvailable" style="cursor: pointer" @click="deleteConfirmation = true">
+          <v-list-item v-if="dataExportAvailable" style="cursor: pointer" @click="deleteConfirmation = true">
             <v-list-item-action>
               <v-icon>mdi-trash-can-outline</v-icon>
             </v-list-item-action>
@@ -209,20 +157,20 @@ limitations under the License.
           <v-dialog v-model="deleteConfirmation" max-width="500">
             <v-card>
               <v-card-title>
-                <v-icon color="red" class="mr-2 ml-n3">mdi-alert-octagon-outline</v-icon> Delete Timeline?
+                <v-icon color="red" class="mr-2 ml-n3">mdi-alert-octagon-outline</v-icon> Delete Data Export?
               </v-card-title>
               <v-card-text>
                 <ul style="list-style-type: none">
-                  <li><strong>Name: </strong>{{ timeline.name }}</li>
-                  <li><strong>Status: </strong>{{ timeline.status }}</li>
+                  <li><strong>Name: </strong>{{ dataExport.name }}</li>
+                  <li><strong>Status: </strong>{{ dataExport.status }}</li>
                   <li>
                     <strong>Number of events: </strong>
-                    {{ timeline.event_count | compactNumber }}
+                    {{ dataExport.event_count | compactNumber }}
                   </li>
-                  <!-- <li><strong>Created by: </strong>{{ timeline.user.username }}</li> -->
+                  <!-- <li><strong>Created by: </strong>{{ dataExport.user.username }}</li> -->
                   <li>
-                    <strong>Created at: </strong>{{ timeline.created_at | shortDateTime }}
-                    <small>({{ timeline.created_at | timeSince }})</small>
+                    <strong>Created at: </strong>{{ dataExport.created_at | shortDateTime }}
+                    <small>({{ dataExport.created_at | timeSince }})</small>
                   </li>
                 </ul>
               </v-card-text>
@@ -234,10 +182,10 @@ limitations under the License.
             </v-card>
           </v-dialog>
         </v-list>
-        <div v-if="!timelineFailed" class="px-4">
+        <div v-if="!dataExportFailed" class="px-4">
           <v-color-picker
             @update:color="updateColor"
-            :value="'#' + timeline.color"
+            :value="'#' + dataExport.color"
             :show-swatches="!showCustomColorPicker"
             :swatches="colorPickerSwatches"
             :hide-canvas="!showCustomColorPicker"
@@ -259,10 +207,8 @@ limitations under the License.
 
 <script>
 import Vue from 'vue'
-import _ from 'lodash'
 import DB from '@/database/index.js'
 import EventBus from '@/event-bus.js'
-import { VSpacer } from 'vuetify/lib';
 
 const gradients = [
   ['#222'],
@@ -274,18 +220,16 @@ const gradients = [
 ]
 
 export default {
-  props: ['timeline', 'eventsCount', 'isSelected', 'isEmptyState'],
+  props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   data() {
     return {
-      // autoRefresh: false, // COMMENTED OUT: No polling in browser model
       allIndexedEvents: 0, // all indexed events from ready and processed datasources
       totalEvents: null,
       dialogStatus: false,
       dialogRename: false,
-      // datasources: [],
       documentMetadata: [], // Browser model: uploaded files from document_metadata table
       eventsPerSecond: [],
-      newTimelineName: [...this.timeline.name],
+      dataExportName: [...this.dataExport.name],
       sparkline: {
         width: 2,
         radius: 10,
@@ -308,9 +252,9 @@ export default {
         ['#DEBBFF', '#9AB0FB', '#CFFBE2'],
       ],
       deleteConfirmation: false,
-      timelineNameRules: [
-        (v) => !!v || 'Timeline name is required.',
-        (v) => (v && v.length <= 255) || 'Timeline name is too long.',
+      dataExportNameRules: [
+        (v) => !!v || 'Data export name is required.',
+        (v) => (v && v.length <= 255) || 'Data export name is too long.',
       ],
     }
   },
@@ -319,7 +263,7 @@ export default {
       return this.$store.state.meta
     },
     // datasourceErrors() {
-    //   const datasources = this.timeline && this.timeline.datasources ? this.timeline.datasources : []
+    //   const datasources = this.dataExport && this.dataExport.datasources ? this.dataExport.datasources : []
     //   return datasources.filter((datasource) => datasource.error_message)
     // },
     // datasourcesProcessing() {
@@ -328,8 +272,8 @@ export default {
     //       this.dataSourceStatus(datasource) === 'processing' || this.dataSourceStatus(datasource) === 'queueing'
     //   )
     // },
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     // totalEventsToIndex() {
     //   return this.datasources
@@ -344,26 +288,26 @@ export default {
     //   return Math.floor((this.secondsSinceStart() / this.secondsToComplete) * 100) || 0
     // },
     iconStatus() {
-      if (this.timeline.status === 'ready') return 'mdi-information-outline'
-      if (this.timeline.status === 'processing') return 'mdi-circle-slice-7'
+      if (this.dataExport.status === 'ready') return 'mdi-information-outline'
+      if (this.dataExport.status === 'processing') return 'mdi-circle-slice-7'
       return 'mdi-alert-circle-outline'
     },
-    timelineFailed() {
-      return this.timeline.status === 'fail'
+    dataExportFailed() {
+      return this.dataExport.status === 'fail'
     },
-    timelineAvailable() {
+    dataExportAvailable() {
       return (
-        this.timeline.status === 'ready' ||
-        this.timeline.status === 'fail' ||
-        (this.settings.showProcessingTimelineEvents && this.timeline.status === 'processing')
+        this.dataExport.status === 'ready' ||
+        this.dataExport.status === 'fail' ||
+        (this.settings.showProcessingData && this.dataExport.status === 'processing')
       )
     },
-    timelineChipColor() {
-      if (!this.timeline || !this.timeline.color) return '#5E75C2'
-      if (!this.timeline.color.startsWith('#')) {
-        return '#' + this.timeline.color
+    dataExportChipColor() {
+      if (!this.dataExport || !this.dataExport.color) return '#5E75C2'
+      if (!this.dataExport.color.startsWith('#')) {
+        return '#' + this.dataExport.color
       }
-      return this.timeline.color
+      return this.dataExport.color
     },
     settings() {
       return this.$store.state.settings
@@ -375,12 +319,12 @@ export default {
     },
     rename() {
       this.dialogRename = false
-      this.$emit('save', this.timeline, this.newTimelineName)
+      this.$emit('save', this.dataExport, this.dataExport.name)
     },
     remove() {
-      this.$emit('remove', this.timeline)
+      this.$emit('remove', this.dataExport)
       this.deleteConfirmation = false
-      this.successSnackBar('Timeline deleted')
+      this.successSnackBar('Data export deleted')
     },
     // secondsSinceStart() {
     //   if (!this.datasourcesProcessing.length) {
@@ -403,150 +347,44 @@ export default {
     // },
     onMenuToggle(isOpen) {
       if (isOpen && this.$store.state.demoMode) {
-        EventBus.$emit('demo:action', 'timeline-menu-opened')
+        EventBus.$emit('demo:action', 'menu-opened')
       }
     },
-    toggleTimeline() {
-      if (!this.timelineFailed) {
-        this.$emit('toggle', this.timeline)
+    toggleDataExport() {
+      if (!this.dataExportFailed) {
+        this.$emit('toggle', this.dataExport)
       }
     },
     // Browser model: no server, so no need for debounce
     updateColor(color) {
-      Vue.set(this.timeline, 'color', color.hex.substring(1))
-      this.$emit('save', this.timeline)
+      Vue.set(this.dataExport, 'color', color.hex.substring(1))
+      this.$emit('save', this.dataExport)
     },
     async loadDocumentMetadata() {
       try {
-        this.documentMetadata = await DB.getUploadedFiles(this.timeline.id)
+        this.documentMetadata = await DB.getUploadedFiles(this.dataExport.id)
       } catch (e) {
-        console.error('[TimelineComponent] Failed to load uploaded files:', e)
+        console.error('[DataExportComponent] Failed to load uploaded files:', e)
         this.documentMetadata = []
       }
     },
-
-    // fetchData() {
-    //   BrowserDB.getSketchTimeline(this.sketch.id, this.timeline.id)
-    //     .then((response) => {
-    //       this.timelineStatus = response.data.objects[0].status[0].status
-    //       this.datasources = response.data.objects[0].datasources
-    //       // This is a naive approach and is misleading if there are multiple
-    //       // datasources importing at the same time, or multiple timelines importing to
-    //       // the same index.
-    //       //
-    //       // NOTE (browser model): upload_id is stored on every event at import time.
-    //       // Source file attribution is queryable via the uploaded_files JOIN in events.js.
-    //       //
-    //       let tmpAllIndexedEvents = this.allIndexedEvents
-    //       this.allIndexedEvents = response.data.meta.lines_indexed
-    //       let deltaEvents = this.allIndexedEvents - tmpAllIndexedEvents
-
-    //       if (deltaEvents < 10000 && deltaEvents > 0) {
-    //         this.eventsPerSecond.push(Math.floor(deltaEvents / 5))
-    //       }
-
-    //       if (this.timelineStatus !== 'ready' && this.timelineStatus !== 'fail') {
-    //         this.autoRefresh = true
-    //       } else {
-    //         this.autoRefresh = false
-    //         this.$store.dispatch('updateSketch', this.sketch.id).then(() => {
-    //           if (this.timelineStatus === 'ready'
-    //             && !this.$store.state.enabledTimelines.includes(this.timeline.id)
-    //             && !this.settings.showProcessingTimelineEvents
-    //           ) {
-    //             this.$emit('toggle', response.data.objects[0])
-    //           }
-    //         })
-    //       }
-    //     })
-    //     .catch((e) => {
-    //       console.log(e)
-    //     })
-    // },
-    dataSourceStatus(datasource) {
-      // COMMENTED OUT: Server-only method - not applicable to browser model
-      // Support legacy datasources that don't have a status set.
-      // if (!datasource.status[0]) {
-      //   return 'ready'
-      // }
-      // return datasource.status[0].status
-    },
-
-    datasourceStatusColors(datasource) {
-      // COMMENTED OUT: Server-only method - not applicable to browser model
-      // Support legacy datasources that don't have a status set.
-      // if (!datasource.status[0]) {
-      //   return 'ready'
-      // }
-      // if (datasource.status[0].status === 'ready' || datasource.status == []) {
-      //   return 'success'
-      // } else if (datasource.status[0].status === 'processing') {
-      //   return 'info'
-      // } else if (datasource.status[0].status === 'queueing') {
-      //   return 'warning'
-      // }
-      // status = fail
-      // return 'error'
-    },
-    totalEventsDatasource(fileOnDisk) {
-      // COMMENTED OUT: Server-only method - not applicable to browser model
-      // return this.datasources.find((x) => x.file_on_disk === fileOnDisk).total_file_events
-    },
   },
   created() {
-    // TODO: Move to computed
-    // Defensive checks: timeline may not have status yet if sketch hasn't fully loaded
-    // Browser model: status is a string, not an array
-    if (!this.timeline || !this.timeline.status) {
+    if (!this.dataExport || !this.dataExport.status) {
       return
     }
-    
-    // this.datasources = this.timeline.datasources || [] // COMMENTED OUT: Server-only, use documentMetadata instead
-    let timelineStat = (this.meta && this.meta.stats_per_timeline) ? this.meta.stats_per_timeline[this.timeline.id] : null
-
-    // COMMENTED OUT: No polling in browser model
-    // if (this.timelineStatus === 'processing') {
-    //   this.autoRefresh = true
-    // } else {
-    //   this.autoRefresh = false
-    //   if (timelineStat) {
-    //     this.allIndexedEvents = timelineStat['count']
-    //   }
-    // }
-    this.newTimelineName = this.timeline.name
     this.loadDocumentMetadata()
   },
   beforeDestroy() {
     clearInterval(this.t)
     this.t = false
   },
-  // COMMENTED OUT: No polling in browser model
-  // watch: {
-  //   autoRefresh(val) {
-  //     if (val && !this.t) {
-  //       this.t = setInterval(
-  //         function () {
-  //           this.fetchData()
-  //         }.bind(this),
-  //         5000
-  //       )
-  //     } else {
-  //       clearInterval(this.t)
-  //       this.t = false
-  //     }
-  //   },
-  //   timeline() {
-  //     if (this.timeline.datasources.length > this.datasources.length) {
-  //       this.fetchData()
-  //     }
-  //   },
-  // },
 }
 </script>
 
 <!-- CSS scoped to this component only -->
 <style scoped lang="scss">
-.timeline-chip {
+.data-export-chip {
   .right {
     margin-left: auto;
   }
@@ -560,11 +398,11 @@ export default {
   }
 }
 
-.v-chip.timeline-chip.failed {
+.v-chip.data-export-chip.failed {
   cursor: auto;
 }
 
-.v-chip.timeline-chip.failed:hover:before {
+.v-chip.data-export-chip.failed:hover:before {
   opacity: 0;
 }
 

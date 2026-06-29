@@ -71,8 +71,8 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     parameters() {
       return JSON.parse(this.searchtemplate.template_json).parameters

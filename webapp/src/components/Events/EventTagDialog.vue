@@ -108,8 +108,8 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     tags() {
       return this.$store.state.tags.map((tag) => tag.tag)

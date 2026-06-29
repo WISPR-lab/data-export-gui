@@ -164,6 +164,11 @@ html {
   background-color: #e6e6e6;
 }
 
+.active-view {
+  background-color: rgba(25, 118, 210, 0.05);
+  font-weight: 500;
+}
+
 .dark-highlight {
   background-color: #303030;
 }
@@ -195,7 +200,7 @@ html {
   color:#fff;
 }
 
-.timeline-name-ellipsis {
+.export-name-ellipsis {
   width: 200px;
   white-space: nowrap;
   overflow: hidden;

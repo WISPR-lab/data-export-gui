@@ -21,8 +21,8 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 
 import Home from './views/Home.vue'
-import Canvas from './views/Canvas.vue'
-import Sketch from './views/Sketch.vue'
+import Events from './views/Events.vue'
+import Project from './views/Project.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
@@ -48,20 +48,20 @@ const routes = [
   {
     // Demo layout
     path: '/demo',
-    component: Sketch,
-    props: { sketchId: 1 },
+    component: Project,
+    props: { projectId: 1 },
     children: [
       {
-        path: 'explore',
-        name: 'DemoExplore',
-        component: Canvas,
-        props: { sketchId: 1 },
+        path: 'events',
+        name: 'DemoEvents',
+        component: Events,
+        props: { projectId: 1 },
       },
       {
         path: 'devices',
         name: 'DemoDevices',
         component: Devices,
-        props: { sketchId: 1 },
+        props: { projectId: 1 },
       },
     ],
   },
@@ -78,20 +78,20 @@ const routes = [
   {
     // App layout (wrapper for all sketch views)
     path: '/',
-    component: Sketch,
-    props: { sketchId: 1 },
+    component: Project,
+    props: { projectId: 1 },
     children: [
       {
-        path: 'explore',
-        name: 'Explore',
-        component: Canvas,
-        props: { sketchId: 1 },
+        path: 'events',
+        name: 'Events',
+        component: Events,
+        props: { projectId: 1 },
       },
       {
         path: 'devices',
         name: 'Devices',
         component: Devices,
-        props: { sketchId: 1 },
+        props: { projectId: 1 },
       },
     ],
   },
@@ -123,14 +123,14 @@ router.beforeEach(async (to, from, next) => {
       
       try {
         await demoDatabaseLoader.initializeDemoDb()
-        await store.dispatch('updateSketch', 1)
+        await store.dispatch('updateProject', 1)
       } catch (e) {
         console.error('[Router] Demo initialization failed:', e)
       }
     }
     
-    // Auto-start demo state if visiting demo explore
-    if (to.name === 'DemoExplore') {
+    // Auto-start demo state if visiting demo events
+    if (to.name === 'DemoEvents') {
       store.commit('SET_DEMO_IN_PROGRESS', true)
       store.commit('SET_DEMO_STEP', 1)
     }
@@ -140,15 +140,15 @@ router.beforeEach(async (to, from, next) => {
       store.commit('SET_DEMO_MODE', false)
       store.commit('SET_CURRENT_DB', 'userdata')
       DB.setActiveDatabase('userdata')
-      await store.dispatch('updateSketch', 1)
+      await store.dispatch('updateProject', 1)
     }
   }
   next()
 })
 
 router.afterEach((to, from) => {
-  // Warmup Pyodide when user navigates to /explore
-  if (to.path.includes('explore')) {
+  // Warmup Pyodide when user navigates to /events
+  if (to.path.includes('events')) {
     if (!warmupPromise) {
       warmupPromise = callPyodideWorker('warmup', {}).catch(err => {
         console.warn('[Router] Pyodide warmup error:', err);

@@ -14,19 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <template>
-  <ts-timeline-component
-    :timeline="timeline"
+  <data-export-component
+    :data-export="dataExport"
     :eventsCount="eventsCount"
     :isSelected="isSelected"
     :isEmptyState="isEmptyState"
     @toggle="$emit('toggle', ...arguments)"
-    @disableAllOtherTimelines="$emit('disableAllOtherTimelines', ...arguments)"
+    @disableAllOtherDataExports="$emit('disableAllOtherDataExports', ...arguments)"
     @save="$emit('save', ...arguments)"
     @remove="$emit('remove', ...arguments)"
   >
     <template v-slot:processing="slotProps">
-      <v-chip v-on="slotProps.events.on" :style="timelineStyle(slotProps.timelineStatus)">
-        <span class="timeline-name-ellipsis">{{ timeline.name }}</span>
+      <v-chip v-on="slotProps.events.on" :style="dataExportStyle(slotProps.dataExportStatus)">
+        <span class="export-name-ellipsis">{{ dataExport.name }}</span>
         <span class="ml-1">
           <v-progress-circular small indeterminate color="grey" :size="20" :width="1"></v-progress-circular>
         </span>
@@ -34,68 +34,68 @@ limitations under the License.
     </template>
     <template v-slot:processed="slotProps">
       <v-chip
-        @click="slotProps.events.toggleTimeline"
-        :style="timelineStyle(slotProps.timelineStatus)"
-        class="pr-1 timeline-chip"
-        :class="[{ failed: slotProps.timelineFailed }, $vuetify.theme.dark ? 'dark-highlight' : 'light-highlight']"
-        :ripple="!slotProps.timelineFailed"
+        @click="slotProps.events.toggleDataExport"
+        :style="dataExportStyle(slotProps.dataExportStatus)"
+        class="pr-1 data-export-chip"
+        :class="[{ failed: slotProps.dataExportFailed }, $vuetify.theme.dark ? 'dark-highlight' : 'light-highlight']"
+        :ripple="!slotProps.dataExportFailed"
       >
         <div class="chip-content">
-          <v-icon v-if="slotProps.timelineFailed" title="Import failed; click for details" @click="slotProps.events.openDialog" left color="red" size="x-large">
+          <v-icon v-if="slotProps.dataExportFailed" title="Import failed; click for details" @click="slotProps.events.openDialog" left color="red" size="x-large">
             mdi-alert-circle-outline
           </v-icon>
-          <v-icon v-if="!slotProps.timelineFailed" title="Toggle visibility" left :color="slotProps.timelineChipColor" size="26" class="ml-n2"> mdi-circle </v-icon>
+          <v-icon v-if="!slotProps.dataExportFailed" title="Toggle visibility" left :color="slotProps.dataExportChipColor" size="26" class="ml-n2"> mdi-circle </v-icon>
 
-          <v-tooltip bottom :disabled="timeline.name.length < 30" open-delay="200">
+          <v-tooltip bottom :disabled="dataExport.name.length < 30" open-delay="200">
             <template v-slot:activator="{ on: onTooltip, attrs }">
               <span
-                class="timeline-name-ellipsis"
-                :class="{ disabled: !isSelected && (slotProps.timelineStatus === 'processing' || slotProps.timelineStatus === 'ready') }"
+                class="export-name-ellipsis"
+                :class="{ disabled: !isSelected && (slotProps.dataExportStatus === 'processing' || slotProps.dataExportStatus === 'ready') }"
                 v-bind="attrs"
                 v-on="onTooltip"
-                >{{ timeline.name }}</span
+                >{{ dataExport.name }}</span
               >
             </template>
-            <span>{{ timeline.name }}</span>
+            <span>{{ dataExport.name }}</span>
           </v-tooltip>
 
           <span class="right">
-            <span v-if="slotProps.timelineStatus === 'processing'" class="ml-3">
+            <span v-if="slotProps.dataExportStatus === 'processing'" class="ml-3">
               <v-progress-circular small indeterminate color="grey" :size="20" :width="2"></v-progress-circular>
             </span>
 
-            <span v-if="!slotProps.timelineFailed" class="events-count" x-small>
+            <span v-if="!slotProps.dataExportFailed" class="events-count" x-small>
               {{ eventsCount | compactNumber }}
             </span>
             <v-btn 
-              id="tsTimelineChipMenu" 
+              id="tsDataExportChipMenu" 
               class="ma-1" 
               x-small 
               icon 
               v-on="slotProps.events.menuOn" 
               @click.stop
             >
-              <v-icon title="Manage Timeline"> mdi-dots-vertical </v-icon>
+              <v-icon title="Manage Data Export"> mdi-dots-vertical </v-icon>
             </v-btn>
           </span>
         </div>
       </v-chip>
     </template>
-  </ts-timeline-component>
+  </data-export-component>
 </template>
 
 <script>
 
-import TsTimelineComponent from './TimelineComponent.vue'
+import DataExportComponent from './DataExportComponent.vue'
 
 export default {
-  props: ['timeline', 'eventsCount', 'isSelected', 'isEmptyState'],
+  props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   components: {
-    TsTimelineComponent,
+    DataExportComponent,
   },
   methods: {
-    timelineStyle(timelineStatus) {
-      const greyOut = (timelineStatus === 'processing' || timelineStatus === 'ready') && !this.isSelected
+    dataExportStyle(dataExportStatus) {
+      const greyOut = (dataExportStatus === 'processing' || dataExportStatus === 'ready') && !this.isSelected
       return {
         opacity: greyOut ? '50%' : '100%',
         backgroundColor: this.$vuetify.theme.dark ? '#303030' : '#f5f5f5',
@@ -107,7 +107,7 @@ export default {
 
 <!-- CSS scoped to this component only -->
 <style scoped lang="scss">
-.timeline-chip {
+.data-export-chip {
   .right {
     margin-left: auto;
   }
@@ -120,11 +120,11 @@ export default {
     width: 300px;
   }
 }
-.v-chip.timeline-chip.failed {
+.v-chip.data-export-chip.failed {
   cursor: auto;
 }
 
-.v-chip.timeline-chip.failed:hover:before {
+.v-chip.data-export-chip.failed:hover:before {
   opacity: 0;
 }
 

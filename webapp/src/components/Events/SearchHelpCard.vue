@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <template>
-  <ts-search-guide-card
+  <search-guide-card
     :flat="flat"
     :show-tags="false"
     :show-data-types="false"
@@ -35,14 +35,14 @@ limitations under the License.
         <v-divider></v-divider>
       </div>
     </template>
-  </ts-search-guide-card>
+  </search-guide-card>
 </template>
 
 <script>
-import TsSearchGuideCard from './SearchGuideCard.vue'
+import SearchGuideCard from './SearchGuideCard.vue'
 
 export default {
-  name: 'TsSearchHelpCard',
+  name: 'SearchHelpCard',
   props: {
     flat: {
       type: Boolean,
@@ -50,7 +50,7 @@ export default {
     },
   },
   components: {
-    TsSearchGuideCard,
+    SearchGuideCard,
   },
 }
 </script>

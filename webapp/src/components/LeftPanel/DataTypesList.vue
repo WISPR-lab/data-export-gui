@@ -82,8 +82,8 @@ export default {
     await this.loadMessages()
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     // eventActions() {
     //   return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
@@ -93,7 +93,7 @@ export default {
     },
   },
   watch: {
-    sketch: {
+    project: {
       async handler() {
         await this.loadMessages()
       },
@@ -114,14 +114,19 @@ export default {
     setQueryAndFilter(action) {
       let eventData = {}
       eventData.doSearch = true
-      // eventData.queryString = 'event_action:' + '"' + action + '"'
-      eventData.queryString = 'message:' + '"' + action + '"'
+      eventData.chip = {
+        field: 'message',
+        value: action,
+        type: 'term',
+        operator: 'must',
+        active: true,
+      }
       EventBus.$emit('setQueryAndFilter', eventData)
       if (this.$store.state.demoMode) {
         EventBus.$emit('demo:action', 'event-type-clicked')
       }
-      if (this.$route.name !== 'Explore' && this.$route.name !== 'DemoExplore') {
-        const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+      if (this.$route.name !== 'Events' && this.$route.name !== 'DemoEvents') {
+        const target = this.$store.state.demoMode ? '/demo/events' : '/events'
         this.$router.push(target)
       }
     },

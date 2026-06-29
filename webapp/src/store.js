@@ -35,7 +35,7 @@ const defaultState = () => {
   }
 
   let userSettings = {
-    showProcessingTimelineEvents: false,
+    showProcessingData: false,
     showLeftPanel: true,
     aiPoweredFeaturesMain: false,
     eventSummarization: false,
@@ -53,7 +53,7 @@ const defaultState = () => {
   }
 
   return {
-    sketch: {},
+    project: {},
     meta: {
       attributes: {},
       filter_labels: [],
@@ -63,9 +63,8 @@ const defaultState = () => {
     tags: [],
     localTimezoneAbbr: getLocalTimezoneAbbr(),
     settings: userSettings,
-    eventActions: [],
     currentSearchNode: null,
-    enabledTimelines: [],
+    enabledDataExports: [],
     snackbar: {
       active: false,
       color: '',
@@ -97,8 +96,8 @@ const state = defaultState()
 export default new Vuex.Store({
   state,
   mutations: {
-    SET_SKETCH(state, payload) {
-      Vue.set(state, 'sketch', payload.objects[0])
+    SET_PROJECT(state, payload) {
+      Vue.set(state, 'project', payload.objects[0])
       Vue.set(state, 'meta', payload.meta)
     },
 
@@ -121,30 +120,20 @@ export default new Vuex.Store({
     RESET_STATE(state, payload) {
       Object.assign(state, defaultState('local-user'))
     },
-    SET_ENABLED_TIMELINES(state, payload) {
-      Vue.set(state, 'enabledTimelines', payload)
+    SET_ENABLED_DATA_EXPORTS(state, payload) {
+      Vue.set(state, 'enabledDataExports', payload)
     },
-    ADD_ENABLED_TIMELINES(state, payload) {
-      const freshEnabledTimelines = [...state.enabledTimelines, ...payload]
-      Vue.set(state, 'enabledTimelines', freshEnabledTimelines)
-    },
-    REMOVE_ENABLED_TIMELINES(state, payload) {
-      Vue.set(
-        state,
-        'enabledTimelines',
-        state.enabledTimelines.filter((tl) => !payload.includes(tl))
-      )
-    },
-    TOGGLE_ENABLED_TIMELINE(state, payload) {
-      if (state.enabledTimelines.includes(payload)) {
+
+    TOGGLE_ENABLED_DATA_EXPORT(state, payload) {
+      if (state.enabledDataExports.includes(payload)) {
         Vue.set(
           state,
-          'enabledTimelines',
-          state.enabledTimelines.filter((tl) => payload !== tl)
+          'enabledDataExports',
+          state.enabledDataExports.filter((de) => payload !== de)
         )
       } else {
-        const freshEnabledTimelines = [...state.enabledTimelines, payload]
-        Vue.set(state, 'enabledTimelines', freshEnabledTimelines)
+        const freshEnabledDataExports = [...state.enabledDataExports, payload]
+        Vue.set(state, 'enabledDataExports', freshEnabledDataExports)
       }
     },
 
@@ -216,35 +205,35 @@ export default new Vuex.Store({
     },
   },
   actions: {
-    async updateSketch(context, sketchId) {
+    async updateProject(context, projectId) {
       if (!window.crossOriginIsolated) {
-        console.warn('[Store.updateSketch] security headers missing. skippng db init.');
+        console.warn('[Store.updateProject] security headers missing. skippng db init.');
         return;
       }
 
-      let sketchName = localStorage.getItem('sketchName') || 'My Data'
+      let projectName = localStorage.getItem('projectName') || 'My Data'
       if (context.state.demoMode) {
-        sketchName = 'Instagram Demo Data'
+        projectName = 'Instagram Demo Data'
       }
       
-      const virtualSketch = {
+      const virtualProject = {
         id: context.state.demoMode ? 2 : 1,
-        name: sketchName,
+        name: projectName,
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
-        timelines: []
+        dataExports: []
       }
       
       try {
-        console.log('[Store.updateSketch] Fetching uploads from database...');
+        console.log('[Store.updateProject] Fetching uploads from database...');
         const uploads = await DB.getUploads()
-        console.log('[Store.updateSketch] Received uploads:', uploads.uploads);
-        const sketch = { ...virtualSketch, timelines: uploads.uploads || [] }
+        console.log('[Store.updateProject] Received uploads:', uploads.uploads);
+        const project = { ...virtualProject, dataExports: uploads.uploads || [] }
         const meta = await DB.getEventMeta()
-        console.log('[Store.updateSketch] Committing SET_SKETCH with timelines:', sketch.timelines.map(t => ({ id: t.id, name: t.name, color: t.color })));
-        context.commit('SET_SKETCH', { objects: [sketch], meta })
+        console.log('[Store.updateProject] Committing SET_PROJECT with dataExports:', project.dataExports.map(t => ({ id: t.id, name: t.name, color: t.color })));
+        context.commit('SET_PROJECT', { objects: [project], meta })
       } catch (e) {
-        console.error('[Store] updateSketch error:', e)
+        console.error('[Store] updateProject error:', e)
       }
     },
     resetState(context) {
@@ -255,12 +244,12 @@ export default new Vuex.Store({
       if (!inputLabel || !num) {
         return
       }
-      let allLabels = context.state.meta.filter_labels
-      let label = allLabels.find(label => label.tag === inputLabel);
+      let allLabels = [...context.state.meta.filter_labels]
+      let label = allLabels.find(label => (label.label === inputLabel) || (label.tag === inputLabel));
       if (label !== undefined) {
         label.count += num
       } else {
-        allLabels.push({ tag: inputLabel, count: num })
+        allLabels.push({ label: inputLabel, tag: inputLabel, count: num })
       }
       allLabels = allLabels.filter(label => label.count > 0)
       context.commit('SET_EVENT_LABELS', allLabels)
@@ -273,17 +262,12 @@ export default new Vuex.Store({
         timeout: snackbar.timeout,
       })
     },
-    enableTimeline(context, timeline) {
-      context.commit('ADD_ENABLED_TIMELINES', [timeline])
+
+    updateEnabledDataExports(context, enabledDataExports) {
+      context.commit('SET_ENABLED_DATA_EXPORTS', enabledDataExports)
     },
-    disableTimeline(context, timeline) {
-      context.commit('REMOVE_ENABLED_TIMELINES', [timeline])
-    },
-    updateEnabledTimelines(context, enabledTimelines) {
-      context.commit('SET_ENABLED_TIMELINES', enabledTimelines)
-    },
-    toggleEnabledTimeline(context, timelineId) {
-      context.commit('TOGGLE_ENABLED_TIMELINE', timelineId)
+    toggleEnabledDataExport(context, dataExportId) {
+      context.commit('TOGGLE_ENABLED_DATA_EXPORT', dataExportId)
     },
     setDemoMode(context, demoMode) {
       context.commit('SET_DEMO_MODE', demoMode)
@@ -300,7 +284,7 @@ export default new Vuex.Store({
     clearDemoState(context) {
       // Clear UI state when switching out of demo mode to prevent filter leakage
       context.commit('SET_EVENT_LABELS', [])
-      context.commit('SET_ENABLED_TIMELINES', [])
+      context.commit('SET_ENABLED_DATA_EXPORTS', [])
       // Reset demo progress
       context.commit('SET_DEMO_IN_PROGRESS', false)
       context.commit('SET_DEMO_STEP', 0)

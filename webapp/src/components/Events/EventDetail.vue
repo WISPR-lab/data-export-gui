@@ -46,7 +46,7 @@ limitations under the License.
 
                     <!-- Exclude field:value as filter chip -->
                      <!-- TODO  filtered for cosmetic-study -->
-                    <!-- <v-btn
+                    <v-btn
                       v-if="!ignoreFilterChips.has(key)"
                       @click.stop="applyFilterChip(key, value, 'must_not')"
                       icon
@@ -54,7 +54,7 @@ limitations under the License.
                       class="mr-1"
                     >
                       <v-icon title="Filter out value">mdi-filter-minus-outline</v-icon>
-                    </v-btn> -->
+                    </v-btn>
 
                     <!-- Copy field name -->
                     <v-btn
@@ -189,8 +189,8 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     meta() {
       return this.$store.state.meta

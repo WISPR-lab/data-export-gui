@@ -189,11 +189,9 @@ export class OPFSManager {
         return;
       }
       
-      let count = 0;
       for await (const [name] of this.storageDir.entries()) {
         // console.log(`[OPFSManager] Removing temp file: ${name}`);
         await this.storageDir.removeEntry(name, { recursive: true });
-        count++;
       }
       // [OPFSManager] Temp cleared
     } catch (error) {
@@ -214,12 +212,10 @@ export class OPFSManager {
         `${this.dbFilename}-wal`,
         `${this.dbFilename}-shm`,
       ];
-      let count = 0;
       for (const name of filesToRemove) {
         try {
           await this.opfsRoot.removeEntry(name);
           // [OPFSManager] Removed file
-          count++;
         } catch (e) {
           if (e.name !== 'NotFoundError') throw e;
           // WAL/SHM may not exist – that's fine

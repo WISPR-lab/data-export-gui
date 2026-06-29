@@ -23,11 +23,11 @@ limitations under the License.
     <welcome-dialog v-model="showFirstTimeModal" @skip="skipDemo" @start="startDemo"></welcome-dialog>
 
     <!-- Progress indicator when loading sketch data -->
-    <v-progress-linear v-if="loadingSketch" indeterminate color="primary"></v-progress-linear>
+    <v-progress-linear v-if="loadingProject" indeterminate color="primary"></v-progress-linear>
 
-    <div v-if="sketch.id && !loadingSketch" style="height: 70vh">
+    <div v-if="project.id && !loadingProject" style="height: 70vh">
       <!-- Empty state -->
-      <v-container v-if="!hasTimelines && !loadingSketch && !isArchived" fill-height fluid>
+      <v-container v-if="!hasDataExports && !loadingProject && !isArchived" fill-height fluid>
         <v-row align="center" justify="center">
           <v-sheet class="pa-4" style="background: transparent">
             <center>
@@ -41,32 +41,32 @@ limitations under the License.
 
 
       <!-- Rename sketch dialog -->
-      <v-dialog v-model="renameSketchDialog" width="600">
+      <v-dialog v-model="renameProjectDialog" width="600">
         <v-card class="pa-4">
-          <ts-rename-sketch @close="renameSketchDialog = false"></ts-rename-sketch>
+          <rename-project @close="renameProjectDialog = false"></rename-project>
         </v-card>
       </v-dialog>
 
       <!-- Settings dialog -->
       <v-dialog v-model="showSettingsDialog" width="700px">
-        <ts-settings-dialog></ts-settings-dialog>
+        <settings-dialog></settings-dialog>
       </v-dialog>
 
 
 
       <!-- Top horizontal toolbar -->
       <page-header
-        v-if="!loadingSketch"
+        v-if="!loadingProject"
         app
         clipped-left
-        :show-drawer="hasTimelines && !loadingSketch && !isArchived"
+        :show-drawer="hasDataExports && !loadingProject && !isArchived"
         @toggle-drawer="toggleDrawer()"
-        @rename-project="renameSketchDialog = true"
+        @rename-project="renameProjectDialog = true"
       ></page-header>
 
       <!-- Left panel -->
       <v-navigation-drawer
-        v-if="hasTimelines"
+        v-if="hasDataExports"
         v-model="showLeftPanel"
         app
         clipped
@@ -78,8 +78,8 @@ limitations under the License.
         <div id="tsMainViewsSection">
           <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Views</div>
           
-          <ts-search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search>
-          <ts-devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-devices>
+          <search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></search>
+          <devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></devices>
         </div>
 
         <v-divider v-if="!isMiniDrawer" class="mb-2"></v-divider>
@@ -87,16 +87,16 @@ limitations under the License.
         <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Your Data</div>
         
         <v-divider v-if="!isMiniDrawer" class="mt-2"></v-divider>
-        <ts-timelines-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-timelines-table>
-        <ts-saved-searches
+        <data-exports-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></data-exports-table>
+        <saved-searches
           v-if="meta && meta.views"
           :icon-only="isMiniDrawer"
           @toggleDrawer="toggleDrawer()"
-        ></ts-saved-searches>
+        ></saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
-        <ts-i-p-addresses :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-i-p-addresses>
-        <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
-        <!-- <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates> -->
+        <i-p-addresses :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></i-p-addresses>
+        <tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></tags>
+        <!-- <search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></search-templates> -->
         
         
         <div class="pa-4">
@@ -105,11 +105,7 @@ limitations under the License.
           <delete-data-button btnType="leftPanel"></delete-data-button>
         </div>
         
-        <!-- <privacy-settings-item :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()" @openSettings="showPrivacySettings = true"></privacy-settings-item> -->
       </v-navigation-drawer>
-
-      <!-- Privacy Settings Modal -->
-      <!-- <privacy-settings-modal v-model="showPrivacySettings"></privacy-settings-modal> -->
 
       <!-- Right panel -->
       <v-navigation-drawer v-if="showRightSidePanel" fixed right width="600" style="box-shadow: 0 10px 15px -3px #888">
@@ -128,22 +124,24 @@ limitations under the License.
       <!-- Main (canvas) view -->
       <v-main class="notransition">
         <!-- Scenario context -->
-        <!--<ts-scenario-navigation v-if="sketch.status && hasTimelines && !isArchived"></ts-scenario-navigation>-->
+        <!--<ts-scenario-navigation v-if="project.status && hasDataExports && !isArchived"></ts-scenario-navigation>-->
         <!-- <ts-question-card
           v-if="
-            sketch.status &&
-            hasTimelines &&
+            project.status &&
+            hasDataExports &&
             !isArchived &&
             systemSettings.DFIQ_ENABLED &&
             !questionCardExclusionRoutes.includes(currentRouteName)
           "
         ></ts-question-card> -->
 
-        <router-view
-          v-if="sketch.status && hasTimelines && !isArchived"
-          @setTitle="(title) => (this.title = title)"
-          class="mt-4"
-        ></router-view>
+        <keep-alive>
+          <router-view
+            v-if="project.status && hasDataExports && !isArchived"
+            @setTitle="(title) => (this.title = title)"
+            class="mt-4"
+          ></router-view>
+        </keep-alive>
       </v-main>
 
       <!-- Context search -->
@@ -151,8 +149,8 @@ limitations under the License.
         hide-overlay
         persistent
         no-click-animation
-        v-model="showTimelineView"
-        @click:outside="showTimelineView = false"
+        v-model="showContextSearch"
+        @click:outside="showContextSearch = false"
         scrollable
       >
         <v-card>
@@ -174,20 +172,20 @@ limitations under the License.
 
             <v-spacer></v-spacer>
 
-            <v-btn icon :disabled="timelineViewHeight > 40" @click="increaseTimelineViewHeight()">
+            <v-btn icon :disabled="contextSearchHeight > 40" @click="increaseContextSearchHeight()">
               <v-icon>mdi-chevron-up</v-icon>
             </v-btn>
-            <v-btn icon :disabled="timelineViewHeight === 0" @click="decreaseTimelineViewHeight()">
+            <v-btn icon :disabled="contextSearchHeight === 0" @click="decreaseContextSearchHeight()">
               <v-icon>mdi-chevron-down</v-icon>
             </v-btn>
-            <v-btn icon @click="showTimelineView = false">
+            <v-btn icon @click="showContextSearch = false">
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </v-toolbar>
           <v-divider></v-divider>
           <v-expand-transition>
-            <v-card-text :style="{ height: timelineViewHeight + 'vh' }" v-show="!minimizeTimelineView">
-              <ts-event-list :query-request="queryRequest" :highlight-event="currentContextEvent"></ts-event-list>
+            <v-card-text :style="{ height: contextSearchHeight + 'vh' }" v-show="!minimizeContextSearch">
+              <event-list :query-request="queryRequest" :highlight-event="currentContextEvent"></event-list>
             </v-card-text>
           </v-expand-transition>
         </v-card>
@@ -199,48 +197,43 @@ limitations under the License.
 <script>
 import EventBus from '../event-bus.js'
 import dayjs from '@/plugins/dayjs'
-import DB from '../database/index.js'
 import PageHeader from '../components/Navigation/PageHeader.vue'
 
-import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
+import SavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
-import TsIPAddresses from '../components/LeftPanel/IPAddresses.vue'
-import TsTags from '../components/LeftPanel/Tags.vue'
-import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
-import TsSearch from '../components/LeftPanel/Search.vue'
+import IPAddresses from '../components/LeftPanel/IPAddresses.vue'
+import Tags from '../components/LeftPanel/Tags.vue'
+import Search from '../components/LeftPanel/Search.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
-import TsRenameSketch from '../components/RenameSketch.vue'
-import TsEventList from '../components/Explore/EventList.vue'
-import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
-import TsDevices from '../components/LeftPanel/Devices.vue'
-import PrivacySettingsItem from '../components/LeftPanel/PrivacySettingsItem.vue'
-import TsSettingsDialog from '../components/SettingsDialog.vue'
+import RenameProject from '../components/RenameProject.vue'
+import EventList from '../components/Events/EventList.vue'
+import DataExportsTable from '../components/LeftPanel/DataExportsTable.vue'
+import Devices from '../components/LeftPanel/Devices.vue'
+import SettingsDialog from '../components/SettingsDialog.vue'
 import DeleteDataButton from '../components/DeleteDataButton.vue'
 import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
 
 export default {
-  props: ['sketchId'],
+  props: ['projectId'],
   components: {
     PageHeader,
-    TsSavedSearches,
+    SavedSearches,
     TsDataTypes,
-    TsIPAddresses,
-    TsTags,
-    TsSearchTemplates,
+    IPAddresses,
+    Tags,
     NewDataExportButton,
-    TsRenameSketch,
-    TsSearch,
-    TsTimelinesTable,
-    TsDevices,
-    PrivacySettingsItem,
-    TsEventList,
-    TsSettingsDialog,
+    RenameProject,
+    Search,
+    DataExportsTable,
+    Devices,
+    EventList,
+    SettingsDialog,
     DeleteDataButton,
     WelcomeDialog,
   },
   data() {
     return {
-      showSketchMetadata: false,
+      showProjectMetadata: false,
       navigationDrawer: {
         width: 350,
       },
@@ -250,18 +243,17 @@ export default {
       showLeftPanel: true,
       leftPanelTab: 0,
       leftPanelTabItems: ['EXPLORE', 'INVESTIGATE'],
-      renameSketchDialog: false,
+      renameProjectDialog: false,
       showHidden: false,
       shareDialog: false,
-      loadingSketch: false,
+      loadingProject: false,
 
-      showPrivacySettings: false,
       showFirstTimeModal: false,
       // Context
-      timelineViewHeight: 60,
-      showTimelineView: false,
+      contextSearchHeight: 60,
+      showContextSearch: false,
       currentContextEvent: {},
-      minimizeTimelineView: false,
+      minimizeContextSearch: false,
       queryRequest: {},
       contextStartTime: null,
       contextEndTime: null,
@@ -273,16 +265,16 @@ export default {
     }
   },
   mounted() {
-    this.loadingSketch = true
+    this.loadingProject = true
 
-    this.$store.dispatch('updateSketch', this.sketchId)
+    this.$store.dispatch('updateProject', this.projectId)
       .then(() => {
-        this.loadingSketch = false
+        this.loadingProject = false
         this.checkShowDemoModal()
       })
       .catch(error => {
-        console.error('[Sketch] Critical error:', error)
-        this.loadingSketch = false
+        console.error('[Project] Critical error:', error)
+        this.loadingProject = false
       })
 
     EventBus.$on('showContextWindow', this.showContextWindow)
@@ -291,8 +283,8 @@ export default {
     EventBus.$off('showContextWindow')
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     meta() {
       return this.$store.state.meta
@@ -301,16 +293,16 @@ export default {
       return this.$store.state.settings
     },
     isArchived() {
-      if (!this.sketch.status || !this.sketch.status.length) {
+      if (!this.project.status || !this.project.status.length) {
         return false
       }
-      return this.sketch.status[0].status === 'archived'
+      return this.project.status[0].status === 'archived'
     },
     currentUser() {
       return this.$store.state.currentUser
     },
-    hasTimelines() {
-      return !!(this.sketch.timelines && this.sketch.timelines.length)
+    hasDataExports() {
+      return !!(this.project.dataExports && this.project.dataExports.length)
     },
     currentRouteName() {
       return this.$route.name
@@ -324,31 +316,20 @@ export default {
   },
   methods: {
     checkShowDemoModal() {
-      const isRegularExploreRoute = this.$route.name === 'Explore'
-      if (isRegularExploreRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasTimelines && !this.loadingSketch) {
+      const isRegularEventsRoute = this.$route.name === 'Events'
+      if (isRegularEventsRoute && !this.demoMode && this.$store.state.demo_visit_or_skip_count === 0 && !this.hasDataExports && !this.loadingProject) {
         this.showFirstTimeModal = true;
       }
     },
     startDemo() {
-      console.log('[Sketch] User clicked "Try Demo"');
+      console.log('[Project] User clicked "Try Demo"');
       this.showFirstTimeModal = false;
-      this.$router.push('/demo/explore');
+      this.$router.push('/demo/events');
     },
     skipDemo() {
-      console.log('[Sketch] User skipped demo');
+      console.log('[Project] User skipped demo');
       this.$store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT');
       this.showFirstTimeModal = false;
-    },
-    deleteSketch: async function () {
-      if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
-        try {
-          await wipeAllData()
-          this.$router.push({ name: 'Home' })
-        } catch (e) {
-          console.error('[Sketch] Failed to delete all data:', e)
-          alert('Failed to delete data. See console for details.')
-        }
-      }
     },
     handleUploadData() {
       this.$router.push('/')
@@ -357,8 +338,8 @@ export default {
       this.$router.push('/')
     },
     startInteractiveDemo() {
-      console.log('[Sketch] Starting interactive demo');
-      this.$router.push('/demo/explore')
+      console.log('[Project] Starting interactive demo');
+      this.$router.push('/demo/events')
     },
     generateContextQuery(event) {
       let timestampMillis = this.$options.filters.formatTimestamp(event._source.primary_timestamp)
@@ -390,32 +371,32 @@ export default {
       let queryRequest = this.generateContextQuery(this.currentContextEvent)
       queryRequest.doSearch = true
       EventBus.$emit('setQueryAndFilter', queryRequest)
-      this.showTimelineView = false
+      this.showContextSearch = false
     },
     showContextWindow(event) {
       this.currentContextEvent = event
       this.queryRequest = this.generateContextQuery(event)
-      this.showTimelineView = true
+      this.showContextSearch = true
     },
-    increaseTimelineViewHeight: function () {
-      this.minimizeTimelineView = false
-      if (this.timelineViewHeight > 70) {
+    increaseContextSearchHeight: function () {
+      this.minimizeContextSearch = false
+      if (this.contextSearchHeight > 70) {
         return
       }
-      this.timelineViewHeight += 30
+      this.contextSearchHeight += 30
     },
-    decreaseTimelineViewHeight: function () {
-      this.minimizeTimelineView = false
-      if (this.timelineViewHeight < 50) {
-        this.minimizeTimelineView = true
-        this.timelineViewHeight = 0
+    decreaseContextSearchHeight: function () {
+      this.minimizeContextSearch = false
+      if (this.contextSearchHeight < 50) {
+        this.minimizeContextSearch = true
+        this.contextSearchHeight = 0
         return
       }
-      this.timelineViewHeight -= 30
+      this.contextSearchHeight -= 30
     },
-    closeTimelineView: function () {
-      this.minimizeTimelineView = true
-      this.timelineViewHeight = 0
+    closeContextSearch: function () {
+      this.minimizeContextSearch = true
+      this.contextSearchHeight = 0
     },
 
     toggleTheme: function () {
@@ -440,8 +421,8 @@ export default {
       }
     },
     updateDocumentTitle: function() {
-      if (this.sketch && this.sketch.name && this.sketch.id) {
-        document.title = `[${this.sketch.id}] ${this.sketch.name}`;
+      if (this.project && this.project.name && this.project.id) {
+        document.title = `[${this.project.id}] ${this.project.name}`;
       } else {
         document.title = 'Timesketch';
       }
@@ -453,7 +434,7 @@ export default {
         this.updateDocumentTitle();
       }
     },
-    hasTimelines(newVal, oldVal) {
+    hasDataExports(newVal, oldVal) {
       if (oldVal === 0 && newVal > 0) {
         this.showLeftPanel = true
       }

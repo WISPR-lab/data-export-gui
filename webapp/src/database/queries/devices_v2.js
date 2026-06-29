@@ -132,10 +132,10 @@ export async function getDevices() {
   const mapped = profileRows.map(profile => {
     const profileInstances = instancesByProfile[profile.id] || [];
 
-    // os info from the newest active instance
-    const latestOS = (profileInstances[0] && firstInstance.latest_os_version) || '';
-    const latestOSName = (profileInstances[0] && firstInstance.os_name) || '';
-    const latestOSType = (profileInstances[0] && firstInstance.os_type) || '';
+    const firstInstance = profileInstances[0];
+    const latestOS = (firstInstance && firstInstance.latest_os_version) || '';
+    const latestOSName = (firstInstance && firstInstance.os_name) || '';
+    const latestOSType = (firstInstance && firstInstance.os_type) || '';
 
     const allOSVersions = [...new Set(profileInstances.flatMap(inst => inst.os_versions))]; // all unique vals in this profile
 

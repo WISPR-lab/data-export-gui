@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <v-card :outlined="!flat" :class="{ 'ma-4': !flat }">
     <!-- Header Section -->
@@ -51,16 +52,20 @@ limitations under the License.
                   <tr>
                     <td>Search an exact phrase</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('&quot;Successful login&quot;')">
-                        <code>"Successful login"</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('&quot;Login&quot;')">
+                        <code>"Login"</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Wildcard search (prefix/suffix)</td>
+                    <td>Wildcard search (prefix/suffix/contains)</td>
                     <td>
                       <a href="#" @click.prevent="emitSetQueryAndFilter('event_action:password*')">
                         <code>event_action:password*</code>
+                      </a>
+                      <br/>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:*error*')">
+                        <code>message:*error*</code>
                       </a>
                     </td>
                   </tr>
@@ -83,12 +88,12 @@ limitations under the License.
                   <tr>
                     <td>Boolean NOT search</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:login NOT message:attempt')">
-                        <code>message:login NOT message:attempt</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('NOT client.ip:192.168.1.1')">
+                        <code>NOT client.ip:192.168.1.1</code>
                       </a>
                       <br/>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('login -attempt')">
-                        <code>login -attempt</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('-platform:google')">
+                        <code>-platform:google</code>
                       </a>
                     </td>
                   </tr>
@@ -118,7 +123,7 @@ limitations under the License.
         <v-col v-if="showTags" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
           <div class="pa-4">
             <h5><v-icon left>mdi-tag-multiple-outline</v-icon> Tags</h5>
-            <ts-tags-list></ts-tags-list>
+            <tags-list></tags-list>
           </div>
         </v-col>
         <v-col v-if="false && showDataTypes" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
@@ -130,7 +135,7 @@ limitations under the License.
         <v-col v-if="showSavedSearches" style="border-left: 1px solid rgba(0, 0, 0, 0.12)">
           <div class="pa-4">
             <h5><v-icon left>mdi-content-save-outline</v-icon> Saved Searches</h5>
-            <ts-saved-searches-list></ts-saved-searches-list>
+            <saved-searches-list></saved-searches-list>
           </div>
         </v-col>
       </v-row>
@@ -147,12 +152,12 @@ limitations under the License.
 <script>
 import EventBus from '../../event-bus.js'
 
-import TsTagsList from '../LeftPanel/TagsList.vue'
+import TagsList from '../LeftPanel/TagsList.vue'
 import TsDataTypesList from '../LeftPanel/DataTypesList.vue'
-import TsSavedSearchesList from '../LeftPanel/SavedSearchesList.vue'
+import SavedSearchesList from '../LeftPanel/SavedSearchesList.vue'
 
 export default {
-  name: 'TsSearchGuideCard',
+  name: 'SearchGuideCard',
   props: {
     flat: {
       type: Boolean,
@@ -172,9 +177,9 @@ export default {
     },
   },
   components: {
-    TsTagsList,
+    TagsList,
     TsDataTypesList,
-    TsSavedSearchesList,
+    SavedSearchesList,
   },
   computed: {
     firstOfCurrentMonth() {
