@@ -44,7 +44,7 @@ limitations under the License.
 
     <v-expand-transition>
       <div v-show="expanded && ipAddresses.length" class="pl-8 pr-4 pb-4">
-        <ts-i-p-addresses-list></ts-i-p-addresses-list>
+        <i-p-addresses-list></i-p-addresses-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>
@@ -52,7 +52,7 @@ limitations under the License.
 </template>
 
 <script>
-import TsIPAddressesList from './IPAddressesList.vue'
+import IPAddressesList from './IPAddressesList.vue'
 import DB from '@/database/index.js'
 
 export default {
@@ -60,7 +60,7 @@ export default {
     iconOnly: Boolean,
   },
   components: {
-    TsIPAddressesList,
+    IPAddressesList,
   },
   data: function () {
     return {
@@ -69,8 +69,8 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
   },
   async mounted() {

@@ -40,6 +40,8 @@ limitations under the License.
 </template>
 
 <script>
+import EventBus from '@/event-bus.js'
+
 export default {
   props: {
     iconOnly: Boolean,
@@ -63,19 +65,3 @@ export default {
 }
 </script>
 
-<style scoped lang="scss">
-.active-view {
-  background-color: rgba(25, 118, 210, 0.05);
-  font-weight: 500;
-}
-</style>
-
-<style scoped lang="scss">
-.dark-hover:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.light-hover:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-</style>

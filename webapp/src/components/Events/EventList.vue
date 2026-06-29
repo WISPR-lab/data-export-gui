@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <div>
     <v-alert
@@ -21,7 +22,7 @@ limitations under the License.
       dismissible
       type="info"
     >
-      Data may be incomplete. Some timelines are still loading.
+      Data may be incomplete. Some data exports are still loading.
     </v-alert>
 
     <v-dialog v-model="exportDialog" width="700">
@@ -63,16 +64,16 @@ limitations under the License.
     </v-dialog> -->
 
     <div v-if="!eventList.objects.length && !searchInProgress && !currentQueryString">
-      <ts-explore-welcome-card></ts-explore-welcome-card>
+      <welcome-card></welcome-card>
     </div>
 
     <div v-if="!eventList.objects.length && !searchInProgress && currentQueryString" class="ml-3">
-      <ts-search-not-found-card
+      <search-not-found-card
         :currentQueryString="currentQueryString"
         :filterChips="filterChips"
         :disableSaveSearch="disableSaveSearch"
         @save-search-clicked="saveSearchMenu = true"
-      ></ts-search-not-found-card>
+      ></search-not-found-card>
     </div>
 
     <!-- DISABLED: Row highlighting feature
@@ -80,7 +81,7 @@ limitations under the License.
       <strong>Showing context for event:</strong>
       <v-sheet class="d-flex flex-wrap mt-1 mb-5">
         <v-sheet class="flex-1-0">
-          <span style="width: 200px" v-bind:style="getTimelineColor(highlightEvent)" class="datetime-table-cell pa-2">
+          <span style="width: 200px" v-bind:style="getDataExportColor(highlightEvent)" class="datetime-table-cell pa-2">
             <span v-if="(highlightEvent._source.primary_timestamp !== null && highlightEvent._source.primary_timestamp !== '') || (highlightEvent._source.timestamp !== null && highlightEvent._source.timestamp !== '')">
               {{ highlightEvent._source.primary_timestamp | formatTimestamp | toISO8601 }}
             </span>
@@ -97,7 +98,7 @@ limitations under the License.
     </div>
     -->
 
-    <div class="ts-event-list-container">
+    <div class="event-list-container">
       <v-card
         v-if="(eventList.objects.length > 0 || searchInProgress) && userSettings.eventSummarization && !eventList.meta.summaryError"
         class="ts-ai-summary-card"
@@ -137,7 +138,7 @@ limitations under the License.
         id="tsEventTable"
         v-model="selectedEvents"
         :headers="headers"
-        :items="DEBUG_filteredEventList"
+        :items="eventList.objects"
         :footer-props="{ 'items-per-page-options': [10, 40, 80, 100, 200, 500], 'show-current-page': true }"
         :loading="searchInProgress"
         :options.sync="tableOptions"
@@ -283,22 +284,11 @@ limitations under the License.
                         <v-list-item-group>
                           <v-list-item :ripple="false">
                             <v-list-item-action>
-                              <v-switch dense v-model="displayOptions.showEmojis"></v-switch>
+                              <v-switch dense v-model="displayOptions.showDataExportName"></v-switch>
                             </v-list-item-action>
                             <v-list-item-content>
-                              <v-list-item-title>Emojis</v-list-item-title>
-                              <v-list-item-subtitle>Show emojis</v-list-item-subtitle>
-                            </v-list-item-content>
-                          </v-list-item>
-                        </v-list-item-group>
-                        <v-list-item-group>
-                          <v-list-item :ripple="false">
-                            <v-list-item-action>
-                              <v-switch dense v-model="displayOptions.showTimelineName"></v-switch>
-                            </v-list-item-action>
-                            <v-list-item-content>
-                              <v-list-item-title>Timeline name</v-list-item-title>
-                              <v-list-item-subtitle>Show timeline name</v-list-item-subtitle>
+                              <v-list-item-title>Data export name</v-list-item-title>
+                              <v-list-item-subtitle>Show data export name</v-list-item-subtitle>
                             </v-list-item-content>
                           </v-list-item>
                         </v-list-item-group>
@@ -333,26 +323,10 @@ limitations under the License.
                     </v-btn>
                   </template>
 
-                  <ts-event-tag-dialog :events="selectedEvents" @close="showEventTagMenu = false"></ts-event-tag-dialog>
+                  <event-tag-dialog :events="selectedEvents" @close="showEventTagMenu = false"></event-tag-dialog>
 
                 </v-menu>
 
-                <v-btn x-small outlined color="error" @click="deleteSelectedEvents">
-                  <v-icon left>mdi-trash-can-outline</v-icon>
-                  Delete Selected
-                </v-btn>
-
-                <!-- DEBUG: Hide selected events (temporary UI-only) -->
-                <v-btn x-small outlined @click="DEBUG_hideSelectedEvents()" color="orange">
-                  <v-icon left>mdi-eye-off</v-icon>
-                  [DEBUG] Hide Selected
-                </v-btn>
-
-                <!-- DEBUG: Show hidden count and reset button -->
-                <v-btn v-if="DEBUG_hiddenEventIds.size > 0" x-small outlined @click="DEBUG_resetHiddenEvents()" color="warning">
-                  <v-icon left>mdi-refresh</v-icon>
-                  [DEBUG] Unhide All ({{ DEBUG_hiddenEventIds.size }} hidden)
-                </v-btn>
               </div>
 
               <v-spacer></v-spacer>
@@ -435,7 +409,7 @@ limitations under the License.
 
           <!-- Datetime field with action buttons -->
           <template v-slot:item._source.primary_timestamp="{ item }">
-            <!-- <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell"> -->
+            <!-- <div v-bind:style="getDataExportColor(item)" class="datetime-table-cell"> -->
             <div class="datetime-table-cell">
               <span v-if="(item._source.primary_timestamp !== null && item._source.primary_timestamp !== '')">
                 <!-- {{ item._source.primary_timestamp }} -->
@@ -447,7 +421,7 @@ limitations under the License.
           </template>
 
           <!-- Generic slot for any field type. Adds tags and emojis to the first column. -->
-          <template v-for="(field, index) in headers" v-slot:[getFieldName(field.text)]="{ item }">
+          <template v-for="(field, index) in headers" :slot="getFieldName(field.text)" slot-scope="{ item }">
             <div
               :key="field.text"
               class="ts-event-field-container"
@@ -471,35 +445,24 @@ limitations under the License.
                 >
                   <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
-                <!-- Emojis -->
-                <span v-if="displayOptions.showEmojis && (field.text === 'message' || (index === 4 && headers[3].value === '_source.comment')) && item._source.__ts_emojis">
-                <!-- <span v-if="displayOptions.showEmojis && index === 3 && item._source.__ts_emojis"> -->
-                  <span
-                    class="mr-2"
-                    v-for="emoji in item._source.__ts_emojis"
-                    :key="emoji"
-                    v-html="emoji + ';'"
-                    :title="meta.emojis && meta.emojis[emoji]"
-                  >
-                  </span>
-                </span>
+                
                 <span>{{ item._source[field.text] }}</span>
               </span>
             </div>
           </template>
 
-          <!-- Timeline name field -->
-          <template v-slot:item.timeline_name="{ item }">
+          <!-- export name field -->
+          <template v-slot:item.data_export_name="{ item }">
             <!-- <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em"> -->
-            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getTimelineColor(item)">
-              <span class="timeline-name-ellipsis" style="width: 130px; text-align: center">{{
-                getTimeline(item).name
+            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getDataExportColor(item)">
+              <span class="export-name-ellipsis" style="width: 130px; text-align: center">{{
+                getDataExport(item).name
               }}</span></v-chip>
           </template>
 
           <template v-slot:item.source_file="{ item }">
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-if="item._source.filename">
-              <span class="timeline-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">
+              <span class="export-name-ellipsis" style="max-width: 180px; text-align: center" :title="item._source.filename">
                 {{ item._source.filename }}
               </span>
             </v-chip>
@@ -510,15 +473,15 @@ limitations under the License.
             <v-chip 
               v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0"
               :style="getTimeBubbleColor()"
-              class="pr-1 timeline-chip"
+              class="pr-1 data-export-chip"
             >
               <div class="chip-content">
-                <span class="timeline-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
+                <span class="export-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
               </div>
             </v-chip>
-            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 timeline-chip">
+            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 data-export-chip">
               <div class="chip-content">
-                <span class="timeline-name-ellipsis"></span>
+                <span class="export-name-ellipsis"></span>
               </div>
             </v-chip>
           </template>
@@ -568,11 +531,11 @@ import EventBus from '@/event-bus.js'
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
 import TsEventTagMenu from './EventTagMenu.vue'
-import TsEventTagDialog from './EventTagDialog.vue'
+import EventTagDialog from './EventTagDialog.vue'
 import TsEventActionMenu from './EventActionMenu.vue'
 import TsEventTags from './EventTags.vue'
-import TsExploreWelcomeCard from './ExploreWelcomeCard.vue'
-import TsSearchNotFoundCard from './SearchNotFoundCard.vue'
+import WelcomeCard from './WelcomeCard.vue'
+import SearchNotFoundCard from './SearchNotFoundCard.vue'
 
 const defaultQueryFilter = () => {
   return {
@@ -588,7 +551,7 @@ const defaultQueryFilter = () => {
 const emptyEventList = () => {
   return {
     meta: {
-      count_per_timeline: {},
+      count_per_data_export: {},
       num_events: 0,
       num_states: 0,
       has_next_page: false,
@@ -602,11 +565,11 @@ export default {
     TsBarChart,
     TsEventDetail,
     TsEventTagMenu,
-    TsEventTagDialog,
+    EventTagDialog,
     TsEventActionMenu,
     TsEventTags,
-    TsExploreWelcomeCard,
-    TsSearchNotFoundCard,
+    WelcomeCard,
+    SearchNotFoundCard,
   },
   props: {
     queryRequest: {
@@ -682,9 +645,8 @@ export default {
       displayOptions: {
         isCompact: false,
         showTags: true,
-        showEmojis: true,
         showMillis: false,
-        showTimelineName: true,
+        showDataExportName: true,
         showSourceFile: false,
       },
       showHistogram: false,
@@ -692,8 +654,6 @@ export default {
       sortOrderAsc: true,
       summaryCollapsed: false,
       showBanner: false,
-      // DEBUG: Temporary hide functionality
-      DEBUG_hiddenEventIds: new Set(),
       isFirstSearch: true,
     }
   },
@@ -703,8 +663,8 @@ export default {
       const uniqueEvents = this.eventList.meta.summary_unique_event_count
       return `[experimental] This summary is based on the message field on your current page (${totalEvents} rows, ${uniqueEvents} unique message fields).`
     },
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     meta() {
       return this.$store.state.meta
@@ -798,10 +758,10 @@ export default {
         width: '200',
         sortable: false,
       })
-      // Add timeline name based on configuration
-      if (this.displayOptions.showTimelineName) {
+      // Add export name based on configuration
+      if (this.displayOptions.showDataExportName) {
         baseHeaders.push({
-          value: 'timeline_name',
+          value: 'data_export_name',
           align: 'end',
           sortable: false,
         })
@@ -817,13 +777,7 @@ export default {
       // console.log('[EventList.headers] Generated headers:', baseHeaders)
       return baseHeaders
     },
-    // DEBUG: Filtered event list (removes hidden event IDs)
-    DEBUG_filteredEventList() {
-      if (this.DEBUG_hiddenEventIds.size === 0) {
-        return this.eventList.objects
-      }
-      return this.eventList.objects.filter(item => !this.DEBUG_hiddenEventIds.has(item._id))
-    },
+
     activeContext() {
       return this.$store.state.activeContext
     },
@@ -835,7 +789,7 @@ export default {
     },
     availableColumns() {
       if (!this.meta || !this.meta.mappings) return [];
-      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'timeline_id', 'event_outcome'];
+      const excluded = ['id', 'event_category', 'tags', 'labels', 'event_kind', 'data_export_id', 'event_outcome'];
       return this.meta.mappings.filter(m => !excluded.includes(m.field));
     },
   },
@@ -844,19 +798,7 @@ export default {
           this.summaryCollapsed = !this.summaryCollapsed;
           localStorage.setItem('aiSummaryCollapsed', String(this.summaryCollapsed));
     },
-    async deleteSelectedEvents() {
-      if (!confirm(`Delete ${this.selectedEvents.length} events?`)) return
-      const ids = this.selectedEvents.map(e => e._id)
-      try {
-        await DB.deleteEvents(ids)
-        this.selectedEvents = []
-        this.search(true)
-        this.$store.dispatch('setSnackBar', { message: 'Events deleted', color: 'success', timeout: 3000 })
-      } catch (e) {
-        console.error(e)
-        this.$store.dispatch('setSnackBar', { message: 'Delete failed', color: 'error', timeout: 3000 })
-      }
-    },
+
     sortEvents(sortDesc) {
       // sortDesc is the value of Vuetify's sort-desc (true = descending, false = ascending)
       if (sortDesc) {
@@ -929,19 +871,19 @@ export default {
         }
       })
     },
-    getTimeline: function (event) {
-      // Browser model: events have timeline_id directly
-      const timelineId = event._source.timeline_id
-      const timeline = this.sketch.timelines.find((tl) => tl.id === timelineId)
-      if (!timeline) {
-        console.warn('[EventList.getTimeline] Timeline not found for id:', timelineId)
-        return { name: 'Unknown Timeline', id: timelineId, color: '#999' }
+    getDataExport: function (event) {
+      // Browser model: events have data_export_id directly
+      const deID = event._source.data_export_id
+      const dataExport = this.project.dataExports.find((de) => de.id === deID)
+      if (!dataExport) {
+        console.warn('[EventList.getDataExport] Data export not found for id:', deID)
+        return { name: 'Unknown Data Export', id: deID, color: '#999' }
       }
-      return timeline
+      return dataExport
     },
-    getTimelineColor(event) {
-      let timeline = this.getTimeline(event)
-      let backgroundColor = timeline.color || '#999'
+    getDataExportColor(event) {
+      let dataExport = this.getDataExport(event)
+      let backgroundColor = dataExport.color || '#999'
       if (!backgroundColor.startsWith('#')) {
         backgroundColor = '#' + backgroundColor
       }
@@ -973,8 +915,8 @@ export default {
       return profile.model || ''
     },
     getAllUploadIds: function () {
-      // Browser model: return timeline IDs directly
-      return this.sketch.timelines.map((tl) => tl.id)
+      // Browser model: return IDs directly
+      return this.project.dataExports.map((de) => de.id)
     },
     search: async function (resetPagination = true, incognito = false, parent = false) {
       // Exit early if there are no uploadIds selected
@@ -983,7 +925,7 @@ export default {
         return
       }
 
-      // Expand '_all' to all timeline IDs (handle both array ['_all'] and string '_all')
+      // Expand '_all' to all data export IDs (handle both array ['_all'] and string '_all')
       const uploadIds = this.currentQueryFilter.uploadIds;
       if (
         uploadIds === '_all' || 
@@ -993,7 +935,7 @@ export default {
         this.currentQueryFilter.uploadIds = allUploadIds;
       }
 
-      // Allow searches with empty query string (shows all events from selected timelines)
+      // Allow searches with empty query string (shows all events from selected data export)
       this.searchInProgress = true
       this.selectedEvents = []
       this.eventList = emptyEventList()
@@ -1013,10 +955,10 @@ export default {
 
         // Response has unwrapped format:
         // - objects: array of {_id, _source} wrapped events
-        // - meta: metadata including count_per_timeline, total_count, etc.
+        // - meta: metadata including count_per_data_export, total_count, etc.
         this.eventList.objects = response.objects || []
         this.eventList.meta = response.meta || {
-          count_per_timeline: {},
+          count_per_data_export: {},
           total_count: 0,
         }
         
@@ -1027,8 +969,8 @@ export default {
         this.eventList.meta.query_time_ms = Date.now() - startTime
 
         this.updateShowBanner()
-        this.$emit('countPerTimeline', this.eventList.meta.count_per_timeline)
-        EventBus.$emit('updateCountPerTimeline', this.eventList.meta.count_per_timeline)
+        this.$emit('countPerDataExport', this.eventList.meta.count_per_data_export)
+        EventBus.$emit('updateCountPerExport', this.eventList.meta.count_per_data_export)
         
         this.addTimeBubbles()
         
@@ -1043,24 +985,6 @@ export default {
         this.searchInProgress = false
       }
     },
-    // fetchEventSummary: function() {
-    //   const formData = {
-    //     query: this.currentQueryString,
-    //     filter: this.currentQueryFilter,
-    //   }
-    //   BrowserDB.llmRequest(this.sketch.id, 'llm_summarize', formData)
-    //     .then((response) => {
-    //       this.$set(this.eventList.meta, 'summary', response.data.response)
-    //       this.$set(this.eventList.meta, 'summary_event_count', response.data.summary_event_count)
-    //       this.$set(this.eventList.meta, 'summary_unique_event_count', response.data.summary_unique_event_count)
-    //       this.isSummaryLoading = false
-    //     })
-    //     .catch((error) => {
-    //       console.error("Error fetching event summary:", error)
-    //       this.$set(this.eventList.meta, 'summaryError', true)
-    //       this.isSummaryLoading = false
-    //     })
-    // },
     exportSearchResult: function () {
       // TODO: Implement CSV export for browser model
       this.exportDialog = false
@@ -1144,11 +1068,13 @@ export default {
       
       if (isStarred) {
         event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
+        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: -1 })
         DB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       } else {
         event._source.labels.push('__ts_star')
+        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: 1 })
         DB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
           console.error('Error updating star in database:', e)
         })
@@ -1175,6 +1101,11 @@ export default {
         }
       })
       
+      // Update global store reactive count
+      if (netStarCountChange !== 0) {
+        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: netStarCountChange })
+      }
+      
       // Persist changes to database
       if (eventsToStar.length > 0) {
         DB.addLabelEvent(eventsToStar, ['__ts_star']).catch(e => {
@@ -1199,33 +1130,16 @@ export default {
       this.saveSearchMenu = false
     },
     updateShowBanner: function() {
-      // Show banner only when processing timelines are enabled and at
-      // least one enabled timeline is in "processing" state.
+      // Show banner only when processing a are enabled and at
+      // least one enabled export is in "processing" state.
       // Browser model: status is a string, not an array
       this.showBanner =
-        !!this.settings.showProcessingTimelineEvents &&
-        this.sketch.timelines
-          .filter(tl => this.$store.state.enabledTimelines.includes(tl.id))
+        !!this.settings.showProcessingData &&
+        this.project.dataExports
+          .filter(tl => this.$store.state.enabledDataExports.includes(tl.id))
           .some(tl => tl.status === 'processing')
     },
-    // DEBUG: Hide selected events from UI (temporary, not persisted)
-    DEBUG_hideSelectedEvents() {
-      // Add selected event IDs to the hidden set and reassign to trigger reactivity
-      const newHidden = new Set(this.DEBUG_hiddenEventIds)
-      this.selectedEvents.forEach(event => {
-        newHidden.add(event._id)
-      })
-      this.DEBUG_hiddenEventIds = newHidden
-      // Clear the selection
-      this.selectedEvents = []
-      console.log('[DEBUG] Hidden events. Total hidden:', this.DEBUG_hiddenEventIds.size)
-    },
-    // DEBUG: Reset hidden events
-    DEBUG_resetHiddenEvents() {
-      // Clear all hidden events
-      console.log('[DEBUG] Resetting hidden events. Was hidden:', this.DEBUG_hiddenEventIds.size)
-      this.DEBUG_hiddenEventIds = new Set()
-    },
+
   },
   watch: {
     tableOptions: {
@@ -1265,7 +1179,7 @@ export default {
       },
       deep: true,
     },
-    'settings.showProcessingTimelineEvents': {
+    'settings.showProcessingData': {
       handler() {
         this.updateShowBanner()
       },
@@ -1509,7 +1423,7 @@ th:first-child {
   }
 }
 
-.ts-event-list-container {
+.event-list-container {
   display: flex;
   flex-direction: column;
   width: 100%;

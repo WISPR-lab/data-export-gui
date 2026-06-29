@@ -37,7 +37,7 @@ limitations under the License.
       @click="expanded = !expanded"
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
-      <span> <v-icon left>mdi-tag-multiple-outline</v-icon> Tags </span>
+      <span> <v-icon left>mdi-tag-multiple-outline</v-icon> Tags & Stars </span>
 
       <span class="float-right" style="margin-right: 10px">
         <small
@@ -48,7 +48,7 @@ limitations under the License.
 
     <v-expand-transition>
       <div v-show="expanded && ((tags || []).length || (filteredLabels || []).length)">
-        <ts-tags-list></ts-tags-list>
+        <tags-list></tags-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>
@@ -56,14 +56,14 @@ limitations under the License.
 </template>
 
 <script>
-import TsTagsList from './TagsList.vue'
+import TagsList from './TagsList.vue'
 
 export default {
   props: {
     iconOnly: Boolean,
   },
   components: {
-    TsTagsList,
+    TagsList,
   },
   data: function () {
     return {
@@ -71,8 +71,8 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     meta() {
       return this.$store.state.meta
@@ -82,7 +82,9 @@ export default {
     },
     filteredLabels() {
       if (!this.meta.filter_labels) return []
-      return this.meta.filter_labels.filter((label) => !label.tag.startsWith('__ts_fact'))
+      return this.meta.filter_labels.filter(function (label) {
+        return label && typeof label.label === 'string' && !label.label.startsWith('__ts_fact')
+      })
     },
   },
 }

@@ -1,16 +1,6 @@
 let sqlite3 = null;
 let initializedDbs = new Set(); // Track which DBs have been initialized
 
-async function loadConfig() {
-  const response = await fetch('./config.yaml');
-  if (!response.ok) {
-    throw new Error('Failed to load config.yaml: ' + response.statusText);
-  }
-  const text = await response.text();
-  config = jsyaml.load(text);
-  return config;
-}
-
 async function getSqlite() {
   if (!sqlite3) {
     const { default: init } = await import('./sqlite-wasm/index.mjs');

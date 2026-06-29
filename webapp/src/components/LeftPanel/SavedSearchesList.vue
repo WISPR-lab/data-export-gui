@@ -68,8 +68,8 @@ export default {
     }
   },
   computed: {
-    sketch() {
-      return this.$store.state.sketch
+    project() {
+      return this.$store.state.project
     },
     meta() {
       return this.$store.state.meta
@@ -81,8 +81,8 @@ export default {
       if (this.$store.state.demoMode) {
         EventBus.$emit('demo:action', 'saved-search-clicked')
       }
-      if (this.$route.name !== 'Explore' && this.$route.name !== 'DemoExplore') {
-        const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+      if (this.$route.name !== 'Events' && this.$route.name !== 'DemoEvents') {
+        const target = this.$store.state.demoMode ? '/demo/events' : '/events'
         this.$router.push(target)
       }
     },

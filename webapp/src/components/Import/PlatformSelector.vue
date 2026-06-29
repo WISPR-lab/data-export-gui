@@ -4,6 +4,8 @@ Platform Selector Dialog
 Presents users with a choice of data export platforms,
 explains the purpose of the tool, links to instructions, and then
 proceeds to the file upload dialog
+
+Added for WISPR Lab / data-export-gui project
 -->
 <template>
   <v-dialog
@@ -85,31 +87,23 @@ proceeds to the file upload dialog
       </div>
     </v-card>
 
-    <!-- Privacy Settings Modal (shown after upload completes) -->
-    <!-- <PrivacySettingsModal
-      v-model="showPrivacySettings"
-      @close="finalizeUpload"
-    /> -->
   </v-dialog>
 </template>
 
 <script>
 import { PLATFORM_METADATA } from '../../utils/uploadFormUtils.js'
 import ImportZone from './ImportZone.vue'
-import PrivacySettingsModal from '../PrivacySettingsModal.vue'
 
 export default {
   name: 'PlatformSelector',
   components: {
     ImportZone,
-    PrivacySettingsModal,
   },
   data() {
     return {
       dialog: false,
       step: 'platform-selection',
       selectedPlatformId: null,
-      showPrivacySettings: false,
     }
   },
   computed: {
@@ -130,7 +124,7 @@ export default {
       this.selectedPlatformId = null
     },
     handleUploadSuccess() {
-      this.showPrivacySettings = true
+      this.finalizeUpload()
     },
     finalizeUpload() {
       this.$emit('success')

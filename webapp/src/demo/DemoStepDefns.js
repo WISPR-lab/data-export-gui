@@ -3,7 +3,7 @@ import EventBus from '@/event-bus.js'
 export const getStepDefinitions = () => [
   {
     id: 'WELCOME',
-    view: 'explore',
+    view: 'events',
     visibleElements: 'body',
     title: 'Interactive Demo',
     content: 'This demo will walk you through the core features of LEStrADE using sample data. \n\n (Tip: You can use the ← and → keys to navigate)',
@@ -14,45 +14,45 @@ export const getStepDefinitions = () => [
     }
   },
   {
-    id: 'OPEN_TIMELINE_MENU',
-    view: 'explore',
-    visibleElements: '.timeline-chip:first-child',
-    clickableElement: '#tsTimelineChipMenu',
+    id: 'OPEN_MENU',
+    view: 'events',
+    visibleElements: '.data-export-chip:first-child',
+    clickableElement: '#tsDataExportChipMenu',
     title: 'Data Export Visibility',
     content: 'Each chip represents a different data export you\'ve uploaded. Let\'s start by opening the menu.',
-    action: 'timeline-menu-opened',
+    action: 'menu-opened',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         await controller._clearAllTags(store).catch(e => console.error(e))
     }
   },
   {
-    id: 'HIDE_TIMELINE_DATA',
-    view: 'explore',
-    visibleElements: ['.timeline-chip:first-child', '.menuable__content__active'],
-    clickableElement: '#tsTimelineVisibilityToggle',
+    id: 'HIDE_DATA_EXPORT',
+    view: 'events',
+    visibleElements: ['.data-export-chip:first-child', '.menuable__content__active'],
+    clickableElement: '#exportVisibilityToggle',
     title: 'Data Export Visibility',
     content: 'You can temporarily hide this export to focus on other data.',
-    action: 'timeline-toggled',
+    action: 'export-visibility-toggled',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         await controller._clearAllTags(store).catch(e => console.error(e))
         // Ensure menu is open if they skipped to here
         const menuVisible = document.querySelector('.menuable__content__active')
         if (!menuVisible) {
-            controller._secureClick('#tsTimelineChipMenu')
+            controller._secureClick('#tsDataExportChipMenu')
         }
     }
   },
   {
     id: 'SHOW_TIMELINE_DATA',
-    view: 'explore',
-    visibleElements: '.timeline-chip:first-child',
-    clickableElement: '.timeline-chip:first-child',
-    blockedElements: ['#tsTimelineChipMenu'],
+    view: 'events',
+    visibleElements: '.data-export-chip:first-child',
+    clickableElement: '.data-export-chip:first-child',
+    blockedElements: ['#tsDataExportChipMenu'],
     title: 'Data Export Visibility',
     content: 'You can bring it back anytime by clicking on the chip. Try re-enabling it.',
-    action: 'timeline-toggled',
+    action: 'export-visibility-toggled',
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         await controller._clearAllTags(store).catch(e => console.error(e))
@@ -61,10 +61,10 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'SHOW_TIMELINE_DATA2',
-    view: 'explore',
-    visibleElements: '.timeline-chip:first-child',
+    view: 'events',
+    visibleElements: '.data-export-chip:first-child',
     clickableElement: '',
-    blockedElements: ['#tsTimelineChipMenu', '.timeline-chip:first-child'],
+    blockedElements: ['#tsDataExportChipMenu', '.data-export-chip:first-child'],
     title: 'Data Export Visibility',
     content: 'Done! Let\'s take a closer look at your data.',
     action: 'next-click',
@@ -75,7 +75,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'EVENTS_MACRO',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsEventTable',
     title: 'Events View',
     content: 'This table shows every "event" or user action extracted from your data exports, sorted chronologically.',
@@ -87,7 +87,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'EXPAND_EVENT',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsEventTable tbody tr:first-child',
     clickableElement: '#tsEventTable tbody tr:first-child',
     title: 'Events View',
@@ -103,7 +103,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'READ_EVENT_DETAILS',
-    view: 'explore',
+    view: 'events',
     visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content'],
     title: 'Events View',
     content: 'Click on any event row to see more details about it.',
@@ -118,7 +118,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'OPEN_TAG_MENU',
-    view: 'explore',
+    view: 'events',
     visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content'],
     clickableElement: '#tsEventTable tbody tr:first-child .v-icon[title*="Modify tags"]',
     title: 'Tagging Events',
@@ -132,7 +132,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'ADD_TAG',
-    view: 'explore',
+    view: 'events',
     visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content', '.menuable__content__active'],
     clickableElement: '.menuable__content__active .v-chip:first-child',
     title: 'Tagging Events',
@@ -147,7 +147,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'VIEW_TAGGED_DATA',
-    view: 'explore',
+    view: 'events',
     visibleElements: ['#tsEventTable tbody tr:first-child', '#tsEventTable tr.v-data-table__expanded__content'],
     title: 'Tagging Events',
     content: 'Great job!',
@@ -160,7 +160,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'SIDEBAR_TAGS',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsLeftPanelTags',
     clickableElement: '#tsLeftPanelTags',
     blockedElements: ['#tsLeftPanelTags [style*="cursor: pointer"]'],
@@ -174,7 +174,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'OPEN_EVENT_TYPES',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsLeftPanelEventTypes',
     clickableElement: '#tsLeftPanelEventTypesHeader',
     blockedElements: ['#tsLeftPanelEventTypesHeader [style*="cursor: pointer"]'],
@@ -188,7 +188,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'FILTER_EVENT_TYPE',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsLeftPanelEventTypes',
     clickableElement: '#tsLeftPanelEventTypesList div[style*="cursor: pointer"]:last-child',
     title: 'Additional Filters',
@@ -204,7 +204,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'EVENT_LIST_FILTERED',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsEventTable',
     title: 'Additional Filters',
     content: 'Great job! Now we see only login events.',
@@ -220,7 +220,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'HIGHLIGHT_SEARCH_BAR',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsSearchBar',
     title: 'Search Bar',
     content: 'Notice that this pre-populated a query in the search bar.',
@@ -235,7 +235,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'SEARCH_DSL_HELP',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsSearchHelpButton',
     // clickableElement: '#tsSearchHelpButton',
     title: 'Search Bar',
@@ -251,7 +251,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'TIME_FILTER',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsAddTimefilterButton',
     title: 'Time Filters',
     content: 'Use time filters to restrict your queries to a precise time range.',
@@ -262,7 +262,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'EVENTS_VIEW_COMPLETE',
-    view: 'explore',
+    view: 'events',
     visibleElements: 'body',
     title: 'Congrats!',
     content: "You've successfully learned how to use the Events View.",
@@ -273,7 +273,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'DEVICES_VIEW_DEMO_SOON',
-    view: 'explore',
+    view: 'events',
     visibleElements: '#tsNavigationDevices',
     title: 'Devices View',
     content: 'This button will take you to the Devices View, where you can analyze your data by device rather than chronologically. \n\n A more in-depth guided tour is coming soon.',
@@ -284,7 +284,7 @@ export const getStepDefinitions = () => [
   },
   {
     id: 'FINISH',
-    view: 'explore',
+    view: 'events',
     visibleElements: ['#tsTutorialsButton', '.interactive-demo-link'],
     title: 'Finish',
     content: 'You can redo this demo again by navigating to Tutorials.', // TODO add interactive button

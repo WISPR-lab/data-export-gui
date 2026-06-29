@@ -1,5 +1,5 @@
 import { OPFSManager } from '@/storage/opfs_manager.js';
-import { classifyError, ERROR_TYPES } from '@/constants/error_types';
+import { ERROR_TYPES } from '@/constants/error_types';
 import DB from '@/database/index.js';
 import { executeUpload } from '@/pyodide/pyodide-client.js';
 
@@ -12,7 +12,7 @@ function log(...args) {
 function logError(...args) { console.error('[UploadService]', ...args); }
 
 
-export async function processUpload(file, platform, sketchId, store) {
+export async function processUpload(file, platform, projectId, store) {
   /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. */
   const startTime = Date.now();
   const summary = {
@@ -69,16 +69,16 @@ export async function processUpload(file, platform, sketchId, store) {
     
     try {
       const uploads = await DB.getUploads();
-      const virtualSketch = {
+      const virtualProject = {
         id: 1,
         name: 'Local Takeout Workspace',
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
-        timelines: uploads.uploads || []
+        dataExports: uploads.uploads || []
       };
       
       const meta = await DB.getEventMeta();
-      store.commit('SET_SKETCH', { objects: [virtualSketch], meta });
+      store.commit('SET_PROJECT', { objects: [virtualProject], meta });
       summary.success = true;
       store.commit('COMPLETE_UPLOAD', summary);
       log('Upload complete');

@@ -54,7 +54,7 @@
             :device="dev"
             :ua-masking-text="uaMaskingText"
             @change="saveDeviceChanges(dev)"
-            @see-all-events="goToExplore(dev)"
+            @see-all-events="goToEvents(dev)"
             @move-instances="openMoveDialog(dev, $event)"
             @create-profile="openCreateDialog(dev, $event)"
             @showJSON="showDeviceJSON"
@@ -100,7 +100,6 @@ import JSONModal from '@/components/Devices/JSONModal.vue';
 import EditsHistoryTable from '@/components/Devices/EditsHistoryTable.vue';
 import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
 import { getUserDeviceEdits, moveInstancesToProfile, createProfileWithInstances } from '@/database/queries/user_device_edits.js';
-import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'Devices',
@@ -123,7 +122,7 @@ export default {
       historyLogs: [],
       showJSONModal: false,
       selectedDeviceForJSON: null,
-      showDemoCompletionModal: false,
+
       uaMaskingText: {
         "mac_ipad": "To prevent fingerprinting, browsers on Apple iPads & Macs use generic User-Agents that hide the exact model and iOS version. Some iPads are misclassified as Macs.",
         "iphone": "To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the exact model.",
@@ -131,16 +130,7 @@ export default {
       }
     }
   },
-  watch: {
-    '$store.state.demoInProgress'(newVal, oldVal) {
-      if (oldVal && !newVal && this.$store.state.demoMode) {
-        console.log('[Devices] Demo completed, showing completion modal');
-        this.$nextTick(() => {
-          this.showDemoCompletionModal = true
-        })
-      }
-    }
-  },
+
   async mounted() {
     await this.fetchDevices();
     await this.fetchHistory();
@@ -289,9 +279,9 @@ export default {
         EventBus.$emit('demo:action', 'device-expanded')
       }
     },
-    goToExplore(device) {
+    goToEvents(device) {
       const queryString = `device_profiles_data:${device.id}`;
-      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore'
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events'
       this.$router.push({
         name: routeName,
         query: { q: queryString }
@@ -299,33 +289,15 @@ export default {
     },
     resumeDemo() {
       console.log('[Devices] Resuming demo');
-      const DemoController = require('@/demo/DemoController.js').default
+      require('@/demo/DemoController.js');
     },
-    goToUpload() {
-      console.log('[Devices] User chose to upload data');
-      this.showDemoCompletionModal = false
-      this.$store.dispatch('clearDemoState')
-      this.$store.commit('SET_DEMO_MODE', false)
-      this.$router.push('/')
-    },
-    returnToHome() {
-      console.log('[Devices] User chose to return home');
-      this.showDemoCompletionModal = false
-      this.$store.dispatch('clearDemoState')
-      this.$store.commit('SET_DEMO_MODE', false)
-      this.$router.push('/')
-    },
-    exploreMoreDemo() {
-      console.log('[Devices] User chose to explore more');
-      this.showDemoCompletionModal = false
-    }
+
   }
 };
 </script>
 
 <style scoped>
 .min-h-100 { min-height: 100vh; }
-.white { background-color: #ffffff !important; }
 .border { border: 1px solid rgba(0,0,0,0.12) !important; }
 .border-top { border-top: 1px solid rgba(0,0,0,0.12) !important; }
 

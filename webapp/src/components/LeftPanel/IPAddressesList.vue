@@ -51,13 +51,19 @@ export default {
     },
   },
   methods: {
-    applyFilterChip(client_ip) {
+    applyFilterChip(clientIp) {
       let eventData = {}
       eventData.doSearch = true
-      eventData.queryString = 'client_ip:' + '"' + client_ip + '"'
+      eventData.chip = {
+        field: 'client_ip',
+        value: clientIp,
+        type: 'term',
+        operator: 'must',
+        active: true,
+      }
       EventBus.$emit('setQueryAndFilter', eventData)
-      if (this.$route.name !== 'Explore' && this.$route.name !== 'DemoExplore') {
-        const target = this.$store.state.demoMode ? '/demo/explore' : '/explore'
+      if (this.$route.name !== 'Events' && this.$route.name !== 'DemoEvents') {
+        const target = this.$store.state.demoMode ? '/demo/events' : '/events'
         this.$router.push(target)
       }
     },

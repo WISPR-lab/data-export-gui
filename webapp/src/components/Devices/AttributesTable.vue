@@ -16,7 +16,7 @@
                         v-bind="attrs" 
                         v-on="on" 
                         class="ip-link" 
-                        @click.stop="goToExploreIP(item)"
+                        @click.stop="goToEventsIP(item)"
                       >
                         {{ item }}
                       </a>
@@ -105,9 +105,9 @@ export default {
     }
   },
   methods: {
-    goToExploreIP(ip) {
+    goToEventsIP(ip) {
       const queryString = `client_ip:"${ip}"`;
-      const routeName = this.$route.name === 'DemoDevices' ? 'DemoExplore' : 'Explore';
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
       this.$router.push({
         name: routeName,
         query: { q: queryString }
@@ -156,7 +156,7 @@ export default {
     },
     clickIPFromModal(ip) {
       this.detailModalOpen = false;
-      this.goToExploreIP(ip);
+      this.goToEventsIP(ip);
     }
   }
 }

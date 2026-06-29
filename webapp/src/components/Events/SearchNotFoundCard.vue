@@ -15,7 +15,7 @@ limitations under the License.
 -->
 <!-- modified for WISPR-lab/data-export-gui -->
 <template>
-  <ts-search-guide-card
+  <search-guide-card
     :flat="inDialog"
     :show-tags="showTags"
     :show-data-types="showDataTypes"
@@ -57,14 +57,14 @@ limitations under the License.
         <v-divider></v-divider>
       </div>
     </template>
-  </ts-search-guide-card>
+  </search-guide-card>
 </template>
 
 <script>
-import TsSearchGuideCard from './SearchGuideCard.vue'
+import SearchGuideCard from './SearchGuideCard.vue'
 
 export default {
-  name: 'TsSearchNotFoundCard',
+  name: 'SearchNotFoundCard',
   props: {
     inDialog: {
       type: Boolean,
@@ -84,7 +84,7 @@ export default {
     },
   },
   components: {
-    TsSearchGuideCard,
+    SearchGuideCard,
   },
   computed: {
     showTags() {

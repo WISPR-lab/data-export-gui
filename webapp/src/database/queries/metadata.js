@@ -20,7 +20,7 @@ export async function getEventMeta() {
   let totalItems = 0
   let filterLabels = [];
   
-  if (countResult.length != 0) {
+  if (countResult.length !== 0) {
     mappings = await db.exec(
         'SELECT field, type FROM v_event_field_mappings ORDER BY field ASC', 
         { returnValue: 'resultRows', rowMode: 'object'}
