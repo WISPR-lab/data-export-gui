@@ -104,7 +104,10 @@ def _pass1_client(
     if "attr__norm__client_version" not in df.columns:
         df["attr__norm__client_version"] = None
 
-    df = df.dropna(subset=keys + ["timestamp"])
+    # Exclude manufacturer from required keys because desktop platforms (Windows/Linux)
+    # do not have manufacturer information in their User Agents and would otherwise be dropped.
+    required_keys = [c for c in BASE_ATTRIBUTES if c != "attr__norm__manufacturer"] + OS_VERSION
+    df = df.dropna(subset=required_keys + ["timestamp"])
     df = df.sort_values(by=keys + ["timestamp"])
 
     if df.empty:

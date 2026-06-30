@@ -131,6 +131,11 @@ def normalize_device_fields(attrs: dict) -> dict:
                 os_type = resolved_type
                 break
 
+    if os_name == "windows" and not model_name:
+        model_name = "windows pc"
+    elif os_name == "linux" and not model_name:
+        model_name = "linux pc"
+
     client_name = _composite_client_name(attrs)
 
     # now every single event has some normalized fields we can easily query on for device grouping
