@@ -1,7 +1,6 @@
 import re
 from ua_extract import DeviceDetector
-from python_core.field_normalization.device_lookup import OS_TYPE_PATTERNS
-
+import field_normalization.device_lookup as dl
 
 class UserAgentParser:
     def __init__(self):
@@ -70,12 +69,23 @@ class UserAgentParser:
         if dd.uses_mobile_browser():
             attrs["user_agent_uses_mobile_browser"] = True
         if dd.os_name():
-            attrs["user_agent_os_name"] = dd.os_name()
-            attrs["user_agent_os_type"] = OS_TYPE_PATTERNS.get(dd.os_name().lower(), "")
+            os_name = dd.os_name()
+            attrs["user_agent_os_name"] = os_name
+            os_type = dl.resolve_pattern(os_name, dl.OS_TYPE_PATTERNS)
+            if os_type:
+                attrs["user_agent_os_type"] = os_type
         if dd.os_version():
             attrs["user_agent_os_version"] = dd.os_version()
         if dd.device_model():
             attrs["user_agent_device_model_name"] = dd.device_model()
+        else:
+            if dd.is_desktop():
+                if dd.os_name():
+                    os_type = attrs.get("user_agent_os_type")
+                    if os_type == "windows":
+                        attrs["user_agent_device_model_name"] = "Windows PC"
+                    elif os_type == "linux":
+                        attrs["user_agent_device_model_name"] = "Linux PC"
         if dd.device_brand():
             attrs["user_agent_device_manufacturer"] = dd.device_brand()
         if dd.device_type():

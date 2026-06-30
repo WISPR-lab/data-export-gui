@@ -2,17 +2,6 @@ import re
 import field_normalization.device_lookup as dl
 
 
-def _infer_manufacturer_from_model(model_name: str) -> str | None:
-    if not model_name:
-        return None
-    model_name = model_name.strip()
-    for manufacturer, patterns in dl.MANUFACTURER_PATTERNS.items():
-        for pattern in patterns:
-            if pattern.match(model_name):
-                return manufacturer
-    return None
-
-
 def _has_version_or_variant(name: str) -> bool:
     if not name:
         return False
@@ -103,13 +92,12 @@ def normalize_device_fields(attrs: dict) -> dict:
     # infer manufacturer from model name if possible
     manufacturer = _get_val(attrs, "device_manufacturer")
     if not manufacturer:
-        manufacturer = _infer_manufacturer_from_model(model_name)
+        manufacturer = dl.resolve_pattern(model_name, dl.MANUFACTURER_PATTERNS)
     if manufacturer:
         if manufacturer.lower() not in dl.BRANDS_ALIASES_LOWER:
-            for _mfr, pattern in dl.BRAND_ALIASES.items():
-                if pattern.search(manufacturer):
-                    manufacturer = _mfr
-                    break
+            resolved_brand = dl.resolve_pattern(manufacturer, dl.BRAND_ALIASES)
+            if resolved_brand:
+                manufacturer = resolved_brand
 
     # now deal with OS
     os_version, inferred_os_name = _decompose_os_version(
@@ -120,21 +108,14 @@ def normalize_device_fields(attrs: dict) -> dict:
     os_name_raw = _get_val(attrs, "os_name") or inferred_os_name or os_type
     os_name = os_name_raw
     if os_name_raw:
-        for clean_name, pattern in dl.OS_NAME_PATTERNS.items():
-            if pattern.search(os_name_raw):
-                os_name = clean_name
-                break
+        resolved_os = dl.resolve_pattern(os_name_raw, dl.OS_NAME_PATTERNS)
+        if resolved_os:
+            os_name = resolved_os
 
     if os_name:
-        for resolved_type, pattern in dl.OS_TYPE_PATTERNS.items():
-            if pattern.search(os_name):
-                os_type = resolved_type
-                break
-
-    if os_name == "windows" and not model_name:
-        model_name = "windows pc"
-    elif os_name == "linux" and not model_name:
-        model_name = "linux pc"
+        resolved_os_type = dl.resolve_pattern(os_name, dl.OS_TYPE_PATTERNS)
+        if resolved_os_type:
+            os_type = resolved_os_type
 
     client_name = _composite_client_name(attrs)
 

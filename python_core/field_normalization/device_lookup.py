@@ -1,6 +1,21 @@
 import re
 
 
+def resolve_pattern(value: str, patterns_dict: dict) -> str | None:
+    if not value:
+        return None
+    val_clean = str(value).strip()
+    for resolved_val, pattern_or_list in patterns_dict.items():
+        if isinstance(pattern_or_list, list):
+            for pat in pattern_or_list:
+                if pat.search(val_clean):
+                    return resolved_val
+        else:
+            if pattern_or_list.search(val_clean):
+                return resolved_val
+    return None
+
+
 # ----------------
 _OS_NAME_PATTERNS = {
     "mac": r"mac\s*os\s*x|macos|mac",
