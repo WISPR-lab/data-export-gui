@@ -211,7 +211,6 @@ export default {
       customNum: 1,
       customUnit: 'days',
       units: [
-        { text: 'Minutes', value: 'minutes' },
         { text: 'Hours',   value: 'hours'   },
         { text: 'Days',    value: 'days'    },
         { text: 'Weeks',   value: 'weeks'   },
@@ -220,9 +219,6 @@ export default {
       ],
       presets: [
         { label: 'Today',        num: 0,  unit: 'days'    },
-        { label: 'Last 15 min',  num: 15, unit: 'minutes' },
-        { label: 'Last 1 hr',    num: 1,  unit: 'hours'   },
-        { label: 'Last 4 hrs',   num: 4,  unit: 'hours'   },
         { label: 'Last 7 days',  num: 7,  unit: 'days'    },
         { label: 'Last 30 days', num: 30, unit: 'days'    },
         { label: 'Last 90 days', num: 90, unit: 'days'    },
