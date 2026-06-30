@@ -18,7 +18,7 @@ limitations under the License.
 <!-- NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui -->
 
 <template>
-  <v-card width="420" style="overflow: visible">
+  <v-card width="480" style="overflow: visible">
     <v-tabs v-model="tab" grow height="34" class="filter-tabs">
       <v-tab>Absolute</v-tab>
       <v-tab>Relative</v-tab>
@@ -76,8 +76,7 @@ limitations under the License.
           </v-row>
 
           <div class="caption grey--text mb-2" style="min-height:16px">
-            <span v-if="activePicker === 'start'">Pick date &amp; time, then confirm below</span>
-            <span v-else-if="activePicker === 'end'">Pick date &amp; time, then confirm below</span>
+            <span v-if="activePicker === 'start' || activePicker === 'end'">Pick date &amp; time, then add filter below</span>
           </div>
 
           <!-- START picker -->
@@ -91,11 +90,6 @@ limitations under the License.
               is-expanded
               @input="onStartInput"
             ></date-picker>
-            <div class="picker-confirm">
-              <v-btn small depressed color="primary" @click="confirmStart">
-                Confirm start time
-              </v-btn>
-            </div>
           </div>
 
           <!-- END picker -->
@@ -110,11 +104,6 @@ limitations under the License.
               :min-date="range.start ? new Date(range.start) : undefined"
               @input="onEndInput"
             ></date-picker>
-            <div class="picker-confirm">
-              <v-btn small depressed color="primary" @click="confirmEnd">
-                Confirm end time
-              </v-btn>
-            </div>
           </div>
  
           <v-card-actions class="px-0 pt-2">
@@ -278,20 +267,12 @@ export default {
     onStartInput(date) {
       if (!date) return
       this.startDateObj = date
+      this.range.start = dayjs(date).utc().millisecond(0).toISOString()
     },
     onEndInput(date) {
       if (!date) return
       this.endDateObj = date
-    },
-    confirmStart() {
-      if (!this.startDateObj) return
-      this.range.start = dayjs(this.startDateObj).utc().millisecond(0).toISOString()
-      this.activePicker = null
-    },
-    confirmEnd() {
-      if (!this.endDateObj) return
-      this.range.end = dayjs(this.endDateObj).utc().millisecond(0).toISOString()
-      this.activePicker = null
+      this.range.end = dayjs(date).utc().millisecond(0).toISOString()
     },
  
     clearStart() {
@@ -365,12 +346,6 @@ export default {
 .picker-wrap {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding-top: 8px;
-}
- 
-.picker-confirm {
-  display: flex;
-  justify-content: flex-end;
-  padding: 8px 0 4px;
 }
  
 .preset-btn {
