@@ -60,15 +60,16 @@
           <filter-menu app :selected-chip="chip" @updateChip="$emit('update', $event, chip)"></filter-menu>
         </v-menu>
 
-        <!-- <v-list-item v-else @click="$emit('toggle-operator', chip)">
+        <v-list-item v-else @click="$emit('toggle-operator', chip)">
           <v-list-item-action class="mr-3">
-            <v-icon>mdi-swap-horizontal</v-icon>
+            <v-icon v-if="chip.operator === 'must_not'">mdi-plus-circle-outline</v-icon>
+            <v-icon v-else>mdi-minus-circle-outline</v-icon>
           </v-list-item-action>
           <v-list-item-subtitle>
-            <span v-if="chip.operator === 'must_not'">Change to MUST</span>
-            <span v-else>Change to NOT</span>
+            <span v-if="chip.operator === 'must_not'">Include results</span>
+            <span v-else>Exclude results</span>
           </v-list-item-subtitle>
-        </v-list-item> -->
+        </v-list-item>
 
         <!-- Option 2: Temporarily disable / Re-enable (Common) -->
         <v-list-item @click="$emit('toggle', chip)">
