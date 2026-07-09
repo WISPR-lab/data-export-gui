@@ -226,9 +226,13 @@ export default {
         { key: 'meid', label: 'MEID' },
         { key: 'device.meid', label: 'MEID' },
         { key: 'device.id.android', label: 'Android ID' },
+        { key: 'device.id.android_secure', label: 'Android ID (Secure)' },
+        { key: 'device.id.android_gsf', label: 'Android ID (GSF)' },
         { key: 'device.product.id', label: 'Hardware Product ID' },
         { key: 'device.id.google.ad', label: 'Google Advertiser ID' },
+        { key: 'device.id.google_ad', label: 'Google Advertiser ID' },
         { key: 'device.id.google', label: 'Google Device ID' },
+        { key: 'device.id.google_timeline_tag', label: 'Google Timeline Tag' },
         { key: 'device.id.facebook', label: 'Facebook Device ID' },
         { key: 'device.id.facebook.ad', label: 'Facebook Advertiser ID' },
         { key: 'udid', label: 'UDID' },
@@ -261,6 +265,10 @@ export default {
       await this.loadAttributes();
     },
     async loadAttributes() {
+      if (this.device && this.device.rawAttributes) {
+        this.rawAttributes = this.device.rawAttributes;
+        return;
+      }
       if (this.device && this.device.id) {
         try {
           this.rawAttributes = await getProfileRawAttrs(this.device.id);

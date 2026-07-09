@@ -25,6 +25,7 @@ import Events from './views/Events.vue'
 import Project from './views/Project.vue'
 import HowToRequest from './views/HowToRequest.vue'
 import Devices from './views/Devices.vue'
+import DevicesMockup from './views/DevicesMockup.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 
@@ -91,6 +92,12 @@ const routes = [
         path: 'devices',
         name: 'Devices',
         component: Devices,
+        props: { projectId: 1 },
+      },
+      {
+        path: 'devices-mockup',
+        name: 'DevicesMockup',
+        component: DevicesMockup,
         props: { projectId: 1 },
       },
     ],
