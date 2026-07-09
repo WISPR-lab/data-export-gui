@@ -258,13 +258,15 @@ views:
       - {target: "entity.first_seen_timestamp", source: "'Device ID details'.first_seen_time", type: "datetime"}
       - {target: "entity.last_seen_timestamp", source: "'Device ID details'.last_seen_time", type: "datetime"}
       - {target: "device.product.id", source: "Hardware ID", type: "string"}
-      - {target: "device.id.google.ad", source: "Google advertiser ID", type: "string"}
+      # Google Advertising ID (resettable advertiser ID). Dev docs: https://developer.android.com/training/articles/user-data-ids#advertising-id
+      - {target: "device.id.google_ad", source: "Google advertiser ID", type: "string"}
       - {target: "user_agent.os.type", source: "OS type", type: "string"}
       - {target: "user_agent.os.version", source: "OS version", type: "string"}
       - {target: "device.model.identifier", source: "Device type", type: "string"}
       - {target: "device.manufacturer", source: "Manufacturer", type: "string"}
       - {target: "user_agent.original", source: "User agent", type: "string"}
-      - {target: "device.id.android", source: "Android ID", type: "string"}
+      # Settings.Secure.ANDROID_ID (app-scoped hex string). Dev docs: https://developer.android.com/training/articles/user-data-ids#secure-id
+      - {target: "device.id.android_secure", source: "Android ID", type: "string"}
       - {target: "device.screen_resolution", source: "Screen size", type: "string"} # is tablet? todo + current cores
     
 

@@ -5,6 +5,7 @@ from .csv_multi import CSVMultiParser
 from .json_label_values import JSONLabelValuesParser
 from .html_table import HTMLTableParser, HTMLGglSubscriberInfoParser
 from .html_ggl_myactivity import HTMLMyActvityParser
+from .html_key_val import HTMLKeyValParser
 
 REGISTRY = {
     "json": JSONParser,
@@ -16,6 +17,7 @@ REGISTRY = {
     "html_table": HTMLTableParser,
     "html_ggl_myactivity": HTMLMyActvityParser,
     "html_ggl_subscriber_info": HTMLGglSubscriberInfoParser,
+    "html_key_val": HTMLKeyValParser,
 }
 
 
