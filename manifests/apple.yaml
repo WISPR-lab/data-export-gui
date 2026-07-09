@@ -192,7 +192,7 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "authenticated_device"
+      entity.type: "hardware_registration"
   fields:
   - {target: "entity.last_seen_timestamp", source: "Device Last Heartbeat Timestamp", type: "datetime"}
   - {target: "entity.first_seen_timestamp", source: "Device Added Date", type: "datetime"}
@@ -209,7 +209,7 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "authenticated_device"
+      entity.type: "app_registration"
   fields:
   - {target: "device.model.identifier", source: "hardware-version", type: "string"}
   - {target: "device.given_name", source: "device-name", type: "string"}
@@ -239,7 +239,7 @@ views:
     event.kind: "asset"
     event.category: ["authentication", "session"]
     event.type: ["info"]
-    entity.type: "authenticated_device"
+    entity.type: "app_registration"
   fields:
   - {target: "device.model.identifier", source: "hardware-version", type: "string"}
   - {target: "device.given_name", source: "device-name", type: "string"}

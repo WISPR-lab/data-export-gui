@@ -52,6 +52,7 @@ files:
   # Devices & Sessions
   - id: "ggl_access_log_devices"
     path: "Access Log Activity/Devices - A list of devices (i.e. Nest, Pixel, iPh.csv"
+    retention_days: 270
     parser:
       format: "csv"
       #parse_dates: ["Last Activity Time"]
@@ -237,7 +238,7 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "authenticated_device"
+      entity.type: "session"
     fields:
       - {target: "entity.last_seen_timestamp", source: "Last Activity Time", type: "datetime"} # TODO
       - {target: "device.manufacturer", source: "Brand Name", type: "string"}
