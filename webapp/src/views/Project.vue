@@ -84,10 +84,10 @@ limitations under the License.
 
         <v-divider v-if="!isMiniDrawer" class="mb-2"></v-divider>
 
-        <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Your Data</div>
+        <div class="pa-4 pb-0 overline grey--text text--darken-1" v-if="!isMiniDrawer">Event Filters</div>
         
         <v-divider v-if="!isMiniDrawer" class="mt-2"></v-divider>
-        <data-exports-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></data-exports-table>
+        <!-- <data-exports-table :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></data-exports-table> -->
         <saved-searches
           v-if="meta && meta.views"
           :icon-only="isMiniDrawer"
