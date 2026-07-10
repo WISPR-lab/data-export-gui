@@ -69,7 +69,7 @@ def view_indexes_to_apply(record: dict, views: list):
             indexes.append(i)
     if not indexes:
         action = record.get("action") or record.get("event")
-        print(
-            f"[MapUtils] Record with action/event '{action}' did not match any view filters"
-        )
+        # print(
+        #     f"[MapUtils] Record with action/event '{action}' did not match any view filters"
+        # )
     return indexes
