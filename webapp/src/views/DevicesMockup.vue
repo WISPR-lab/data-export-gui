@@ -4,7 +4,7 @@
 
     <!-- Page Header -->
     <div class="mb-6">
-      <h1 class="text-h4 text--primary mb-1">Devices</h1>
+      <h1 class="text-h4 text--primary mb-1">Devices (Mockup)</h1>
       <div class="text-body-2 text--secondary">Track account access records and unlinked activity clusters.</div>
     </div>
 
@@ -32,136 +32,270 @@
         
         <!-- COLUMN 1: Sessions & Registrations (Left side) -->
         <v-col cols="12" md="6" class="pr-md-4">
-          <h3 class="text-subtitle-2 font-weight-bold grey--text text--darken-2 mb-1">Sessions & Registrations</h3>
-          <p class="text-caption text--secondary mb-4">Registered sessions and hardware records on the platform.</p>
           
-          <v-expansion-panels flat class="device-panels">
-            <v-expansion-panel
-              v-for="(entry, eIdx) in platform.entries"
-              :key="'entry-' + eIdx"
-              class="mb-3 border rounded-xl overflow-hidden device-profile-card"
-            >
-              <v-expansion-panel-header class="pa-4">
-                <template v-slot:default="{ open }">
-                  <div class="device-header-row py-1 d-flex align-center justify-space-between w-100">
-                    <div class="d-flex align-center flex-grow-1 min-width-0">
-                      <v-avatar size="40" color="grey lighten-5" class="mr-4 flex-shrink-0">
-                        <v-icon color="grey darken-3" size="20">{{ entry.icon }}</v-icon>
-                      </v-avatar>
-                      
-                      <div class="d-flex flex-column min-width-0">
-                        <div class="d-flex flex-wrap align-baseline">
-                          <span class="text-subtitle-2 text--primary font-weight-medium text-truncate">
-                            {{ entry.title }}
-                          </span>
-                          <span v-if="entry.norm_client" class="text-caption text--secondary font-weight-regular ml-2">
-                            via {{ entry.norm_client }}
-                          </span>
-                        </div>
-                        <div v-if="entry.dateString || entry.location" class="text-caption text--secondary mt-0.5 text-truncate">
-                          <span>{{ entry.dateString }}</span>
-                          <span v-if="entry.dateString && entry.location"> • </span>
-                          <span>{{ entry.location }}</span>
+          <!-- Sub-section 1: Active Sessions -->
+          <div class="mb-6">
+            <h3 class="text-subtitle-2 font-weight-bold grey--text text--darken-2 mb-1">Active Sessions</h3>
+            <p class="text-caption text--secondary mb-3">
+              Cookie-bound login states. Temporary, tied to current authentication cookies.
+            </p>
+            
+            <div v-if="!platform.sessions.length" class="text-caption text--secondary italic pa-2 border rounded-xl text-center grey lighten-5 mb-4">
+              No active session cookies found.
+            </div>
+            
+            <v-expansion-panels flat class="device-panels">
+              <v-expansion-panel
+                v-for="(entry, eIdx) in platform.sessions"
+                :key="'sess-' + eIdx"
+                class="mb-3 border rounded-xl overflow-hidden device-profile-card"
+              >
+                <v-expansion-panel-header class="pa-4">
+                  <template v-slot:default="{ open }">
+                    <div class="device-header-row py-1 d-flex align-center justify-space-between w-100">
+                      <div class="d-flex align-center flex-grow-1 min-width-0">
+                        <v-avatar size="40" color="grey lighten-5" class="mr-4 flex-shrink-0">
+                          <v-icon color="grey darken-3" size="20">{{ entry.icon }}</v-icon>
+                        </v-avatar>
+                        
+                        <div class="d-flex flex-column min-width-0">
+                          <div class="d-flex flex-wrap align-baseline">
+                            <span class="text-subtitle-2 text--primary font-weight-medium text-truncate">
+                              {{ entry.title }}
+                            </span>
+                            <span v-if="entry.client_name" class="text-caption text--secondary font-weight-regular ml-2">
+                              via {{ entry.client_name }}
+                            </span>
+                          </div>
+                          <div class="text-caption text--secondary mt-0.5 text-truncate">
+                            <span>{{ entry.dateString || 'Active Session' }}</span>
+                            <span v-if="entry.location"> • {{ entry.location }}</span>
+                          </div>
                         </div>
                       </div>
+                      
+                      <!-- Right Side Chips & Button -->
+                      <div class="text-right mr-4 flex-shrink-0 d-flex align-center justify-end" style="gap: 8px;">
+                        <v-tooltip v-if="entry.is_reduced_ua" bottom max-width="320">
+                          <template v-slot:activator="{ on, attrs }">
+                            <v-chip
+                              small
+                              color="grey lighten-2"
+                              class="font-weight-medium flex-shrink-0 grey--text text--darken-3 px-2"
+                              style="height: 22px; font-size: 11px;"
+                              v-bind="attrs"
+                              v-on="on"
+                            >
+                              <v-icon left small class="grey--text text--darken-3" style="font-size: 12px; margin-right: 4px;">mdi-fingerprint-off</v-icon>
+                              Reduced UA
+                            </v-chip>
+                          </template>
+                          <span>To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the exact model.</span>
+                        </v-tooltip>
+
+                        <v-chip v-if="entry.has_trusted_cookie" small color="primary" outlined class="px-2" style="height: 22px; font-size: 11px;">
+                          Cookie
+                        </v-chip>
+
+                        <v-btn
+                          v-if="entry.event_count"
+                          text
+                          small
+                          color="primary"
+                          class="text-capitalize px-1 min-width-0"
+                          style="height: 28px; font-size: 12px;"
+                          @click.stop="goToEventsPage(entry.events_query)"
+                        >
+                          {{ entry.event_count }} Events
+                          <v-icon right small style="margin-left: 2px; font-size: 14px;">mdi-arrow-right</v-icon>
+                        </v-btn>
+                      </div>
                     </div>
-                    
-                    <!-- Right Side: Chips & Action Button -->
-                    <div class="text-right mr-4 flex-shrink-0 d-flex align-center justify-end" style="gap: 8px;">
-                      <!-- Fingerprint Chip -->
-                      <v-tooltip v-if="entry.is_reduced_ua" bottom max-width="320">
-                        <template v-slot:activator="{ on, attrs }">
-                          <v-chip
-                            small
-                            color="grey lighten-2"
-                            class="font-weight-medium flex-shrink-0 grey--text text--darken-3 px-2"
-                            style="height: 22px; font-size: 11px;"
-                            v-bind="attrs"
-                            v-on="on"
-                          >
-                            <v-icon left small class="grey--text text--darken-3" style="font-size: 12px; margin-right: 4px;">mdi-fingerprint-off</v-icon>
-                            Reduced UA
-                          </v-chip>
-                        </template>
-                        <span>To prevent fingerprinting, browsers on iPhones use generic User-Agents that hide the exact model.</span>
-                      </v-tooltip>
+                  </template>
+                </v-expansion-panel-header>
+                <v-expansion-panel-content class="grey lighten-5 border-top">
+                  <div class="pa-4">
+                    <div class="text-caption text--primary font-weight-medium mb-2">Session Attributes</div>
+                    <attributes-table :attributes="entry.formatted_attributes" />
+                  </div>
+                </v-expansion-panel-content>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
 
-                      <!-- Cookie Chip -->
-                      <v-chip 
-                        v-if="entry.augmented_from_recognized" 
-                        small 
-                        color="primary" 
-                        outlined
-                        class="px-2"
-                        style="height: 22px; font-size: 11px;"
-                      >
-                        Cookie
-                      </v-chip>
+          <!-- Sub-section 2: App Registrations -->
+          <div class="mb-6">
+            <h3 class="text-subtitle-2 font-weight-bold grey--text text--darken-2 mb-1">App Registrations</h3>
+            <p class="text-caption text--secondary mb-3">
+              Installed client applications (usually with push tokens). Persistent client installs on devices.
+            </p>
+            
+            <div v-if="!platform.appRegistrations.length" class="text-caption text--secondary italic pa-2 border rounded-xl text-center grey lighten-5 mb-4">
+              No registered client apps.
+            </div>
 
-                      <!-- Action Button -->
-                      <v-btn
-                        v-if="entry.event_count"
-                        text
-                        small
-                        color="primary"
-                        class="text-capitalize px-1 min-width-0"
-                        style="height: 28px; font-size: 12px;"
-                        @click.stop="goToEventsPage(entry.query)"
-                      >
-                        {{ entry.event_count }} Events
-                        <v-icon right small style="margin-left: 2px; font-size: 14px;">mdi-arrow-right</v-icon>
-                      </v-btn>
+            <v-expansion-panels flat class="device-panels">
+              <v-expansion-panel
+                v-for="(entry, eIdx) in platform.appRegistrations"
+                :key="'app-' + eIdx"
+                class="mb-3 border rounded-xl overflow-hidden device-profile-card"
+              >
+                <v-expansion-panel-header class="pa-4">
+                  <template v-slot:default="{ open }">
+                    <div class="device-header-row py-1 d-flex align-center justify-space-between w-100">
+                      <div class="d-flex align-center flex-grow-1 min-width-0">
+                        <v-avatar size="40" color="grey lighten-5" class="mr-4 flex-shrink-0">
+                          <v-icon color="grey darken-3" size="20">{{ entry.icon }}</v-icon>
+                        </v-avatar>
+                        
+                        <div class="d-flex flex-column min-width-0">
+                          <div class="d-flex flex-wrap align-baseline">
+                            <span class="text-subtitle-2 text--primary font-weight-medium text-truncate">
+                              {{ entry.title }}
+                            </span>
+                            <span v-if="entry.client_name" class="text-caption text--secondary font-weight-regular ml-2">
+                              via {{ entry.client_name }}
+                            </span>
+                          </div>
+                          <div class="text-caption text--secondary mt-0.5 text-truncate">
+                            <span>{{ entry.dateString || 'App Registration' }}</span>
+                            <span v-if="entry.location"> • {{ entry.location }}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Right Side Chips & Button -->
+                      <div class="text-right mr-4 flex-shrink-0 d-flex align-center justify-end" style="gap: 8px;">
+                        <v-btn
+                          v-if="entry.event_count"
+                          text
+                          small
+                          color="primary"
+                          class="text-capitalize px-1 min-width-0"
+                          style="height: 28px; font-size: 12px;"
+                          @click.stop="goToEventsPage(entry.events_query)"
+                        >
+                          {{ entry.event_count }} Events
+                          <v-icon right small style="margin-left: 2px; font-size: 14px;">mdi-arrow-right</v-icon>
+                        </v-btn>
+                      </div>
                     </div>
+                  </template>
+                </v-expansion-panel-header>
+                <v-expansion-panel-content class="grey lighten-5 border-top">
+                  <div class="pa-4">
+                    <div class="text-caption text--primary font-weight-medium mb-2">App Registration Details</div>
+                    <attributes-table :attributes="entry.formatted_attributes" />
                   </div>
-                </template>
-              </v-expansion-panel-header>
+                </v-expansion-panel-content>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
 
-              <v-expansion-panel-content class="grey lighten-5 border-top">
-                <div class="pa-4">
-                  <div class="text-caption text--primary font-weight-medium mb-2">
-                    {{ getDetailsTitle(entry.entity_type) }}
+          <!-- Sub-section 3: Hardware Registrations -->
+          <div v-if="platform.hardwareRegistrations.length">
+            <h3 class="text-subtitle-2 font-weight-bold grey--text text--darken-2 mb-1">Hardware Registrations</h3>
+            <p class="text-caption text--secondary mb-3">
+              Verified physical hardware profiles (linked to Apple ID or Google devices). Cryptographically or OS-verified.
+            </p>
+
+            <v-expansion-panels flat class="device-panels">
+              <v-expansion-panel
+                v-for="(entry, eIdx) in platform.hardwareRegistrations"
+                :key="'hw-' + eIdx"
+                class="mb-3 border rounded-xl overflow-hidden device-profile-card"
+              >
+                <v-expansion-panel-header class="pa-4">
+                  <template v-slot:default="{ open }">
+                    <div class="device-header-row py-1 d-flex align-center justify-space-between w-100">
+                      <div class="d-flex align-center flex-grow-1 min-width-0">
+                        <v-avatar size="40" color="grey lighten-5" class="mr-4 flex-shrink-0">
+                          <v-icon color="grey darken-3" size="20">{{ entry.icon }}</v-icon>
+                        </v-avatar>
+                        
+                        <div class="d-flex flex-column min-width-0">
+                          <div class="d-flex flex-wrap align-baseline">
+                            <span class="text-subtitle-2 text--primary font-weight-medium text-truncate">
+                              {{ entry.title }}
+                            </span>
+                            <span v-if="entry.client_name" class="text-caption text--secondary font-weight-regular ml-2">
+                              via {{ entry.client_name }}
+                            </span>
+                          </div>
+                          <div class="text-caption text--secondary mt-0.5 text-truncate">
+                            <span>{{ entry.dateString || 'Hardware Registration' }}</span>
+                            <span v-if="entry.location"> • {{ entry.location }}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Right Side Chips & Button -->
+                      <div class="text-right mr-4 flex-shrink-0 d-flex align-center justify-end" style="gap: 8px;">
+                        <v-chip v-if="entry.has_passkey" small color="success" outlined class="px-2" style="height: 22px; font-size: 11px;">
+                          Passkey
+                        </v-chip>
+
+                        <v-btn
+                          v-if="entry.event_count"
+                          text
+                          small
+                          color="primary"
+                          class="text-capitalize px-1 min-width-0"
+                          style="height: 28px; font-size: 12px;"
+                          @click.stop="goToEventsPage(entry.events_query)"
+                        >
+                          {{ entry.event_count }} Events
+                          <v-icon right small style="margin-left: 2px; font-size: 14px;">mdi-arrow-right</v-icon>
+                        </v-btn>
+                      </div>
+                    </div>
+                  </template>
+                </v-expansion-panel-header>
+                <v-expansion-panel-content class="grey lighten-5 border-top">
+                  <div class="pa-4">
+                    <div class="text-caption text--primary font-weight-medium mb-2">Hardware Registry Details</div>
+                    <attributes-table :attributes="entry.formatted_attributes" />
                   </div>
-                  <attributes-table :attributes="entry.formatted_attributes" />
-                </div>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-          </v-expansion-panels>
+                </v-expansion-panel-content>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+
         </v-col>
 
         <!-- COLUMN 2: Unlinked Activity (Right side) -->
         <v-col cols="12" md="6" class="pl-md-4 border-left">
           <h3 class="text-subtitle-2 font-weight-bold grey--text text--darken-2 mb-1">Unlinked Activity</h3>
           <p class="text-caption text--secondary mb-4">
-            Logins/activity with no session cookie. Could belong to any matching device.
+            Logins/activity with no active session cookie. Query events grouped under this instance.
           </p>
           
-          <!-- Visually distinct, non-rounded, dashed-border list rows for clusters -->
-          <div class="d-flex flex-column" style="gap: 12px;">
+          <div v-if="!platform.unlinkedClusters.length" class="text-caption text--secondary italic pa-4 border rounded-xl text-center grey lighten-5">
+            No unlinked activity clusters.
+          </div>
+
+          <div v-else class="d-flex flex-column" style="gap: 12px;">
             <div
               v-for="(cluster, cIdx) in platform.unlinkedClusters"
               :key="'cluster-' + cIdx"
               class="unlinked-activity-row pa-3 d-flex align-center justify-space-between"
             >
-              <div class="min-width-0">
+              <div class="min-width-0 mr-2">
                 <div class="text-caption font-weight-bold text--primary text-truncate">
-                  UNLINKED ACTIVITY BLOCK
+                  {{ cluster.title }}
                 </div>
                 <div class="text-caption text--secondary mt-0.5 text-truncate">
-                  {{ cluster.event_count }} Logins on {{ cluster.title }}
-                  <span v-if="cluster.norm_client"> via {{ cluster.norm_client }}</span>
-                </div>
-                <div class="text-caption text--secondary text-truncate">
                   Active {{ cluster.dateString }}
                 </div>
               </div>
 
-              <!-- View Events link -->
+              <!-- Query directly by instance identifier -->
               <v-btn
                 v-if="cluster.event_count"
                 small
                 text
                 color="primary"
-                class="text-capitalize px-2 font-weight-medium"
+                class="text-capitalize px-2 font-weight-medium flex-shrink-0"
                 @click.stop="goToEventsPage(cluster.query)"
               >
                 View {{ cluster.event_count }} Events
@@ -179,6 +313,9 @@
 
 <script>
 import AttributesTable from '@/components/Devices/AttributesTable.vue';
+import { getResolvedSessionsRegistrations } from '@/database/queries/resolved_sessions_registrations.js';
+import { getUnlinkedClusters } from '@/database/queries/instances_v2.js';
+import { getDB } from '@/database/index.js';
 
 export default {
   name: 'DevicesMockup',
@@ -191,21 +328,11 @@ export default {
     }
   },
   mounted() {
-    this.fetchMockData();
+    this.fetchLiveData();
   },
   methods: {
-    getDetailsTitle(type) {
-      const titles = {
-        'session': 'Session Attributes',
-        'app_registration': 'App Registration Attributes',
-        'hardware_registration': 'Hardware Registration Attributes',
-        'trusted_cookie': 'Trusted Cookie Attributes',
-        'platform_inferred_device': 'Platform Inferred Device Attributes'
-      };
-      return titles[type] || 'Connection Attributes';
-    },
     goToEventsPage(query) {
-      if (this.$router) {
+      if (this.$router && query) {
         const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
         this.$router.push({
           name: routeName,
@@ -213,232 +340,130 @@ export default {
         }).catch(err => {});
       }
     },
-    fetchMockData() {
-      this.platforms = [
-        {
-          name: "facebook",
-          displayName: "Facebook",
-          accountLabel: "Alice (alice_fb_123)",
-          icon: "mdi-facebook",
-          color: "#5E75C2",
-          entries: [
-            {
-              entity_type: "session",
-              title: "iPhone XR",
-              dateString: "Active Jan 3, 2025 – Feb 25, 2025",
-              icon: "mdi-cookie-outline",
-              norm_client: "Facebook App",
-              location: "Madison, WI",
-              is_reduced_ua: false,
-              augmented_from_recognized: true,
-              event_count: 14,
-              query: "session_id:inst-fb-iphonexr-session",
-              formatted_attributes: [
-                { label: "Instance ID", value: "inst-fb-iphonexr-session" },
-                { label: "Model", value: "Apple iPhone XR" },
-                { label: "OS", value: "iOS 17.7.1" },
-                { label: "IP Addresses", value: ["2600:6c44:11f0:f010:44b8:b949:c7eb:7f04", "144.92.239.37"] },
-                { label: "Client Session Id", value: "Nvt2********************" },
-                { label: "User Agent Original", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/21H216 [FBAN/FBIOS;FBAV/492.0.0.101.111;FBBV/6703080455;FBDV/iPhone11,8;FBMD/iPhone;FBSN/iOS;FBSV/17.7.1;FBSS/0;FBID/phone;FBLC/en_US;FBOP/5]" },
-                { label: "Name", value: "Facebook for iOS on Apple iPhone XR" },
-                { label: "Device", value: "iPhone XR" },
-                { label: "Location", value: "Madison, WI, United States" },
-                { label: "App", value: "Facebook app" },
-                { label: "Session Type", value: "iphone" },
-                { label: "First Active", value: 1735850811, isTimestamp: true },
-                { label: "Last Active", value: 1740458397, isTimestamp: true }
-              ]
-            },
-            {
-              entity_type: "session",
-              title: "iPhone (Generic)",
-              dateString: "Last Active: Jan 27, 2025",
-              icon: "mdi-cookie-outline",
-              norm_client: "UIWebView",
-              location: "Madison, WI",
-              is_reduced_ua: true,
-              augmented_from_recognized: false,
-              formatted_attributes: [
-                { label: "Instance ID", value: "inst-fb-iphone-generic-session-1" },
-                { label: "Model", value: "Apple iPhone" },
-                { label: "OS", value: "iOS 17.7.1" },
-                { label: "IP Addresses", value: ["72.33.2.118"] },
-                { label: "Client Session Id", value: "IOGP********************" },
-                { label: "User Agent Original", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148" },
-                { label: "Device", value: "iPhone" },
-                { label: "Location", value: "Madison, WI, United States" },
-                { label: "App", value: "UIWebView" },
-                { label: "Session Type", value: "mobile_web" },
-                { label: "First Active", value: 1738007083, isTimestamp: true }
-              ]
-            },
-            {
-              entity_type: "session",
-              title: "iPhone (Generic)",
-              dateString: "Active Jan 21, 2025 – Jan 27, 2025",
-              icon: "mdi-cookie-outline",
-              norm_client: "Mobile Safari",
-              location: "Madison, WI",
-              is_reduced_ua: true,
-              augmented_from_recognized: false,
-              formatted_attributes: [
-                { label: "Instance ID", value: "inst-fb-iphone-generic-session-2" },
-                { label: "Model", value: "Apple iPhone" },
-                { label: "OS", value: "iOS 17.7.1" },
-                { label: "IP Addresses", value: ["72.33.2.118"] },
-                { label: "Client Session Id", value: "kuaP********************" },
-                { label: "User Agent Original", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.8 Mobile/15E148 Safari/604.1" },
-                { label: "Device", value: "iPhone" },
-                { label: "Location", value: "Madison, WI, United States" },
-                { label: "App", value: "Mobile Safari" },
-                { label: "Session Type", value: "mobile_web" },
-                { label: "First Active", value: 1737483956, isTimestamp: true },
-                { label: "Last Active", value: 1737996301, isTimestamp: true }
-              ]
-            },
-            {
-              entity_type: "session",
-              title: "iPhone 7",
-              dateString: "Last Active: Jan 21, 2025",
-              icon: "mdi-cookie-outline",
-              norm_client: "Facebook App",
-              location: "Madison, WI",
-              is_reduced_ua: false,
-              augmented_from_recognized: false,
-              event_count: 6,
-              query: "session_id:inst-fb-iphone7-alice-session",
-              formatted_attributes: [
-                { label: "Instance ID", value: "inst-fb-iphone7-alice-session" },
-                { label: "Model", value: "Apple iPhone 7" },
-                { label: "OS", value: "iOS 15.7" },
-                { label: "IP Addresses", value: ["72.33.2.108"] },
-                { label: "Client Session Id", value: "VvKP********************" },
-                { label: "User Agent Original", value: "Mozilla/5.0 (iPhone; CPU iPhone OS 15_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/19H12 [FBAN/FBIOS;FBAV/492.0.0.101.111;FBBV/6703080455;FBDV/iPhone9,3;FBMD/iPhone;FBSN/iOS;FBSV/15.7;FBSS/2;FBID/phone;FBLC/en_US;FBOP/5]" },
-                { label: "Device", value: "iPhone" },
-                { label: "Location", value: "Madison, WI, United States" },
-                { label: "App", value: "Facebook for iOS" },
-                { label: "Session Type", value: "web" },
-                { label: "First Active", value: 1737486987, isTimestamp: true }
-              ]
-            },
-            {
-              entity_type: "app_registration",
-              title: "iPhone XR",
-              dateString: "Last Active: Feb 25, 2025",
-              icon: "mdi-cellphone-link",
-              formatted_attributes: [
-                { label: "Instance ID", value: "inst-fb-iphonexr-app" },
-                { label: "Model", value: "Apple iPhone XR" },
-                { label: "OS", value: "iOS 17.7.1" },
-                { label: "Type", value: "iPhone11,8" },
-                { label: "Os", value: "iPhone OS 17.7.1" },
-                { label: "Advertiser Id", value: "aa1960e5-d242-465a-ad74-7bade90a760e" },
-                { label: "Family Device Id", value: "5D8FAD5A****************************" },
-                { label: "Device Locale", value: "en_US" },
-                { label: "Push Tokens", value: [
-                  "Token 1: 8e63... (device_id: 5D8FAD5A-34A6-4644-98AA-CB0FC61CC46A, app_version: 492.0.0.101.111, os: 17.7.1, created: Jan 3, 2025)",
-                  "Token 2: db24... (device_id: 5D8FAD5A-34A6-4644-98AA-CB0FC61CC46A, app_version: 492.0.0.101.111, os: 17.7.1, created: Nov 14, 2024)"
-                ] },
-                { label: "First Active", value: 1731625326, isTimestamp: true },
-                { label: "Last Active", value: 1740458501, isTimestamp: true }
-              ]
-            },
-            {
-              entity_type: "app_registration",
-              title: "iPhone 7",
-              dateString: "Last Active: Jan 21, 2025",
-              icon: "mdi-cellphone-link",
-              formatted_attributes: [
-                { label: "Instance ID", value: "inst-fb-iphone7-alice-app" },
-                { label: "Model", value: "Apple iPhone 7" },
-                { label: "OS", value: "iOS 15.7" },
-                { label: "Type", value: "iPhone9,3" },
-                { label: "Os", value: "iPhone OS 15.7" },
-                { label: "Family Device Id", value: "D4A6E043****************************" },
-                { label: "Device Locale", value: "en_US" },
-                { label: "Update Time", value: "1737482144", isTimestamp: true }
-              ]
-            }
-          ],
-          unlinkedClusters: [
-            {
-              title: "iPhone (Generic)",
-              norm_client: "Facebook App",
-              dateString: "Jan 21, 2025 – Feb 20, 2025",
-              event_count: 16,
-              query: "app:fb_generic_ios"
-            },
-            {
-              title: "iPhone (Generic)",
-              norm_client: "Mobile Safari",
-              dateString: "Jun 8, 2025 – Jun 12, 2025",
-              event_count: 8,
-              query: "browser:safari_generic_ios"
-            }
-          ]
-        },
-        {
-          name: "google",
-          displayName: "Google",
-          accountLabel: "Alice (alice@gmail.com)",
-          icon: "mdi-google",
-          color: "#FD7EAC",
-          entries: [
-            {
-              entity_type: "platform_inferred_device",
-              title: "iPhone XR",
-              dateString: "Last Active: Feb 19, 2025",
-              icon: "mdi-account-clock-outline",
-              location: "US",
-              is_reduced_ua: false,
-              formatted_attributes: [
-                { label: "Device Type", value: "MOBILE" },
-                { label: "Brand Name", value: "Apple" },
-                { label: "Marketing Name", value: "iPhone XR" },
-                { label: "OS", value: "iOS" },
-                { label: "OS Version", value: "17.7.1" },
-                { label: "Device Model", value: "iPhone11,8" },
-                { label: "User Given Name", value: "iPhone" },
-                { label: "Device Last Location", value: "Country ISO: US\nLast Activity Time: 2025-02-19 14:40:00 UTC" }
-              ]
-            },
-            {
-              entity_type: "platform_inferred_device",
-              title: "iPhone (Generic)",
-              dateString: "Last Active: Feb 20, 2025",
-              icon: "mdi-account-clock-outline",
-              location: "US",
-              is_reduced_ua: true,
-              formatted_attributes: [
-                { label: "Device Type", value: "MOBILE" },
-                { label: "Brand Name", value: "Apple" },
-                { label: "Marketing Name", value: "iPhone" },
-                { label: "OS", value: "iOS" },
-                { label: "OS Version", value: "15.7" },
-                { label: "Device Model", value: "iPhone" },
-                { label: "User Given Name", value: "None" },
-                { label: "Device Last Location", value: "Country ISO: US\nLast Activity Time: 2025-02-20 21:58:55 UTC" }
-              ]
-            }
-          ],
-          unlinkedClusters: [
-            {
-              title: "iPhone (Generic)",
-              norm_client: "Google Chrome",
-              dateString: "Jan 21, 2025 – Feb 20, 2025",
-              event_count: 16,
-              query: "browser:chrome_ios"
-            },
-            {
-              title: "iPhone (Generic)",
-              norm_client: "Safari",
-              dateString: "Jun 8, 2025 – Jun 12, 2025",
-              event_count: 8,
-              query: "browser:safari_ios"
-            }
-          ]
-        }
-      ];
+    async fetchLiveData() {
+      try {
+        const db = await getDB();
+        
+        // Fetch platform uploads/accounts
+        const uploads = await db.exec("SELECT * FROM uploads", {
+          returnValue: 'resultRows',
+          rowMode: 'object'
+        });
+
+        const states = await getResolvedSessionsRegistrations();
+        const clusters = await getUnlinkedClusters();
+
+        const platformMeta = {
+          facebook: { displayName: 'Facebook', icon: 'mdi-facebook', color: '#5E75C2' },
+          google: { displayName: 'Google', icon: 'mdi-google', color: '#FD7EAC' },
+          apple: { displayName: 'Apple/iCloud', icon: 'mdi-apple', color: '#000000' },
+          discord: { displayName: 'Discord', icon: 'mdi-discord', color: '#5865F2' },
+          instagram: { displayName: 'Instagram', icon: 'mdi-instagram', color: '#E1306C' }
+        };
+
+        const entityIcons = {
+          session: 'mdi-cookie-outline',
+          app_registration: 'mdi-cellphone-link',
+          hardware_registration: 'mdi-cellphone',
+          platform_inferred_device: 'mdi-account-clock-outline'
+        };
+
+        const formatDate = (dateStr) => {
+          if (!dateStr) return null;
+          try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return null;
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          } catch (e) {
+            return null;
+          }
+        };
+
+        this.platforms = uploads.map(upload => {
+          const platformKey = (upload.platform || '').toLowerCase();
+          const meta = platformMeta[platformKey] || { displayName: upload.platform, icon: 'mdi-account', color: '#757575' };
+
+          // Filter states belonging to this upload
+          const uploadEntries = states
+            .filter(s => s.upload_id === upload.id)
+            .map(s => {
+              const firstSeen = s.attributes.created_timestamp || s.attributes.first_seen_time || s.attributes.device_added_date;
+              const lastSeen = s.attributes.updated_timestamp || s.attributes.last_seen_time || s.attributes.device_last_heartbeat_timestamp;
+              
+              let dateString = '';
+              const firstStr = formatDate(firstSeen);
+              const lastStr = formatDate(lastSeen);
+              if (firstStr && lastStr && firstStr !== lastStr) {
+                dateString = `Active ${firstStr} – ${lastStr}`;
+              } else if (lastStr) {
+                dateString = `Last Active: ${lastStr}`;
+              } else if (firstStr) {
+                dateString = `Active: ${firstStr}`;
+              }
+
+              const location = s.attributes.location || s.attributes.device_last_location || '';
+
+              const formattedAttrs = Object.entries(s.attributes)
+                .filter(([k, v]) => !k.startsWith('norm__') && v !== null && v !== '')
+                .map(([k, v]) => {
+                  let valStr = String(v);
+                  if (typeof v === 'object') {
+                    valStr = JSON.stringify(v, null, 2);
+                  }
+                  const label = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                  return { label, value: valStr };
+                });
+
+              return {
+                id: s.id,
+                entity_type: s.entity_type,
+                title: s.model_name,
+                client_name: s.client_name,
+                icon: entityIcons[s.entity_type] || 'mdi-devices',
+                dateString,
+                location,
+                is_reduced_ua: s.is_reduced_ua,
+                has_trusted_cookie: s.has_trusted_cookie,
+                has_passkey: s.has_passkey,
+                registration_device: s.registration_device,
+                event_count: s.event_count,
+                events_query: s.events_query,
+                formatted_attributes: formattedAttrs
+              };
+            });
+
+          // Separate into distinct sections
+          const sessions = uploadEntries.filter(e => e.entity_type === 'session');
+          const appRegistrations = uploadEntries.filter(e => e.entity_type === 'app_registration');
+          const hardwareRegistrations = uploadEntries.filter(e => e.entity_type === 'hardware_registration');
+
+          // Filter clusters belonging to this upload and query by instance ID
+          const uploadClusters = clusters
+            .filter(c => c.upload_id === upload.id)
+            .map(c => {
+              const title = c.norm_client ? `${c.norm_client} (${c.title})` : c.title;
+              return {
+                ...c,
+                title,
+                query: c.query
+              };
+            });
+
+          return {
+            displayName: meta.displayName,
+            accountLabel: upload.given_name || 'Primary Account',
+            icon: meta.icon,
+            color: meta.color,
+            sessions,
+            appRegistrations,
+            hardwareRegistrations,
+            unlinkedClusters: uploadClusters
+          };
+        });
+
+      } catch (err) {
+        console.error('Error fetching live DB data for mockup:', err);
+      }
     }
   }
 }
@@ -467,5 +492,8 @@ export default {
   background-color: #fafafa;
   border: 1px dashed #bdbdbd !important;
   border-radius: 8px;
+}
+.italic {
+  font-style: italic;
 }
 </style>

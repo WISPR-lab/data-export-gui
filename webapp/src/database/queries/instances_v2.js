@@ -1,0 +1,45 @@
+// added for WISPR-lab/data-export-gui
+import { getDB } from '../index.js';
+import { hexColor } from '@/utils/hex.js';
+
+export async function getUnlinkedClusters() {
+  const db = await getDB();
+  
+  const sql = `
+    SELECT di.*, u.color as upload_color, u.platform as upload_platform
+    FROM device_instances di
+    LEFT JOIN uploads u ON di.upload_id = u.id
+  `;
+  
+  const rows = await db.exec(sql, {
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+
+  const formatDate = (ts) => {
+    if (!ts) return '';
+    const date = new Date(ts * 1000);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  return rows.map(row => {
+    let start = formatDate(row.first_seen);
+    let end = formatDate(row.last_seen);
+    let dateStr = start;
+    if (start && end && start !== end) {
+      dateStr = `${start} – ${end}`;
+    }
+
+    return {
+      id: row.id,
+      upload_id: row.upload_id,
+      platform: row.upload_platform,
+      title: row.model || 'Unknown Device',
+      norm_client: row.client_name,
+      dateString: dateStr || 'Unknown Date',
+      event_count: row.event_count || 0,
+      query: `device_instance_id:${row.id}`,
+      upload_color: hexColor(row.upload_color)
+    };
+  });
+}
