@@ -32,7 +32,7 @@ limitations under the License.
   </div>
   <div v-else id="tsLeftPanelEventTypes">
     <div
-      :style="eventMessages && eventMessages.length ? 'cursor: pointer' : ''"
+      :style="eventTypes && eventTypes.length ? 'cursor: pointer' : ''"
       class="pa-4"
       id="tsLeftPanelEventTypesHeader"
       @click="toggleExpand"
@@ -44,14 +44,14 @@ limitations under the License.
         <!-- <small v-if="eventActions"
           ><strong>{{ eventActions.length }}</strong></small
          > -->
-        <small v-if="eventMessages"
-          ><strong>{{ eventMessages.length }}</strong></small
+        <small v-if="eventTypes"
+          ><strong>{{ eventTypes.length }}</strong></small
         >
       </span>
     </div>
 
     <v-expand-transition>
-      <div v-show="expanded && eventMessages.length" class="pl-8 pr-4 pb-4">
+      <div v-show="expanded && eventTypes.length" class="pl-8 pr-4 pb-4">
         <ts-data-types-list></ts-data-types-list>
       </div>
     </v-expand-transition>
@@ -75,7 +75,7 @@ export default {
     return {
       expanded: false,
       // eventActions: [],
-      eventMessages: [],
+      eventTypes: [],
     }
   },
   computed: {
@@ -86,22 +86,22 @@ export default {
   watch: {
     project: {
       async handler() {
-        await this.loadEventMessages()
+        await this.loadEventTypes()
       },
       deep: true
     }
   },
   methods: {
-    async loadEventMessages() {
+    async loadEventTypes() {
       try {
-        this.eventMessages = await DB.getEventMessages();
+        this.eventTypes = await DB.getEventTypes();
       } catch (e) {
-        console.error('Error loading event messages:', e)
-        this.eventMessages = []
+        console.error('Error loading event types:', e)
+        this.eventTypes = []
       }
     },
     toggleExpand() {
-      if (this.eventMessages && this.eventMessages.length) {
+      if (this.eventTypes && this.eventTypes.length) {
         this.expanded = !this.expanded
         if (this.expanded && this.$store.state.demoMode) {
           EventBus.$emit('demo:action', 'event-types-expanded')
@@ -116,7 +116,7 @@ export default {
     }
   },
   async mounted() {
-    await this.loadEventMessages()
+    await this.loadEventTypes()
 
     EventBus.$on('demo:collapse-event-types', this.handleCollapse)
     EventBus.$on('demo:expand-event-types', this.handleExpand)

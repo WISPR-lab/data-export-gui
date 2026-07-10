@@ -213,7 +213,7 @@ export const getStepDefinitions = () => [
         await controller.basicInitialize(store)
         EventBus.$emit('demo:expand-event-types')
         EventBus.$emit('setQueryAndFilter', {
-            queryString: 'message:"Successful login"',
+            queryString: 'event_type_msg:"Successful login"',
             doSearch: true
         })
     }
@@ -228,7 +228,7 @@ export const getStepDefinitions = () => [
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         EventBus.$emit('setQueryAndFilter', {
-            queryString: 'message:"Successful login"',
+            queryString: 'event_type_msg:"Successful login"',
             doSearch: true
         })
     }
@@ -244,7 +244,7 @@ export const getStepDefinitions = () => [
     onEnter: async (controller, store, isForward) => {
         await controller.basicInitialize(store)
         EventBus.$emit('setQueryAndFilter', {
-            queryString: 'message:"Successful login"',
+            queryString: 'event_type_msg:"Successful login"',
             doSearch: true
         })
     }

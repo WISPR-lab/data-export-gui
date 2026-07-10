@@ -19,12 +19,12 @@ limitations under the License.
 <template>
   <div id="tsLeftPanelEventTypesList">
     <v-data-iterator
-      :items="eventMessages"
+      :items="eventTypes"
       :items-per-page.sync="itemsPerPage"
       :search="search"
-      :hide-default-footer="eventMessages.length <= itemsPerPage"
+      :hide-default-footer="eventTypes.length <= itemsPerPage"
     >
-      <template v-slot:header v-if="eventMessages.length > itemsPerPage">
+      <template v-slot:header v-if="eventTypes.length > itemsPerPage">
         <v-toolbar flat>
           <v-text-field
             v-model="search"
@@ -47,13 +47,13 @@ limitations under the License.
         > -->
         <div
           v-for="msg in props.items"
-          :key="msg.message"
-          @click="setQueryAndFilter(msg.message)"
+          :key="msg.event_type_msg"
+          @click="setQueryAndFilter(msg.event_type_msg)"
           style="cursor: pointer; font-size: 0.9em"
         >
           <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
             <span
-              >{{ msg.message }} (<small
+              >{{ msg.event_type_msg }} (<small
                 ><strong>{{ msg.count | compactNumber }}</strong></small
               >)</span
             >
@@ -75,11 +75,11 @@ export default {
       itemsPerPage: 10,
       search: '',
       // actions: [],
-      messages: [],
+      event_types: [],
     }
   },
   async mounted() {
-    await this.loadMessages()
+    await this.loadEventTypes()
   },
   computed: {
     project() {
@@ -88,34 +88,34 @@ export default {
     // eventActions() {
     //   return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
     // },
-    eventMessages() {
-      return [...this.messages].sort((a, b) => a.message.localeCompare(b.message))
+    eventTypes() {
+      return [...this.event_types].sort((a, b) => a.event_type_msg.localeCompare(b.event_type_msg))
     },
   },
   watch: {
     project: {
       async handler() {
-        await this.loadMessages()
+        await this.loadEventTypes()
       },
       deep: true
     }
   },
   methods: {
-    async loadMessages() {
+    async loadEventTypes() {
       try {
         // this.actions = await DB.getEventActions()
-        this.messages = await DB.getEventMessages()
+        this.event_types = await DB.getEventTypes()
       } catch (e) {
         console.error('Error loading event actions:', e)
         // this.actions = []
-        this.messages = []
+        this.event_types = []
       }
     },
     setQueryAndFilter(action) {
       let eventData = {}
       eventData.doSearch = true
       eventData.chip = {
-        field: 'message',
+        field: 'event_type_msg',
         value: action,
         type: 'term',
         operator: 'must',
