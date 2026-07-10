@@ -247,7 +247,7 @@ CREATE VIEW IF NOT EXISTS v_event_field_mappings AS
 -- static columns
 SELECT 'id' AS field, 'text' AS type
 UNION SELECT 'timestamp', 'timestamp'
-UNION SELECT 'message', 'text'
+UNION SELECT 'event_type_msg', 'text'
 UNION SELECT 'event_category', 'category'
 UNION SELECT 'event_action', 'text'
 UNION SELECT 'event_kind', 'category'

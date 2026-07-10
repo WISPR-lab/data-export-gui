@@ -68,7 +68,17 @@ def group(upload_id: str, db_path: str = None) -> None:
             "SELECT id, upload_id, entity_type, origin, attributes FROM devices_raw WHERE upload_id = ?",
             (upload_id,),
         ).fetchall()
-        resolved_sessions_registration_rows = resolve(raw_rows)
+        
+        event_rows = conn.execute(
+            """
+            SELECT id, upload_id, origin, timestamp, attributes 
+            FROM events 
+            WHERE upload_id = ? AND json_extract(attributes, '$.client_session_id') IS NOT NULL
+            """,
+            (upload_id,),
+        ).fetchall()
+        
+        resolved_sessions_registration_rows = resolve(raw_rows, event_rows)
 
         if not resolved_sessions_registration_rows:
             print(f"No resolved sessions or registrations found for upload_id: {upload_id}")

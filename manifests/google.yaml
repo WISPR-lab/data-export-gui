@@ -243,7 +243,7 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "session"
+      entity.type: "platform_inferred_device"
     fields:
       - {target: "entity.last_seen_timestamp", source: "Last Activity Time", type: "datetime"} # TODO
       - {target: "device.manufacturer", source: "Brand Name", type: "string"}

@@ -1,8 +1,9 @@
 # added for WISPR-lab/data-export-gui
 import json
+from datetime import datetime, timezone
 from utils.redaction_utils import compare_redacted_vals
 
-def resolve(raw_rows: list[dict]) -> list[dict]:
+def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
     """
     Builds the session and registration list for the Devices View.
     
@@ -10,7 +11,71 @@ def resolve(raw_rows: list[dict]) -> list[dict]:
     and registered Apple devices with passkeys sharing a device_serial_number.
     """
     devices = _parsed_devices(raw_rows)
-    
+    events = _parsed_events(event_rows)
+
+    # Group events by client_session_id
+    session_events = {}
+    for ev in events:
+        sid = ev["attributes"].get("client_session_id")
+        if not sid:
+            continue
+        if sid not in session_events:
+            session_events[sid] = []
+        session_events[sid].append(ev)
+
+    # Synthesize sessions from events history if not present in raw devices
+    raw_sids = {
+        d["attributes"].get("client_session_id")
+        for d in devices
+        if d["entity_type"] == "session" and d["attributes"].get("client_session_id")
+    }
+
+    for sid, evs in session_events.items():
+        if sid not in raw_sids:
+            first_ev = min(evs, key=lambda e: e["timestamp"])
+            attrs = {"client_session_id": sid, "inactive": True}
+            for k in ("device_model_name", "norm__model_name", "model",
+                      "user_agent_client_name", "norm__client_name", "client_name",
+                      "user_agent_os_full", "norm__os_name", "os_name",
+                      "os_version", "norm__os_version",
+                      "norm__os_type", "os_type", "user_agent_original", "user_agent"):
+                for ev in evs:
+                    if k in ev["attributes"]:
+                        attrs[k] = ev["attributes"][k]
+                        break
+
+            devices.append({
+                "id": f"synthetic_session_{sid}",
+                "upload_id": first_ev["upload_id"],
+                "entity_type": "session",
+                "origin": first_ev["origin"],
+                "attributes": attrs
+            })
+
+    # Bolster session timestamps with event boundaries (widest bound).
+    # ponytail: assumes timestamps are UTC ISO strings as stored; no epoch conversion needed.
+    for d in devices:
+        if d["entity_type"] != "session":
+            continue
+        sid = d["attributes"].get("client_session_id")
+        if not sid or sid not in session_events:
+            continue
+
+        evs = session_events[sid]
+        min_ev_ts = min(e["timestamp"] for e in evs)
+        max_ev_ts = max(e["timestamp"] for e in evs)
+
+        attrs = d["attributes"]
+        curr_first = attrs.get("entity_first_seen_timestamp")
+        curr_last = attrs.get("entity_last_seen_timestamp")
+
+        # Widen bounds: event timestamps win if they extend the range
+        final_first = min(curr_first, min_ev_ts) if curr_first else min_ev_ts
+        final_last = max(curr_last, max_ev_ts) if curr_last else max_ev_ts
+
+        attrs["entity_first_seen_timestamp"] = final_first
+        attrs["entity_last_seen_timestamp"] = final_last
+
     passkeys = [d for d in devices if d["entity_type"] == "passkey_registration"]
     cookies = [d for d in devices if d["entity_type"] == "trusted_cookie"]
 
@@ -31,11 +96,9 @@ def resolve(raw_rows: list[dict]) -> list[dict]:
                     break
                     
             if dev_key:
-                # Group strictly by (entity_type, dev_key) to prevent cross-type merging
                 group_key = (entity_type, dev_key)
                 if group_key in registrations:
-                    existing = registrations[group_key]
-                    existing["attributes"].update(d["attributes"])
+                    registrations[group_key]["attributes"].update(d["attributes"])
                 else:
                     registrations[group_key] = d
             else:
@@ -43,7 +106,6 @@ def resolve(raw_rows: list[dict]) -> list[dict]:
         else:
             other_devices.append(d)
 
-    # Combine deduplicated registrations and other devices
     filtered_devices = list(registrations.values()) + other_devices
 
     rows = []
@@ -76,7 +138,7 @@ def resolve(raw_rows: list[dict]) -> list[dict]:
             "model_name": attrs.get("device_model_name") or attrs.get("norm__model_name") or attrs.get("model"),
             "client_name": attrs.get("user_agent_client_name") or attrs.get("norm__client_name") or attrs.get("client_name"),
             "os_name": attrs.get("user_agent_os_full") or attrs.get("norm__os_name") or attrs.get("os_name"),
-            "os_version": attrs.get("os_version") or attrs.get("norm__os_version") or attrs.get("os_version"),
+            "os_version": attrs.get("os_version") or attrs.get("norm__os_version"),
             "os_type": attrs.get("norm__os_type") or attrs.get("os_type"),
             "attributes": json.dumps(attrs),
             "is_reduced_ua": 1 if "mobile/15e148" in str(attrs.get("user_agent_original") or "").lower() else 0,
@@ -103,6 +165,27 @@ def _parsed_devices(raw_rows: list[dict]) -> list[dict]:
             "upload_id": r["upload_id"],
             "entity_type": r["entity_type"],
             "origin": r["origin"],
+            "attributes": attrs
+        })
+    return parsed
+
+
+def _parsed_events(event_rows: list[dict]) -> list[dict]:
+    parsed = []
+    if not event_rows:
+        return parsed
+    for r in event_rows:
+        attrs = {}
+        if r["attributes"]:
+            try:
+                attrs = json.loads(r["attributes"]) if isinstance(r["attributes"], str) else r["attributes"]
+            except Exception:
+                pass
+        parsed.append({
+            "id": r["id"],
+            "upload_id": r["upload_id"],
+            "origin": r["origin"],
+            "timestamp": r["timestamp"],
             "attributes": attrs
         })
     return parsed

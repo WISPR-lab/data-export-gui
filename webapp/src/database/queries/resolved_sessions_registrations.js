@@ -2,6 +2,19 @@
 import { getDB } from '../index.js';
 import { hexColor } from '@/utils/hex.js';
 
+// Coerce epoch-zero timestamps to null so they never surface in the UI.
+// Handles: 0, "0", 0.0, ISO strings starting with "1970-01-01".
+function nullTs(val) {
+  if (val === null || val === undefined) return null;
+  var s = String(val).trim();
+  if (s === '0' || s === '0.0' || s === '' || s.indexOf('1970-01-01') === 0) return null;
+  var n = Number(val);
+  if (!isNaN(n) && n === 0) return null;
+  return val;
+}
+
+var EPOCH_ZERO_KEYS = ['entity_first_seen_timestamp', 'entity_last_seen_timestamp', 'timestamp'];
+
 export async function getResolvedSessionsRegistrations() {
   const db = await getDB();
   
@@ -27,6 +40,11 @@ export async function getResolvedSessionsRegistrations() {
         attrs = {};
       }
     }
+
+    // Nullify epoch-zero on known timestamp keys in the attrs blob
+    EPOCH_ZERO_KEYS.forEach(function(k) {
+      if (k in attrs) attrs[k] = nullTs(attrs[k]);
+    });
 
     const cookieVal = attrs['client_session_id'];
     const serialVal = attrs['device_serial_number'];
@@ -78,6 +96,7 @@ export async function getResolvedSessionsRegistrations() {
       os_version: row.os_version,
       os_type: row.os_type,
       is_reduced_ua: !!row.is_reduced_ua,
+      user_agent_original: attrs['user_agent_original'] || null,
       has_trusted_cookie: !!row.has_trusted_cookie,
       trusted_cookie_id: row.trusted_cookie_id,
       has_passkey: !!row.has_passkey,
@@ -92,4 +111,3 @@ export async function getResolvedSessionsRegistrations() {
 
   return resolved;
 }
-
