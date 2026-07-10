@@ -275,7 +275,7 @@ export function buildOrderClause(options = {}) {
   const order = (options.order || 'desc').toUpperCase();
   const orderBy = options.orderBy || 'timestamp';
   
-  const allowedColumns = ['timestamp', 'id', 'message', 'category'];
+  const allowedColumns = ['timestamp', 'id', 'event_type_msg', 'category'];
   const column = allowedColumns.includes(orderBy) ? orderBy : 'timestamp';
   const direction = ['ASC', 'DESC'].includes(order) ? order : 'DESC';
   

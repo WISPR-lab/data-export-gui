@@ -225,7 +225,7 @@ export default {
       countPerDataExport: {},
       currentItemsPerPage: 40,
       timeFilterMenu: false,
-      selectedFields: [{ field: 'message', type: 'text' }],
+      selectedFields: [{ field: 'event_type_msg', type: 'text' }],
       showRightSidePanel: false,
       addManualEvent: false,
       datetimeManualEvent: '',
@@ -587,7 +587,7 @@ export default {
       this.currentQueryString = node.query_string
       this.currentQueryFilter = JSON.parse(node.query_filter)
       if (!this.currentQueryFilter.fields || !this.currentQueryFilter.fields.length) {
-        this.currentQueryFilter.fields = [{ field: 'message', type: 'text' }]
+        this.currentQueryFilter.fields = [{ field: 'event_type_msg', type: 'text' }]
       }
       this.selectedFields = this.currentQueryFilter.fields
       if (this.currentQueryFilter.uploadIds[0] === '_all' || this.currentQueryFilter.uploadIds === '_all') {

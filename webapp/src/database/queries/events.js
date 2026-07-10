@@ -24,7 +24,7 @@ export async function searchEvents(queryString = '', filter = {}) {
   /* Builds WHERE/ORDER/PAGINATION, batch-resolves file refs and raw_data line numbers, returns Elasticsearch-shaped {_id, _index, _source} hit objects. */
   const db = await getDB();
   
-  const stringColumns = ['e.id', 'e.upload_id', 'e.message', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id', 'u.platform'];
+  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id', 'u.platform'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
@@ -35,7 +35,7 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.id, 
       e.upload_id, 
       e.timestamp, 
-      e.message, 
+      e.event_type_msg, 
       e.attributes, 
       e.tags, 
       e.labels,
@@ -210,13 +210,13 @@ export async function getEventActions() {
 }
 
 
-export async function getEventMessages() {
+export async function getEventTypes() {
   const db = await getDB();
   const sql = `
-    SELECT message, COUNT(*) as count 
+    SELECT event_type_msg, COUNT(*) as count 
     FROM events 
-    WHERE message IS NOT NULL AND message != ''
-    GROUP BY message 
+    WHERE event_type_msg IS NOT NULL AND event_type_msg != ''
+    GROUP BY event_type_msg 
     ORDER BY count DESC
   `;
   
@@ -225,11 +225,11 @@ export async function getEventMessages() {
     rowMode: 'object'
   });
   if (rows.length === 0) {
-      console.warn('[getEventMessages] No event messages found in the database.');
+      console.warn('[getEventTypes] No event type messages found in the database.');
   }
 
   return rows.map(row => ({
-    message: row.message,
+    event_type_msg: row.event_type_msg,
     count: row.count
   }));
 }
@@ -389,7 +389,7 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
     ...attributes,
     primary_timestamp: row.timestamp,
     timestamp: row.timestamp,
-    message: row.message,
+    event_type_msg: row.event_type_msg,
     category: eventCategory,
     type: eventType,
     event_action: row.event_action,

@@ -214,7 +214,7 @@ limitations under the License.
 
                     <v-card-actions>
                       <v-spacer></v-spacer>
-                      <v-btn text @click="selectedFields = [{ field: 'message', type: 'text' }]"> Reset </v-btn>
+                      <v-btn text @click="selectedFields = [{ field: 'event_type_msg', type: 'text' }]"> Reset </v-btn>
                       <v-btn text color="primary" @click="columnDialog = false"> Set columns </v-btn>
                     </v-card-actions>
                   </v-card>
@@ -439,12 +439,13 @@ limitations under the License.
                   v-if="
                     displayOptions.showTags &&
                     // index === 3 &&
-                    (field.text === 'message' || (index === 4 && headers[3].value === '_source.comment')) &&
+                    (field.text === 'event_type_msg' || (index === 4 && headers[3].value === '_source.comment')) &&
                     (item._source.tags && item._source.tags.length > 0)
                   "
                 >
                   <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
+                
                 
                 <span>{{ item._source[field.text] }}</span>
               </span>
@@ -496,7 +497,7 @@ limitations under the License.
           </template>
 
           <!-- Comment field -->
-          <template v-slot:item._source.comment="{ item }">
+          <!-- <template v-slot:item._source.comment="{ item }">
             <div class="d-inline-block">
               <v-btn icon small @click="toggleDetailedEvent(item)" v-if="item._source.comment && item._source.comment.length">
                 <v-badge :offset-y="10" :offset-x="10" bordered :content="item._source.comment.length">
@@ -518,7 +519,7 @@ limitations under the License.
                 <v-icon title="Close comments"> mdi-comment-remove-outline </v-icon>
               </v-btn>
             </div>
-          </template>
+          </template> -->
         </v-data-table>
       </div>
     </div>
@@ -620,7 +621,7 @@ export default {
       isSummaryLoading: false,
       currentItemsPerPage: this.itemsPerPage,
       expandedRows: [],
-      selectedFields: [{ field: 'message', type: 'text' }],
+      selectedFields: [{ field: 'event_type_msg', type: 'text' }],
       searchColumns: '',
       columnDialog: false,
       saveSearchMenu: false,
@@ -724,21 +725,21 @@ export default {
           width: '200',
           sortable: true,
         },
-        {
-          value: '_source.comment',
-          width: '40',
-          sortable: false,
-        },
+        // {
+        //   value: '_source.comment',
+        //   width: '40',
+        //   sortable: false,
+        // },
       ]
       let extraHeaders = []
       this.selectedFields.forEach((field) => {
         let header = {
-          text: field.field,
+          text: field.field !== 'event_type_msg' ? field.field : 'Event Type',
           align: 'start',
           value: '_source.' + field.field,
           sortable: false,
         }
-        if (field.field === 'message') {
+        if (field.field === 'event_type_msg') {
           header.width = '100%'
           // header.text = 'Event Type'
           extraHeaders.unshift(header)
