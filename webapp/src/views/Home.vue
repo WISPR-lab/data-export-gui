@@ -41,12 +41,35 @@
       </div>
 
 
-      <div class="mb-20">
+      <div class="mb-16">
         <img :src="heroScreenshot" alt="Dashboard screenshot" class="screenshot card-shadow" />
       </div>
-      <v-alert color="primary" dense class="font-weight-medium mt-10 mb-10 text-center white--text"><span>
+      <v-alert color="primary" dense class="font-weight-medium mb-0 text-center white--text alert-top-rounded"><span>
         LEStrADE is an academic tool in early beta. We welcome feedback to help us improve the tool on GitHub!
       </span></v-alert>
+
+      <div class="mt-0 mb-16">
+        <v-card color="grey lighten-5" class="card-shadow pa-8">
+          <h3 class="text-h5 font-weight-medium secondary--text mb-6 text-center">Supported Platforms</h3>
+          <v-row>
+            <v-col v-for="tierGroup in platformTiers" :key="tierGroup.tier" cols="12" sm="6">
+              <p class="text-body2 secondary--text mb-4 text-center font-weight-medium">{{ tierGroup.tier }}</p>
+              <div class="d-flex flex-wrap gap-2 justify-center">
+                <v-chip
+                  v-for="platform in tierGroup.platforms"
+                  :key="platform.name"
+                  outlined
+                  :to="platform.routeName ? { name: 'HowToRequest', query: { tab: platform.routeName } } : null"
+                >
+                  <DiscordIcon v-if="platform.name === 'Discord'" size="14px" margin-right="6px" />
+                  <v-icon v-else small left>{{ platform.icon }}</v-icon>
+                  {{ platform.name }}
+                </v-chip>
+              </div>
+            </v-col>
+          </v-row>
+        </v-card>
+      </div>
 
       <div class="mb-20">
         <v-card class="card-shadow pa-10 pl-16 pr-16 mb-4">
@@ -123,28 +146,6 @@
         </v-card> -->
       </div>
 
-      <div class="mt-16 mb-20">
-        <v-card color="grey lighten-5" class="card-shadow pa-8">
-          <h3 class="text-h5 font-weight-medium secondary--text mb-6 text-center">Supported Platforms</h3>
-          <v-row>
-            <v-col v-for="tierGroup in platformTiers" :key="tierGroup.tier" cols="12" sm="6">
-              <p class="text-body2 secondary--text mb-4 text-center font-weight-medium">{{ tierGroup.tier }}</p>
-              <div class="d-flex flex-wrap gap-2 justify-center">
-                <v-chip
-                  v-for="platform in tierGroup.platforms"
-                  :key="platform.name"
-                  outlined
-                >
-                  <DiscordIcon v-if="platform.name === 'Discord'" size="14px" margin-right="6px" />
-                  <v-icon v-else small left>{{ platform.icon }}</v-icon>
-                  {{ platform.name }}
-                </v-chip>
-              </div>
-            </v-col>
-          </v-row>
-        </v-card>
-      </div>
-
       <v-divider class="my-8"></v-divider>
       <footer class="py-4 text-center">
         <p class="text-caption secondary--text mb-0">
@@ -186,17 +187,17 @@ export default {
         {
           tier: 'Fully Supported',
           platforms: [
-            { name: 'Google', icon: 'mdi-google' },
-            { name: 'Facebook', icon: 'mdi-facebook' },
+            { name: 'Google', icon: 'mdi-google', routeName: 'google' },
+            { name: 'Facebook', icon: 'mdi-facebook', routeName: 'facebook' },
           ]
         },
         {
           tier: 'Beta',
           platforms: [
-            { name: 'Instagram', icon: 'mdi-instagram' },
-            { name: 'Snapchat', icon: 'mdi-snapchat' },
-            { name: 'Discord', icon: 'mdi-discord' },
-            { name: 'Apple', icon: 'mdi-apple' },
+            { name: 'Instagram', icon: 'mdi-instagram', routeName: 'facebook' },
+            { name: 'Snapchat', icon: 'mdi-snapchat', routeName: 'snapchat' },
+            { name: 'Discord', icon: 'mdi-discord', routeName: 'discord' },
+            { name: 'Apple', icon: 'mdi-apple' , routeName: 'apple' },
           ]
         },
       ],
@@ -221,6 +222,10 @@ export default {
   border-radius: 8px;
   border: 1px solid #e0e0e0 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.alert-top-rounded {
+  border-radius: 4px 4px 0 0 !important;
 }
 
 .screenshot {

@@ -101,12 +101,15 @@ export default {
   data() {
     return {
       instructionRegistry,
-      selectedPlatform: instructionRegistry.google,
+      selectedPlatform: instructionRegistry[this.$route.query.tab] || instructionRegistry.google,
       platforms: Object.values(instructionRegistry).map(platform => ({
         id: platform.id,
         name: platform.name
       }))
     }
+  },
+  mounted() {
+    window.scrollTo({ top: 0 })
   },
   computed: {
     displayedSteps() {
