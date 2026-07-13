@@ -44,9 +44,25 @@
       <div class="mb-16">
         <img :src="heroScreenshot" alt="Dashboard screenshot" class="screenshot card-shadow" />
       </div>
-      <v-alert color="primary" dense class="font-weight-medium mb-0 text-center white--text alert-top-rounded"><span>
-        LEStrADE is an academic tool in early beta. We welcome feedback to help us improve the tool on GitHub!
-      </span></v-alert>
+
+      <v-alert color="primary" dense class="font-weight-medium mb-0 text-center white--text alert-top-rounded">
+        <div class="d-flex flex-wrap justify-center align-center gap-2">
+          <span>LEStrADE is an academic tool in early beta. We welcome feedback to help us improve the tool on GitHub!</span>
+          <v-btn
+            outlined
+            small
+            rounded
+            color="white"
+            href="https://github.com/WISPR-lab/data-export-gui/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ml-2"
+          >
+            <v-icon left small>mdi-github</v-icon>
+            GitHub
+          </v-btn>
+        </div>
+      </v-alert>
 
       <div class="mt-0 mb-16">
         <v-card color="grey lighten-5" class="card-shadow pa-8">
