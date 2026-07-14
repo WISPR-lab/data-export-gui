@@ -24,6 +24,21 @@
                     <span>See events with this IP address</span>
                   </v-tooltip>
                 </template>
+                <template v-else-if="isSessionIdAttribute(attr.label)">
+                  <v-tooltip bottom open-delay="400">
+                    <template v-slot:activator="{ on, attrs }">
+                      <a
+                        v-bind="attrs"
+                        v-on="on"
+                        class="ip-link"
+                        @click.stop="goToEventsSession(item)"
+                      >
+                        {{ item }}
+                      </a>
+                    </template>
+                    <span>See events with this session ID</span>
+                  </v-tooltip>
+                </template>
                 <span v-else-if="attr.isTimestamp">{{ item | longDateTimeLocal }}</span>
                 <span v-else>{{ item | formatDeviceDetails }}</span>
                 <span v-if="idx < getDisplayValue(attr).length - 1" style="margin-right: 6px;">,</span>
@@ -113,8 +128,19 @@ export default {
         query: { q: queryString }
       });
     },
+    goToEventsSession(sessionId) {
+      const queryString = `cookie:${sessionId}`;
+      const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
+      this.$router.push({
+        name: routeName,
+        query: { q: queryString }
+      });
+    },
     isIPAttribute(label) {
       return label && /\bips?\b/i.test(label);
+    },
+    isSessionIdAttribute(label) {
+      return label && /session\s*id/i.test(label);
     },
     isOSAttribute(label) {
       return label && /\bos\b/i.test(label);
