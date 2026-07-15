@@ -1,6 +1,7 @@
 // added for WISPR-lab/data-export-gui
 import { getDB } from '../index.js';
 import { hexColor } from '@/utils/hex.js';
+import { getUASummary } from './ua_summary.js';
 
 export async function getUnlinkedClusters() {
   const db = await getDB();
@@ -30,15 +31,21 @@ export async function getUnlinkedClusters() {
       dateStr = `${start} – ${end}`;
     }
 
+    var summary = getUASummary([row])[0] || {};
+    var clientLabel = summary.primary ? (summary.primary + (summary.secondary ? ' (' + summary.secondary + ')' : '')) : row.client_name;
+
     return {
       id: row.id,
       upload_id: row.upload_id,
       platform: row.upload_platform,
       title: row.model || 'Unknown Device',
-      norm_client: row.client_name,
+      norm_client: clientLabel,
+      os_type: row.os_type || null,
+      first_seen: row.first_seen || null,
+      last_seen: row.last_seen || null,
       dateString: dateStr || 'Unknown Date',
       event_count: row.event_count || 0,
-      query: `device_instance_id:${row.id}`,
+      query: 'device_instance_id:' + row.id,
       upload_color: hexColor(row.upload_color)
     };
   });

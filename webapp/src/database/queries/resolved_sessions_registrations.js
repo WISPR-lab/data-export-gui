@@ -65,7 +65,7 @@ export async function getResolvedSessionsRegistrations() {
     let eventCount = 0;
 
     if (cookieVal) {
-      eventsQuery = `cookie:${cookieVal}`;
+      eventsQuery = `client_session_id:"${cookieVal}"`;
       const pattern = String(cookieVal).replace(/\*/g, '%');
       const countSql = `
         SELECT COUNT(*) as count
@@ -81,7 +81,7 @@ export async function getResolvedSessionsRegistrations() {
       eventCount = (countRes && countRes[0]) ? countRes[0].count : 0;
 
     } else if (serialVal) {
-      eventsQuery = `serial:${serialVal}`;
+      eventsQuery = `device_serial_number:"${serialVal}"`;
       const pattern = String(serialVal).replace(/\*/g, '%');
       const countSql = `
         SELECT COUNT(*) as count

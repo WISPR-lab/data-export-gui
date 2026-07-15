@@ -129,7 +129,7 @@ export default {
       });
     },
     goToEventsSession(sessionId) {
-      const queryString = `cookie:${sessionId}`;
+      const queryString = `client_session_id:"${sessionId}"`;
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
       this.$router.push({
         name: routeName,
