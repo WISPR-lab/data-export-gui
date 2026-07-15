@@ -109,7 +109,7 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "host"]
       event.type: ["info"]
-      entity.type: "authenticated_device"
+      entity.type: "session"
     fields:
       - {target: "entity.last_seen_timestamp", source: "string_map_data.'Last Login'.timestamp", type: "datetime"}
       - {target: "user_agent.original", source: "string_map_data.'User Agent'.value", type: "string"}

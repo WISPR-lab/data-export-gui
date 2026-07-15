@@ -70,7 +70,7 @@ export class OPFSManager {
           const escaped = p.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
           const withWildcard = escaped.replace(/\\\*/g, '.*');
           const regex = new RegExp(`(^|/)${withWildcard}$`, 'i');
-          console.log(`[WHITELIST] Pattern: "${p}" -> Regex: ${regex}`);
+          // console.log(`[WHITELIST] Pattern: "${p}" -> Regex: ${regex}`);
           return regex;
         });
       } catch (err) {
@@ -116,7 +116,7 @@ export class OPFSManager {
         totalSeen++;
         if (this.isWhitelisted(file.name)) {
           totalAccepted++;
-          console.log(`[WHITELIST ACCEPTED] ${file.name}`);
+          // console.log(`[WHITELIST ACCEPTED] ${file.name}`);
           const safeName = this.flattenPath(file.name);
           const p = this._saveFileEntry(safeName, file)
             .then(() => { writeSuccesses++; })
@@ -126,7 +126,7 @@ export class OPFSManager {
             });
           savedPromises.push(p);
         } else {
-          console.log(`[WHITELIST REJECTED] ${file.name}`);
+          // console.log(`[WHITELIST REJECTED] ${file.name}`);
           rejectedFiles.push(file.name);
         }
         // Files whose .start() is never called are automatically skipped by fflate

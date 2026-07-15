@@ -216,8 +216,25 @@ CREATE TABLE IF NOT EXISTS user_device_edits (
     created_at REAL
 );
 
-
-
+CREATE TABLE IF NOT EXISTS resolved_sessions_registrations (
+    id TEXT PRIMARY KEY,
+    upload_id TEXT,
+    entity_type TEXT,
+    origin TEXT,
+    model_name TEXT,
+    client_name TEXT,
+    os_name TEXT,
+    os_version TEXT,
+    os_type TEXT,
+    attributes JSONTEXT,
+    is_reduced_ua INTEGER DEFAULT 0,
+    has_trusted_cookie INTEGER DEFAULT 0,
+    trusted_cookie_id TEXT,
+    has_passkey INTEGER DEFAULT 0,
+    registration_device TEXT,
+    event_count INTEGER DEFAULT 0,
+    FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
+);
 
 -----------------------------------------
 --------          VIEWS          --------
@@ -230,7 +247,7 @@ CREATE VIEW IF NOT EXISTS v_event_field_mappings AS
 -- static columns
 SELECT 'id' AS field, 'text' AS type
 UNION SELECT 'timestamp', 'timestamp'
-UNION SELECT 'message', 'text'
+UNION SELECT 'event_type_msg', 'text'
 UNION SELECT 'event_category', 'category'
 UNION SELECT 'event_action', 'text'
 UNION SELECT 'event_kind', 'category'

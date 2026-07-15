@@ -6,6 +6,7 @@ from db_session import DatabaseSession
 from . import deterministic_ids
 from . import client_os_upgrades
 from .instances import DeviceInstanceGraph
+from .resolved_sessions_registrations import resolve
 from . import profiles
 
 from python_core.utils.pyodide_utils import get_config_value
@@ -31,7 +32,8 @@ def group(upload_id: str, db_path: str = None) -> None:
         if events_df.empty and devices_df.empty:
             return
 
-        df = DeviceInstanceGraph.format_initial(events_df, devices_df)
+        # df = DeviceInstanceGraph.format_initial(events_df, devices_df)
+        df = DeviceInstanceGraph.format_initial(events_df, devices_df.head(0)) # removing devices_raw for now
 
         identity_edges = deterministic_ids.get_edges(df)
         if not identity_edges.empty:
@@ -60,6 +62,41 @@ def group(upload_id: str, db_path: str = None) -> None:
         _write_device_instances(conn, instances, ts)
 
         _write_device_profiles(conn, instances, ts)
+
+        conn.execute("DELETE FROM resolved_sessions_registrations WHERE upload_id = ?", (upload_id,))
+        raw_rows = conn.execute(
+            "SELECT id, upload_id, entity_type, origin, attributes FROM devices_raw WHERE upload_id = ?",
+            (upload_id,),
+        ).fetchall()
+        
+        event_rows = conn.execute(
+            """
+            SELECT id, upload_id, origin, timestamp, attributes 
+            FROM events 
+            WHERE upload_id = ? AND json_extract(attributes, '$.client_session_id') IS NOT NULL
+            """,
+            (upload_id,),
+        ).fetchall()
+        
+        resolved_sessions_registration_rows = resolve(raw_rows, event_rows)
+
+        if not resolved_sessions_registration_rows:
+            print(f"No resolved sessions or registrations found for upload_id: {upload_id}")
+        else:
+            conn.executemany(
+                """
+                INSERT INTO resolved_sessions_registrations (
+                    id, upload_id, entity_type, origin, model_name, client_name, 
+                    os_name, os_version, os_type, attributes, is_reduced_ua, 
+                    has_trusted_cookie, trusted_cookie_id, has_passkey, registration_device
+                ) VALUES (
+                    :id, :upload_id, :entity_type, :origin, :model_name, :client_name, 
+                    :os_name, :os_version, :os_type, :attributes, :is_reduced_ua, 
+                    :has_trusted_cookie, :trusted_cookie_id, :has_passkey, :registration_device
+                )
+                """,
+                resolved_sessions_registration_rows
+            )
 
         conn.commit()
 

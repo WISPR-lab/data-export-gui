@@ -1,3 +1,4 @@
+import re
 from utils.misc import clean_target, is_trivial
 from utils.json_utils import get_value_at_path
 from utils.filter_builder import make_filter
@@ -44,6 +45,14 @@ def dynamic_fields(record: dict, view: dict, default=""):
         else:
             val = get_value_at_path(record, source, default)
 
+        # Apply regex extractor if configured
+        if f.get("regex") and val:
+            match = re.search(f.get("regex"), str(val))
+            if match:
+                val = match.group(1).strip()
+            else:
+                val = default
+
         if ftype in ["datetime", "timestamp", "date"]:
             val = unix_ms(parse_date(str(val)))
         fields[clean_target(target)] = val
@@ -69,7 +78,7 @@ def view_indexes_to_apply(record: dict, views: list):
             indexes.append(i)
     if not indexes:
         action = record.get("action") or record.get("event")
-        print(
-            f"[MapUtils] Record with action/event '{action}' did not match any view filters"
-        )
+        # print(
+        #     f"[MapUtils] Record with action/event '{action}' did not match any view filters"
+        # )
     return indexes

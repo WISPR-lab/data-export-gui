@@ -143,15 +143,13 @@ views:
 - file:
     id: "apple_passkey"
   static:
-    event.action: "passkey_creation"
-    event.kind: "event"
-    event.category: ["authentication"]
-    event.type: ["creation", "user"]
+    event.kind: "asset"
+    entity.type: "passkey_registration"
   fields:
-  - {target: "@timestamp", source: "Created Date", type: "datetime"}
-  - {target: "device.given_name", source: "Device Name", type: "string"}
-  - {target: "device.serial_number", source: "Device Serial Number", type: "string"}
-  # TODO FINISH
+    - {target: "device.serial_number", source: "Device Serial Number", type: "string"}
+    - {target: "device.model.name", source: "Hardware Model", type: "string"}
+    - {target: "credential_id", source: "Credential ID", type: "string"}
+    - {target: "public_key", source: "Public Key", type: "string"}
 
 
 # -------------------------- MISC ACTIVITY EVENTS --------------------------
@@ -192,7 +190,7 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "authenticated_device"
+      entity.type: "hardware_registration"
   fields:
   - {target: "entity.last_seen_timestamp", source: "Device Last Heartbeat Timestamp", type: "datetime"}
   - {target: "entity.first_seen_timestamp", source: "Device Added Date", type: "datetime"}
@@ -209,7 +207,7 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "authenticated_device"
+      entity.type: "app_registration"
   fields:
   - {target: "device.model.identifier", source: "hardware-version", type: "string"}
   - {target: "device.given_name", source: "device-name", type: "string"}
@@ -239,7 +237,7 @@ views:
     event.kind: "asset"
     event.category: ["authentication", "session"]
     event.type: ["info"]
-    entity.type: "authenticated_device"
+    entity.type: "app_registration"
   fields:
   - {target: "device.model.identifier", source: "hardware-version", type: "string"}
   - {target: "device.given_name", source: "device-name", type: "string"}

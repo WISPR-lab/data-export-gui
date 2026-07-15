@@ -79,7 +79,15 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                     # Pop event_category and event_type from fields before storing as attributes
                     fields.pop("event_category", [])
                     fields.pop("event_type", [])
-                    if entity_type == "authenticated_device":
+                    if entity_type in (
+                        "authenticated_device",
+                        "trusted_cookie",
+                        "session",
+                        "app_registration",
+                        "hardware_registration",
+                        "passkey_registration",
+                        "platform_inferred_device",
+                    ):
                         auth_device_rows.append(
                             {
                                 "id": str(uuid.uuid4()),
