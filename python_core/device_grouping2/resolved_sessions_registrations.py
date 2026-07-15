@@ -1,5 +1,6 @@
 # added for WISPR-lab/data-export-gui
 import json
+import uuid
 from datetime import datetime, timezone
 from utils.redaction_utils import compare_redacted_vals
 
@@ -44,8 +45,11 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
                         attrs[k] = ev["attributes"][k]
                         break
 
+            # ponytail: Use uuid.uuid5 to generate stable, valid UUID for synthetic session IDs
+            session_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"synthetic_session_{sid}"))
+
             devices.append({
-                "id": f"synthetic_session_{sid}",
+                "id": session_uuid,
                 "upload_id": first_ev["upload_id"],
                 "entity_type": "session",
                 "origin": first_ev["origin"],
