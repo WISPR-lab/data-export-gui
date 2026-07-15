@@ -88,14 +88,14 @@ const routes = [
         component: Events,
         props: { projectId: 1 },
       },
+      // {
+      //   path: 'devices',
+      //   name: 'Devices',
+      //   component: Devices,
+      //   props: { projectId: 1 },
+      // },
       {
         path: 'devices',
-        name: 'Devices',
-        component: Devices,
-        props: { projectId: 1 },
-      },
-      {
-        path: 'devices-mockup',
         name: 'DevicesMockup',
         component: DevicesMockup,
         props: { projectId: 1 },
