@@ -315,6 +315,24 @@ export default {
           this.startDemo();
         });
       }
+
+      if (to.query.chipField && to.query.chipValue) {
+        const chipExists = this.currentQueryFilter.chips.find(
+          (c) => c.field === to.query.chipField && c.value === to.query.chipValue
+        );
+
+        if (!chipExists) {
+          this.currentQueryFilter.chips.push({
+            field: to.query.chipField,
+            value: to.query.chipValue,
+            type: 'term',
+            operator: 'must',
+            active: true,
+          });
+          
+          this.search();
+        }
+      }
     },
   },
   methods: {
@@ -663,6 +681,8 @@ export default {
       exportId: this.$route.query.export || this.$route.query.timeline,
       resultLimit: this.$route.query.limit,
       queryString: this.$route.query.q,
+      chipField: this.$route.query.chipField,
+      chipValue: this.$route.query.chipValue,
     }
 
     // if (this.params.viewId) {
@@ -672,6 +692,20 @@ export default {
 
     if (this.params.queryString) {
       this.currentQueryString = this.params.queryString
+      doSearch = true
+    }
+
+    if (this.params.chipField && this.params.chipValue) {
+      if (!this.currentQueryFilter.chips) {
+        this.currentQueryFilter.chips = []
+      }
+      this.currentQueryFilter.chips.push({
+        field: this.params.chipField,
+        value: this.params.chipValue,
+        type: 'term',
+        operator: 'must',
+        active: true,
+      })
       doSearch = true
     }
 

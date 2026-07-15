@@ -121,11 +121,10 @@ export default {
   },
   methods: {
     goToEventsIP(ip) {
-      const queryString = `client_ip:"${ip}"`;
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
       this.$router.push({
         name: routeName,
-        query: { q: queryString }
+        query: { chipField: 'client_ip', chipValue: ip }
       });
     },
     goToEventsSession(sessionId) {
@@ -133,7 +132,7 @@ export default {
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
       this.$router.push({
         name: routeName,
-        query: { q: queryString }
+        query: { chipField: 'client_session_id', chipValue: sessionId }
       });
     },
     isIPAttribute(label) {
