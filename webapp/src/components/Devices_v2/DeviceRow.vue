@@ -3,16 +3,16 @@
   <v-expansion-panel
     class="mb-2 border rounded-xl overflow-hidden"
   >
-    <v-expansion-panel-header class="py-3 px-4" :hide-actions="!isRecord">
+    <v-expansion-panel-header class="py-3 px-4">
       <template v-slot:default>
         <!-- Outer layout splits Avatar (left) from all content (right) to prevent under-avatar alignment bugs -->
         <div class="d-flex align-center w-100" style="min-width: 0;">
           
           <!-- Permanent Left Column: Avatar Logo (resists wrapping) -->
           <div class="flex-shrink-0 mr-3">
-            <v-avatar size="36" color="grey lighten-4">
+            <!-- <v-avatar size="36" color="grey lighten-4">
               <v-icon color="grey darken-2" size="18">{{ icon }}</v-icon>
-            </v-avatar>
+            </v-avatar> -->
           </div>
 
           <!-- Permanent Right Column: All text & buttons (groups content to align together) -->
@@ -22,12 +22,12 @@
               <!-- Title & Badges block -->
               <v-col cols="12" md="6" class="pr-2 py-0.5">
                 <div class="text-body-2 font-weight-medium text--primary" style="line-height: 1.3; min-width: 0;">
-                  {{ title }}
+                  {{ titleCase(title) }}
                   <span v-if="clientName" class="text-body-2 text--secondary font-weight-regular ml-1">via {{ clientName }}</span>
                   
                   <!-- Inline Masked link -->
                   <span
-                    v-if="isRecord && isReducedUa"
+                    v-if="isReducedUa"
                     class="masked-glossary ml-2"
                     @click.stop="triggerInfoModal"
                   >
@@ -49,25 +49,31 @@
                 </div>
               </v-col>
 
-              <!-- Active Date Label -->
-              <v-col cols="12" md="4" class="text-body-2 text--secondary pr-2 py-0.5 mt-1 mt-md-0">
+              <!-- Active Date Label (grows to md="6" if there is no events action button) -->
+              <v-col cols="12" :md="eventsQuery ? 4 : 6" class="text-body-2 text--secondary pr-2 py-0.5 mt-1 mt-md-0">
                 {{ activeDateLabel }}
               </v-col>
 
-              <!-- Events Action Button -->
-              <v-col cols="12" md="2" class="py-0.5 mt-1 mt-md-0">
-                <v-btn
-                  v-if="eventsQuery"
-                  x-small
-                  text
-                  color="primary"
-                  class="text-capitalize pa-0"
-                  style="font-size: 12px; font-weight: 500; height: auto;"
-                  @click.stop="goToEvents"
-                >
-                  {{ buttonText }}
-                  <v-icon right size="13" class="ml-1">mdi-arrow-right</v-icon>
-                </v-btn>
+              <!-- Events Action Button (hidden entirely when eventsQuery is empty) -->
+              <v-col v-if="eventsQuery" cols="12" md="2" class="py-0.5 mt-1 mt-md-0">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn
+                      v-bind="attrs"
+                      v-on="on"
+                      x-small
+                      text
+                      color="primary"
+                      class="text-capitalize pa-0"
+                      style="font-size: 12px; font-weight: 500; height: auto;"
+                      @click.stop="goToEvents"
+                    >
+                      {{ buttonText }}
+                      <v-icon right size="13" class="ml-1">mdi-arrow-right</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>{{ buttonTooltip }}</span>
+                </v-tooltip>
               </v-col>
 
             </v-row>
@@ -88,6 +94,7 @@
 
 <script>
 import AttributesTable from '@/components/Devices/AttributesTable.vue';
+import { titleCase } from '@/filters/TitleCase.js';
 
 export default {
   name: 'DeviceRow',
@@ -99,7 +106,7 @@ export default {
     icon:        { type: String,  default: 'mdi-devices' },
     firstSeen:   { type: [String, Number], default: null },
     lastSeen:    { type: [String, Number], default: null },
-    fallbackDateStr: { type: String, default: 'Unknown Date' },
+    fallbackDateStr: { type: String, default: '' },
     eventsQuery: { type: String,  default: '' },
     isReducedUa:         { type: Boolean, default: false },
     hasPasskey:          { type: Boolean, default: false },
@@ -115,9 +122,17 @@ export default {
     buttonText() {
       var count = this.eventCount;
       if (count && count > 0) {
-        return 'See ' + count + (count === 1 ? ' event' : ' events');
+        return count + (count === 1 ? ' event' : ' events');
       }
-      return 'See events';
+      return 'Events';
+    },
+    buttonTooltip() {
+      var count = this.eventCount || 0;
+      var eventsText = count + (count === 1 ? ' event' : ' events');
+      if (this.isRecord) {
+        return 'See ' + eventsText + ' with this session ID';
+      }
+      return 'See ' + eventsText + ' in this activity cluster';
     },
     activeDateLabel() {
       var fmt = this.$options.filters && this.$options.filters.dateRange;
@@ -178,6 +193,7 @@ export default {
     }
   },
   methods: {
+    titleCase,
     triggerInfoModal() {
       this.$emit('show-info', {
         title: 'Masked User Agent',

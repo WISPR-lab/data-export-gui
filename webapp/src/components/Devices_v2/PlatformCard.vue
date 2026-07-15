@@ -76,14 +76,14 @@
               </div>
 
               <!-- Platform-inferred badge -->
-              <div
+              <!-- <div
                 v-if="section.key === 'platform_inferred_device'"
                 class="platform-badge d-flex align-center pa-2 rounded-lg mb-3"
                 style="gap: 6px;"
               >
                 <v-icon size="14" color="blue darken-2">mdi-check-decagram</v-icon>
                 <span class="text-body-2 blue--text text--darken-2">{{ platformBadgeText }}</span>
-              </div>
+              </div> -->
 
               <!-- Expansion Panels for Records -->
               <v-expansion-panels flat class="device-panels">
@@ -97,7 +97,7 @@
                   :first-seen="entry.firstSeen"
                   :last-seen="entry.lastSeen"
                   :events-query="entry.events_query"
-                  :is-reduced-ua="entry.is_reduced_ua"
+                  :is-reduced-ua="entry.is_reduced_ua == 1"
                   :has-passkey="entry.has_passkey"
                   :detail-label="section.detailLabel"
                   :formatted-attributes="entry.formatted_attributes"
@@ -161,7 +161,9 @@
                   :fallback-date-str="cluster.dateString"
                   :events-query="cluster.query"
                   :event-count="cluster.event_count"
+                  :is-reduced-ua="cluster.apple_masking == 1"
                   :cluster-raw="cluster"
+                  @show-info="openInfoModal($event.title, $event.description)"
                 />
               </v-expansion-panels>
 
@@ -228,9 +230,9 @@ export default {
     tab2Label() {
       return 'Additional Activity Clusters Inferred by LEStrADE';
     },
-    platformBadgeText() {
-      return 'Reported directly by ' + this.platform.displayName + ' — this is the platform\'s own device recognition.';
-    },
+    // platformBadgeText() {
+    //   return 'Reported directly by ' + this.platform.displayName + ' — this is the platform\'s own device recognition.';
+    // },
     activeSections() {
       return this.platform.sections.filter(function(s) { return s.entries.length > 0; });
     },

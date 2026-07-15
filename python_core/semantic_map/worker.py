@@ -86,6 +86,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                         "app_registration",
                         "hardware_registration",
                         "passkey_registration",
+                        "platform_inferred_device",
                     ):
                         auth_device_rows.append(
                             {

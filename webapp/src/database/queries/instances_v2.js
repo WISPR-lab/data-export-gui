@@ -10,6 +10,7 @@ export async function getUnlinkedClusters() {
     SELECT di.*, u.color as upload_color, u.platform as upload_platform
     FROM device_instances di
     LEFT JOIN uploads u ON di.upload_id = u.id
+    ORDER BY di.last_seen DESC
   `;
   
   const rows = await db.exec(sql, {
@@ -35,6 +36,7 @@ export async function getUnlinkedClusters() {
     var clientLabel = summary.primary ? (summary.primary + (summary.secondary ? ' (' + summary.secondary + ')' : '')) : row.client_name;
 
     return {
+      ...row,
       id: row.id,
       upload_id: row.upload_id,
       platform: row.upload_platform,
@@ -43,7 +45,7 @@ export async function getUnlinkedClusters() {
       os_type: row.os_type || null,
       first_seen: row.first_seen || null,
       last_seen: row.last_seen || null,
-      dateString: dateStr || 'Unknown Date',
+      dateString: dateStr || '',
       event_count: row.event_count || 0,
       query: 'device_instance_id:' + row.id,
       upload_color: hexColor(row.upload_color)
