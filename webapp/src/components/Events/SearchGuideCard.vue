@@ -42,10 +42,10 @@ limitations under the License.
                     </td>
                   </tr>
                   <tr>
-                    <td>Search a word in message field</td>
+                    <td>Search a word in Event Type field</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:log')">
-                        <code>message:log</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('event_type_msg:log')">
+                        <code>event_type_msg:log</code>
                       </a>
                     </td>
                   </tr>
@@ -64,8 +64,8 @@ limitations under the License.
                         <code>event_action:password*</code>
                       </a>
                       <br/>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:*error*')">
-                        <code>message:*error*</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('event_type_msg:*error*')">
+                        <code>event_type_msg:*error*</code>
                       </a>
                     </td>
                   </tr>
@@ -80,8 +80,8 @@ limitations under the License.
                   <tr>
                     <td>Boolean OR search</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('message:login OR message:logout')">
-                        <code>message:login OR message:logout</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('event_type_msg:login OR event_type_msg:logout')">
+                        <code>event_type_msg:login OR event_type_msg:logout</code>
                       </a>
                     </td>
                   </tr>
@@ -100,13 +100,13 @@ limitations under the License.
                   <tr>
                     <td>Grouped search with parentheses</td>
                     <td>
-                      <a href="#" @click.prevent="emitSetQueryAndFilter('(reset OR changed) AND message:password*')">
-                        <code>(reset OR changed) AND message:password*</code>
+                      <a href="#" @click.prevent="emitSetQueryAndFilter('(reset OR changed) AND event_type_msg:password*')">
+                        <code>(reset OR changed) AND event_type_msg:password*</code>
                       </a>
                     </td>
                   </tr>
                   <tr>
-                    <td>Search across default fields <br/><span class="caption">(message, attributes, event_action, category, event_kind, platform)</span></td>
+                    <td>Search across default fields <br/><span class="caption">(event_type_msg, attributes, event_action, category, event_kind, platform)</span></td>
                     <td>
                       <a href="#" @click.prevent="emitSetQueryAndFilter('success')">
                         <code>success</code>

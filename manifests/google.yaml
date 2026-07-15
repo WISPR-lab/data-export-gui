@@ -52,9 +52,15 @@ files:
   # Devices & Sessions
   - id: "ggl_access_log_devices"
     path: "Access Log Activity/Devices - A list of devices (i.e. Nest, Pixel, iPh.csv"
+    retention_days: 270
     parser:
       format: "csv"
       #parse_dates: ["Last Activity Time"]
+
+  - id: "ggl_android_device_config"
+    path: "Android Device Configuration Service/Device-*.html"
+    parser:
+      format: "html_key_val"
 
   # - id: "ggl_timeline_settings"
   #   path: "Timeline/Settings.json"
@@ -237,14 +243,37 @@ views:
       event.kind: "asset"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "authenticated_device"
+      entity.type: "platform_inferred_device"
     fields:
-      - {target: "entity.last_seen_timestamp", source: "Last Activity Time", type: "datetime"} # TODO
+      - target: "entity.last_seen_timestamp"
+        source: ["Last Activity Time", "Device Last Location"]
+        transform: "coalesce"
+        regex: "Last Activity Time:\\s*([^\\r\\n]+)"
+        type: "datetime"
       - {target: "device.manufacturer", source: "Brand Name", type: "string"}
       - {target: "device.model.name", source: "Marketing Name", type: "string"}
       - {target: "device.model.identifier", source: "Device Model", type: "string"}
       - {target: "user_agent.os.name", source: "OS", type: "string"}
       - {target: "user_agent.os.version", source: "OS Version", type: "string"}
+
+  - file:
+      id: "ggl_android_device_config"
+    static:
+      event.kind: "asset"
+      event.category: ["authentication", "session"]
+      event.type: ["info"]
+      entity.type: "hardware_registration"
+    fields:
+      # Google Services Framework (GSF) device-wide 19-digit decimal. Dev docs: https://developers.google.com/android/reference/com/google/android/gsf/gservices
+      - {target: "device.id.android_gsf", source: "Android ID", type: "string"}
+      - {target: "device.imei", source: "IMEI(s)", type: "string"}
+      - {target: "device.meid", source: "MEID(s)", type: "string"}
+      - {target: "device.serial_number", source: "Serial Number(s)", type: "string"}
+      - {target: "device.manufacturer", source: "Manufacturer", type: "string"}
+      - {target: "device.model.identifier", source: "Model", type: "string"}
+      - {target: "client.ip", source: "IP address from Last Data Connection", type: "string"}
+      - {target: "device.locale", source: "Locale", type: "string"}
+      - {target: "device.timezone", source: "Timezone", type: "string"}
 
   # - file:
   #     id: "ggl_timeline_settings"
@@ -259,7 +288,8 @@ views:
   #     - {target: "user_agent.os.name", source: "platformType", type: "string"}
   #     - {target: "user_agent.os.version", source: "iosVersion", type: "string"}
   #     - {target: "device.name", source: "devicePrettyName", type: "string"}
-  #     - {target: "device.id.google", source: "deviceTag", type: "string"}
+  #     # ID used to tag location-reporting devices in Google Timeline.
+  #     - {target: "device.id.google_timeline_tag", source: "deviceTag", type: "string"}
 
   # ------------------------ USER PROFILE ------------------------
   # - file:

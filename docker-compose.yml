@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  app:
+  web:
     build: .
     ports:
       - "5001:5001"
@@ -9,6 +7,19 @@ services:
       - .:/workspace
       - /workspace/node_modules
       - /workspace/webapp/node_modules
+    command: yarn --cwd webapp serve
+
+  eval:
+    build: .
+    volumes:
+      - .:/workspace
+      - data_raw:/workspace/entity_resolution_evaluation/data/raw
+      - /workspace/node_modules
+      - /workspace/webapp/node_modules
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: /bin/bash
 
   test:
     build: .
@@ -17,4 +28,7 @@ services:
       - /workspace/node_modules
       - /workspace/webapp/node_modules
     command: uv run pytest
+
+volumes:
+  data_raw:
 

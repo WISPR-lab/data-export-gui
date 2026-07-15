@@ -104,7 +104,10 @@ def _pass1_client(
     if "attr__norm__client_version" not in df.columns:
         df["attr__norm__client_version"] = None
 
-    df = df.dropna(subset=keys + ["timestamp"])
+    # Exclude manufacturer from required keys because desktop platforms (Windows/Linux)
+    # do not have manufacturer information in their User Agents and would otherwise be dropped.
+    required_keys = [c for c in BASE_ATTRIBUTES if c != "attr__norm__manufacturer"] + OS_VERSION
+    df = df.dropna(subset=required_keys + ["timestamp"])
     df = df.sort_values(by=keys + ["timestamp"])
 
     if df.empty:
@@ -230,9 +233,13 @@ def _pass2_os(
     return edges[["id_a", "id_b", "type", "provenance"]], pairs
 
 
-def get_edges(df: pd.DataFrame, run_pass2: bool = None) -> pd.DataFrame:
-    events_df = df[df["table"] == "events"]
-    if events_df.empty:
+def get_edges(
+    df: pd.DataFrame,
+    run_pass2: bool = None,
+    max_days_client: int = MAX_DAYS_CLIENT_DIFF,
+    max_days_os: int = MAX_DAYS_OS_DIFF,
+) -> pd.DataFrame:
+    if df.empty:
         return pd.DataFrame(columns=["id_a", "id_b", "type", "provenance"])
 
     if run_pass2 is None:
@@ -240,9 +247,9 @@ def get_edges(df: pd.DataFrame, run_pass2: bool = None) -> pd.DataFrame:
 
         run_pass2 = get_config_value("ENABLE_DEVICE_GROUPING_PASS2", False)
 
-    pass1_edges, subgraph_df = _pass1_client(events_df)
+    pass1_edges, subgraph_df = _pass1_client(df, max_days=max_days_client)
     if run_pass2:
-        pass2_edges, _ = _pass2_os(subgraph_df)
+        pass2_edges, _ = _pass2_os(subgraph_df, max_days=max_days_os)
         combined = pd.concat([pass1_edges, pass2_edges], ignore_index=True)
     else:
         combined = pass1_edges

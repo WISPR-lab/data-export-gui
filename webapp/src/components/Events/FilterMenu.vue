@@ -18,85 +18,161 @@ limitations under the License.
 <!-- NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui -->
 
 <template>
-  <v-card width="700" style="overflow: visible">
-    <v-container class="px-8">
-      <br />
+  <v-card width="480" style="overflow: visible">
+    <v-tabs v-model="tab" grow height="34" class="filter-tabs">
+      <v-tab>Absolute</v-tab>
+      <v-tab>Relative</v-tab>
+    </v-tabs>
 
-      <v-row>
-        <v-col cols="12">
-          <v-btn class="mr-2" small depressed @click="getDateRange(0, 'days')">Today</v-btn>
-          <v-btn class="mr-2" small depressed @click="getDateRange(7, 'days')">Last 7 days</v-btn>
-          <v-btn class="mr-2" small depressed @click="getDateRange(30, 'days')">Last 30 days</v-btn>
-          <v-btn class="mr-2" small depressed @click="getDateRange(90, 'days')">Last 90 days</v-btn>
-          <v-btn class="mr-2" small depressed @click="getDateRange(1, 'year')">Last 1 year</v-btn>
-        </v-col>
-      </v-row>
+     <v-container class="px-5 pt-3 pb-2">
+      <v-tabs-items v-model="tab">
 
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            :value="formatStartTime"
-            label="From"
-            outlined
-            hide-details
-            v-on:click="showPicker = true"
-            v-on:change="setStartTime"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            :value="formatEndTime"
-            label="To (optional)"
-            outlined
-            hide-details
-            v-on:click="showPicker = true"
-            v-on:change="setEndTime"
-            :append-outer-icon="showPicker ? 'mdi-calendar-remove' : 'mdi-calendar'"
-            @click:append-outer="showPicker = !showPicker"
-          >
-          </v-text-field>
-        </v-col>
-      </v-row>
-
-      <v-row v-if="showPicker">
-        <v-col cols="12">
+        <!-- ABSOLUTE TAB -->
+        <v-tab-item>
           <v-select
             v-model="selectedTimezone"
             :items="timezones"
             label="Timezone"
             outlined
-            hide-details
             dense
-            style="margin-bottom: 16px"
+            hide-details
+            class="mb-3 mt-1"
           ></v-select>
-        </v-col>
-      </v-row>
 
-      <v-row v-if="showPicker">
-        <v-col cols="12">
-          <date-picker
-            v-model="dateRange"
-            mode="dateTime"
-            ref="picker"
-            :timezone="selectedTimezone"
-            :is-dark="$vuetify.theme.dark"
-            is24hr
-            is-range
-            is-expanded
-          ></date-picker>
-        </v-col>
-      </v-row>
+          <v-row dense class="mb-1">
+            <!-- FROM field -->
+            <v-col cols="6">
+              <v-text-field
+                :value="formatStartTime"
+                label="From"
+                outlined
+                dense
+                hide-details
+                placeholder="Pick start"
+                readonly
+                :class="{ 'field-active': activePicker === 'start' }"
+                :append-icon="range.start ? 'mdi-close' : ''"
+                @click:append.stop="clearStart"
+                @click="togglePicker('start')"
+              ></v-text-field>
+            </v-col>
 
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn text @click="clearAndCancel"> Cancel </v-btn>
-        <v-btn text color="primary" @click="submit()"> Add filter </v-btn>
-      </v-card-actions>
+            <!-- TO field -->
+            <v-col cols="6">
+              <v-text-field
+                :value="formatEndTime"
+                label="To (optional)"
+                outlined
+                dense
+                hide-details
+                placeholder="Pick end"
+                readonly
+                :class="{ 'field-active': activePicker === 'end' }"
+                :append-icon="range.end ? 'mdi-close' : ''"
+                @click:append.stop="clearEnd"
+                @click="togglePicker('end')"
+              ></v-text-field>
+            </v-col>
+          </v-row>
+
+          <div class="caption grey--text mb-2" style="min-height:16px">
+            <span v-if="activePicker === 'start' || activePicker === 'end'">Pick date &amp; time, then add filter below</span>
+          </div>
+
+          <!-- START picker -->
+          <div v-if="activePicker === 'start'" class="picker-wrap">
+            <date-picker
+              :value="startDateObj"
+              mode="dateTime"
+              :timezone="selectedTimezone"
+              :is-dark="$vuetify.theme.dark"
+              is12hr
+              is-expanded
+              @input="onStartInput"
+            ></date-picker>
+          </div>
+
+          <!-- END picker -->
+          <div v-if="activePicker === 'end'" class="picker-wrap">
+            <date-picker
+              :value="endDateObj"
+              mode="dateTime"
+              :timezone="selectedTimezone"
+              :is-dark="$vuetify.theme.dark"
+              is12hr
+              is-expanded
+              :min-date="range.start ? new Date(range.start) : undefined"
+              @input="onEndInput"
+            ></date-picker>
+          </div>
+ 
+          <v-card-actions class="px-0 pt-2">
+            <v-spacer></v-spacer>
+            <v-btn small text @click="clearAndCancel">Cancel</v-btn>
+            <v-btn small text color="primary" :disabled="!range.start" @click="submit">
+              Add filter
+            </v-btn>
+          </v-card-actions>
+        </v-tab-item>
+
+        <!-- ── RELATIVE TAB ─────────────────────────────── -->
+        <v-tab-item>
+          <div class="relative-presets mb-4">
+            <v-btn
+              v-for="preset in presets"
+              :key="preset.label"
+              small
+              depressed
+              class="preset-btn mr-2 mb-2"
+              @click="applyPreset(preset)"
+            >{{ preset.label }}</v-btn>
+          </div>
+
+          <v-divider class="mb-4"></v-divider>
+
+          <div class="relative-custom">
+            <span class="caption grey--text mb-2 d-block">Custom range</span>
+            <v-row dense align="center">
+              <v-col cols="4">
+                <v-text-field
+                  v-model.number="customNum"
+                  type="number"
+                  min="1"
+                  label="Amount"
+                  outlined
+                  dense
+                  hide-details
+                ></v-text-field>
+              </v-col>
+              <v-col cols="5">
+                <v-select
+                  v-model="customUnit"
+                  :items="units"
+                  label="Unit"
+                  outlined
+                  dense
+                  hide-details
+                ></v-select>
+              </v-col>
+              <v-col cols="3">
+                <span class="body-2">ago</span>
+              </v-col>
+            </v-row>
+          </div>
+
+          <v-card-actions class="px-0 pt-3">
+            <v-spacer></v-spacer>
+            <v-btn small text @click="clearAndCancel">Cancel</v-btn>
+            <v-btn small text color="primary" @click="applyCustomRelative">Add filter</v-btn>
+          </v-card-actions>
+
+        </v-tab-item>
+ 
+      </v-tabs-items>
     </v-container>
   </v-card>
 </template>
-
+ 
 <script>
 import dayjs from '@/plugins/dayjs'
 import DatePicker from 'v-calendar/lib/components/date-picker.umd'
@@ -108,48 +184,45 @@ export default {
   },
   data() {
     return {
+      tab: 0,
+      activePicker: null,
       range: {
         start: '',
         end: '',
       },
-      filterTab: null,
-      showPicker: false,
+
+      startDateObj: null,
+      endDateObj: null,
+
       selectedTimezone: '',
       timezones: [],
+      
+      customNum: 1,
+      customUnit: 'days',
+      units: [
+        { text: 'Hours',   value: 'hours'   },
+        { text: 'Days',    value: 'days'    },
+        { text: 'Weeks',   value: 'weeks'   },
+        { text: 'Months',  value: 'months'  },
+        { text: 'Years',   value: 'years'   },
+      ],
+      presets: [
+        { label: 'Today',        num: 0,  unit: 'days'    },
+        { label: 'Last 7 days',  num: 7,  unit: 'days'    },
+        { label: 'Last 30 days', num: 30, unit: 'days'    },
+        { label: 'Last 90 days', num: 90, unit: 'days'    },
+        { label: 'Last 1 year',  num: 1,  unit: 'years'   },
+      ],
     }
   },
   computed: {
-    dateRange: {
-      set(val) {
-        if (val && val.start && val.end) {
-          // Convert local time to ISO string, then to UTC for storage
-          this.range.start = dayjs(val.start).tz(this.selectedTimezone).utc().millisecond(0).toISOString()
-          this.range.end = dayjs(val.end).tz(this.selectedTimezone).utc().millisecond(0).toISOString()
-        } else {
-          this.range.start = ''
-          this.range.end = ''
-        }
-      },
-      get() {
-        let range = {
-          start: this.range.start,
-          end: this.range.end,
-        }
-        return range
-      },
-    },
-    formatStartTime: function () {
+    formatStartTime() {
       if (!this.range.start) return ''
-      const dt = dayjs(this.range.start).tz(this.selectedTimezone)
-      return dt.format('DD MMM YYYY h:mm A')
+      return dayjs(this.range.start).tz(this.selectedTimezone).format('MMM DD YYYY h:mm A')
     },
-    formatEndTime: function () {
-      if (this.range.start === this.range.end || !this.range.start) {
-        return ''
-      }
+    formatEndTime() {
       if (!this.range.end) return ''
-      const dt = dayjs(this.range.end).tz(this.selectedTimezone)
-      return dt.format('DD MMM YYYY h:mm A') 
+      return dayjs(this.range.end).tz(this.selectedTimezone).format('MMM DD YYYY h:mm A')
     },
   },
   created() {
@@ -169,76 +242,59 @@ export default {
     this.selectedTimezone = userTz
     
     if (this.selectedChip) {
-      this.range.start = this.selectedChip.value.split(',')[0]
-      this.range.end = this.selectedChip.value.split(',')[1]
+      const parts = this.selectedChip.value.split(',')
+      this.range.start = parts[0]
+      this.range.end   = parts[1]
+      this.startDateObj = this.range.start ? new Date(this.range.start) : null
+      this.endDateObj   = this.range.end   ? new Date(this.range.end)   : null
     }
   },
   methods: {
-    getDateRange: function (num, resolution) {
-      let now = dayjs().tz(this.selectedTimezone)
-      let then = now.subtract(num, resolution)
-      let chipType = 'datetime_range'
-      let chipValue = then.utc().format('YYYY-MM-DD') + ',' + now.utc().format('YYYY-MM-DD')
-      let chip = {
-        field: '',
-        type: chipType,
-        value: chipValue,
-        operator: 'must',
-        active: true,
+    togglePicker(which) {
+      if (this.activePicker === which) {
+        this.activePicker = null
+        return
       }
-      this.addChip(chip)
-      this.$emit('cancel')
+      // When opening a picker, seed it with the currently confirmed value (or now)
+      if (which === 'start') {
+        this.startDateObj = this.range.start ? new Date(this.range.start) : new Date()
+      } else {
+        this.endDateObj = this.range.end ? new Date(this.range.end) : (this.range.start ? new Date(this.range.start) : new Date())
+      }
+      this.activePicker = which
+    },
 
-      return { start: now, end: then }
+    onStartInput(date) {
+      if (!date) return
+      this.startDateObj = date
+      this.range.start = dayjs(date).utc().millisecond(0).toISOString()
     },
-    setStartTime: function (newDateTime) {
-      if (!newDateTime) {
-        this.range.start = ''
-        return
-      }
-      this.range.start = dayjs(newDateTime).tz(this.selectedTimezone).utc().toISOString()
-      if (!this.range.end) {
-        if (this.range.start) {
-          this.range.end = this.range.start || ''
-        }
-      }
-      if (this.$refs.picker) {
-        this.$refs.picker.focusDate(this.range.start)
-      }
+    onEndInput(date) {
+      if (!date) return
+      this.endDateObj = date
+      this.range.end = dayjs(date).utc().millisecond(0).toISOString()
     },
-    setEndTime: function (newDateTime) {
-      if (!newDateTime) {
-        this.range.end = ''
-        return
-      }
-      this.range.end = dayjs(newDateTime).tz(this.selectedTimezone).utc().toISOString()
-      if (this.$refs.picker) {
-        this.$refs.picker.focusDate(this.range.start)
-      }
+ 
+    clearStart() {
+      this.range.start = ''
+      this.startDateObj = null
+      this.activePicker = null
     },
-    addDateTimeChip: function (chipValue) {
-      const chipType = 'datetime_range'
-      let chip = {
-        field: '',
-        type: chipType,
-        value: chipValue,
-        operator: 'must',
-        active: true,
-      }
-      this.addChip(chip)
-      this.range = {
-        start: null,
-        end: null,
-      }
+    clearEnd() {
+      this.range.end = ''
+      this.endDateObj = null
+      this.activePicker = null
     },
-    clearAndCancel: function () {
-      this.range = {
-        start: '',
-        end: '',
-      }
+    clearAndCancel() {
+      this.range = { start: '', end: '' }
+      this.startDateObj = null
+      this.endDateObj = null
+      this.activePicker = null
       this.$emit('cancel')
     },
-    addChip: function (newChip) {
+    
+    
+    addChip(newChip) {
       if (this.selectedChip) {
         this.$emit('updateChip', newChip)
       } else {
@@ -250,37 +306,58 @@ export default {
         return
       }
 
-      if (this.range.start === this.range.end) {
-        let dateTimeArray = this.range.start.split('T')
-        let date = dateTimeArray[0]
-        let chipValue = date + ',' + date
-        this.addDateTimeChip(chipValue)
-      }
-
-      if (this.range.start !== this.range.end) {
-      }
-
-      if (this.range.start !== this.range.end) {
-        let chipType = 'datetime_range'
-        let chipValue = this.range.start + ',' + this.range.end
-        let chip = {
-          field: '',
-          type: chipType,
-          value: chipValue,
-          operator: 'must',
-          active: true,
-        }
-        this.addChip(chip)
-        this.range = {
-          start: '',
-          end: '',
-        }
-      }
-
+      this.addChip({
+        field: '', type: 'datetime_range',
+        value: `${this.range.start},${this.range.end}`,
+        operator: 'must', active: true,
+      })
+      this.clearAndCancel()
+      this.$emit('cancel')
+  },
+  applyPreset(preset) {
+      const now  = dayjs().utc()
+      const then = preset.num === 0 ? now.startOf('day') : now.subtract(preset.num, preset.unit)
+      this.addChip({ field: '', type: 'datetime_range', value: `${then.toISOString()},${now.toISOString()}`, operator: 'must', active: true })
+      this.$emit('cancel')
+    },
+    applyCustomRelative() {
+      if (!this.customNum || this.customNum < 1) return
+      const now  = dayjs().utc()
+      const then = now.subtract(this.customNum, this.customUnit)
+      this.addChip({ field: '', type: 'datetime_range', value: `${then.toISOString()},${now.toISOString()}`, operator: 'must', active: true })
       this.$emit('cancel')
     },
   },
 }
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.filter-tabs {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+ 
+.field-active {
+  ::v-deep .v-input__slot {
+    border-color: var(--v-primary-base) !important;
+    box-shadow: 0 0 0 1px var(--v-primary-base);
+  }
+}
+ 
+.picker-wrap {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 8px;
+}
+ 
+.preset-btn {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+ 
+.relative-custom .caption {
+  font-size: 11px;
+}
+
+
+
+</style>

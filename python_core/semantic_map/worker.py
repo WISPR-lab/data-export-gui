@@ -66,7 +66,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                             "event_kind": event_kind,
                             "event_category": event_category,
                             "event_type": event_type,
-                            "message": amb.message(event_action, **fields),
+                            "event_type_msg": amb.message(event_action, **fields),
                             "attributes": fields,
                             "deduplicated": False,  # taken care of in deduplication step
                             "extra_timestamps": [],  # ^^
@@ -79,7 +79,15 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                     # Pop event_category and event_type from fields before storing as attributes
                     fields.pop("event_category", [])
                     fields.pop("event_type", [])
-                    if entity_type == "authenticated_device":
+                    if entity_type in (
+                        "authenticated_device",
+                        "trusted_cookie",
+                        "session",
+                        "app_registration",
+                        "hardware_registration",
+                        "passkey_registration",
+                        "platform_inferred_device",
+                    ):
                         auth_device_rows.append(
                             {
                                 "id": str(uuid.uuid4()),
@@ -193,8 +201,8 @@ def map(platform, upload_id, db_path=None, manifest_dir=None):
                 print(f"[SemanticMapWorker] Inserting {len(event_rows)} events...")
                 conn.executemany(
                     """
-                    INSERT INTO events (id, upload_id, file_ids, raw_data_ids, timestamp, event_action, event_kind, event_category, event_type, message, attributes, deduplicated, extra_timestamps)
-                    VALUES (:id, :upload_id, :file_ids, :raw_data_ids, :timestamp, :event_action, :event_kind, :event_category, :event_type, :message, :attributes, :deduplicated, :extra_timestamps)
+                    INSERT INTO events (id, upload_id, file_ids, raw_data_ids, timestamp, event_action, event_kind, event_category, event_type, event_type_msg, attributes, deduplicated, extra_timestamps)
+                    VALUES (:id, :upload_id, :file_ids, :raw_data_ids, :timestamp, :event_action, :event_kind, :event_category, :event_type, :event_type_msg, :attributes, :deduplicated, :extra_timestamps)
                     """,
                     event_rows,
                 )

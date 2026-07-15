@@ -59,16 +59,16 @@ export default {
   data() {
     return {
       eventActions: [],
-      eventMessages: [],
+      eventTypes: [],
     }
   },
   async mounted() {
     try {
       this.eventActions = await DB.getEventActions()
-      this.eventMessages = await DB.getEventMessages()
+      this.eventTypes = await DB.getEventTypes()
     } catch (e) {
-      console.error('Error loading event messages:', e)
-      this.eventMessages = []
+      console.error('Error loading event types:', e)
+      this.eventTypes = []
       this.eventActions = []
     }
   },
@@ -83,7 +83,7 @@ export default {
     },
     showDataTypes() {
       // return this.eventActions.length > 0
-      return this.eventMessages.length > 0
+      return this.eventTypes.length > 0
     },
     showSavedSearches() {
       return (this.$store.state.meta.views || []).length > 0

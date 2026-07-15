@@ -74,7 +74,8 @@ class DeviceInstance:
             self.first_seen = None
             self.last_seen = None
 
-        self.event_count = int(len(self.df[self.df["table"] == "events"]))
+        try: self.event_count = int(len(self.df[self.df["table"] == "events"]))
+        except Exception as e: self.event_count = 0
 
         self.os_versions = (
             self.df["attr__norm__os_version"].dropna().unique().tolist()
