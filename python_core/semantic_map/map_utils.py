@@ -1,3 +1,4 @@
+import re
 from utils.misc import clean_target, is_trivial
 from utils.json_utils import get_value_at_path
 from utils.filter_builder import make_filter
@@ -43,6 +44,14 @@ def dynamic_fields(record: dict, view: dict, default=""):
                 )  # default to first source if no transform specified
         else:
             val = get_value_at_path(record, source, default)
+
+        # Apply regex extractor if configured
+        if f.get("regex") and val:
+            match = re.search(f.get("regex"), str(val))
+            if match:
+                val = match.group(1).strip()
+            else:
+                val = default
 
         if ftype in ["datetime", "timestamp", "date"]:
             val = unix_ms(parse_date(str(val)))

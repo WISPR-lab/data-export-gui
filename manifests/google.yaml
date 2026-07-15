@@ -245,7 +245,11 @@ views:
       event.type: ["info"]
       entity.type: "platform_inferred_device"
     fields:
-      - {target: "entity.last_seen_timestamp", source: "Last Activity Time", type: "datetime"} # TODO
+      - target: "entity.last_seen_timestamp"
+        source: ["Last Activity Time", "Device Last Location"]
+        transform: "coalesce"
+        regex: "Last Activity Time:\\s*([^\\r\\n]+)"
+        type: "datetime"
       - {target: "device.manufacturer", source: "Brand Name", type: "string"}
       - {target: "device.model.name", source: "Marketing Name", type: "string"}
       - {target: "device.model.identifier", source: "Device Model", type: "string"}

@@ -55,7 +55,7 @@ MANUFACTURER_PATTERNS = { mfr: [re.compile(pat, re.IGNORECASE) for pat in pats] 
 
 _BRAND_ALIASES = {
     "Apple": r"apple",
-    "Samsung": r"samsung|^sm$",
+    "Samsung": r"samsung|samsng|^sm$",
     "LG": r"\blg\b|^lge$",
     "Motorola": r"motorola|\bmoto\b",
     "Google": r"google",
