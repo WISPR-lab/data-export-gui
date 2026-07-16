@@ -84,8 +84,7 @@ export async function processUpload(file, platform, projectId, store) {
         .map((de) => de.id)
         .filter((id) => !previousIds.includes(id));
       if (newIds.length > 0) {
-        const merged = [...new Set([...store.state.enabledDataExports, ...newIds])];
-        store.commit('SET_ENABLED_DATA_EXPORTS', merged);
+        store.commit('SET_ENABLED_DATA_EXPORTS', newIds);
       }
       summary.success = true;
       store.commit('COMPLETE_UPLOAD', summary);
