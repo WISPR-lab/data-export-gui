@@ -425,8 +425,6 @@ limitations under the License.
             <div
               :key="field.text"
               class="ts-event-field-container"
-              style="cursor: pointer"
-              @click="toggleDetailedEvent(item)"
             >
               <span
                 :class="{
