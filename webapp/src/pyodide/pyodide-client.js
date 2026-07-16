@@ -68,7 +68,7 @@ export function terminatePyodideWorker() {
 }
 
 
-export async function executeUpload(file, platform, opfsManager, callbacks) {
+export async function executeUpload(file, platform, givenName, opfsManager, callbacks) {
   /* Orchestrates ZIP→OPFS extraction (JS side), then delegates extract/map/normalize/group to Pyodide, then cleans temp storage. Attaches uploadId to errors for upstream cleanup. */
   const cb = callbacks || {};
   const onProgress = cb.onProgress;
@@ -82,7 +82,7 @@ export async function executeUpload(file, platform, opfsManager, callbacks) {
     await opfsManager.processZipUpload(file, platform);
 
     // Consolidated Step: Run entire pipeline in Pyodide (extract, semantic map, normalize, group)
-    const result = await callPyodideWorker('run_pipeline', { platform, givenName: file.name }, onProgress);
+    const result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress);
     uploadId = result.upload_id;
 
     // Step 6: Cleanup OPFS

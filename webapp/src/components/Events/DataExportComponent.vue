@@ -229,7 +229,7 @@ export default {
       dialogRename: false,
       documentMetadata: [], // Browser model: uploaded files from document_metadata table
       eventsPerSecond: [],
-      dataExportName: [...this.dataExport.name],
+      dataExportName: this.dataExport && this.dataExport.name ? this.dataExport.name : '',
       sparkline: {
         width: 2,
         radius: 10,
@@ -319,7 +319,7 @@ export default {
     },
     rename() {
       this.dialogRename = false
-      this.$emit('save', this.dataExport, this.dataExport.name)
+      this.$emit('save', this.dataExport, this.dataExportName)
     },
     remove() {
       this.$emit('remove', this.dataExport)

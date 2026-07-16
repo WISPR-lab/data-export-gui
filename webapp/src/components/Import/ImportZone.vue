@@ -266,6 +266,7 @@ export default {
         await processUpload(
           this.selectedFile,
           this.selectedPlatform,
+          this.dataExportName,
           projectId,
           this.$store
         );
