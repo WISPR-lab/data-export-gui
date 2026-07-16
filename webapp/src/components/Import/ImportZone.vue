@@ -15,25 +15,40 @@ It replaces the generic UploadForm for the new workflow.
 
     <!-- Main Upload Dialog -->
     <v-dialog v-model="dialog" persistent max-width="500px">
-      <v-card>
-        <v-card-title class="pb-2">
-          <DiscordIcon v-if="selectedPlatform === 'discord'" size="20px" margin-right="12px" fill="var(--v-primary-base)" />
-          <v-icon v-else color="primary" class="mr-3">{{ platformIcon }}</v-icon>
-          <span class="headline font-weight-medium">Import {{ platformName }} Data</span>
+      <v-card rounded="lg">
+        <v-card-title class="text-h6 font-weight-medium pb-2">
+          <DiscordIcon v-if="selectedPlatform === 'discord'" size="20px" margin-right="12px" fill="currentColor" />
+          <v-icon v-else color="secondary" class="mr-3">{{ platformIcon }}</v-icon>
+          <span class="text-h6 font-weight-medium">Import {{ platformName }} Data</span>
         </v-card-title>
         
-        <v-card-text class="pb-0">
-          <!-- Error & Warning Display -->
-          <import-error-display
-            :error-type="uploadErrorType"
-            :errors="uploadErrors"
-            :warnings="uploadWarnings"
-            :local-errors="localErrors"
-          ></import-error-display>
+        <v-card-text class="pb-0 pt-1">
+          <p class="text-body-2 text--secondary mb-4">
+            Don't have your export yet?
+            <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
+              View instructions
+            </router-link>
+          </p>
 
-          <v-alert dense text type="success" icon="mdi-information" class="mb-4">
-            This tool is limited to the data provided by {{ platformName }}. For example, platforms may record incorrect time or location of events.
+          <v-alert dense text type="info" class="mb-4 text-body-2">
+            This tool is limited to the data provided by {{ platformName }}. 
+            For example, platforms may record incorrect time or location of events.
+            Verify all results.
           </v-alert>
+          
+          <!-- <v-card-text class="pb-0 pt-1">
+          <v-alert dense text type="info" class="mb-4 text-body-2">
+            Don't have your export yet?
+            <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
+              View instructions
+            </router-link>
+          </v-alert>
+
+          <p class="text-body-2 text--secondary mb-4">
+            This tool is limited to the data provided by {{ platformName }}. 
+            For example, platforms may record incorrect time or location of events.
+            Verify all results.
+          </p> -->
 
           <!-- File Upload -->
           <div
@@ -78,12 +93,15 @@ It replaces the generic UploadForm for the new workflow.
             />
           </div>
 
-          <p class="text-body2 text--secondary mb-4">
-            Don't have your export yet?
-            <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
-              View step-by-step instructions
-            </router-link>
-          </p>
+          <!-- Error & Warning Display -->
+          <import-error-display
+            class="mt-4"
+            :error-type="uploadErrorType"
+            :errors="uploadErrors"
+            :warnings="uploadWarnings"
+            :local-errors="localErrors"
+          ></import-error-display>
+
 
           <!-- Timeline Name -->
           <div class="mb-4" v-if="selectedFile">
@@ -103,11 +121,13 @@ It replaces the generic UploadForm for the new workflow.
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn text @click="closeDialog">
+          <v-btn text rounded @click="closeDialog">
             Cancel
           </v-btn>
           <v-btn
             color="primary"
+            rounded
+            depressed
             :disabled="!canSubmit"
             @click="submitUpload"
             :loading="isUploading"
@@ -300,14 +320,14 @@ export default {
   justify-content: center;
   text-align: center;
   padding: 48px 16px;
-  border: 2px dashed rgba(0, 0, 0, 0.18);
-  border-radius: 16px;
+  border: 2px dashed #e0e0e0;
+  border-radius: 4px;
   background-color: rgba(0, 0, 0, 0.015);
   transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
   cursor: pointer;
 
   &:hover {
-    border-color: rgba(25, 118, 210, 0.4);
+    border-color: var(--v-primary-lighten3);
     background-color: rgba(25, 118, 210, 0.03);
   }
  
@@ -319,7 +339,7 @@ export default {
  
   &--filled {
     border-style: solid;
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: #e0e0e0;
     background-color: rgba(0, 0, 0, 0.015);
     cursor: default;
   }
@@ -338,13 +358,13 @@ export default {
     }
   }
 }
- 
+
 :deep(.v-application--dark) .upload-dropzone {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.18);
   background-color: rgba(255, 255, 255, 0.02);
  
   &--filled {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.14);
   }
 }
 </style>

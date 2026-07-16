@@ -26,19 +26,6 @@ limitations under the License.
         :search="search"
         :hide-default-footer="nonZeroItems.length <= itemsPerPage"
       >
-        <template v-slot:header v-if="nonZeroItems.length > itemsPerPage">
-          <v-toolbar flat>
-            <v-text-field
-              v-model="search"
-              clearable
-              hide-details
-              outlined
-              dense
-              prepend-inner-icon="mdi-magnify"
-              label="Search for tags ..."
-            ></v-text-field>
-          </v-toolbar>
-        </template>
         <template v-slot:default="props">
           <div
             v-for="item in props.items"

@@ -20,6 +20,10 @@ export default {
       type: String,
       default: '6px'
     },
+    color: {
+      type: String,
+      default: ''
+    },
     fill: {
       type: String,
       default: 'currentColor'
@@ -32,6 +36,7 @@ export default {
         height: this.size,
         marginRight: this.marginRight,
         flexShrink: 0,
+        color: this.color || this.fill,
         fill: this.fill
       }
     }
