@@ -345,32 +345,32 @@ class DemoController {
        }
    }
 
-   emitLoginChip() {
-       EventBus.$emit('setQueryAndFilter', {
+    emitLoginChip() {
+        EventBus.$emit('setQueryAndFilter', {
+            chip: {
+                field: 'event_type_msg',
+                value: 'Login - Success',
+                type: 'attribute',
+                operator: 'must',
+                active: true
+            },
+            doSearch: true
+        })
+    }
+
+   _forceApplySampleFilter() {
+       if (DEMO_DEBUGGING) console.log('[DemoController] Forcing sample filter for result step');
+       EventBus.$emit('setQueryAndFilter', { 
+           doSearch: true,
            chip: {
-               field: 'event_type_msg',
-               value: 'Login - Success',
-               type: 'term',
-               operator: 'must',
-               active: true
-           },
-           doSearch: true
+             field: 'event_action',
+             value: 'access',
+             type: 'attribute',
+             operator: 'must',
+             active: true,
+           }
        })
    }
-
-  _forceApplySampleFilter() {
-      if (DEMO_DEBUGGING) console.log('[DemoController] Forcing sample filter for result step');
-      EventBus.$emit('setQueryAndFilter', { 
-          doSearch: true,
-          chip: {
-            field: 'event_action',
-            value: 'access',
-            type: 'term',
-            operator: 'must',
-            active: true,
-          }
-      })
-  }
 
   _secureClick(selector) {
       const el = document.querySelector(selector)

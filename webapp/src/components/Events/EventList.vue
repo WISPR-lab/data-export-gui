@@ -393,7 +393,7 @@ limitations under the License.
           <template v-slot:item.actions="{ item }">
             <div id="tsAnnotateActions" style="display: inline-flex; gap: 4px; align-items: center;">
               <v-btn id="tsEventActions" small icon @click="toggleStar(item)">
-                <v-icon title="Toggle star status" v-if="item._source.labels && item._source.labels.includes('__ts_star')" color="amber"
+                <v-icon title="Toggle star status" v-if="item._source.starred === 1" color="amber"
                   >mdi-star</v-icon
                 >
                 <v-icon title="Toggle star status" v-else>mdi-star-outline</v-icon>
@@ -786,7 +786,7 @@ export default {
       return this.$store.state.settings
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'attribute'))
     },
     availableColumns() {
       if (!this.meta || !this.meta.mappings) return [];
@@ -926,6 +926,13 @@ export default {
       // Exit early if there are no uploadIds selected
       if (this.currentQueryFilter.uploadIds && !this.currentQueryFilter.uploadIds.length) {
         this.eventList = emptyEventList()
+        EventBus.$emit('updateCountPerExport', {})
+        this.$emit('countPerDataExport', {})
+        EventBus.$emit('searchResultsCounts', {
+          countPerEventType: {},
+          countPerIPAddress: {},
+          countPerTagOrLabel: {}
+        })
         return
       }
 
@@ -967,7 +974,6 @@ export default {
         }
         
         // Calculate has_next_page based on pagination
-        const limit = this.currentQueryFilter.size || 40
         const currentFrom = this.currentQueryFilter.from || 0
         this.eventList.meta.has_next_page = (currentFrom + this.eventList.objects.length) < this.eventList.meta.total_count
         this.eventList.meta.query_time_ms = Date.now() - startTime
@@ -975,6 +981,11 @@ export default {
         this.updateShowBanner()
         this.$emit('countPerDataExport', this.eventList.meta.count_per_data_export)
         EventBus.$emit('updateCountPerExport', this.eventList.meta.count_per_data_export)
+        EventBus.$emit('searchResultsCounts', {
+          countPerEventType: this.eventList.meta.count_per_event_type || {},
+          countPerIPAddress: this.eventList.meta.count_per_ip_address || {},
+          countPerTagOrLabel: this.eventList.meta.count_per_tag_or_label || {}
+        })
         
         this.addTimeBubbles()
         
@@ -1068,18 +1079,27 @@ export default {
       }
       
       // Determine if we're adding or removing the star
-      const isStarred = event._source.labels.includes('__ts_star');
+      // Determine if we're adding or removing the star
+      const isStarred = event._source.starred === 1;
       
       if (isStarred) {
-        event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
-        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: -1 })
-        DB.removeLabelEvent([event._id], ['__ts_star']).catch(e => {
+        event._source.starred = 0
+        if (event._source.labels) {
+          const idx = event._source.labels.indexOf('starred')
+          if (idx > -1) event._source.labels.splice(idx, 1)
+        }
+        this.$store.dispatch('updateEventLabels', { label: 'starred', num: -1 })
+        DB.removeLabelEvent([event._id], ['starred']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       } else {
-        event._source.labels.push('__ts_star')
-        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: 1 })
-        DB.addLabelEvent([event._id], ['__ts_star']).catch(e => {
+        event._source.starred = 1
+        if (!event._source.labels) {
+          event._source.labels = []
+        }
+        event._source.labels.push('starred')
+        this.$store.dispatch('updateEventLabels', { label: 'starred', num: 1 })
+        DB.addLabelEvent([event._id], ['starred']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       }
@@ -1090,16 +1110,20 @@ export default {
       const eventsToUnstar = []
       
       this.selectedEvents.forEach((event) => {
-        // Ensure labels array exists
-        if (!event._source.labels) {
-          event._source.labels = []
-        }
-        if (event._source.labels.includes('__ts_star')) {
-          event._source.labels.splice(event._source.labels.indexOf('__ts_star'), 1)
+        if (event._source.starred === 1) {
+          event._source.starred = 0
+          if (event._source.labels) {
+            const idx = event._source.labels.indexOf('starred')
+            if (idx > -1) event._source.labels.splice(idx, 1)
+          }
           eventsToUnstar.push(event._id)
           netStarCountChange--
         } else {
-          event._source.labels.push('__ts_star')
+          event._source.starred = 1
+          if (!event._source.labels) {
+            event._source.labels = []
+          }
+          event._source.labels.push('starred')
           eventsToStar.push(event._id)
           netStarCountChange++
         }
@@ -1107,17 +1131,17 @@ export default {
       
       // Update global store reactive count
       if (netStarCountChange !== 0) {
-        this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: netStarCountChange })
+        this.$store.dispatch('updateEventLabels', { label: 'starred', num: netStarCountChange })
       }
       
       // Persist changes to database
       if (eventsToStar.length > 0) {
-        DB.addLabelEvent(eventsToStar, ['__ts_star']).catch(e => {
+        DB.addLabelEvent(eventsToStar, ['starred']).catch(e => {
           console.error('Error starring events:', e)
         })
       }
       if (eventsToUnstar.length > 0) {
-        DB.removeLabelEvent(eventsToUnstar, ['__ts_star']).catch(e => {
+        DB.removeLabelEvent(eventsToUnstar, ['starred']).catch(e => {
           console.error('Error unstarring events:', e)
         })
       }

@@ -206,7 +206,7 @@ export default {
       
       const internalFilters = [
         'label',
-        '__ts_star', 
+        'starred', 
         '__ts_comment',
         '_index', 
         '_id', 
@@ -350,7 +350,7 @@ export default {
       let chip = {
         field: key,
         value: value,
-        type: 'term',
+        type: 'attribute',
         operator: operator,
         active: true,
       }
