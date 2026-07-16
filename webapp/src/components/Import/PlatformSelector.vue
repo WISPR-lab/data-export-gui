@@ -29,12 +29,12 @@ Added for WISPR Lab / data-export-gui project
         </v-card-title>
 
         <v-card-text class="pt-0 pb-2">
-          <p class="text-body2 text--secondary mb-4">
+          <p class="text-body-2 text--secondary mb-4">
             Choose which service's data export you'd like to analyze. You can upload more data later.
           </p>
 
-          <v-alert dense text type="success" icon="mdi-information" class="mb-4">
-            <span>Your data export is processed locally on your device and is never sent to any server.</span> 
+          <v-alert dense text type="success" icon="mdi-lock" class="mb-4 text-body-2">
+            <span><b>Privacy: </b>Your data export is processed on your device and is never sent to any server.</span> 
           </v-alert>
 
           <v-row dense class="mb-4">

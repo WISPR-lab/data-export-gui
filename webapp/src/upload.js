@@ -12,7 +12,7 @@ function log(...args) {
 function logError(...args) { console.error('[UploadService]', ...args); }
 
 
-export async function processUpload(file, platform, projectId, store) {
+export async function processUpload(file, platform, givenName, projectId, store) {
   /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. */
   const startTime = Date.now();
   const summary = {
@@ -40,7 +40,7 @@ export async function processUpload(file, platform, projectId, store) {
     
     const opfsManager = new OPFSManager();
     
-    const result = await executeUpload(file, platform, opfsManager, {
+    const result = await executeUpload(file, platform, givenName, opfsManager, {
       onProgress: (evt) => {
         log(`${evt.stage} (${evt.progress}%)`);
         if (store) {

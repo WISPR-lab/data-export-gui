@@ -100,21 +100,21 @@ export default {
     },
     async save(dataExport, dataExportName = false) {
       // Only show the progress bar if renaming the data export
-      if (dataExportName) {
+      if (dataExportName !== false) {
         this.isLoading = true
       }
       
       try {
         await DB.updateUpload(dataExport.id, {
-          given_name: dataExport.name,
-          color: dataExport.color
+          given_name: dataExportName || dataExport.name,
+          color: dataExport.color,
         })
         await this.$store.dispatch('updateProject', this.project.id)
         this.syncSelectedDataExports()
       } catch (e) {
         console.error('[DataExportPicker] Failed to update upload:', e)
       } finally {
-        if (dataExportName) {
+        if (dataExportName !== false) {
           this.isLoading = false
         }
       }
