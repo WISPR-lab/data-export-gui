@@ -42,7 +42,6 @@ limitations under the License.
       <span class="float-right" style="margin-right: 10px">
         <small v-if="tags && filteredLabels">
           <strong>{{ filteredCount !== null ? filteredCount : totalTagsCount }}</strong>
-          <span v-if="filteredCount !== null && filteredCount !== totalTagsCount" class="text--secondary" style="font-weight: normal;"> (of {{ totalTagsCount }})</span>
         </small>
       </span>
     </div>

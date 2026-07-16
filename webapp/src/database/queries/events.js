@@ -72,8 +72,8 @@ export async function searchEvents(queryString = '', filter = {}) {
     
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
     const countPerDataExport = await _getEventsCountPerTimeline(db, whereClause, whereParams);
-    const countPerEventType = await _getEventsCountPerEventType(db, filter, queryString);
-    const countPerIPAddress = await _getEventsCountPerIPAddress(db, filter, queryString);
+    const countPerEventType = await _getEventsCountPerEventType(db, whereClause, whereParams);
+    const countPerIPAddress = await _getEventsCountPerIPAddress(db, whereClause, whereParams);
     const countPerTagOrLabel = await _getEventsCountPerTagOrLabel(db, filter, queryString);
     
     // Batch resolve files and line numbers
@@ -349,10 +349,8 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
   return counts;
 }
 
-async function _getEventsCountPerEventType(db, filter, queryString) {
+async function _getEventsCountPerEventType(db, whereClause, whereParams) {
   // Compute counts with the current filter
-  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'u.platform'];
-  const { clause: whereClause, params: whereParams } = buildWhereClause(filter, queryString || '', stringColumns);
   const baseWhere = 'WHERE e.event_type_msg IS NOT NULL AND e.event_type_msg != \'\'';
   const combinedWhere = whereClause ? whereClause + ' AND e.event_type_msg IS NOT NULL AND e.event_type_msg != \'\'': baseWhere;
   const sql = `
@@ -364,7 +362,7 @@ async function _getEventsCountPerEventType(db, filter, queryString) {
     ${combinedWhere} 
     GROUP BY e.event_type_msg
   `;
-  const rows = await db.exec(sql, {
+  const rows = await db.exec(sql, { 
     bind: whereParams,
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -376,10 +374,8 @@ async function _getEventsCountPerEventType(db, filter, queryString) {
   return counts;
 }
 
-async function _getEventsCountPerIPAddress(db, filter, queryString) {
+async function _getEventsCountPerIPAddress(db, whereClause, whereParams) {
   // Compute counts with the current filter
-  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'u.platform'];
-  const { clause: whereClause, params: whereParams } = buildWhereClause(filter, queryString || '', stringColumns);
   const baseWhere = 'WHERE e.attributes IS NOT NULL AND e.attributes != \'\''
   const combinedWhere = whereClause ? whereClause + ' AND e.attributes IS NOT NULL AND e.attributes != \'\'': baseWhere;
   const sql = `

@@ -20,6 +20,7 @@ limitations under the License.
   <div>
     <div>
       <v-data-iterator
+        no-data-text=""
         :items="nonZeroItems"
         :items-per-page.sync="itemsPerPage"
         :search="search"
@@ -167,8 +168,8 @@ export default {
         var self = this
         newLabels.forEach(function(item) {
           var key = item.label || item.tag
-          if (self.isFiltered && self.filteredCounts[key] !== undefined) {
-            self.filteredCounts[key] = item.count
+          if (self.isFiltered) {
+            self.$set(self.filteredCounts, key, item.count)
           }
         })
       },
@@ -179,8 +180,8 @@ export default {
         var self = this
         newTags.forEach(function(item) {
           var key = item.label || item.tag
-          if (self.isFiltered && self.filteredCounts[key] !== undefined) {
-            self.filteredCounts[key] = item.count
+          if (self.isFiltered) {
+            self.$set(self.filteredCounts, key, item.count)
           }
         })
       },

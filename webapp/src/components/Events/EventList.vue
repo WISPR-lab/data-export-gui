@@ -926,6 +926,13 @@ export default {
       // Exit early if there are no uploadIds selected
       if (this.currentQueryFilter.uploadIds && !this.currentQueryFilter.uploadIds.length) {
         this.eventList = emptyEventList()
+        EventBus.$emit('updateCountPerExport', {})
+        this.$emit('countPerDataExport', {})
+        EventBus.$emit('searchResultsCounts', {
+          countPerEventType: {},
+          countPerIPAddress: {},
+          countPerTagOrLabel: {}
+        })
         return
       }
 

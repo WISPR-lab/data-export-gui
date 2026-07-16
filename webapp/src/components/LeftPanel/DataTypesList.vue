@@ -19,6 +19,7 @@ limitations under the License.
 <template>
   <div id="tsLeftPanelEventTypesList">
     <v-data-iterator
+       no-data-text=""
       :items="nonZeroItems"
       :items-per-page.sync="itemsPerPage"
       :search="search"

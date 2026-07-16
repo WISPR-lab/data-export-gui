@@ -262,16 +262,14 @@ function compileAttributeFilters(chips = [], stringColumns = []) {
   activeFilterChips.forEach(chip => {
     const escapedValue = escapeLikePattern(chip.value);
     
-    if (chip.type === 'tag') {
+    if (chip.value === 'starred') {
+      conditions.push(`e.starred = 1`);
+    } else if (chip.type === 'tag') {
       conditions.push(`json_extract(e.tags, '$') LIKE ?`);
       params.push(`%"${escapedValue}"%`);
     } else if (chip.type === 'label') {
-      if (chip.value === 'starred') {
-        conditions.push(`e.starred = 1`);
-      } else {
-        conditions.push(`json_extract(e.labels, '$') LIKE ?`);
-        params.push(`%"${escapedValue}"%`);
-      }
+      conditions.push(`json_extract(e.labels, '$') LIKE ?`);
+      params.push(`%"${escapedValue}"%`);
     } else if (chip.type === 'attribute' && chip.field) {
       const matched = stringColumns.find(col => col.split('.').pop() === chip.field);
       const cond = matched ? `LOWER(${matched}) = ?` : `json_extract(e.attributes, '$.${chip.field}') = ?`;

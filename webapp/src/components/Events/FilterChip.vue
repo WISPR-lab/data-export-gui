@@ -125,6 +125,9 @@ export default {
       })
     },
     formatChipDisplay(chip) {
+      if (chip && chip.value === 'starred') {
+        return 'Starred'
+      }
       // Format datetime_range chips nicely
       if (chip && chip.type === 'datetime_range' && chip.value) {
         const dayjs = require('@/plugins/dayjs').default
