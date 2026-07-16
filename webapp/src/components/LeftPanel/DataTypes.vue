@@ -18,47 +18,40 @@ limitations under the License.
 
 
 <template>
-  <div>
-    <v-btn
-      v-if="iconOnly"
-      icon
-      class="ma-2"
-      @click="$emit('toggleDrawer'); expanded = true"
+  <div
+    v-if="iconOnly"
+    class="pa-4"
+    style="cursor: pointer"
+    @click="
+      $emit('toggleDrawer')
+      expanded = true
+    "
+  >
+    <v-icon left>mdi-filter-multiple-outline</v-icon>
+    <div style="height: 1px"></div>
+  </div>
+  <div v-else id="tsLeftPanelEventTypes">
+    <div
+      :style="eventTypes && eventTypes.length ? 'cursor: pointer' : ''"
+      class="pa-4"
+      @click="toggleExpand"
+      :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
-      <v-icon>mdi-filter-multiple-outline</v-icon>
-    </v-btn>
-    <div v-else id="tsLeftPanelEventTypes">
-      <v-list-item
-        :disabled="!eventTypes.length"
-        link
-        @click="toggleExpand"
-        class="px-4"
-      >
-        <v-list-item-icon class="mr-3">
-          <v-icon>mdi-filter-multiple-outline</v-icon>
-        </v-list-item-icon>
-        
-        <v-list-item-content>
-          <v-list-item-title>Event Types</v-list-item-title>
-        </v-list-item-content>
-
-        <v-list-item-action v-if="eventTypes.length">
-          <span class="text-caption font-weight-bold">
-            {{ filteredCount !== null ? filteredCount : eventTypes.length }}
-            <span v-if="filteredCount !== null && filteredCount !== eventTypes.length" class="text--secondary font-weight-regular">
-              (of {{ eventTypes.length }})
-            </span>
-          </span>
-        </v-list-item-action>
-      </v-list-item>
-
-      <v-expand-transition>
-        <div v-show="expanded && eventTypes.length" class="pl-8 pr-4 pb-4">
-          <ts-data-types-list @filtered-count="filteredCount = $event"></ts-data-types-list>
-        </div>
-      </v-expand-transition>
-      <v-divider></v-divider>
+      <span> <v-icon left>mdi-filter-multiple-outline</v-icon>Event Types</span>
+      <span class="float-right" style="margin-right: 10px">
+        <small v-if="eventTypes">
+          <strong>{{ filteredCount !== null ? filteredCount : eventTypes.length }}</strong>
+          <span v-if="filteredCount !== null && filteredCount !== eventTypes.length" class="text--secondary" style="font-weight: normal;"> (of {{ eventTypes.length }})</span>
+        </small>
+      </span>
     </div>
+
+    <v-expand-transition>
+      <div v-show="expanded && eventTypes.length" class="pl-8 pr-4 pb-4">
+        <ts-data-types-list @filtered-count="filteredCount = $event"></ts-data-types-list>
+      </div>
+    </v-expand-transition>
+    <v-divider></v-divider>
   </div>
 </template>
 
