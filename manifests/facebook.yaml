@@ -151,6 +151,34 @@ views:
       event.type: ["end"]
     fields: *fb_logins_logouts
 
+
+# -------------------------- SESSION REFRESHES -----------------
+
+  - file: 
+      id: "fb_account_activity"
+      where:
+        logic: "any"
+        conditions:
+        - {source: "action", op: "==", value: "Web Session Terminated"}
+        - {source: "action", op: "==", value: "Mobile Session Terminated"}
+    static:
+      event.action: "session_terminated"
+      event.kind: "event"
+      event.category: ["authentication", "session"]
+      event.type: ["info"]
+    fields: *fb_account_activity
+
+  - file: 
+      id: "fb_account_activity"
+      where:
+        {source: "action", op: "==", value: "Session updated"}
+    static:
+      event.action: "session_refresh"
+      event.kind: "event"
+      event.category: ["authentication", "session"]
+      event.type: ["info"]
+    fields: *fb_account_activity
+
 # -------------------------- PWD CHANGE ------------------------
   - file:
       id: "fb_account_activity"
