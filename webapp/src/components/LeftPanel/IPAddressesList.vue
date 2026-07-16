@@ -112,7 +112,7 @@ export default {
       eventData.chip = {
         field: 'client_ip',
         value: clientIp,
-        type: 'term',
+        type: 'attribute',
         operator: 'must',
         active: true,
       }

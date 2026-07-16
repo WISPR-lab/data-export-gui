@@ -1,32 +1,35 @@
+// added for WISPR-lab/data-export-gui
+
 import { parse as parseLiqe } from 'liqe';
 
-
-
-
 export function buildWhereClause(filter = {}, queryString = '', stringColumns = []) {
-  /* Composes string search, upload filter, datetime range, and chip conditions into a single WHERE clause with parameterized bindings. */
+  /* Composes search bar text, upload filters, datetime range, and attribute chips into a single WHERE clause. */
   const allConditions = [];
   const allParams = [];
 
+  // 1. Text Search Bar Query
   if (queryString && queryString.trim()) {
-    const { conditions, params } = stringConditions(queryString, stringColumns);
+    const { conditions, params } = compileSearchString(queryString, stringColumns);
     allConditions.push(...conditions);
     allParams.push(...params);
   }
 
-  const { conditions: uploadConds, params: uploadParams } = uploadCondition(filter.uploadIds);
+  // 2. Upload Timeline Filters
+  const { conditions: uploadConds, params: uploadParams } = compileUploadFilter(filter.uploadIds);
   allConditions.push(...uploadConds);
   allParams.push(...uploadParams);
 
-  const { conditions: datetimeConds, params: datetimeParams } = datetimeChipCondition(filter.chips);
+  // 3. Time Filter Chips
+  const { conditions: datetimeConds, params: datetimeParams } = compileTimeFilters(filter.chips);
   allConditions.push(...datetimeConds);
   allParams.push(...datetimeParams);
 
-  const { conditions: filterConds, params: filterParams } = otherChipConditions(filter.chips, stringColumns);
+  // 4. Attribute / Tag / Label Chips
+  const { conditions: filterConds, params: filterParams } = compileAttributeFilters(filter.chips, stringColumns);
   allConditions.push(...filterConds);
   allParams.push(...filterParams);
 
-  const result =  {
+  const result = {
     clause: allConditions.length > 0 ? 'WHERE ' + allConditions.join(' AND ') : '',
     params: allParams
   };
@@ -35,71 +38,59 @@ export function buildWhereClause(filter = {}, queryString = '', stringColumns = 
   return result;
 }
 
-
-
-//   Strings 
-
-function escapeLikePattern(value) {
-  if (typeof value !== 'string') return value;
-  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '|_');
-}
-
-function wildcardToLike(term) {
-  if (typeof term !== 'string') return term;
-  const escaped = escapeLikePattern(term);
-  return escaped.replace(/\*/g, '%').replace(/\?/g, '_');
-}
-
-
-
-function stringLeaf(field, value, stringColumns) {
-  /* If field matches a known column, scopes LIKE to it; otherwise broadcasts LIKE across all stringColumns plus json_extract on attributes. */
-  const isWildcard = value.includes('*') || value.includes('?');
-  const likeValue = isWildcard ? value : `%${value}%`;
+export function buildOrderClause(options = {}) {
+  const order = (options.order || 'desc').toUpperCase();
+  const orderBy = options.orderBy || 'timestamp';
   
-  if (field) {
-    const matchedCol = stringColumns.find(col => {
-      const colName = col.includes('.') ? col.split('.')[1] : col;
-      return colName === field;
-    });
-    if (matchedCol) {
-      const lowerLikeValue = likeValue.toLowerCase();
-      return {
-        conditions: [`LOWER(${matchedCol}) LIKE ? ESCAPE '|'`],
-        params: [lowerLikeValue]
-      };
-    } else {
-      return {
-        conditions: [`json_extract(e.attributes, '$.${field}') LIKE ?`],
-        params: [`%${value}%`]
-      };
-    }
-  } else {
-    const fieldConditions = stringColumns.map(f => `LOWER(${f}) LIKE ? ESCAPE '|'`);
-    const lowerLikeValue = likeValue.toLowerCase();
-    return {
-      conditions: [`(${fieldConditions.join(' OR ')} OR json_extract(e.attributes, '$') LIKE ?)`],
-      params: [...Array(stringColumns.length).fill(lowerLikeValue), `%${value}%`]
-    };
+  const allowedColumns = ['timestamp', 'id', 'event_type_msg', 'category'];
+  const column = allowedColumns.includes(orderBy) ? orderBy : 'timestamp';
+  const direction = ['ASC', 'DESC'].includes(order) ? order : 'DESC';
+  
+  return `ORDER BY e.${column} ${direction}`;
+}
+
+export function buildPaginationClause(options = {}) {
+  const limit = parseInt(options.size || 40, 10);
+  const offset = parseInt(options.from || 0, 10);
+  
+  return {
+    clause: 'LIMIT ? OFFSET ?',
+    params: [limit, offset]
+  };
+}
+
+// --- SEARCH STRING COMPILER (LUCENE) ---
+
+function compileSearchString(searchString, stringColumns) {
+  /* Parses the search bar string as Lucene syntax; falls back to global fuzzy search on parse failure. */
+  if (!searchString || !searchString.trim()) {
+    return { conditions: [], params: [] };
+  }
+
+  try {
+    const ast = parseLiqe(searchString);
+    return traverseSearchAST(ast, stringColumns);
+  } catch (error) {
+    console.warn('[compileSearchString] Parse error, falling back to global fuzzy search:', error);
+    return compileGlobalFuzzySearch(searchString, stringColumns);
   }
 }
 
+function traverseSearchAST(node, stringColumns) {
+  /* Recursively traverses the parsed Lucene AST tree and builds SQL conditions. */
+  if (!node) return { conditions: [], params: [] };
 
-function astToConditions(ast, stringColumns) {
-  /* Recursively walks a Liqe AST and converts each node to SQL conditions with parameterized bindings. */
-  if (!ast) return { conditions: [], params: [] };
-
-  if (ast.type === 'Tag') {
-    const field = ast.field && ast.field.type === 'Field' ? ast.field.name : null;
-    const val = ast.expression && ast.expression.value !== undefined ? ast.expression.value : '';
-    const value = wildcardToLike(val);
-    return stringLeaf(field, value, stringColumns);
+  if (node.type === 'Tag') {
+    const field = node.field && node.field.type === 'Field' ? node.field.name : null;
+    const val = node.expression && node.expression.value !== undefined ? node.expression.value : '';
+    const quoted = node.expression && node.expression.quoted === true;
+    return compileFieldSearch(field, val, stringColumns, quoted);
   }
 
-  if (ast.type === 'LogicalExpression') {
-    const left = astToConditions(ast.left, stringColumns);
-    const right = astToConditions(ast.right, stringColumns);
-    const op = ast.operator && ast.operator.operator ? ast.operator.operator : 'AND';
+  if (node.type === 'LogicalExpression') {
+    const left = traverseSearchAST(node.left, stringColumns);
+    const right = traverseSearchAST(node.right, stringColumns);
+    const op = node.operator && node.operator.operator ? node.operator.operator : 'AND';
 
     if (left.conditions.length > 0 && right.conditions.length > 0) {
       return {
@@ -113,8 +104,8 @@ function astToConditions(ast, stringColumns) {
     }
   }
 
-  if (ast.type === 'UnaryOperator') {
-    const inner = astToConditions(ast.operand, stringColumns);
+  if (node.type === 'UnaryOperator') {
+    const inner = traverseSearchAST(node.operand, stringColumns);
     if (inner.conditions.length > 0) {
       return {
         conditions: [`NOT (${inner.conditions[0]})`],
@@ -124,43 +115,74 @@ function astToConditions(ast, stringColumns) {
     return inner;
   }
 
-  if (ast.type === 'ParenthesizedExpression') {
-    return astToConditions(ast.expression, stringColumns);
+  if (node.type === 'ParenthesizedExpression') {
+    return traverseSearchAST(node.expression, stringColumns);
   }
 
   return { conditions: [], params: [] };
 }
 
-
-
-export function stringConditions(queryString, stringColumns) {
-  /* Parses queryString as Lucene syntax; falls back to literal LIKE search across all columns on parse failure. */
-  if (!queryString || !queryString.trim()) {
-    return { conditions: [], params: [] };
-  }
-
-  try {
-    const ast = parseLiqe(queryString);
-    return astToConditions(ast, stringColumns);
-  } catch (error) {
-    console.warn('[stringConditions] Parse error, falling back to literal search:', error);
-    const escaped = escapeLikePattern(queryString);
-    return stringLeaf(null, escaped, stringColumns);
+function compileFieldSearch(field, value, stringColumns, quoted = false) {
+  /* Scopes search bar queries to columns or JSON attributes; supports exact matches for quoted terms. */
+  if (field) {
+    const matchedCol = stringColumns.find(col => col.split('.').pop() === field);
+    if (quoted) {
+      if (matchedCol) {
+        return {
+          conditions: [`LOWER(${matchedCol}) = ?`],
+          params: [value.toLowerCase()]
+        };
+      } else {
+        return {
+          conditions: [`json_extract(e.attributes, '$.${field}') = ?`],
+          params: [value]
+        };
+      }
+    } else {
+      const isWildcard = value.includes('*') || value.includes('?');
+      const finalValue = wildcardToLike(value);
+      const likeValue = isWildcard ? finalValue : `%${finalValue}%`;
+      if (matchedCol) {
+        return {
+          conditions: [`LOWER(${matchedCol}) LIKE ? ESCAPE '|'`],
+          params: [likeValue.toLowerCase()]
+        };
+      } else {
+        return {
+          conditions: [`json_extract(e.attributes, '$.${field}') LIKE ?`],
+          params: [likeValue]
+        };
+      }
+    }
+  } else {
+    return compileGlobalFuzzySearch(value, stringColumns);
   }
 }
 
+function compileGlobalFuzzySearch(text, stringColumns) {
+  /* Helper to perform fuzzy LIKE search across all database columns and JSON attributes. */
+  const isWildcard = text.includes('*') || text.includes('?');
+  const finalValue = wildcardToLike(text);
+  const likeValue = isWildcard ? finalValue : `%${finalValue}%`;
+  
+  const fieldConditions = stringColumns.map(f => `LOWER(${f}) LIKE ? ESCAPE '|'`);
+  const lowerLikeValue = likeValue.toLowerCase();
+  
+  return {
+    conditions: [`(${fieldConditions.join(' OR ')} OR json_extract(e.attributes, '$') LIKE ?)`],
+    params: [...Array(stringColumns.length).fill(lowerLikeValue), likeValue]
+  };
+}
 
-//   upload filter 
+// --- STATE-BASED CHIP BUILDERS ---
 
-
-
-function uploadCondition(uploadIds = []) {
+function compileUploadFilter(uploadIds = []) {
+  /* Restricts queries to specific upload timeline sources. */
   if (!Array.isArray(uploadIds)) {
     return { conditions: [], params: [] };
   }
 
-  const ids = uploadIds.filter(id => typeof id === 'string' && id !== '_all');
-  
+  const ids = uploadIds.filter(id => (typeof id === 'string' || typeof id === 'number') && id !== '_all');
   if (ids.length === 0) {
     return { conditions: [], params: [] };
   }
@@ -172,17 +194,15 @@ function uploadCondition(uploadIds = []) {
   };
 }
 
-
-
-// chips, datetime
-
-
-function datetimeChipCondition(chips = []) {
-  /* Extends date-only end values (YYYY-MM-DD) to 23:59:59.999 so the full day is included in the range. */
+function compileTimeFilters(chips = []) {
+  /* Compiles date range chips into timestamp window restrictions. */
   if (!Array.isArray(chips) || chips.length === 0) {
     return { conditions: [], params: [] };
   }
-  const activeDatetimeChips = chips.filter(chip => chip && chip.type && chip.type.startsWith('datetime') && chip.active !== false);
+  
+  const activeDatetimeChips = chips.filter(
+    chip => chip && chip.type && chip.type.startsWith('datetime') && chip.active !== false
+  );
   if (activeDatetimeChips.length === 0) {
     return { conditions: [], params: [] };
   }
@@ -222,20 +242,14 @@ function datetimeChipCondition(chips = []) {
   };
 }
 
-
-
-
-// other chip filters
-
-
-function otherChipConditions(chips = [], stringColumns = []) {
-  /* Routes tag/label chips to JSON LIKE queries and term chips to column-scoped stringLeaf conditions. */
+function compileAttributeFilters(chips = [], stringColumns = []) {
+  /* Compiles tags, labels, and attribute filter chips into exact database matches. */
   if (!Array.isArray(chips) || chips.length === 0) {
     return { conditions: [], params: [] };
   }
 
   const activeFilterChips = chips.filter(
-    chip => chip && chip.type && (chip.type === 'tag' || chip.type === 'term' || chip.type === 'label') && chip.active !== false
+    chip => chip && chip.type && (chip.type === 'tag' || chip.type === 'attribute' || chip.type === 'label') && chip.active !== false
   );
 
   if (activeFilterChips.length === 0) {
@@ -258,42 +272,32 @@ function otherChipConditions(chips = [], stringColumns = []) {
         conditions.push(`json_extract(e.labels, '$') LIKE ?`);
         params.push(`%"${escapedValue}"%`);
       }
-    } else if (chip.type === 'term' && chip.field) {
-      const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringColumns);
-      if (termConds.length > 0) {
-        if (chip.operator === 'must_not') {
-          conditions.push(`NOT (${termConds[0]})`);
-        } else {
-          conditions.push(termConds[0]);
-        }
-        params.push(...termParams);
+    } else if (chip.type === 'attribute' && chip.field) {
+      const matched = stringColumns.find(col => col.split('.').pop() === chip.field);
+      const cond = matched ? `LOWER(${matched}) = ?` : `json_extract(e.attributes, '$.${chip.field}') = ?`;
+      const param = matched ? chip.value.toLowerCase() : chip.value;
+
+      if (chip.operator === 'must_not') {
+        conditions.push(`NOT (${cond})`);
+      } else {
+        conditions.push(cond);
       }
+      params.push(param);
     }
   });
 
   return { conditions, params };
 }
 
+// --- UTILITY STRING HELPERS ---
 
-export function buildOrderClause(options = {}) {
-  const order = (options.order || 'desc').toUpperCase();
-  const orderBy = options.orderBy || 'timestamp';
-  
-  const allowedColumns = ['timestamp', 'id', 'event_type_msg', 'category'];
-  const column = allowedColumns.includes(orderBy) ? orderBy : 'timestamp';
-  const direction = ['ASC', 'DESC'].includes(order) ? order : 'DESC';
-  
-  return `ORDER BY e.${column} ${direction}`;
+function escapeLikePattern(value) {
+  if (typeof value !== 'string') return value;
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '|_');
 }
 
-export function buildPaginationClause(options = {}) {
-  const limit = parseInt(options.size || 40, 10);
-  const offset = parseInt(options.from || 0, 10);
-  
-  const result = {
-    clause: 'LIMIT ? OFFSET ?',
-    params: [limit, offset]
-  };
-
-  return result;
+function wildcardToLike(term) {
+  if (typeof term !== 'string') return term;
+  const escaped = escapeLikePattern(term);
+  return escaped.replace(/\*/g, '%').replace(/\?/g, '_');
 }

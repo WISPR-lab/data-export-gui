@@ -85,7 +85,8 @@ export default {
     filteredLabels() {
       if (!this.meta.filter_labels) return []
       return this.meta.filter_labels.filter(function (label) {
-        return label && typeof label.label === 'string' && !label.label.startsWith('__ts_fact')
+        const name = label.tag || label.label
+        return label && typeof name === 'string' && !name.startsWith('__ts_fact')
       })
     },
     totalTagsCount() {

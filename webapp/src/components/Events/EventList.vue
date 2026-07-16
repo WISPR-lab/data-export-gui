@@ -786,7 +786,7 @@ export default {
       return this.$store.state.settings
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'attribute'))
     },
     availableColumns() {
       if (!this.meta || !this.meta.mappings) return [];

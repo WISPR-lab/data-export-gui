@@ -32,7 +32,7 @@
     </template>
     <v-card>
       <v-list dense>
-        <!-- Option 1: Edit for time chips, Operator Toggle for regular chips -->
+        <!-- Edit for time chips -->
         <v-menu
           v-if="isTimeChip"
           offset-y
@@ -44,39 +44,40 @@
           style="overflow: visible"
         >
           <template v-slot:activator="{ on, attrs }">
-                <v-list-item v-bind="attrs" v-on="on">
-                  <v-list-item-action class="mr-3">
-                    <v-icon>mdi-square-edit-outline</v-icon>
-                  </v-list-item-action>
-                  <v-list-item-subtitle>Edit filter</v-list-item-subtitle>
-                </v-list-item>
-              </template>
-              <filter-menu app :selected-chip="chip" @updateChip="$emit('update', $event, chip)"></filter-menu>
-            </v-menu>
-
-            <v-list-item v-else @click="$emit('toggle-operator', chip)">
+            <v-list-item v-bind="attrs" v-on="on">
               <v-list-item-action class="mr-3">
-                <v-icon v-if="chip.operator === 'must_not'">mdi-plus-circle-outline</v-icon>
-                <v-icon v-else>mdi-minus-circle-outline</v-icon>
+                <v-icon>mdi-square-edit-outline</v-icon>
               </v-list-item-action>
-              <v-list-item-subtitle>
-                <span v-if="chip.operator === 'must_not'">Include results</span>
-                <span v-else>Exclude results</span>
-              </v-list-item-subtitle>
+              <v-list-item-subtitle>Edit filter</v-list-item-subtitle>
             </v-list-item>
+          </template>
+          <filter-menu app :selected-chip="chip" @updateChip="$emit('update', $event, chip)"></filter-menu>
+        </v-menu>
 
-          <!-- Option 2: Temporarily disable / Re-enable (Common) -->
-          <v-list-item @click="$emit('toggle', chip)">
-            <v-list-item-action class="mr-3">
-              <v-icon v-if="chip.active !== false">mdi-eye-off</v-icon>
-              <v-icon v-else>mdi-eye</v-icon>
-            </v-list-item-action>
-            <v-list-item-subtitle>
-              <span v-if="chip.active !== false">Temporarily disable</span>
-              <span v-else>Re-enable</span>
-            </v-list-item-subtitle>
-            </v-list-item>
-            
+        <!-- Option 1: Temporarily disable / Re-enable (Common) -->
+        <v-list-item @click="$emit('toggle', chip)">
+          <v-list-item-action class="mr-3">
+            <v-icon v-if="chip.active !== false">mdi-eye-off</v-icon>
+            <v-icon v-else>mdi-eye</v-icon>
+          </v-list-item-action>
+          <v-list-item-subtitle>
+            <span v-if="chip.active !== false">Temporarily disable</span>
+            <span v-else>Re-enable</span>
+          </v-list-item-subtitle>
+        </v-list-item>
+
+        <!-- Option 2: Operator Toggle for regular chips -->
+        <v-list-item v-if="!isTimeChip" @click="$emit('toggle-operator', chip)">
+          <v-list-item-action class="mr-3">
+            <v-icon v-if="chip.operator === 'must_not'">mdi-plus-circle-outline</v-icon>
+            <v-icon v-else>mdi-minus-circle-outline</v-icon>
+          </v-list-item-action>
+          <v-list-item-subtitle>
+            <span v-if="chip.operator === 'must_not'">Include results</span>
+            <span v-else>Exclude results</span>
+          </v-list-item-subtitle>
+        </v-list-item>
+
         <!-- Option 3: Remove filter (Common) -->
         <v-list-item @click="$emit('remove', chip)">
           <v-list-item-action class="mr-3">

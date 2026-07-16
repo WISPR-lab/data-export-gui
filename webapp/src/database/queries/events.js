@@ -13,7 +13,7 @@ example of 'filter' object
     uploadIds: [],
     chips: [
       { type: 'tag', value: 'archived', active: true },
-      { type: 'term', field: 'user_agent_os_name', value: 'Windows' },
+      { type: 'attribute', field: 'user_agent_os_name', value: 'Windows' },
       { type: 'label', value: 'verified' },
       { type: 'datetime:range', value: '2024-01-15T00:00:00Z,2024-01-20T23:59:59Z' }
     ]

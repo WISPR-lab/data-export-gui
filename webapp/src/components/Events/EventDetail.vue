@@ -350,7 +350,7 @@ export default {
       let chip = {
         field: key,
         value: value,
-        type: 'term',
+        type: 'attribute',
         operator: operator,
         active: true,
       }

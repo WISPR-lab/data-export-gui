@@ -162,7 +162,7 @@ export default {
       eventData.chip = {
         field: 'event_type_msg',
         value: action,
-        type: 'term',
+        type: 'attribute',
         operator: 'must',
         active: true,
       }

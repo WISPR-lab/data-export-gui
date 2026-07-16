@@ -263,7 +263,7 @@ export default {
       return this.$store.state.meta
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term' || chip.type === 'tag'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'attribute' || chip.type === 'tag'))
     },
     timeFilterChips: function () {
       return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && chip.type.startsWith('datetime'))
@@ -402,18 +402,12 @@ export default {
     },
     handleSearchBarSearch(event) {
       this.currentQueryString = event.queryString
-      if (event.promotedChips && event.promotedChips.length > 0) {
-        if (!this.currentQueryFilter.chips) {
-          this.currentQueryFilter.chips = []
-        }
-        event.promotedChips.forEach(function (chip) {
-          const exists = this.currentQueryFilter.chips.some(function (c) {
-            return c.field === chip.field && c.value === chip.value && c.type === chip.type && c.operator === chip.operator
-          })
-          if (!exists) {
-            this.currentQueryFilter.chips.push(chip)
+      if (this.currentQueryFilter && this.currentQueryFilter.chips && this.currentQueryFilter.chips.length > 0) {
+        this.currentQueryFilter.chips.forEach(function (chip) {
+          if (chip && chip.active !== false) {
+            chip.active = false
           }
-        }.bind(this))
+        })
       }
       this.search()
     },
