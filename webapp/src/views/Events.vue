@@ -297,6 +297,12 @@ export default {
     },
   },
   watch: {
+    allDataExports: function (newVal) {
+      // Auto-enable all when project first loads and nothing is selected yet
+      if (newVal.length > 0 && this.$store.state.enabledDataExports.length === 0) {
+        this.enableAllDataExports()
+      }
+    },
     enabledDataExports: function () {
       this.updateEnabledDataExports(this.enabledDataExports)
     },
@@ -353,11 +359,20 @@ export default {
       this.currentQueryFilter = searchEvent.queryFilter
 
       if (searchEvent.chip) {
+        const newChip = searchEvent.chip
         const chipExist = this.currentQueryFilter.chips.find(function (chip) {
-          return chip.field === searchEvent.chip.field && chip.value === searchEvent.chip.value
+          return chip.field === newChip.field && chip.value === newChip.value
         })
         if (!chipExist) {
-          this.currentQueryFilter.chips.push(searchEvent.chip)
+          // Disable any existing active chip of the same field (same type: event_type_msg or client_ip)
+          if (newChip.field) {
+            this.currentQueryFilter.chips.forEach(function (chip) {
+              if (chip.field === newChip.field && chip.active !== false) {
+                chip.active = false
+              }
+            })
+          }
+          this.currentQueryFilter.chips.push(newChip)
         }
       }
 
@@ -691,6 +706,8 @@ export default {
 
     if (!this.currentQueryString) {
       this.currentQueryFilter.uploadIds = ['_all']
+      // Enable all data exports so chips appear selected after a hard refresh
+      this.enableAllDataExports()
     }
 
     if (doSearch) {
