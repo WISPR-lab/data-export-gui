@@ -33,6 +33,10 @@ Added for WISPR Lab / data-export-gui project
             Choose which service's data export you'd like to analyze. You can upload more data later.
           </p>
 
+          <v-alert dense text type="success" icon="mdi-information" class="mb-4">
+            <span>Your data export is processed locally on your device and is never sent to any server.</span> 
+          </v-alert>
+
           <v-row dense class="mb-4">
             <v-col v-for="platform in platforms" :key="platform.id" cols="4">
               <v-card
@@ -59,12 +63,6 @@ Added for WISPR Lab / data-export-gui project
             </v-col>
           </v-row>
 
-          <v-alert dense text type="info" class="mb-0">
-            Don't have your data yet?
-            <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
-              View step-by-step instructions
-            </router-link>
-          </v-alert>
         </v-card-text>
 
         <v-card-actions class="pa-4 pt-2">
