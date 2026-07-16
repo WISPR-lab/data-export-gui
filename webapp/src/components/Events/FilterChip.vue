@@ -12,7 +12,7 @@
         <v-icon v-if="isTimeChip" left small>mdi-clock-outline</v-icon>
 
         <!-- Icons for term/tag/label chips -->
-        <v-icon v-else-if="chip.value === '__ts_star'" left small color="amber">mdi-star</v-icon>
+        <v-icon v-else-if="chip.value === 'starred'" left small color="amber">mdi-star</v-icon>
         <v-icon v-else-if="chip.value === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
         <v-icon v-else-if="getQuickTag(chip.value)" left small :color="getQuickTag(chip.value).color">{{
           getQuickTag(chip.value).label

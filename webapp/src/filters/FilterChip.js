@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// modified for WISPR-lab/data-export-gui
 export default {
   name: 'filterChip',
   filter: function (input) {
     if (input.type === 'label') {
-      if (input.value === '__ts_star') {
+      if (input.value === 'starred') {
         return 'Starred'
       } else if (input.value === '__ts_comment') {
         return 'Commented'

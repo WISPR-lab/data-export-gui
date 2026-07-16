@@ -252,8 +252,12 @@ function otherChipConditions(chips = [], stringColumns = []) {
       conditions.push(`json_extract(e.tags, '$') LIKE ?`);
       params.push(`%"${escapedValue}"%`);
     } else if (chip.type === 'label') {
-      conditions.push(`json_extract(e.labels, '$') LIKE ?`);
-      params.push(`%"${escapedValue}"%`);
+      if (chip.value === 'starred') {
+        conditions.push(`e.starred = 1`);
+      } else {
+        conditions.push(`json_extract(e.labels, '$') LIKE ?`);
+        params.push(`%"${escapedValue}"%`);
+      }
     } else if (chip.type === 'term' && chip.field) {
       const { conditions: termConds, params: termParams } = stringLeaf(chip.field, escapedValue, stringColumns);
       if (termConds.length > 0) {

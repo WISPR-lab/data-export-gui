@@ -20,12 +20,12 @@ limitations under the License.
   <div>
     <div>
       <v-data-iterator
-          :items="allTagsAndLabels"
-          :items-per-page.sync="itemsPerPage"
-          :search="search"
-          :hide-default-footer="allTagsAndLabels.length <= itemsPerPage"
-        >
-        <template v-slot:header v-if="allTagsAndLabels.length > itemsPerPage">
+        :items="nonZeroItems"
+        :items-per-page.sync="itemsPerPage"
+        :search="search"
+        :hide-default-footer="nonZeroItems.length <= itemsPerPage"
+      >
+        <template v-slot:header v-if="nonZeroItems.length > itemsPerPage">
           <v-toolbar flat>
             <v-text-field
               v-model="search"
@@ -46,7 +46,7 @@ limitations under the License.
             style="cursor: pointer; font-size: 0.9em"
           >
             <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
-              <v-icon v-if="item.label === '__ts_star'" left small color="amber">mdi-star</v-icon>
+              <v-icon v-if="item.label === 'starred'" left small color="amber">mdi-star</v-icon>
               <v-icon v-if="item.label === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
               <v-icon v-if="getQuickTag(item.tag)" small left :color="getQuickTag(item.tag).color">{{ getQuickTag(item.tag).label }}</v-icon>
               <span>
@@ -57,6 +57,27 @@ limitations under the License.
         </template>
       </v-data-iterator>
     </div>
+
+    <!-- Zero-count items shown below divider only after filter search has executed -->
+    <template v-if="zeroItems.length">
+      <v-divider class="my-2 mx-3"></v-divider>
+      <div
+        v-for="item in zeroItems"
+        :key="'zero-' + (item.tag || item.label)"
+        @click="applyFilterChip(item.tag || item.label, item.tag ? 'tag' : '', item.tag ? 'tag' : 'label')"
+        class="text--secondary"
+        style="cursor: pointer; font-size: 0.9em;"
+      >
+        <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
+          <v-icon v-if="item.label === 'starred'" left small color="amber">mdi-star</v-icon>
+          <v-icon v-if="item.label === '__ts_comment'" left small>mdi-comment-multiple-outline</v-icon>
+          <v-icon v-if="getQuickTag(item.tag)" small left :color="getQuickTag(item.tag).color">{{ getQuickTag(item.tag).label }}</v-icon>
+          <span>
+            {{ (item.tag || item.label) | formatLabelText }} (<small><strong>0</strong></small>)
+          </span>
+        </v-row>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -64,7 +85,6 @@ limitations under the License.
 import EventBus from '../../event-bus.js'
 
 export default {
-  props: [],
   data: function () {
     return {
       // TODO: Refactor this into a configurable option
@@ -74,8 +94,16 @@ export default {
         { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
       ],
       itemsPerPage: 10,
-      search: ''
+      search: '',
+      isFiltered: false,
+      filteredCounts: {},
     }
+  },
+  mounted() {
+    EventBus.$on('searchResultsCounts', this.onSearchResultsCounts)
+  },
+  beforeDestroy() {
+    EventBus.$off('searchResultsCounts', this.onSearchResultsCounts)
   },
   computed: {
     meta() {
@@ -93,8 +121,28 @@ export default {
     assignedQuickTags() {
       return this.tags.filter((tag) => this.getQuickTag(tag.tag))
     },
+    nonZeroItems() {
+      var self = this
+      return this.allTagsAndLabels
+        .map(function(item) {
+          var key = item.tag || item.label
+          var count = self.isFiltered ? (self.filteredCounts[key] || 0) : item.count
+          return Object.assign({}, item, { count: count })
+        })
+        .filter(function(item) { return item.count > 0 })
+    },
+    zeroItems() {
+      if (!this.isFiltered) return []
+      var self = this
+      return this.allTagsAndLabels
+        .map(function(item) {
+          var key = item.tag || item.label
+          var count = self.isFiltered ? (self.filteredCounts[key] || 0) : item.count
+          return Object.assign({}, item, { count: count })
+        })
+        .filter(function(item) { return item.count === 0 })
+    },
     allTagsAndLabels() {
-      const labelOrder = ['__ts_star', '__ts_comment', 'bad', 'suspicious', 'good']
       const safeLabels = Array.isArray(this.labels) ? this.labels : []
       return [...safeLabels, ...this.assignedQuickTags, ...this.customTags]
         .filter(item => item.tag || item.label)
@@ -103,26 +151,49 @@ export default {
           const aLabel = a.tag || a.label
           const bLabel = b.tag || b.label
 
-          const aIsLabel = !!a.label
-          const bIsLabel = !!b.label
-
-          if (aIsLabel && !bIsLabel) return -1
-          if (!aIsLabel && bIsLabel) return 1
-
-          const aOrder = labelOrder.indexOf(aLabel)
-          const bOrder = labelOrder.indexOf(bLabel)
-
-          if (aOrder > -1 && bOrder > -1) return aOrder - bOrder
-          if (aOrder > -1) return -1
-          if (bOrder > -1) return 1
+          if (aLabel === 'starred') return -1
+          if (bLabel === 'starred') return 1
 
           return aLabel.localeCompare(bLabel)
         })
     },
   },
+  watch: {
+    nonZeroItems: function(val) {
+      this.$emit('filtered-count', this.isFiltered ? val.length : null)
+    },
+    labels: {
+      handler(newLabels) {
+        var self = this
+        newLabels.forEach(function(item) {
+          var key = item.label || item.tag
+          if (self.isFiltered && self.filteredCounts[key] !== undefined) {
+            self.filteredCounts[key] = item.count
+          }
+        })
+      },
+      deep: true
+    },
+    tags: {
+      handler(newTags) {
+        var self = this
+        newTags.forEach(function(item) {
+          var key = item.label || item.tag
+          if (self.isFiltered && self.filteredCounts[key] !== undefined) {
+            self.filteredCounts[key] = item.count
+          }
+        })
+      },
+      deep: true
+    }
+  },
   methods: {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
+    },
+    onSearchResultsCounts(payload) {
+      this.filteredCounts = payload.countPerTagOrLabel || {}
+      this.isFiltered = true
     },
     applyFilterChip(term, termField='', termType='label') {
       let eventData = {}

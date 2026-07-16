@@ -206,7 +206,7 @@ export default {
       
       const internalFilters = [
         'label',
-        '__ts_star', 
+        'starred', 
         '__ts_comment',
         '_index', 
         '_id', 

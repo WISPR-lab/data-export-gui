@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// modified for WISPR-lab/data-export-gui
 export default {
   name: 'formatLabelText',
   filter: function (input) {
-    if (input === '__ts_star' || input === 'label : __ts_star') {
+    if (input === 'starred' || input === 'label : starred') {
       return 'Starred'
     }
     if (input === '__ts_comment' || input === 'label : __ts_comment') {
