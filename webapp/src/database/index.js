@@ -176,8 +176,10 @@ export default {
   // Note: Frontend uses getEventActions (event_action field), not getCategories (event_category field)
   getEventActions: events.getEventActions,
   getEventTypes: events.getEventTypes,
+  getEventTypesFiltered: events.getEventTypesFiltered,
   getEventTags: events.getEventTags,
   getIPAddresses: events.getIPAddresses,
+  getIPAddressesFiltered: events.getIPAddressesFiltered,
   deleteEvents: events.deleteEvents,
   addLabelEvent: events.addLabelEvent,
   removeLabelEvent: events.removeLabelEvent,

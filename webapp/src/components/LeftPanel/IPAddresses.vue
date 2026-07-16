@@ -36,15 +36,16 @@ limitations under the License.
     >
       <span> <v-icon left>mdi-ip</v-icon>IP Addresses</span>
       <span class="float-right" style="margin-right: 10px">
-        <small v-if="ipAddresses"
-          ><strong>{{ ipAddresses.length }}</strong></small
-        >
+        <small v-if="ipAddresses">
+          <strong>{{ filteredCount !== null ? filteredCount : ipAddresses.length }}</strong>
+          <span v-if="filteredCount !== null && filteredCount !== ipAddresses.length" style="color: #9e9e9e; font-weight: normal;"> (of {{ ipAddresses.length }})</span>
+        </small>
       </span>
     </div>
 
     <v-expand-transition>
       <div v-show="expanded && ipAddresses.length" class="pl-8 pr-4 pb-4">
-        <i-p-addresses-list></i-p-addresses-list>
+        <i-p-addresses-list @filtered-count="filteredCount = $event"></i-p-addresses-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>
@@ -54,6 +55,7 @@ limitations under the License.
 <script>
 import IPAddressesList from './IPAddressesList.vue'
 import DB from '@/database/index.js'
+import EventBus from '@/event-bus.js'
 
 export default {
   props: {
@@ -66,6 +68,7 @@ export default {
     return {
       expanded: false,
       ipAddresses: [],
+      filteredCount: null,
     }
   },
   computed: {
@@ -81,6 +84,8 @@ export default {
       this.ipAddresses = []
     }
   },
+  beforeDestroy() {},
+  methods: {},
 }
 </script>
 

@@ -975,6 +975,10 @@ export default {
         this.updateShowBanner()
         this.$emit('countPerDataExport', this.eventList.meta.count_per_data_export)
         EventBus.$emit('updateCountPerExport', this.eventList.meta.count_per_data_export)
+        EventBus.$emit('searchResultsCounts', {
+          countPerEventType: this.eventList.meta.count_per_event_type || {},
+          countPerIPAddress: this.eventList.meta.count_per_ip_address || {}
+        })
         
         this.addTimeBubbles()
         

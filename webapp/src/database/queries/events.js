@@ -71,6 +71,8 @@ export async function searchEvents(queryString = '', filter = {}) {
     
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
     const countPerDataExport = await _getEventsCountPerTimeline(db, whereClause, whereParams);
+    const countPerEventType = await _getEventsCountPerEventType(db, filter, queryString);
+    const countPerIPAddress = await _getEventsCountPerIPAddress(db, filter, queryString);
     
     // Batch resolve files and line numbers
     const allFileIds = new Set();
@@ -154,6 +156,8 @@ export async function searchEvents(queryString = '', filter = {}) {
       meta: {
         total_count: totalCount,
         count_per_data_export: countPerDataExport,
+        count_per_event_type: countPerEventType,
+        count_per_ip_address: countPerIPAddress,
       }
     };
   } catch (error) {
@@ -233,6 +237,8 @@ export async function getEventTypes() {
     count: row.count
   }));
 }
+
+
 
 export async function getEventTags() {
   /* Client-side aggregation: parses JSON tags from all events and counts occurrences. */
@@ -338,6 +344,64 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
     counts[row.upload_id] = row.count;
   });
   return counts;
+}
+
+async function _getEventsCountPerEventType(db, filter, queryString) {
+  // Compute counts with the current filter
+  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'u.platform'];
+  const { clause: whereClause, params: whereParams } = buildWhereClause(filter, queryString || '', stringColumns);
+  const baseWhere = 'WHERE e.event_type_msg IS NOT NULL AND e.event_type_msg != \'\'';
+  const combinedWhere = whereClause ? whereClause + ' AND e.event_type_msg IS NOT NULL AND e.event_type_msg != \'\'': baseWhere;
+  const sql = `
+    SELECT e.event_type_msg, COUNT(*) as count 
+    FROM events e 
+    LEFT JOIN uploads u ON e.upload_id = u.id
+    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
+    LEFT JOIN device_instance_events die ON e.id = die.event_id
+    ${combinedWhere} 
+    GROUP BY e.event_type_msg
+  `;
+  const rows = await db.exec(sql, {
+    bind: whereParams,
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  const counts = {};
+  rows.forEach(row => {
+    counts[row.event_type_msg] = row.count;
+  });
+  return counts;
+}
+
+async function _getEventsCountPerIPAddress(db, filter, queryString) {
+  // Compute counts with the current filter
+  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'u.platform'];
+  const { clause: whereClause, params: whereParams } = buildWhereClause(filter, queryString || '', stringColumns);
+  const baseWhere = 'WHERE e.attributes IS NOT NULL AND e.attributes != \'\''
+  const combinedWhere = whereClause ? whereClause + ' AND e.attributes IS NOT NULL AND e.attributes != \'\'': baseWhere;
+  const sql = `
+    SELECT e.attributes 
+    FROM events e 
+    LEFT JOIN uploads u ON e.upload_id = u.id
+    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
+    LEFT JOIN device_instance_events die ON e.id = die.event_id
+    ${combinedWhere}
+  `;
+  const rows = await db.exec(sql, {
+    bind: whereParams,
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  const ipCounts = {};
+  rows.forEach(row => {
+    try {
+      const attrs = JSON.parse(row.attributes);
+      if (attrs.client_ip) {
+        ipCounts[attrs.client_ip] = (ipCounts[attrs.client_ip] || 0) + 1;
+      }
+    } catch (e) {}
+  });
+  return ipCounts;
 }
 
 function _formatEventObject(row, filenames = [], lineNumbers = [], sources = []) {
