@@ -54,12 +54,13 @@ limitations under the License.
 
     <!-- Zero-count items after a query filtered them out -->
     <template v-if="zeroItems.length">
-      <div style="border-top: 1px solid #bdbdbd; margin: 6px 12px 4px; opacity: 0.5;"></div>
+      <v-divider class="my-2 mx-3"></v-divider>
       <div
         v-for="msg in zeroItems"
         :key="'zero-' + msg.event_type_msg"
         @click="setQueryAndFilter(msg.event_type_msg)"
-        style="cursor: pointer; font-size: 0.9em; opacity: 0.45;"
+        class="text--secondary"
+        style="cursor: pointer; font-size: 0.9em;"
       >
         <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
           <span>{{ msg.event_type_msg }} (<small><strong>0</strong></small>)</span>

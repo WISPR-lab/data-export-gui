@@ -38,7 +38,7 @@ limitations under the License.
       <span class="float-right" style="margin-right: 10px">
         <small v-if="ipAddresses">
           <strong>{{ filteredCount !== null ? filteredCount : ipAddresses.length }}</strong>
-          <span v-if="filteredCount !== null && filteredCount !== ipAddresses.length" style="color: #9e9e9e; font-weight: normal;"> (of {{ ipAddresses.length }})</span>
+          <span v-if="filteredCount !== null && filteredCount !== ipAddresses.length" class="text--secondary" style="font-weight: normal;"> (of {{ ipAddresses.length }})</span>
         </small>
       </span>
     </div>

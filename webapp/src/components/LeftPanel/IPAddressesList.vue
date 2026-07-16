@@ -21,12 +21,13 @@
 
     <!-- Zero-count IPs after a query filtered them out -->
     <template v-if="zeroItems.length">
-      <div style="border-top: 1px solid #bdbdbd; margin: 6px 12px 4px; opacity: 0.5;"></div>
+      <v-divider class="my-2 mx-3"></v-divider>
       <div
         v-for="item in zeroItems"
         :key="'zero-' + item.client_ip"
         @click="applyFilterChip(item.client_ip)"
-        style="cursor: pointer; font-size: 0.9em; opacity: 0.45;"
+        class="text--secondary"
+        style="cursor: pointer; font-size: 0.9em;"
       >
         <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
           <span>{{ item.client_ip }} (<small><strong>0</strong></small>)</span>
