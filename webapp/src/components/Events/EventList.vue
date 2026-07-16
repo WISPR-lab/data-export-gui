@@ -439,7 +439,7 @@ limitations under the License.
                   v-if="
                     displayOptions.showTags &&
                     // index === 3 &&
-                    (field.text === 'event_type_msg' || (index === 4 && headers[3].value === '_source.comment')) &&
+                    (field.text === 'event_type_msg' || field.text === 'Event Type' || (index === 4 && headers[3].value === '_source.comment')) &&
                     (item._source.tags && item._source.tags.length > 0)
                   "
                 >
@@ -447,7 +447,7 @@ limitations under the License.
                 </span>
                 
                 
-                <span>{{ item._source[field.text] }}</span>
+                <span>{{ field.text === 'Event Type' ? item._source.event_type_msg : item._source[field.text] }}</span>
               </span>
             </div>
           </template>
@@ -810,6 +810,9 @@ export default {
       this.search(true, true, false)
     },
     getFieldName: function (field) {
+      if (field === 'Event Type') {
+        return 'item._source.event_type_msg'
+      }
       return 'item._source.' + field
     },
     toggleDetailedEvent: function (row) {

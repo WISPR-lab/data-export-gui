@@ -17,12 +17,6 @@ class DemoController {
     return getStepDefinitions()
   }
 
-  async basicInitialize(store) {
-    this._setAllExportsVisible(store)
-    this._clearSearch()
-    this._forceCollapseAllRows()
-    this._closeAllMenus()
-  }
 
   forceOpenTutorials() {
     if (this._tutorialsInterval) {
@@ -241,9 +235,9 @@ class DemoController {
     
     const isCurrentlyVisible = store.state.enabledDataExports.includes(firstTl.id)
     if (isVisible && !isCurrentlyVisible) {
-      store.commit('ADD_ENABLED_DATA_EXPORTS', [firstTl.id])
+      store.commit('SET_ENABLED_DATA_EXPORTS', store.state.enabledDataExports.concat([firstTl.id]))
     } else if (!isVisible && isCurrentlyVisible) {
-      store.commit('REMOVE_ENABLED_DATA_EXPORTS', [firstTl.id])
+      store.commit('SET_ENABLED_DATA_EXPORTS', store.state.enabledDataExports.filter(function(id) { return id !== firstTl.id; }))
     }
   }
 
@@ -297,6 +291,7 @@ class DemoController {
       if (store) {
           store.commit('SET_TIMELINE_TAGS', [])
           store.commit('SET_EVENT_LABELS', [])
+          await store.dispatch('updateProject', 1)
       }
   }
 
@@ -312,22 +307,55 @@ class DemoController {
       }, 100)
   }
 
-   async _addSampleTag(store) {
-       if (DEMO_DEBUGGING) console.log('[DemoController] Programmatically adding sample tag');
-       const DB = require('@/database/index.js').default
-       const result = await DB.searchEvents('', { size: 1, order: 'asc' })
-       if (result.objects && result.objects.length > 0) {
-           const targetEvent = result.objects[0]
-           await DB.updateEventTags(targetEvent._id, ['bad'])
-           
-           if (store) {
-               store.dispatch('updateEventLabels', { label: 'bad', num: 1 })
-           }
-           
-           setTimeout(() => {
-               EventBus.$emit('setQueryAndFilter', { doSearch: true })
-           }, 50)
+    async _addSampleTag(store) {
+        if (DEMO_DEBUGGING) console.log('[DemoController] Programmatically adding sample tag');
+        const DB = require('@/database/index.js').default
+        const result = await DB.searchEvents('', { size: 1, order: 'asc' })
+        if (result.objects && result.objects.length > 0) {
+            const targetEvent = result.objects[0]
+            await DB.updateEventTags(targetEvent._id, ['bad'])
+            
+            if (store) {
+                store.dispatch('updateEventLabels', { label: 'bad', num: 1 })
+                await store.dispatch('updateProject', 1)
+            }
+            
+            setTimeout(() => {
+                EventBus.$emit('setQueryAndFilter', { doSearch: true })
+            }, 50)
+        }
+    }
+
+   async initOnly(store) {
+        this._setAllExportsVisible(store)
+        this._clearSearch()
+        this._forceCollapseAllRows()
+        this._closeAllMenus()
+   }
+
+   async initAndClear(store) {
+       await this.initOnly(store)
+       await this._clearAllTags(store).catch(e => console.error(e))
+   }
+
+   async initAndClearConditionally(store, isForward) {
+       await this.initOnly(store)
+       if (!isForward) {
+           await this._clearAllTags(store).catch(e => console.error(e))
        }
+   }
+
+   emitLoginChip() {
+       EventBus.$emit('setQueryAndFilter', {
+           chip: {
+               field: 'event_type_msg',
+               value: 'Login - Success',
+               type: 'term',
+               operator: 'must',
+               active: true
+           },
+           doSearch: true
+       })
    }
 
   _forceApplySampleFilter() {
