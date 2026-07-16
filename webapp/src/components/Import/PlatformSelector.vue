@@ -29,7 +29,7 @@ Added for WISPR Lab / data-export-gui project
         </v-card-title>
 
         <v-card-text class="pt-0 pb-2">
-          <p class="text-body2 text--secondary mb-5">
+          <p class="text-body2 text--secondary mb-4">
             Choose which service's data export you'd like to analyze. You can upload more data later.
           </p>
 
@@ -65,7 +65,7 @@ Added for WISPR Lab / data-export-gui project
 
         </v-card-text>
 
-        <v-card-actions class="pa-4 pt-2">
+        <v-card-actions class="pa-4 pt-0">
           <v-spacer></v-spacer>
           <v-btn text @click="closeDialog">Cancel</v-btn>
           <v-btn color="primary" :disabled="!selectedPlatformId" @click="proceedToUpload">
