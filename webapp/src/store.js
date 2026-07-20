@@ -88,6 +88,7 @@ const defaultState = () => {
     demoStep: 0,
     demo_visit_or_skip_count: 0,
     demoFinishCount: 0,
+    crossPageSearchQuery: null,
   }
 }
 
@@ -96,6 +97,9 @@ const state = defaultState()
 export default new Vuex.Store({
   state,
   mutations: {
+    SET_CROSS_PAGE_SEARCH_QUERY(state, query) {
+      Vue.set(state, 'crossPageSearchQuery', query)
+    },
     SET_PROJECT(state, payload) {
       Vue.set(state, 'project', payload.objects[0])
       Vue.set(state, 'meta', payload.meta)

@@ -321,11 +321,62 @@ export default {
           this.startDemo();
         });
       }
+      // ponytail: reload query and trigger search if q query parameter changes
+      const q = to.query.q;
+      if (q !== undefined) {
+        let changed = false;
+        const match = q.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+        if (match) {
+          this.addQueryChip(match[1], match[2]);
+          if (this.currentQueryString !== '') {
+            this.currentQueryString = '';
+            changed = true;
+          }
+          changed = true;
+        } else if (q !== this.currentQueryString) {
+          this.currentQueryString = q || '';
+          changed = true;
+        }
+        if (changed) {
+          this.search();
+        }
+      }
+    },
+    '$store.state.crossPageSearchQuery'(newVal) {
+      if (newVal) {
+        this.handleCrossPageQuery(newVal);
+      }
     },
   },
   methods: {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
+    },
+    addQueryChip(field, value) {
+      if (!this.currentQueryFilter.chips) {
+        this.currentQueryFilter.chips = []
+      }
+      const exists = this.currentQueryFilter.chips.some(c => c.type === 'attribute' && c.field === field && c.value === value)
+      if (!exists) {
+        this.currentQueryFilter.chips.push({
+          type: 'attribute',
+          field: field,
+          value: value,
+          active: true
+        })
+      }
+    },
+    handleCrossPageQuery(queryStr) {
+      if (!queryStr) return;
+      const match = queryStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+      if (match) {
+        this.addQueryChip(match[1], match[2]);
+        this.currentQueryString = '';
+      } else {
+        this.currentQueryString = queryStr;
+      }
+      this.search();
+      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', null);
     },
     startDemo() {
       console.log('[Events] Starting interactive demo');
@@ -660,12 +711,23 @@ export default {
       });
     }
   },
+  activated() {
+    const pendingQuery = this.$store.state.crossPageSearchQuery;
+    if (pendingQuery) {
+      this.handleCrossPageQuery(pendingQuery);
+    }
+  },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')
     EventBus.$off('setActiveView')
   },
   created: function () {
     let doSearch = false
+
+    const pendingQuery = this.$store.state.crossPageSearchQuery;
+    if (pendingQuery) {
+      this.handleCrossPageQuery(pendingQuery);
+    }
 
     this.params = {
       viewId: this.$route.query.view,
@@ -674,13 +736,20 @@ export default {
       queryString: this.$route.query.q,
     }
 
-    // if (this.params.viewId) {
-    //   this.searchView(this.params.viewId)
-    //   return
-    // }
+    let queryStr = this.params.queryString || '';
+    let parsedAsChip = false;
+    if (queryStr) {
+      const match = queryStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+      if (match) {
+        this.addQueryChip(match[1], match[2]);
+        this.currentQueryString = '';
+        parsedAsChip = true;
+        doSearch = true;
+      }
+    }
 
-    if (this.params.queryString) {
-      this.currentQueryString = this.params.queryString
+    if (queryStr && !parsedAsChip) {
+      this.currentQueryString = queryStr
       doSearch = true
     }
 

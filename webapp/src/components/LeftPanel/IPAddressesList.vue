@@ -47,7 +47,6 @@ export default {
     return {
       itemsPerPage: 10,
       ips: [],
-      // ponytail: seenKeys tracks IPs ever seen with count>0; used to show zero-count items after filtering
       seenKeys: {},
       isFiltered: false,
     }

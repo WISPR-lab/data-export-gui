@@ -69,8 +69,7 @@ export default {
       itemsPerPage: 10,
       search: '',
       event_types: [],
-      // ponytail: seenKeys tracks types ever seen with count>0; used to show zero-count items after filtering
-      seenKeys: {},
+      seenKeys: {}, // tracks types ever seen with count>0
       isFiltered: false,
     }
   },
