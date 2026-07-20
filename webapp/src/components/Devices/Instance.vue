@@ -180,12 +180,9 @@ export default {
   },
   methods: {
     goToEvents() {
-      const queryString = `device_instance_id:${this.instance.id}`;
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$router.push({
-        name: routeName,
-        query: { q: queryString }
-      });
+      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', `device_instance_id:${this.instance.id}`);
+      this.$router.push({ name: routeName });
     }
   }
 }
