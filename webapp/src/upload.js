@@ -12,7 +12,7 @@ function log(...args) {
 function logError(...args) { console.error('[UploadService]', ...args); }
 
 
-export async function processUpload(file, platform, projectId, store) {
+export async function processUpload(file, platform, givenName, projectId, store) {
   /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. */
   const startTime = Date.now();
   const summary = {
@@ -40,7 +40,7 @@ export async function processUpload(file, platform, projectId, store) {
     
     const opfsManager = new OPFSManager();
     
-    const result = await executeUpload(file, platform, opfsManager, {
+    const result = await executeUpload(file, platform, givenName, opfsManager, {
       onProgress: (evt) => {
         log(`${evt.stage} (${evt.progress}%)`);
         if (store) {
@@ -68,6 +68,7 @@ export async function processUpload(file, platform, projectId, store) {
     if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'complete', progress: 95 });
     
     try {
+      const previousIds = ((store.state.project && store.state.project.dataExports) || []).map((de) => de.id);
       const uploads = await DB.getUploads();
       const virtualProject = {
         id: 1,
@@ -79,6 +80,12 @@ export async function processUpload(file, platform, projectId, store) {
       
       const meta = await DB.getEventMeta();
       store.commit('SET_PROJECT', { objects: [virtualProject], meta });
+      const newIds = virtualProject.dataExports
+        .map((de) => de.id)
+        .filter((id) => !previousIds.includes(id));
+      if (newIds.length > 0) {
+        store.commit('SET_ENABLED_DATA_EXPORTS', newIds);
+      }
       summary.success = true;
       store.commit('COMPLETE_UPLOAD', summary);
       log('Upload complete');

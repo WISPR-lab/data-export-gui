@@ -202,7 +202,8 @@ export default {
     },
     goToEvents() {
       var routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$router.push({ name: routeName, query: { q: this.eventsQuery } }).catch(function() {});
+      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', this.eventsQuery);
+      this.$router.push({ name: routeName }).catch(function() {});
     }
   }
 };

@@ -263,7 +263,7 @@ export default {
       return this.$store.state.meta
     },
     filterChips: function () {
-      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'term' || chip.type === 'tag'))
+      return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && (chip.type === 'label' || chip.type === 'attribute' || chip.type === 'tag'))
     },
     timeFilterChips: function () {
       return this.currentQueryFilter.chips.filter((chip) => chip && chip.type && chip.type.startsWith('datetime'))
@@ -297,6 +297,12 @@ export default {
     },
   },
   watch: {
+    allDataExports: function (newVal) {
+      // Auto-enable all when project first loads and nothing is selected yet
+      if (newVal.length > 0 && this.$store.state.enabledDataExports.length === 0) {
+        this.enableAllDataExports()
+      }
+    },
     enabledDataExports: function () {
       this.updateEnabledDataExports(this.enabledDataExports)
     },
@@ -315,11 +321,62 @@ export default {
           this.startDemo();
         });
       }
+      // ponytail: reload query and trigger search if q query parameter changes
+      const q = to.query.q;
+      if (q !== undefined) {
+        let changed = false;
+        const match = q.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+        if (match) {
+          this.addQueryChip(match[1], match[2]);
+          if (this.currentQueryString !== '') {
+            this.currentQueryString = '';
+            changed = true;
+          }
+          changed = true;
+        } else if (q !== this.currentQueryString) {
+          this.currentQueryString = q || '';
+          changed = true;
+        }
+        if (changed) {
+          this.search();
+        }
+      }
+    },
+    '$store.state.crossPageSearchQuery'(newVal) {
+      if (newVal) {
+        this.handleCrossPageQuery(newVal);
+      }
     },
   },
   methods: {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
+    },
+    addQueryChip(field, value) {
+      if (!this.currentQueryFilter.chips) {
+        this.currentQueryFilter.chips = []
+      }
+      const exists = this.currentQueryFilter.chips.some(c => c.type === 'attribute' && c.field === field && c.value === value)
+      if (!exists) {
+        this.currentQueryFilter.chips.push({
+          type: 'attribute',
+          field: field,
+          value: value,
+          active: true
+        })
+      }
+    },
+    handleCrossPageQuery(queryStr) {
+      if (!queryStr) return;
+      const match = queryStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+      if (match) {
+        this.addQueryChip(match[1], match[2]);
+        this.currentQueryString = '';
+      } else {
+        this.currentQueryString = queryStr;
+      }
+      this.search();
+      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', null);
     },
     startDemo() {
       console.log('[Events] Starting interactive demo');
@@ -353,11 +410,20 @@ export default {
       this.currentQueryFilter = searchEvent.queryFilter
 
       if (searchEvent.chip) {
+        const newChip = searchEvent.chip
         const chipExist = this.currentQueryFilter.chips.find(function (chip) {
-          return chip.field === searchEvent.chip.field && chip.value === searchEvent.chip.value
+          return chip.field === newChip.field && chip.value === newChip.value
         })
         if (!chipExist) {
-          this.currentQueryFilter.chips.push(searchEvent.chip)
+          // Disable any existing active chip of the same field (same type: event_type_msg or client_ip)
+          if (newChip.field) {
+            this.currentQueryFilter.chips.forEach(function (chip) {
+              if (chip.field === newChip.field && chip.active !== false) {
+                chip.active = false
+              }
+            })
+          }
+          this.currentQueryFilter.chips.push(newChip)
         }
       }
 
@@ -387,18 +453,12 @@ export default {
     },
     handleSearchBarSearch(event) {
       this.currentQueryString = event.queryString
-      if (event.promotedChips && event.promotedChips.length > 0) {
-        if (!this.currentQueryFilter.chips) {
-          this.currentQueryFilter.chips = []
-        }
-        event.promotedChips.forEach(function (chip) {
-          const exists = this.currentQueryFilter.chips.some(function (c) {
-            return c.field === chip.field && c.value === chip.value && c.type === chip.type && c.operator === chip.operator
-          })
-          if (!exists) {
-            this.currentQueryFilter.chips.push(chip)
+      if (this.currentQueryFilter && this.currentQueryFilter.chips && this.currentQueryFilter.chips.length > 0) {
+        this.currentQueryFilter.chips.forEach(function (chip) {
+          if (chip && chip.active !== false) {
+            chip.active = false
           }
-        }.bind(this))
+        })
       }
       this.search()
     },
@@ -651,12 +711,23 @@ export default {
       });
     }
   },
+  activated() {
+    const pendingQuery = this.$store.state.crossPageSearchQuery;
+    if (pendingQuery) {
+      this.handleCrossPageQuery(pendingQuery);
+    }
+  },
   beforeDestroy() {
     EventBus.$off('setQueryAndFilter')
     EventBus.$off('setActiveView')
   },
   created: function () {
     let doSearch = false
+
+    const pendingQuery = this.$store.state.crossPageSearchQuery;
+    if (pendingQuery) {
+      this.handleCrossPageQuery(pendingQuery);
+    }
 
     this.params = {
       viewId: this.$route.query.view,
@@ -665,13 +736,20 @@ export default {
       queryString: this.$route.query.q,
     }
 
-    // if (this.params.viewId) {
-    //   this.searchView(this.params.viewId)
-    //   return
-    // }
+    let queryStr = this.params.queryString || '';
+    let parsedAsChip = false;
+    if (queryStr) {
+      const match = queryStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+      if (match) {
+        this.addQueryChip(match[1], match[2]);
+        this.currentQueryString = '';
+        parsedAsChip = true;
+        doSearch = true;
+      }
+    }
 
-    if (this.params.queryString) {
-      this.currentQueryString = this.params.queryString
+    if (queryStr && !parsedAsChip) {
+      this.currentQueryString = queryStr
       doSearch = true
     }
 
@@ -691,6 +769,8 @@ export default {
 
     if (!this.currentQueryString) {
       this.currentQueryFilter.uploadIds = ['_all']
+      // Enable all data exports so chips appear selected after a hard refresh
+      this.enableAllDataExports()
     }
 
     if (doSearch) {

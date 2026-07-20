@@ -308,8 +308,37 @@ export default {
         var db = await getDB();
         var sqlLines = [];
         
-        for (var i = 0; i < this.DB_TABLES.length; i++) {
-          var tableName = this.DB_TABLES[i];
+        // Predefined topological order of tables to satisfy foreign key constraints
+        var TABLE_ORDER = [
+          'uploads',
+          'device_profiles_v2',
+          'atomic_devices',
+          'user_device_edits',
+          'uploaded_files',
+          'raw_data',
+          'events',
+          'devices_raw',
+          'device_instances',
+          'resolved_sessions_registrations',
+          'device_instance_edges',
+          'event_comments',
+          'device_profile_notes',
+          'event_assoc',
+          'device_instance_events',
+          'device_instance_raw_devices',
+          'device_profile_instances'
+        ];
+
+        var tables = this.DB_TABLES.slice().sort(function(a, b) {
+          var idxA = TABLE_ORDER.indexOf(a);
+          var idxB = TABLE_ORDER.indexOf(b);
+          var valA = idxA === -1 ? 999 : idxA;
+          var valB = idxB === -1 ? 999 : idxB;
+          return valA - valB;
+        });
+
+        for (var i = 0; i < tables.length; i++) {
+          var tableName = tables[i];
           var rows = await db.exec(
             'SELECT * FROM ' + tableName,
             { returnValue: 'resultRows', rowMode: 'object' }

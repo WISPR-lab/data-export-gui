@@ -14,46 +14,97 @@ It replaces the generic UploadForm for the new workflow.
     ></import-progress>
 
     <!-- Main Upload Dialog -->
-    <v-dialog v-model="dialog" persistent max-width="700px">
-      <v-card>
-        <v-card-title class="pb-2">
-          <DiscordIcon v-if="selectedPlatform === 'discord'" size="20px" margin-right="12px" fill="var(--v-primary-base)" />
-          <v-icon v-else color="primary" class="mr-3">{{ platformIcon }}</v-icon>
-          <span class="headline font-weight-medium">Import {{ platformName }} Data</span>
+    <v-dialog v-model="dialog" persistent max-width="500px">
+      <v-card rounded="lg">
+        <v-card-title class="text-h6 font-weight-medium pb-2">
+          <DiscordIcon v-if="selectedPlatform === 'discord'" size="20px" margin-right="12px" fill="currentColor" />
+          <v-icon v-else color="secondary" class="mr-3">{{ platformIcon }}</v-icon>
+          <span class="text-h6 font-weight-medium">Import {{ platformName }} Data</span>
         </v-card-title>
         
-        <v-card-text class="pb-0">
-          <v-alert type="info" outlined dense class="mb-4 text-body-2 font-weight-medium">
+        <v-card-text class="pb-0 pt-1">
+          <p class="text-body-2 text--secondary mb-4">
             Don't have your export yet?
             <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
-              View step-by-step instructions
+              View instructions
+            </router-link>
+          </p>
+
+          <v-alert dense text type="info" class="mb-4 text-body-2">
+            This tool is limited to the data provided by {{ platformName }}. 
+            For example, platforms may record incorrect time or location of events.
+            Verify all results.
+          </v-alert>
+          
+          <!-- <v-card-text class="pb-0 pt-1">
+          <v-alert dense text type="info" class="mb-4 text-body-2">
+            Don't have your export yet?
+            <router-link to="/how-to-request" target="_blank" class="font-weight-medium">
+              View instructions
             </router-link>
           </v-alert>
 
+          <p class="text-body-2 text--secondary mb-4">
+            This tool is limited to the data provided by {{ platformName }}. 
+            For example, platforms may record incorrect time or location of events.
+            Verify all results.
+          </p> -->
+
+          <!-- File Upload -->
+          <div
+            class="upload-dropzone mb-2"
+            :class="{
+              'upload-dropzone--dragging': isDragging,
+              'upload-dropzone--filled': !!selectedFile,
+            }"
+            @dragover.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="onDrop"
+            @click="!selectedFile && $refs.fileInput.click()"
+          >
+            <template v-if="!selectedFile">
+              <div class="upload-dropzone__badge mb-3">
+                <v-icon size="24" color="primary">mdi-tray-arrow-up</v-icon>
+              </div>
+              <p class="text-body-2 font-weight-medium mb-1">Drag and drop your ZIP file here</p>
+              <p class="text-caption text--secondary mb-3">or</p>
+              <v-btn outlined rounded small color="primary" @click.stop="$refs.fileInput.click()">
+                Browse Files
+              </v-btn>
+            </template>
+ 
+            <template v-else>
+              <div class="upload-dropzone__badge upload-dropzone__badge--success mb-3">
+                <v-icon size="24" color="success">mdi-file-check-outline</v-icon>
+              </div>
+              <p class="text-body-2 font-weight-medium mb-0">{{ selectedFile.name }}</p>
+              <p class="text-caption text--secondary mb-3">{{ formatFileSize(selectedFile.size) }}</p>
+              <v-btn text rounded x-small color="error" @click.stop="clearFile">
+                Remove
+              </v-btn>
+            </template>
+ 
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".zip"
+              class="d-none"
+              @change="onInputChange"
+            />
+          </div>
+
           <!-- Error & Warning Display -->
           <import-error-display
+            class="mt-4"
             :error-type="uploadErrorType"
             :errors="uploadErrors"
             :warnings="uploadWarnings"
             :local-errors="localErrors"
           ></import-error-display>
 
-          <!-- File Upload -->
-          <div class="mb-4">
-            <v-file-input
-              v-model="selectedFile"
-              label="Choose ZIP file"
-              outlined
-              dense
-              required
-              show-size
-              accept=".zip"
-              @change="onFileSelected"
-            ></v-file-input>
-          </div>
 
           <!-- Timeline Name -->
-          <div class="mb-4">
+          <div class="mb-4" v-if="selectedFile">
             <v-text-field
               v-model="dataExportName"
               label="Data Export Name"
@@ -70,11 +121,13 @@ It replaces the generic UploadForm for the new workflow.
 
         <v-card-actions class="pa-4">
           <v-spacer></v-spacer>
-          <v-btn text @click="closeDialog">
+          <v-btn text rounded @click="closeDialog">
             Cancel
           </v-btn>
           <v-btn
             color="primary"
+            rounded
+            depressed
             :disabled="!canSubmit"
             @click="submitUpload"
             :loading="isUploading"
@@ -125,6 +178,7 @@ export default {
       ],
       localErrors: [],
       fileValid: false,
+      isDragging: false,
     };
   },
   computed: {
@@ -176,18 +230,30 @@ export default {
     this.suggestDEName();
   },
   methods: {
-    onFileSelected(file) {
+    onDrop(event) {
+      this.isDragging = false;
+      const file = event.dataTransfer && event.dataTransfer.files[0];
+      if (file) {
+        this.processFile(file);
+      }
+    },
+    onInputChange(event) {
+      const file = event.target.files && event.target.files[0];
+      if (file) {
+        this.processFile(file);
+      }
+      // reset so selecting the same file again still fires @change
+      event.target.value = '';
+    },
+    processFile(file) {
+      this.selectedFile = file;
       this.localErrors = [];
       this.fileValid = false;
-
-      if (!file) {
-        return;
-      }
-
+ 
       const validation = validateFile(file);
       this.localErrors = validation.errors;
       this.fileValid = validation.valid;
-
+ 
       if (this.fileValid) {
         this.dataExportName = stripZipExtension(file.name);
       }
@@ -220,6 +286,7 @@ export default {
         await processUpload(
           this.selectedFile,
           this.selectedPlatform,
+          this.dataExportName,
           projectId,
           this.$store
         );
@@ -243,6 +310,61 @@ export default {
 :deep(.v-application--dark) {
   .text-muted {
     color: rgba(255, 255, 255, 0.54);
+  }
+}
+
+.upload-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 16px;
+  border: 2px dashed #e0e0e0;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.015);
+  transition: border-color 0.15s, background-color 0.15s, transform 0.15s;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--v-primary-lighten3);
+    background-color: rgba(25, 118, 210, 0.03);
+  }
+ 
+  &--dragging {
+    border-color: var(--v-primary-base);
+    background-color: rgba(25, 118, 210, 0.06);
+    transform: scale(1.01);
+  }
+ 
+  &--filled {
+    border-style: solid;
+    border-color: #e0e0e0;
+    background-color: rgba(0, 0, 0, 0.015);
+    cursor: default;
+  }
+ 
+  &__badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: rgba(25, 118, 210, 0.1);
+ 
+    &--success {
+      background-color: rgba(76, 175, 80, 0.12);
+    }
+  }
+}
+
+:deep(.v-application--dark) .upload-dropzone {
+  border-color: rgba(255, 255, 255, 0.18);
+  background-color: rgba(255, 255, 255, 0.02);
+ 
+  &--filled {
+    border-color: rgba(255, 255, 255, 0.14);
   }
 }
 </style>

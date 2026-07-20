@@ -121,20 +121,14 @@ export default {
   },
   methods: {
     goToEventsIP(ip) {
-      const queryString = `client_ip:"${ip}"`;
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$router.push({
-        name: routeName,
-        query: { q: queryString }
-      });
+      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', `client_ip:"${ip}"`);
+      this.$router.push({ name: routeName });
     },
     goToEventsSession(sessionId) {
-      const queryString = `client_session_id:"${sessionId}"`;
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$router.push({
-        name: routeName,
-        query: { q: queryString }
-      });
+      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', `client_session_id:"${sessionId}"`);
+      this.$router.push({ name: routeName });
     },
     isIPAttribute(label) {
       return label && /\bips?\b/i.test(label);

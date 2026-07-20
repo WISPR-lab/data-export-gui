@@ -44,8 +44,6 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
                     if k in ev["attributes"]:
                         attrs[k] = ev["attributes"][k]
                         break
-
-            # ponytail: Use uuid.uuid5 to generate stable, valid UUID for synthetic session IDs
             session_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"synthetic_session_{sid}"))
 
             devices.append({
@@ -55,9 +53,6 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
                 "origin": first_ev["origin"],
                 "attributes": attrs
             })
-
-    # Bolster session timestamps with event boundaries (widest bound).
-    # ponytail: assumes timestamps are UTC ISO strings as stored; no epoch conversion needed.
     for d in devices:
         if d["entity_type"] != "session":
             continue

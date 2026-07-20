@@ -54,7 +54,7 @@ views:
       - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
       - {target: "client.ip", source: "string_map_data.'IP Address'.value", type: "string"}
       - {target: "user_agent.original", source: "string_map_data.'User Agent'.value", type: "string"}
-      - {target: "PLACEHOLDER", source: "string_map_data.'Cookie Name'.value", type: "string"}
+      - {target: "client.session.id", source: "string_map_data.'Cookie Name'.value", type: "string"}
 
   - file:
       id: "insta_logout_activity"
@@ -67,7 +67,7 @@ views:
       - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
       - {target: "client.ip", source: "string_map_data.'IP Address'.value", type: "string"}
       - {target: "user_agent.original", source: "string_map_data.'User Agent'.value", type: "string"}
-      - {target: "PLACEHOLDER", source: "string_map_data.'Cookie Name'.value", type: "string"}
+      - {target: "client.session.id", source: "string_map_data.'Cookie Name'.value", type: "string"}
 
   - file:
       id: "insta_password_change"
@@ -90,8 +90,8 @@ views:
       event.type: ["change"]
     fields:
       - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
-      - {target: "PLACEHOLDER", source: "string_map_data.'Previous Value'.value", type: "string"}
-      - {target: "PLACEHOLDER", source: "string_map_data.'New Value'.value", type: "string"}
+      - {target: "user.email.old", source: "string_map_data.'Previous Value'.value", type: "string"}
+      - {target: "user.email.new", source: "string_map_data.'New Value'.value", type: "string"}
 
   - file:
       id: "insta_download_requests"

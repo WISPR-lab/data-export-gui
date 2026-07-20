@@ -40,15 +40,15 @@ limitations under the License.
       <span> <v-icon left>mdi-tag-multiple-outline</v-icon> Tags & Stars </span>
 
       <span class="float-right" style="margin-right: 10px">
-        <small
-          ><strong v-if="tags && filteredLabels">{{ (tags || []).length + (filteredLabels || []).length }}</strong></small
-        >
+        <small v-if="tags && filteredLabels">
+          <strong>{{ filteredCount !== null ? filteredCount : totalTagsCount }}</strong>
+        </small>
       </span>
     </div>
 
     <v-expand-transition>
       <div v-show="expanded && ((tags || []).length || (filteredLabels || []).length)">
-        <tags-list></tags-list>
+        <tags-list @filtered-count="filteredCount = $event"></tags-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>
@@ -68,6 +68,7 @@ export default {
   data: function () {
     return {
       expanded: false,
+      filteredCount: null,
     }
   },
   computed: {
@@ -83,9 +84,13 @@ export default {
     filteredLabels() {
       if (!this.meta.filter_labels) return []
       return this.meta.filter_labels.filter(function (label) {
-        return label && typeof label.label === 'string' && !label.label.startsWith('__ts_fact')
+        const name = label.tag || label.label
+        return label && typeof name === 'string' && !name.startsWith('__ts_fact')
       })
     },
+    totalTagsCount() {
+      return (this.tags || []).length + (this.filteredLabels || []).length
+    }
   },
 }
 </script>

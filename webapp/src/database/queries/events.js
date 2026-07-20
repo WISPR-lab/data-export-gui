@@ -13,7 +13,7 @@ example of 'filter' object
     uploadIds: [],
     chips: [
       { type: 'tag', value: 'archived', active: true },
-      { type: 'term', field: 'user_agent_os_name', value: 'Windows' },
+      { type: 'attribute', field: 'user_agent_os_name', value: 'Windows' },
       { type: 'label', value: 'verified' },
       { type: 'datetime:range', value: '2024-01-15T00:00:00Z,2024-01-20T23:59:59Z' }
     ]
@@ -45,6 +45,7 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.event_kind,
       e.file_ids,
       e.raw_data_ids,
+      e.starred,
       u.given_name AS data_export_name, 
       u.platform AS platform,
       COALESCE(ei.device_profiles_data, '[]') AS device_profiles_data,
@@ -71,6 +72,9 @@ export async function searchEvents(queryString = '', filter = {}) {
     
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
     const countPerDataExport = await _getEventsCountPerTimeline(db, whereClause, whereParams);
+    const countPerEventType = await _getEventsCountPerEventType(db, whereClause, whereParams);
+    const countPerIPAddress = await _getEventsCountPerIPAddress(db, whereClause, whereParams);
+    const countPerTagOrLabel = await _getEventsCountPerTagOrLabel(db, filter, queryString);
     
     // Batch resolve files and line numbers
     const allFileIds = new Set();
@@ -154,6 +158,9 @@ export async function searchEvents(queryString = '', filter = {}) {
       meta: {
         total_count: totalCount,
         count_per_data_export: countPerDataExport,
+        count_per_event_type: countPerEventType,
+        count_per_ip_address: countPerIPAddress,
+        count_per_tag_or_label: countPerTagOrLabel,
       }
     };
   } catch (error) {
@@ -234,6 +241,8 @@ export async function getEventTypes() {
   }));
 }
 
+
+
 export async function getEventTags() {
   /* Client-side aggregation: parses JSON tags from all events and counts occurrences. */
   const db = await getDB();
@@ -300,8 +309,8 @@ export async function getIPAddresses() {
   });
   
   return Object.entries(ipCounts)
-    .map(([client_ip, count]) => ({
-      client_ip,
+    .map(([ip, count]) => ({
+      client_ip: ip,
       count
     }))
     .sort((a, b) => b.count - a.count);
@@ -336,6 +345,101 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
   const counts = {};
   rows.forEach(row => {
     counts[row.upload_id] = row.count;
+  });
+  return counts;
+}
+
+async function _getEventsCountPerEventType(db, whereClause, whereParams) {
+  // Compute counts with the current filter
+  const baseWhere = 'WHERE e.event_type_msg IS NOT NULL AND e.event_type_msg != \'\'';
+  const combinedWhere = whereClause ? whereClause + ' AND e.event_type_msg IS NOT NULL AND e.event_type_msg != \'\'': baseWhere;
+  const sql = `
+    SELECT e.event_type_msg, COUNT(*) as count 
+    FROM events e 
+    LEFT JOIN uploads u ON e.upload_id = u.id
+    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
+    LEFT JOIN device_instance_events die ON e.id = die.event_id
+    ${combinedWhere} 
+    GROUP BY e.event_type_msg
+  `;
+  const rows = await db.exec(sql, { 
+    bind: whereParams,
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  const counts = {};
+  rows.forEach(row => {
+    counts[row.event_type_msg] = row.count;
+  });
+  return counts;
+}
+
+async function _getEventsCountPerIPAddress(db, whereClause, whereParams) {
+  // Compute counts with the current filter
+  const baseWhere = 'WHERE e.attributes IS NOT NULL AND e.attributes != \'\''
+  const combinedWhere = whereClause ? whereClause + ' AND e.attributes IS NOT NULL AND e.attributes != \'\'': baseWhere;
+  const sql = `
+    SELECT e.attributes 
+    FROM events e 
+    LEFT JOIN uploads u ON e.upload_id = u.id
+    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
+    LEFT JOIN device_instance_events die ON e.id = die.event_id
+    ${combinedWhere}
+  `;
+  const rows = await db.exec(sql, {
+    bind: whereParams,
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  const ipCounts = {};
+  rows.forEach(row => {
+    try {
+      const attrs = JSON.parse(row.attributes);
+      if (attrs.client_ip) {
+        ipCounts[attrs.client_ip] = (ipCounts[attrs.client_ip] || 0) + 1;
+      }
+    } catch (e) {}
+  });
+  return ipCounts;
+}
+
+async function _getEventsCountPerTagOrLabel(db, filter, queryString) {
+  // Compute counts with the current filter, but ignoring the tags and labels filters themselves
+  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'u.platform'];
+  const filteredChips = (filter.chips || []).filter(function(c) { return c.type !== 'tag' && c.type !== 'label'; });
+  const modifiedFilter = Object.assign({}, filter, { chips: filteredChips });
+  const { clause: whereClause, params: whereParams } = buildWhereClause(modifiedFilter, queryString || '', stringColumns);
+  const sql = `
+    SELECT e.tags, e.labels 
+    FROM events e 
+    LEFT JOIN uploads u ON e.upload_id = u.id
+    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
+    LEFT JOIN device_instance_events die ON e.id = die.event_id
+    ${whereClause}
+  `;
+  const rows = await db.exec(sql, {
+    bind: whereParams,
+    returnValue: 'resultRows',
+    rowMode: 'object'
+  });
+  const counts = {};
+  rows.forEach(row => {
+    try {
+      const tags = row.tags ? JSON.parse(row.tags) : [];
+      if (Array.isArray(tags)) {
+        tags.forEach(t => {
+          if (t) counts[t] = (counts[t] || 0) + 1;
+        });
+      }
+    } catch (e) {}
+    try {
+      const labels = row.labels ? JSON.parse(row.labels) : [];
+      if (Array.isArray(labels)) {
+        labels.forEach(l => {
+          if (l) counts[l] = (counts[l] || 0) + 1;
+        });
+      }
+    } catch (e) {}
   });
   return counts;
 }
@@ -399,6 +503,7 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
     data_export_name: row.data_export_name,
     data_export_id: row.upload_id,
     platform: row.platform,
+    starred: row.starred || 0,
     filename: filenames[0] || '',
     filenames,
     line_numbers: lineNumbers,
@@ -438,11 +543,19 @@ export async function addLabelEvent(eventIds, labels) {
     }
     
     const newLabels = [...new Set([...currentLabels, ...labels])];
+    const isStarred = labels.includes('starred') ? 1 : 0;
     
-    await db.exec(
-      'UPDATE events SET labels = ? WHERE id = ?',
-      { bind: [JSON.stringify(newLabels), eventId] }
-    );
+    if (isStarred) {
+      await db.exec(
+        'UPDATE events SET labels = ?, starred = 1 WHERE id = ?',
+        { bind: [JSON.stringify(newLabels), eventId] }
+      );
+    } else {
+      await db.exec(
+        'UPDATE events SET labels = ? WHERE id = ?',
+        { bind: [JSON.stringify(newLabels), eventId] }
+      );
+    }
   }
 }
 
@@ -471,11 +584,19 @@ export async function removeLabelEvent(eventIds, labels) {
     }
     
     const newLabels = currentLabels.filter(label => !labels.includes(label));
+    const wasStarredRemoved = labels.includes('starred') ? 1 : 0;
     
-    await db.exec(
-      'UPDATE events SET labels = ? WHERE id = ?',
-      { bind: [JSON.stringify(newLabels), eventId] }
-    );
+    if (wasStarredRemoved) {
+      await db.exec(
+        'UPDATE events SET labels = ?, starred = 0 WHERE id = ?',
+        { bind: [JSON.stringify(newLabels), eventId] }
+      );
+    } else {
+      await db.exec(
+        'UPDATE events SET labels = ? WHERE id = ?',
+        { bind: [JSON.stringify(newLabels), eventId] }
+      );
+    }
   }
 }
 

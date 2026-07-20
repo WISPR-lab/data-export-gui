@@ -63,55 +63,10 @@ export default {
   },
   methods: {
     search() {
-      const result = this.promoteQueryStringToChips(this.currentQueryString)
-      this.$emit('input', result.queryString)
+      this.$emit('input', this.currentQueryString)
       this.$emit('search', {
-        queryString: result.queryString,
-        promotedChips: result.promotedChips,
+        queryString: this.currentQueryString,
       })
-    },
-    promoteQueryStringToChips(queryString) {
-      if (!queryString) {
-        return { queryString: '', promotedChips: [] }
-      }
-
-      // Regex to match key-value pairs, e.g. key:value or key:"value" or key:'value'
-      const regex = /\b([\w_.]+):(?:"([^"]+)"|'([^']+)'|([^\s]+))/gi
-      const promotedChips = []
-
-      const cleanQueryString = queryString.replace(regex, function (match, key, doubleQuoteVal, singleQuoteVal, plainVal) {
-        const val = doubleQuoteVal || singleQuoteVal || plainVal
-
-        // TODO: Add support for negation prefixes (e.g. NOT key:value or -key:value)
-        // This will be implemented by the undergraduate student working on the negation feature.
-        const isNegated = false
-
-        let type = 'term'
-        let field = key
-        let value = val
-        if (key.toLowerCase() === 'tag') {
-          type = 'tag'
-          field = 'tag'
-        } else if (key.toLowerCase() === 'label') {
-          type = 'label'
-          field = ''
-        }
-
-        promotedChips.push({
-          field: field,
-          value: value,
-          type: type,
-          operator: isNegated ? 'must_not' : 'must',
-          active: true,
-        })
-
-        return ''
-      })
-
-      return {
-        queryString: cleanQueryString.replace(/\s+/g, ' ').trim(),
-        promotedChips: promotedChips,
-      }
     },
   },
 }

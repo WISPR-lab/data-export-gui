@@ -27,32 +27,28 @@ limitations under the License.
       expanded = true
     "
   >
-    <v-icon left>mdi-database-outline</v-icon>
+    <v-icon left>mdi-filter-multiple-outline</v-icon>
     <div style="height: 1px"></div>
   </div>
   <div v-else id="tsLeftPanelEventTypes">
     <div
       :style="eventTypes && eventTypes.length ? 'cursor: pointer' : ''"
       class="pa-4"
-      id="tsLeftPanelEventTypesHeader"
       @click="toggleExpand"
       :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
     >
-      <!-- <span> <v-icon left>mdi-database-outline</v-icon> Data Types </span> -->
-       <span> <v-icon left>mdi-filter-multiple-outline</v-icon>Event Types</span>
+      <span> <v-icon left>mdi-filter-multiple-outline</v-icon>Event Types</span>
       <span class="float-right" style="margin-right: 10px">
-        <!-- <small v-if="eventActions"
-          ><strong>{{ eventActions.length }}</strong></small
-         > -->
-        <small v-if="eventTypes"
-          ><strong>{{ eventTypes.length }}</strong></small
-        >
+        <small v-if="eventTypes">
+          <strong>{{ filteredCount !== null ? filteredCount : eventTypes.length }}</strong>
+          <span v-if="filteredCount !== null && filteredCount !== eventTypes.length" class="text--secondary" style="font-weight: normal;"> (of {{ eventTypes.length }})</span>
+        </small>
       </span>
     </div>
 
     <v-expand-transition>
       <div v-show="expanded && eventTypes.length" class="pl-8 pr-4 pb-4">
-        <ts-data-types-list></ts-data-types-list>
+        <ts-data-types-list @filtered-count="filteredCount = $event"></ts-data-types-list>
       </div>
     </v-expand-transition>
     <v-divider></v-divider>
@@ -76,6 +72,7 @@ export default {
       expanded: false,
       // eventActions: [],
       eventTypes: [],
+      filteredCount: null,
     }
   },
   computed: {
@@ -113,11 +110,10 @@ export default {
     },
     handleExpand() {
       this.expanded = true
-    }
+    },
   },
   async mounted() {
     await this.loadEventTypes()
-
     EventBus.$on('demo:collapse-event-types', this.handleCollapse)
     EventBus.$on('demo:expand-event-types', this.handleExpand)
   },

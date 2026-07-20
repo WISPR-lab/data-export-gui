@@ -19,32 +19,14 @@ limitations under the License.
 <template>
   <div id="tsLeftPanelEventTypesList">
     <v-data-iterator
-      :items="eventTypes"
+       no-data-text=""
+      :items="nonZeroItems"
       :items-per-page.sync="itemsPerPage"
       :search="search"
-      :hide-default-footer="eventTypes.length <= itemsPerPage"
+      :hide-default-footer="nonZeroItems.length <= itemsPerPage"
     >
-      <template v-slot:header v-if="eventTypes.length > itemsPerPage">
-        <v-toolbar flat>
-          <v-text-field
-            v-model="search"
-            clearable
-            hide-details
-            outlined
-            dense
-            prepend-inner-icon="mdi-magnify"
-            label="Search for a category.."
-          ></v-text-field>
-        </v-toolbar>
-      </template>
 
       <template v-slot:default="props">
-        <!-- <div
-          v-for="dataType in props.items"
-          :key="dataType.data_type"
-          @click="setQueryAndFilter(dataType.data_type)"
-          style="cursor: pointer; font-size: 0.9em"
-        > -->
         <div
           v-for="msg in props.items"
           :key="msg.event_type_msg"
@@ -52,15 +34,27 @@ limitations under the License.
           style="cursor: pointer; font-size: 0.9em"
         >
           <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
-            <span
-              >{{ msg.event_type_msg }} (<small
-                ><strong>{{ msg.count | compactNumber }}</strong></small
-              >)</span
-            >
+            <span>{{ msg.event_type_msg }} (<small><strong>{{ msg.count | compactNumber }}</strong></small>)</span>
           </v-row>
         </div>
       </template>
     </v-data-iterator>
+
+    <!-- Zero-count items after a query filtered them out -->
+    <template v-if="zeroItems.length">
+      <v-divider class="my-2 mx-3"></v-divider>
+      <div
+        v-for="msg in zeroItems"
+        :key="'zero-' + msg.event_type_msg"
+        @click="setQueryAndFilter(msg.event_type_msg)"
+        class="text--secondary"
+        style="cursor: pointer; font-size: 0.9em;"
+      >
+        <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
+          <span>{{ msg.event_type_msg }} (<small><strong>0</strong></small>)</span>
+        </v-row>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -74,22 +68,38 @@ export default {
     return {
       itemsPerPage: 10,
       search: '',
-      // actions: [],
       event_types: [],
+      seenKeys: {}, // tracks types ever seen with count>0
+      isFiltered: false,
     }
   },
   async mounted() {
     await this.loadEventTypes()
+    EventBus.$on('searchResultsCounts', this.onSearchResultsCounts)
+  },
+  beforeDestroy() {
+    EventBus.$off('searchResultsCounts', this.onSearchResultsCounts)
   },
   computed: {
     project() {
       return this.$store.state.project
     },
-    // eventActions() {
-    //   return [...this.actions].sort((a, b) => a.action.localeCompare(b.action))
-    // },
     eventTypes() {
-      return [...this.event_types].sort((a, b) => a.event_type_msg.localeCompare(b.event_type_msg))
+      return [...this.event_types].sort(function(a, b) { return a.event_type_msg.localeCompare(b.event_type_msg) })
+    },
+    nonZeroItems() {
+      return this.eventTypes.filter(function(t) { return t.count > 0 })
+    },
+    zeroItems() {
+      // Only show zero-count items if a query is active and they were previously seen
+      if (!this.isFiltered) return []
+      var self = this
+      var nonZeroKeys = {}
+      this.nonZeroItems.forEach(function(t) { nonZeroKeys[t.event_type_msg] = true })
+      return Object.keys(self.seenKeys)
+        .filter(function(k) { return !nonZeroKeys[k] })
+        .map(function(k) { return { event_type_msg: k, count: 0 } })
+        .sort(function(a, b) { return a.event_type_msg.localeCompare(b.event_type_msg) })
     },
   },
   watch: {
@@ -98,18 +108,40 @@ export default {
         await this.loadEventTypes()
       },
       deep: true
-    }
+    },
+    nonZeroItems: function(val) {
+      this.$emit('filtered-count', this.isFiltered ? val.length : null)
+    },
   },
   methods: {
     async loadEventTypes() {
       try {
-        // this.actions = await DB.getEventActions()
         this.event_types = await DB.getEventTypes()
+        var self = this
+        this.event_types.forEach(function(t) {
+          if (t.count > 0) self.seenKeys[t.event_type_msg] = true
+        })
+        this.isFiltered = false
+        this.$emit('filtered-count', null)
       } catch (e) {
         console.error('Error loading event actions:', e)
-        // this.actions = []
         this.event_types = []
       }
+    },
+    onSearchResultsCounts(payload) {
+      const countMap = payload.countPerEventType || {}
+      var self = this
+      var merged = Object.keys(self.seenKeys).map(function(k) {
+        return { event_type_msg: k, count: countMap[k] || 0 }
+      })
+      Object.keys(countMap).forEach(function(k) {
+        if (!self.seenKeys[k]) {
+          merged.push({ event_type_msg: k, count: countMap[k] })
+          self.seenKeys[k] = true
+        }
+      })
+      this.event_types = merged
+      this.isFiltered = true
     },
     setQueryAndFilter(action) {
       let eventData = {}
@@ -117,7 +149,7 @@ export default {
       eventData.chip = {
         field: 'event_type_msg',
         value: action,
-        type: 'term',
+        type: 'attribute',
         operator: 'must',
         active: true,
       }
