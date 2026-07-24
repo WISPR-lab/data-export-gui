@@ -220,6 +220,7 @@ const gradients = [
 ]
 
 export default {
+  name: 'DataExportMenu',
   props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   data() {
     return {

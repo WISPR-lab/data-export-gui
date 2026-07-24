@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <template>
-  <data-export-component
+  <data-export-menu
     :data-export="dataExport"
     :eventsCount="eventsCount"
     :isSelected="isSelected"
@@ -81,17 +81,17 @@ limitations under the License.
         </div>
       </v-chip>
     </template>
-  </data-export-component>
+  </data-export-menu>
 </template>
 
 <script>
 
-import DataExportComponent from './DataExportComponent.vue'
+import DataExportMenu from './DataExportMenu.vue'
 
 export default {
   props: ['dataExport', 'eventsCount', 'isSelected', 'isEmptyState'],
   components: {
-    DataExportComponent,
+    DataExportMenu,
   },
   methods: {
     dataExportStyle(dataExportStatus) {

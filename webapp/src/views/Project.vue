@@ -208,7 +208,6 @@ import Search from '../components/LeftPanel/Search.vue'
 import NewDataExportButton from '../components/Import/NewDataExportButton.vue'
 import RenameProject from '../components/RenameProject.vue'
 import EventList from '../components/Events/EventList.vue'
-import DataExportsTable from '../components/LeftPanel/DataExportsTable.vue'
 import Devices from '../components/LeftPanel/Devices.vue'
 import SettingsDialog from '../components/SettingsDialog.vue'
 import DeleteDataButton from '../components/DeleteDataButton.vue'
@@ -226,7 +225,6 @@ export default {
     NewDataExportButton,
     RenameProject,
     Search,
-    DataExportsTable,
     Devices,
     EventList,
     SettingsDialog,
