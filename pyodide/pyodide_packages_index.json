@@ -1,0 +1,1 @@
+["sqlite3", "pandas", "pyyaml", "numpy", "micropip", "packaging", "python-dateutil", "pytz", "tzdata", "beautifulsoup4", "soupsieve", "tqdm", "rich", "pygments", "click", "typing-extensions", "regex", "aiohttp", "aiosignal", "async-timeout", "attrs", "charset-normalizer", "frozenlist", "idna", "multidict", "yarl", "future"]
