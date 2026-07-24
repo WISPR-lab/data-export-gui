@@ -39,6 +39,11 @@ Vue.use(require('vue-moment'))
 // Disable warning during development
 Vue.config.productionTip = false
 
+import { getPyodideWorker } from '@/pyodide/pyodide-client'
+
+// Boot Pyodide worker immediately so packages load in the background on any route
+getPyodideWorker()
+
 new Vue({
   router,
   store,

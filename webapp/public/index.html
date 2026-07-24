@@ -25,7 +25,7 @@ limitations under the License.
       content="
         default-src 'self'; 
         script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; 
-        connect-src 'self' blob: data:; 
+        connect-src 'self' blob: data: <%= process.env.NODE_ENV === 'development' ? 'ws: wss: http: https:' : '' %>; 
         style-src 'self' 'unsafe-inline'; 
         img-src 'self' data: blob:; 
         font-src 'self' data:; 
@@ -33,7 +33,7 @@ limitations under the License.
       "
     >
     <!-- <link rel="icon" href="<%= BASE_URL %>favicon.ico" /> -->
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet" />
+    <link href="/fonts/roboto.css" rel="stylesheet" />
     <title>LEStrADE</title>
     <script src="/vendor/coi-serviceworker.min.js"></script>
   </head>
