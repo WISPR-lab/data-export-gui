@@ -62,7 +62,8 @@
           text
           small
           color="primary"
-          @click.stop="goToEvents"
+          :to="{ name: eventsRouteName, query: { chips: 'device_instance_id:' + instance.id } }"
+          @click.native.stop
           title="View events for this instance"
         >
           {{ instance.event_count }} Events
@@ -176,13 +177,18 @@ export default {
       const start = new Date(this.instance.first_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       const end = new Date(this.instance.last_seen * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       return start === end ? start : `${start} – ${end}`;
+    },
+    eventsRouteName() {
+      return this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
     }
   },
   methods: {
     goToEvents() {
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', `device_instance_id:${this.instance.id}`);
-      this.$router.push({ name: routeName });
+      this.$router.push({
+        name: routeName,
+        query: { chips: `device_instance_id:${this.instance.id}` }
+      });
     }
   }
 }
