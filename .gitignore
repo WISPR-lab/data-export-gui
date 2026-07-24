@@ -109,3 +109,5 @@ entity_resolution_evaluation/data/
 entity_resolution_evaluation/demo/runs/
 entity_resolution_evaluation/explore.ipynb
 uv.lock
+webapp/public/vendor/
+webapp/public/pyodide/

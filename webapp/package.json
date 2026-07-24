@@ -5,7 +5,7 @@
   "scripts": {
     "sync-assets": "bash sync_assets.sh",
     "serve": "npm run sync-assets && NODE_ENV=development NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
-    "build": "bash sync_assets.sh --copy && NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
+    "build": "bash sync_assets.sh && NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
     "lint": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",
     "test": "vitest --dom",
     "test:unit": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service test:unit"
@@ -16,6 +16,7 @@
     "@sqlite.org/sqlite-wasm": "^3.51.2-build6",
     "apexcharts": "^3.27.1",
     "axios": "^1.12.0",
+    "coi-serviceworker": "^0.1.7",
     "crypto-js": "^4.2.0",
     "cytoscape": "^3.24.0",
     "cytoscape-dagre": "^2.5.0",
@@ -25,7 +26,7 @@
     "dompurify": "^3.2.3",
     "driver.js": "^1.4.0",
     "fflate": "^0.8.2",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "4.1.0",
     "jszip": "^3.10.1",
     "liqe": "^3.8.7",
     "lodash": "^4.17.11",

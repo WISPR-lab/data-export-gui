@@ -4,11 +4,10 @@
 // NOTE: This file is automatically copied to public/ during build (npm run sync-assets).
 // DO NOT EDIT the version in the public/ folder.
 
-// const { reject } = require("lodash");
 
-// importScripts('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js');
-importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js');
-importScripts('https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js');
+importScripts('/vendor/js-yaml.min.js');
+importScripts("/pyodide/pyodide.js");
+
 
 let pyodide;
 let pyodideReadyPromise;
@@ -243,7 +242,7 @@ async function initPyodide() {
     baseUrl = getBaseUrl();
     console.log(`[Pyodide Worker] Computed base URL: ${baseUrl}`);
     
-    pyodide = await loadPyodide();
+    pyodide = await loadPyodide({indexURL: "/pyodide/"});
     
     const pyCorePath = config.paths.python_core;
     await extractPythonCoreZip(pyodide, pyCorePath);

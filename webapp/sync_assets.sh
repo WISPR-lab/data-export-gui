@@ -1,52 +1,39 @@
 #!/usr/bin/env bash
 # Syncs static assets that Webpack cannot bundle into public/.
-# By default uses symlinks so edits in src/ are reflected immediately.
-# For CI/build, use --copy to create actual copies instead.
-# Usage: ./sync_assets.sh [--symlink|--copy]
+# Usage: ./sync_assets.sh
+
+
 
 set -euo pipefail
 
-WEBAPP_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+WEBAPP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$WEBAPP_DIR/.." && pwd)"
 PUBLIC="$WEBAPP_DIR/public"
-PYTHON_CORE_DIR="$REPO_ROOT/python_core"
-
-# Parse mode argument
-LINK_MODE="${1:---symlink}"
-
-case "$LINK_MODE" in
-  --symlink)
-    LINK_DIR_CMD="ln -sf"
-    LINK_FILE_CMD="ln -sf"
-    echo "[sync-assets] Using symlinks (dev mode)"
-    ;;
-  --copy)
-    LINK_DIR_CMD="cp -r"
-    LINK_FILE_CMD="cp"
-    echo "[sync-assets] Using copies (build mode)"
-    ;;
-  *)
-    echo "Usage: $0 [--symlink|--copy]"
-    echo "  --symlink  Use symlinks (default, for development)"
-    echo "  --copy     Use copies (for CI/production builds)"
-    exit 1
-    ;;
-esac
+WHEELS_DIR="$PUBLIC/wheels"
+PYODIDE_DIR="$PUBLIC/pyodide"
+VENDOR_DIR="$PUBLIC/vendor"
+SUBMODULE_DIR="$REPO_ROOT/UA-Extract-purepy"
 
 
-if [ ! -d "$REPO_ROOT/UA-Extract-purepy" ]; then
-  echo "[sync-assets] ERROR: UA-Extract-purepy submodule not found!"
-  echo ""
-  echo "To initialize the submodule, run:"
-  echo "  cd $REPO_ROOT"
-  echo "  git submodule update --init --recursive"
-  echo ""
+# pre-flight checks
+
+
+if [ ! -d "$SUBMODULE_DIR" ]; then
+  echo "[sync-assets] ERROR: Submodule 'UA-Extract-purepy' is missing."
+  echo "Run: git submodule update --init --recursive"
   exit 1
 fi
 
-bash "$REPO_ROOT/UA-Extract-purepy/build_wheels.sh"
+if ! command -v zip &> /dev/null || ! command -v curl &> /dev/null; then
+  echo "[sync-assets] ERROR: 'zip' and 'curl' are required build dependencies."
+  exit 1
+fi
+
+# -------------------------------------
 
 
+echo "[sync-assets] cleaning up old assets..."
 rm -rf \
   "$PUBLIC/python_core.zip" \
   "$PUBLIC/manifests" \
@@ -55,42 +42,118 @@ rm -rf \
   "$PUBLIC/pyodide-worker.js" \
   "$PUBLIC/config.yaml" \
   "$PUBLIC/schema.sql" \
-  "$PUBLIC/wheels"
+  "$WHEELS_DIR" \
+  "$PYODIDE_DIR"
+
+mkdir -p "$WHEELS_DIR" "$PYODIDE_DIR" "$PUBLIC" "$VENDOR_DIR"
 
 
-# Create wheels directory and copy .whl AND the pointer file
-mkdir -p "$PUBLIC/wheels"
-DIST_DIR="$REPO_ROOT/UA-Extract-purepy/dist"
+# ------------------------------------- 
 
-if [ "$LINK_MODE" = "--symlink" ]; then
-  # Link wheels
-  for wheel in "$DIST_DIR"/*.whl; do
-    [ -f "$wheel" ] && ln -sf "$wheel" "$PUBLIC/wheels/$(basename "$wheel")"
-  done
-  # Link the pointer file so the worker knows which version to load
-  ln -sf "$DIST_DIR/latest_wheel.txt" "$PUBLIC/wheels/latest_wheel.txt"
-else
-  # Copy wheels and pointer
-  cp "$DIST_DIR"/*.whl "$PUBLIC/wheels/" 2>/dev/null || true
-  cp "$DIST_DIR/latest_wheel.txt" "$PUBLIC/wheels/" 2>/dev/null || true
+
+echo "[sync-assets] Building UA-Extract-purepy submodule wheels..."
+bash "$SUBMODULE_DIR/build_wheels.sh"
+
+DIST_DIR="$SUBMODULE_DIR/dist"
+
+echo "[sync-assets] Syncing UA-Extract-purepy submodule wheels..."
+local_wheels=("$DIST_DIR"/*.whl)
+
+if [ ${#local_wheels[@]} -eq 0 ]; then
+echo "[sync-assets] ERROR: No .whl files found in $DIST_DIR"
+exit 1
 fi
 
-if [ "$LINK_MODE" = "--symlink" ]; then
-  $LINK_DIR_CMD "$REPO_ROOT/manifests"                     "$PUBLIC/manifests"
-else
-  mkdir -p "$PUBLIC/manifests"
-  cp "$REPO_ROOT/manifests"/*.yaml "$PUBLIC/manifests/"
+for wheel in "${local_wheels[@]}"; do
+cp -f "$wheel" "$WHEELS_DIR/$(basename "$wheel")"
+done
+
+if [ -f "$DIST_DIR/latest_wheel.txt" ]; then
+cp -f "$DIST_DIR/latest_wheel.txt" "$WHEELS_DIR/latest_wheel.txt"
 fi
-$LINK_FILE_CMD "$WEBAPP_DIR/src/pyodide/pyodide-worker.js"         "$PUBLIC/pyodide-worker.js"
-$LINK_FILE_CMD "$WEBAPP_DIR/src/database/sqlite-worker.js"         "$PUBLIC/sqlite-worker.js"
+
+echo "[sync-assets] Downloading third-party PyPI dependencies into $WHEELS_DIR..."
+PIP_CMD=""
+if command -v pip3 &> /dev/null; then
+  PIP_CMD="pip3"
+elif command -v pip &> /dev/null; then
+  PIP_CMD="pip"
+elif python3 -m pip --version &> /dev/null; then
+  PIP_CMD="python3 -m pip"
+fi
+
+if [ -n "$PIP_CMD" ]; then
+  $PIP_CMD download -d "$WHEELS_DIR" --only-binary=:all: \
+    pyyaml \
+    regex \
+    aiohttp \
+    pytz \
+    pandas \
+    hjson \
+    json5 \
+    tenacity \
+    "rich==13.7.1" \
+    "typer==0.9.0" \
+    exrex \
+    beautifulsoup4 \
+    packaging \
+    tqdm \
+    || true
+else
+  echo "[sync-assets] WARNING: Neither 'pip3' nor 'pip' found in PATH."
+fi
 
 
+# ------------------------------------- 
+
+
+PYODIDE_VERSION="0.27.2"
+echo "[sync-assets] Syncing Pyodide v${PYODIDE_VERSION} runtime binaries..."
+
+PYODIDE_CDN="https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full"
+PYODIDE_FILES=("pyodide.js" "pyodide.wasm" "pyodide-lock.json" "python_stdlib.zip")
+for file in "${PYODIDE_FILES[@]}"; do
+  if [ ! -f "$PYODIDE_DIR/$file" ]; then
+    echo "  -> Downloading $file"
+    curl -sL "$PYODIDE_CDN/$file" -o "$PYODIDE_DIR/$file"
+  fi
+done
+
+
+# -------------------------------------
+
+
+echo "[sync-assets] Copying manifests, worker scripts, and schema..."
+mkdir -p "$PUBLIC/manifests"
+manifest_files=("$REPO_ROOT/manifests"/*.yaml)
+if [ ${#manifest_files[@]} -gt 0 ]; then
+  cp -f "${manifest_files[@]}" "$PUBLIC/manifests/"
+fi
+
+cp -f "$WEBAPP_DIR/src/pyodide/pyodide-worker.js" "$PUBLIC/pyodide-worker.js"
+cp -f "$WEBAPP_DIR/src/database/sqlite-worker.js" "$PUBLIC/sqlite-worker.js"
+cp -f "$REPO_ROOT/config.yaml" "$PUBLIC/config.yaml"
+cp -f "$REPO_ROOT/schema.sql"  "$PUBLIC/schema.sql"
+
+
+
+echo "[sync-assets] Zipping and copying python_core..."
 (cd "$REPO_ROOT" && zip -r "$PUBLIC/python_core.zip" python_core -q)
-echo "[sync-assets] Created: python_core.zip"
 
 
-cp -r "$WEBAPP_DIR/node_modules/@sqlite.org/sqlite-wasm/dist" "$PUBLIC/sqlite-wasm"
-cp    "$REPO_ROOT/config.yaml" "$PUBLIC/config.yaml"
-cp    "$REPO_ROOT/schema.sql"  "$PUBLIC/schema.sql"
+
+echo "[sync-assets] Copying SQLite WASM binaries and schema ..."
+SQLITE_WASM_DIR="$WEBAPP_DIR/node_modules/@sqlite.org/sqlite-wasm/dist"
+if [ -d "$SQLITE_WASM_DIR" ]; then
+  cp -rf "$SQLITE_WASM_DIR" "$PUBLIC/sqlite-wasm"
+fi
+
+
+
+# -------------------------------------
 
 echo "[sync-assets] Done."
+
+
+
+
