@@ -80,6 +80,7 @@ limitations under the License.
           
           <search :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></search>
           <devices :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></devices>
+          <compare-events :icon-only="isMiniDrawer"></compare-events>
         </div>
 
         <v-divider v-if="!isMiniDrawer" class="mb-2"></v-divider>
@@ -212,6 +213,7 @@ import Devices from '../components/LeftPanel/Devices.vue'
 import SettingsDialog from '../components/SettingsDialog.vue'
 import DeleteDataButton from '../components/DeleteDataButton.vue'
 import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
+import CompareEvents from '../components/LeftPanel/CompareEvents.vue'
 
 export default {
   props: ['projectId'],
@@ -230,6 +232,7 @@ export default {
     SettingsDialog,
     DeleteDataButton,
     WelcomeDialog,
+    CompareEvents,
   },
   data() {
     return {

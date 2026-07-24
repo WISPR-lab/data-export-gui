@@ -89,6 +89,8 @@ const defaultState = () => {
     demo_visit_or_skip_count: 0,
     demoFinishCount: 0,
     crossPageSearchQuery: null,
+    compareEvents: [],
+    showCompareDialog: false,
   }
 }
 
@@ -97,6 +99,49 @@ const state = defaultState()
 export default new Vuex.Store({
   state,
   mutations: {
+    TOGGLE_COMPARE_EVENT(state, event) {
+      if (!event || !event._id) return
+      const existingIdx = state.compareEvents.findIndex((e) => e._id === event._id)
+      if (existingIdx >= 0) {
+        const updated = state.compareEvents.filter((e) => e._id !== event._id)
+        Vue.set(state, 'compareEvents', updated)
+        if (updated.length < 2) {
+          Vue.set(state, 'showCompareDialog', false)
+        }
+      } else {
+        if (state.compareEvents.length >= 4) {
+          Vue.set(state, 'snackbar', {
+            active: true,
+            color: 'warning',
+            message: 'Maximum 4 events can be compared at a time.',
+            timeout: 4000,
+          })
+          return
+        }
+        const updated = [...state.compareEvents, event]
+        Vue.set(state, 'compareEvents', updated)
+        Vue.set(state, 'snackbar', {
+          active: true,
+          color: 'info',
+          message: updated.length >= 2 ? 'Event pinned for comparison. Click Compare Events in the left panel when ready.' : 'Event pinned for comparison. Pin another event to compare.',
+          timeout: 4000,
+        })
+      }
+    },
+    REMOVE_COMPARE_EVENT(state, eventId) {
+      const updated = state.compareEvents.filter((e) => e._id !== eventId)
+      Vue.set(state, 'compareEvents', updated)
+      if (updated.length < 2) {
+        Vue.set(state, 'showCompareDialog', false)
+      }
+    },
+    CLEAR_COMPARE_EVENTS(state) {
+      Vue.set(state, 'compareEvents', [])
+      Vue.set(state, 'showCompareDialog', false)
+    },
+    SET_SHOW_COMPARE_DIALOG(state, show) {
+      Vue.set(state, 'showCompareDialog', show)
+    },
     SET_CROSS_PAGE_SEARCH_QUERY(state, query) {
       Vue.set(state, 'crossPageSearchQuery', query)
     },

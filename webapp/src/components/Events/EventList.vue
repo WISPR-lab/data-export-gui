@@ -793,6 +793,13 @@ export default {
     },
   },
   methods: {
+    toggleCompareEvent(item) {
+      this.$store.commit('TOGGLE_COMPARE_EVENT', item)
+    },
+    isEventSelectedForCompare(item) {
+      const compareEvents = this.$store.state.compareEvents || []
+      return compareEvents.some((e) => e._id === item._id)
+    },
     toggleSummary() {
           this.summaryCollapsed = !this.summaryCollapsed;
           localStorage.setItem('aiSummaryCollapsed', String(this.summaryCollapsed));

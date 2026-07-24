@@ -102,3 +102,11 @@ export const tagMetadata = {
     },
   },
 };
+
+export const FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE = [
+  'label', 'starred', '__ts_comment', '_index', '_id', '_type', 'tag',
+  'filename', 'device_profiles_data', 'data_export_name', 'data_export_id', 'comment',
+];
+
+
+
