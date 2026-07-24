@@ -321,30 +321,11 @@ export default {
           this.startDemo();
         });
       }
-      // ponytail: reload query and trigger search if q query parameter changes
-      const q = to.query.q;
-      if (q !== undefined) {
-        let changed = false;
-        const match = q.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
-        if (match) {
-          this.addQueryChip(match[1], match[2]);
-          if (this.currentQueryString !== '') {
-            this.currentQueryString = '';
-            changed = true;
-          }
-          changed = true;
-        } else if (q !== this.currentQueryString) {
-          this.currentQueryString = q || '';
-          changed = true;
+      if (this.parseRouteParams(to.query)) {
+        if (!this.currentQueryFilter.uploadIds.length) {
+          this.currentQueryFilter.uploadIds = ['_all'];
         }
-        if (changed) {
-          this.search();
-        }
-      }
-    },
-    '$store.state.crossPageSearchQuery'(newVal) {
-      if (newVal) {
-        this.handleCrossPageQuery(newVal);
+        this.search();
       }
     },
   },
@@ -352,12 +333,107 @@ export default {
     getQuickTag(tag) {
       return this.quickTags.find((el) => el.tag === tag)
     },
-    addQueryChip(field, value) {
+    parseRouteParams(query = {}) {
+      let doSearch = false;
+      
+      // 1. Text Search Bar (q=)
+      if (query.q !== undefined) {
+        let qStr = query.q || '';
+        const match = qStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+        if (match) {
+          this.addQueryChip(match[1], match[2], true);
+          if (this.currentQueryString !== '') {
+            this.currentQueryString = '';
+            doSearch = true;
+          }
+          doSearch = true;
+        } else if (qStr !== this.currentQueryString) {
+          this.currentQueryString = qStr;
+          doSearch = true;
+        }
+      }
+
+      // 2. Chips (chips=field:val,!field:val)
+      if (query.chips !== undefined) {
+        if (!this.currentQueryFilter.chips) {
+          this.currentQueryFilter.chips = [];
+        }
+        // Disable all pre-existing active chips when chips param is explicitly provided
+        this.currentQueryFilter.chips.forEach(c => {
+          if (c && c.active !== false) {
+            c.active = false;
+          }
+        });
+
+        const tokens = String(query.chips).split(',').filter(Boolean);
+        tokens.forEach(token => {
+          let isActive = true;
+          let raw = token.trim();
+          if (raw.indexOf('!') === 0) {
+            isActive = false;
+            raw = raw.substring(1);
+          }
+          const colonIdx = raw.indexOf(':');
+          if (colonIdx !== -1) {
+            const field = raw.substring(0, colonIdx);
+            const value = raw.substring(colonIdx + 1).replace(/^"|"$/g, '');
+            const existing = this.currentQueryFilter.chips.find(c => c.field === field && c.value === value);
+            if (existing) {
+              existing.active = isActive;
+            } else {
+              this.currentQueryFilter.chips.push({
+                type: 'attribute',
+                field: field,
+                value: value,
+                active: isActive
+              });
+            }
+          }
+        });
+        doSearch = true;
+      }
+
+      return doSearch;
+    },
+
+    syncRouteFromState() {
+      const qVal = this.currentQueryString || undefined;
+      let chipsStr = undefined;
+      
+      if (this.currentQueryFilter && Array.isArray(this.currentQueryFilter.chips) && this.currentQueryFilter.chips.length > 0) {
+        const serialized = this.currentQueryFilter.chips
+          .filter(c => c && c.field && c.value)
+          .map(c => (c.active === false ? '!' : '') + c.field + ':' + String(c.value).replace(/"/g, ''));
+        if (serialized.length > 0) {
+          chipsStr = serialized.join(',');
+        }
+      }
+
+      const queryObj = {};
+      if (qVal) queryObj.q = qVal;
+      if (chipsStr) queryObj.chips = chipsStr;
+
+      const currentRouteQuery = this.$route.query || {};
+      if (currentRouteQuery.q !== queryObj.q || currentRouteQuery.chips !== queryObj.chips) {
+        this.$router.replace({ query: queryObj }).catch(() => {});
+      }
+    },
+
+    addQueryChip(field, value, disableExisting = true) {
       if (!this.currentQueryFilter.chips) {
         this.currentQueryFilter.chips = []
       }
-      const exists = this.currentQueryFilter.chips.some(c => c.type === 'attribute' && c.field === field && c.value === value)
-      if (!exists) {
+      if (disableExisting) {
+        this.currentQueryFilter.chips.forEach(c => {
+          if (c && c.active !== false) {
+            c.active = false
+          }
+        })
+      }
+      const existing = this.currentQueryFilter.chips.find(c => c.type === 'attribute' && c.field === field && c.value === value)
+      if (existing) {
+        existing.active = true
+      } else {
         this.currentQueryFilter.chips.push({
           type: 'attribute',
           field: field,
@@ -365,18 +441,6 @@ export default {
           active: true
         })
       }
-    },
-    handleCrossPageQuery(queryStr) {
-      if (!queryStr) return;
-      const match = queryStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
-      if (match) {
-        this.addQueryChip(match[1], match[2]);
-        this.currentQueryString = '';
-      } else {
-        this.currentQueryString = queryStr;
-      }
-      this.search();
-      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', null);
     },
     startDemo() {
       console.log('[Events] Starting interactive demo');
@@ -450,6 +514,7 @@ export default {
       if (this.$store.state.demoMode) {
         EventBus.$emit('demo:action', 'search-executed')
       }
+      this.syncRouteFromState();
     },
     handleSearchBarSearch(event) {
       this.currentQueryString = event.queryString
@@ -712,9 +777,13 @@ export default {
     }
   },
   activated() {
-    const pendingQuery = this.$store.state.crossPageSearchQuery;
-    if (pendingQuery) {
-      this.handleCrossPageQuery(pendingQuery);
+    if (this.parseRouteParams(this.$route.query)) {
+      if (!this.currentQueryFilter.uploadIds.length) {
+        this.currentQueryFilter.uploadIds = ['_all'];
+      }
+      this.search();
+    } else {
+      this.syncRouteFromState();
     }
   },
   beforeDestroy() {
@@ -722,50 +791,18 @@ export default {
     EventBus.$off('setActiveView')
   },
   created: function () {
-    let doSearch = false
+    let doSearch = this.parseRouteParams(this.$route.query);
 
-    const pendingQuery = this.$store.state.crossPageSearchQuery;
-    if (pendingQuery) {
-      this.handleCrossPageQuery(pendingQuery);
-    }
-
-    this.params = {
-      viewId: this.$route.query.view,
-      exportId: this.$route.query.export || this.$route.query.timeline,
-      resultLimit: this.$route.query.limit,
-      queryString: this.$route.query.q,
-    }
-
-    let queryStr = this.params.queryString || '';
-    let parsedAsChip = false;
-    if (queryStr) {
-      const match = queryStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
-      if (match) {
-        this.addQueryChip(match[1], match[2]);
-        this.currentQueryString = '';
-        parsedAsChip = true;
-        doSearch = true;
-      }
-    }
-
-    if (queryStr && !parsedAsChip) {
-      this.currentQueryString = queryStr
-      doSearch = true
-    }
-
-    if (this.params.exportId) {
-      if (!this.params.queryString) {
-        this.currentQueryString = '*'
-      }
-
-      let dataExport = this.project.dataExports.find((dataExport) => {
-        return dataExport.id === parseInt(this.params.exportId, 10)
-      })
+    if (this.$route.query.export || this.$route.query.timeline) {
+      const exportId = this.$route.query.export || this.$route.query.timeline;
+      let dataExport = this.project.dataExports.find((de) => de.id === parseInt(exportId, 10));
       if (dataExport) {
-        this.currentQueryFilter.uploadIds = [dataExport.id]
+        this.currentQueryFilter.uploadIds = [dataExport.id];
       }
-      doSearch = true
+      doSearch = true;
     }
+
+
 
     if (!this.currentQueryString) {
       this.currentQueryFilter.uploadIds = ['_all']

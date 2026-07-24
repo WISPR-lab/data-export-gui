@@ -66,7 +66,8 @@
                       color="primary"
                       class="text-capitalize pa-0"
                       style="font-size: 12px; font-weight: 500; height: auto;"
-                      @click.stop="goToEvents"
+                      :to="{ name: eventsRouteName, query: { chips: eventsChipsQuery } }"
+                      @click.native.stop
                     >
                       {{ buttonText }}
                       <v-icon right size="13" class="ml-1">mdi-arrow-right</v-icon>
@@ -190,6 +191,20 @@ export default {
         attrs.push({ label: 'Latest Client Version', value: c.latest_client_version });
       }
       return attrs;
+    },
+    eventsRouteName() {
+      return this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
+    },
+    eventsChipsQuery() {
+      if (!this.eventsQuery) return '';
+      if (this.eventsQuery.indexOf('client_session_id:') === 0) {
+        var sid = this.eventsQuery.replace('client_session_id:', '').replace(/"/g, '');
+        return 'client_session_id:' + sid;
+      } else if (this.eventsQuery.indexOf('device_serial_number:') === 0) {
+        var serial = this.eventsQuery.replace('device_serial_number:', '').replace(/"/g, '');
+        return 'device_serial_number:' + serial;
+      }
+      return this.eventsQuery;
     }
   },
   methods: {
@@ -202,8 +217,17 @@ export default {
     },
     goToEvents() {
       var routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', this.eventsQuery);
-      this.$router.push({ name: routeName }).catch(function() {});
+      var chipsVal = '';
+      if (this.eventsQuery.indexOf('client_session_id:') === 0) {
+        var sid = this.eventsQuery.replace('client_session_id:', '').replace(/"/g, '');
+        chipsVal = 'client_session_id:' + sid;
+      } else if (this.eventsQuery.indexOf('device_serial_number:') === 0) {
+        var serial = this.eventsQuery.replace('device_serial_number:', '').replace(/"/g, '');
+        chipsVal = 'device_serial_number:' + serial;
+      } else {
+        chipsVal = this.eventsQuery;
+      }
+      this.$router.push({ name: routeName, query: { chips: chipsVal } }).catch(function() {});
     }
   }
 };

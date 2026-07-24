@@ -1,10 +1,10 @@
 export const PLATFORM_METADATA = {
   google:    { name: 'Google',    icon: 'mdi-google'    },
-  discord:   { name: 'Discord',   icon: 'mdi-discord'   },
-  apple:     { name: 'Apple',     icon: 'mdi-apple'     },
+  // discord:   { name: 'Discord',   icon: 'mdi-discord'   },
+  // apple:     { name: 'Apple',     icon: 'mdi-apple'     },
   facebook:  { name: 'Facebook',  icon: 'mdi-facebook'  },
   instagram: { name: 'Instagram', icon: 'mdi-instagram' },
-  snapchat:  { name: 'Snapchat',  icon: 'mdi-snapchat'  },
+  // snapchat:  { name: 'Snapchat',  icon: 'mdi-snapchat'  },
 };
 
 

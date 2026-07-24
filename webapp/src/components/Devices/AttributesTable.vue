@@ -12,14 +12,15 @@
                 <template v-if="isIPAttribute(attr.label)">
                   <v-tooltip bottom open-delay="400">
                     <template v-slot:activator="{ on, attrs }">
-                      <a 
+                      <router-link 
                         v-bind="attrs" 
                         v-on="on" 
                         class="ip-link" 
-                        @click.stop="goToEventsIP(item)"
+                        :to="getIPRoute(item)"
+                        @click.native.stop
                       >
                         {{ item }}
-                      </a>
+                      </router-link>
                     </template>
                     <span>See events with this IP address</span>
                   </v-tooltip>
@@ -27,14 +28,15 @@
                 <template v-else-if="isSessionIdAttribute(attr.label)">
                   <v-tooltip bottom open-delay="400">
                     <template v-slot:activator="{ on, attrs }">
-                      <a
+                      <router-link
                         v-bind="attrs"
                         v-on="on"
                         class="ip-link"
-                        @click.stop="goToEventsSession(item)"
+                        :to="getSessionRoute(item)"
+                        @click.native.stop
                       >
                         {{ item }}
-                      </a>
+                      </router-link>
                     </template>
                     <span>See events with this session ID</span>
                   </v-tooltip>
@@ -112,6 +114,9 @@ export default {
     };
   },
   computed: {
+    eventsRouteName() {
+      return this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
+    },
     MAX_OS_TYPES() {
       return 5;
     },
@@ -120,15 +125,29 @@ export default {
     }
   },
   methods: {
+    getIPRoute(ip) {
+      const cleanIp = String(ip).replace(/"/g, '');
+      return { name: this.eventsRouteName, query: { chips: 'client_ip:' + cleanIp } };
+    },
+    getSessionRoute(sessionId) {
+      const cleanSid = String(sessionId).replace(/"/g, '');
+      return { name: this.eventsRouteName, query: { chips: 'client_session_id:' + cleanSid } };
+    },
     goToEventsIP(ip) {
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', `client_ip:"${ip}"`);
-      this.$router.push({ name: routeName });
+      const cleanIp = String(ip).replace(/"/g, '');
+      this.$router.push({
+        name: routeName,
+        query: { chips: `client_ip:${cleanIp}` }
+      });
     },
     goToEventsSession(sessionId) {
       const routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      this.$store.commit('SET_CROSS_PAGE_SEARCH_QUERY', `client_session_id:"${sessionId}"`);
-      this.$router.push({ name: routeName });
+      const cleanSid = String(sessionId).replace(/"/g, '');
+      this.$router.push({
+        name: routeName,
+        query: { chips: `client_session_id:${cleanSid}` }
+      });
     },
     isIPAttribute(label) {
       return label && /\bips?\b/i.test(label);
