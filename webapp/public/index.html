@@ -32,10 +32,22 @@ limitations under the License.
         worker-src 'self' blob:;
       "
     >
-    <!-- <link rel="icon" href="<%= BASE_URL %>favicon.ico" /> -->
-
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
     <title>LEStrADE</title>
-    <script src="/vendor/coi-serviceworker.min.js"></script>
+    <script>
+      window.coi = {
+        doReload: () => {
+          const key = 'coi_reload_attempted';
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, 'true');
+            window.location.reload();
+          } else {
+            console.warn('[COI] Reload attempted, skipping further reloads to prevent loop.');
+          }
+        }
+      };
+    </script>
+    <script src="<%= BASE_URL %>vendor/coi-serviceworker.min.js"></script>
   </head>
   <body>
     <div id="app"></div>

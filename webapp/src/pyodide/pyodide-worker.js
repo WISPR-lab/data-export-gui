@@ -5,8 +5,8 @@
 // DO NOT EDIT the version in the public/ folder.
 
 
-importScripts('/vendor/js-yaml.min.js');
-importScripts("/pyodide/pyodide.js");
+importScripts('./vendor/js-yaml.min.js');
+importScripts('./pyodide/pyodide.js');
 
 
 let pyodide;
@@ -124,7 +124,7 @@ async function installDeps(pyodide) {
 
   // Step 1: Pyodide-native packages (built for emscripten; must come from indexURL=/pyodide/)
   try {
-    const pkgIndexRes = await fetch('/pyodide/pyodide_packages_index.json');
+    const pkgIndexRes = await fetch(buildResourceUrl('pyodide/pyodide_packages_index.json'));
     if (!pkgIndexRes.ok) throw new Error('pyodide_packages_index.json missing');
     const pkgNames = await pkgIndexRes.json();
     console.log('[Pyodide Worker] Loading Pyodide-native packages:', pkgNames);
@@ -196,7 +196,7 @@ async function initPyodide() {
     baseUrl = getBaseUrl();
     console.log(`[Pyodide Worker] Computed base URL: ${baseUrl}`);
     
-    pyodide = await loadPyodide({indexURL: "/pyodide/"});
+    pyodide = await loadPyodide({indexURL: buildResourceUrl('pyodide/')});
     
     const pyCorePath = config.paths.python_core;
     await extractPythonCoreZip(pyodide, pyCorePath);
