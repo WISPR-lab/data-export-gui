@@ -76,16 +76,27 @@ export default {
       return this.$store.state.project
     },
   },
-  async mounted() {
-    try {
-      this.ipAddresses = await DB.getIPAddresses();
-    } catch (e) {
-      console.error('Error loading IP addresses:', e)
-      this.ipAddresses = []
+  watch: {
+    'project.dataExports': {
+      async handler() {
+        await this.loadIPAddresses()
+      },
+      deep: true
     }
   },
-  beforeDestroy() {},
-  methods: {},
+  methods: {
+    async loadIPAddresses() {
+      try {
+        this.ipAddresses = await DB.getIPAddresses();
+      } catch (e) {
+        console.error('Error loading IP addresses:', e)
+        this.ipAddresses = []
+      }
+    }
+  },
+  async mounted() {
+    await this.loadIPAddresses()
+  },
 }
 </script>
 

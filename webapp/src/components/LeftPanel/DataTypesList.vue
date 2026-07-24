@@ -103,7 +103,7 @@ export default {
     },
   },
   watch: {
-    project: {
+    'project.dataExports': {
       async handler() {
         await this.loadEventTypes()
       },
