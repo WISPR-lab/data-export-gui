@@ -36,6 +36,7 @@ class DatabaseSession:
         self.json_columns = set(json_columns or [])
 
         self.is_firefox = get_config_value("IS_FIREFOX", default=False)
+        self.is_safari = get_config_value("IS_SAFARI", default=False)
         self.firefox_internal_temp_path = "/tmp/working_db.sqlite"
 
         self.use_dict_factory = use_dict_factory
@@ -98,9 +99,10 @@ class DatabaseSession:
     def __enter__(self) -> sqlite3.Connection:
 
         try:
-            if self.is_firefox:
+            if self.is_firefox or self.is_safari:
+                browser = "Safari" if self.is_safari else "Firefox"
                 print(
-                    f"[DBSession] Firefox detected, applying OPFS to MEMFS workaround for DB path: {self.db_path_orig}"
+                    f"[DBSession] {browser} detected, applying OPFS to MEMFS workaround for DB path: {self.db_path_orig}"
                 )
                 self.db_path_target = self._firefox_workaround_opfs_to_memfs()
                 print(
@@ -142,7 +144,7 @@ class DatabaseSession:
         except Exception as e:
             if self.conn:
                 self.conn.close()
-            if self.is_firefox and safefileutils.exists(
+            if (self.is_firefox or self.is_safari) and safefileutils.exists(
                 self.firefox_internal_temp_path
             ):
                 os.remove(self.firefox_internal_temp_path)
@@ -159,7 +161,7 @@ class DatabaseSession:
                     self.conn.commit()
                 self.conn.close()
 
-                if self.is_firefox:
+                if self.is_firefox or self.is_safari:
                     if exc_type is None:
                         self._firefox_flush_memfs_to_opfs()
                     if self.firefox_internal_temp_path and safefileutils.exists(

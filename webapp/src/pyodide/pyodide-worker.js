@@ -15,6 +15,7 @@ let config = null;
 let baseUrl = null; // e.g. "https://.../data-export-gui/"
 let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
 const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent); // excludes Chrome (which also contains 'Safari')
 
 function getBaseUrl() {
   const workerUrl = self.location.href;
@@ -223,7 +224,8 @@ builtins.SCHEMA_PATH = "${config.paths.schema}"
 builtins.TEMP_ZIP_DATA_STORAGE = "${config.storage.temp_zip_storage}"
 builtins.MANIFESTS_DIR = "${config.paths.manifests}"
 builtins.PYTHON_CORE = "${config.paths.python_core}"
-builtins.IS_FIREFOX = ${isFirefox? 'True' : 'False'}
+builtins.IS_FIREFOX = ${isFirefox ? 'True' : 'False'}
+builtins.IS_SAFARI = ${isSafari ? 'True' : 'False'}
     `);
 
     pyodide.FS.mkdir(config.paths.manifests);
@@ -295,10 +297,9 @@ pyodideReadyPromise = initPyodideWithRetry();
 
 
 async function flushOPFSDatabase() {
-  /* Firefox: bypasses Emscripten syncfs (crashes on stat()) by manually reading DB bytes and writing them to OPFS via SyncAccessHandle. Chrome: uses standard FS.syncfs. */
-  if (isFirefox) {
-    // Python already manually flushed the bytes to OPFS safely.
-    console.log("[Pyodide Worker] Firefox detected: manually syncing db to opfs without calling syncfs() to avoid Firefox stat() crash.");
+  /* Firefox/Safari: bypass Emscripten syncfs (crashes on stat()/BigInt) by manually writing DB bytes to OPFS via SyncAccessHandle. Chrome: standard FS.syncfs. */
+  if (isFirefox || isSafari) {
+    console.log('[Pyodide Worker] Firefox/Safari: manually syncing db to OPFS.');
     try {
       const dbBytes = pyodide.FS.readFile(config.database.db_path);
       const opfsRoot = await navigator.storage.getDirectory();
@@ -309,9 +310,9 @@ async function flushOPFSDatabase() {
       accessHandle.write(dbBytes, { at: 0 });
       accessHandle.flush();
       accessHandle.close();
-      return; 
+      return;
     } catch (e) {
-      console.error('[Pyodide Worker] Firefox manual OPFS sync failed:', e);
+      console.error('[Pyodide Worker] Manual OPFS sync failed:', e);
       return;
     }
   }
@@ -330,22 +331,21 @@ async function flushOPFSDatabase() {
 
 
 async function showPackages(pyodide) {
-  const packages = await pyodide.runPythonAsync(`
-      import micropip
-      packages = micropip.list()
-      packages
-  `);
-  if (packages && packages.toJs) {
-    console.log(`[Pyodide Worker] Installed packages:`, packages.toJs({ dict_converter: Object.fromEntries }));
-  } else {
-    console.warn('[Pyodide Worker] Could not retrieve installed packages list');
+  try {
+    const result = await pyodide.runPythonAsync(`
+import micropip, json
+json.dumps(list(micropip.list().keys()))
+    `);
+    console.log('[Pyodide Worker] Installed packages:', JSON.parse(result));
+  } catch (e) {
+    console.warn('[Pyodide Worker] Could not list packages:', e);
   }
-};
+}
 
 
 self.onmessage = async (event) => {
   const { id, command, args } = event.data;
-  console.log(`[PyodideWorker] Received message: command='${command}', id=${id}`);
+  // console.log(`[PyodideWorker] Received message: command='${command}', id=${id}`);
   
   try {
     // Wait for Pyodide to be ready
