@@ -256,8 +256,7 @@ export default new Vuex.Store({
   actions: {
     async updateProject(context, projectId) {
       if (!window.crossOriginIsolated) {
-        console.warn('[Store.updateProject] security headers missing. skippng db init.');
-        return;
+        console.warn('[Store.updateProject] security headers missing, attempting DB access anyway...');
       }
 
       let projectName = localStorage.getItem('projectName') || 'My Data'
