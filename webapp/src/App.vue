@@ -29,7 +29,7 @@ limitations under the License.
     <router-view></router-view>
 
     <!-- Compare View Overlay -->
-    <event-compare-dialog />
+    <compare-events-dialog />
 
     <!-- Safe Exit Button (global, on every page) -->
     <safe-exit-button></safe-exit-button>
@@ -43,13 +43,13 @@ limitations under the License.
 import EventBus from './event-bus.js'
 import { initShutdownDetection } from '@/utils/shutdownDetection.js'
 import DemoOverlay from '@/components/Demo/DemoOverlay.vue'
-import EventCompareDialog from '@/components/Events/EventCompareDialog.vue'
+import CompareEventsDialog from '@/components/Events/CompareEventsDialog.vue'
 
 export default {
   name: 'app',
   components: {
     DemoOverlay,
-    EventCompareDialog,
+    CompareEventsDialog,
   },
   computed: {
     snackbar() {

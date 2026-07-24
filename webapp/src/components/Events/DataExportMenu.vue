@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<!-- modified for WISPR-lab/data-export-gui -->
+<!-- modified  and renamed for WISPR-lab/data-export-gui -->
 <!--
   A generic export component that provides common export related
   functionality and allows customization of the template. That way a export
@@ -96,6 +96,13 @@ limitations under the License.
               </v-list-item>
             </template>
             <v-card>
+              <v-card-title class="d-flex justify-space-between align-center text-h6 font-weight-bold py-3 px-4">
+                <span>Uploaded Files</span>
+                <v-btn icon small @click="dialogStatus = false" title="Close dialog">
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
+              </v-card-title>
+              <v-divider></v-divider>
               <div class="pa-4">
                 <ul style="list-style-type: none">
                   <li><strong>Upload name: </strong>{{ dataExport.name }}</li>
@@ -115,10 +122,6 @@ limitations under the License.
                   </li>
                 </ul>
 
-                <!-- <v-alert text class="ma-5">
-                  This tool doesn't process all files in the ZIP you uploaded, only those that are useful for security analysis. If parsing fails for any file in the ZIP, its contents will not be indexed by the tool. To upload these files again, delete the upload and re-import the data.
-                </v-alert> -->
-
                 <v-alert
                   v-for="doc in documentMetadata"
                   :key="doc.id"
@@ -135,15 +138,9 @@ limitations under the License.
                     <li v-if="doc.parse_status === 'fail'">
                       <strong>Status:</strong> <code>parse failed</code>
                     </li>
-                    <!-- <li v-else class="text-success">✓ Parsed successfully</li> -->
                   </ul>
                 </v-alert>
               </div>
-              <v-divider></v-divider>
-              <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="primary" text @click="dialogStatus = false"> Close </v-btn>
-              </v-card-actions>
             </v-card>
           </v-dialog>
 

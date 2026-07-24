@@ -109,11 +109,11 @@ export default new Vuex.Store({
           Vue.set(state, 'showCompareDialog', false)
         }
       } else {
-        if (state.compareEvents.length >= 4) {
+        if (state.compareEvents.length >= 5) {
           Vue.set(state, 'snackbar', {
             active: true,
             color: 'warning',
-            message: 'Maximum 4 events can be compared at a time.',
+            message: 'Maximum 5 events can be compared at a time.',
             timeout: 4000,
           })
           return

@@ -205,7 +205,7 @@ export default {
     fullEventFiltered() {
       const source = this.event._source || {}
       return Object.keys(source)
-        .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && source[key] !== '')
+        .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && !key.startsWith('norm__') && source[key] !== '')
         .reduce((obj, key) => {
           obj[key] = source[key]
           return obj

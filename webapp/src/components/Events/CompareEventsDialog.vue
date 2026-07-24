@@ -89,13 +89,6 @@
           </template>
         </v-simple-table>
       </v-card-text>
-
-      <v-divider></v-divider>
-
-      <v-card-actions class="px-4 py-2">
-        <v-spacer></v-spacer>
-        <v-btn text small @click="closeDialog">Close</v-btn>
-      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
@@ -106,7 +99,7 @@ import TsEventTagMenu from './EventTagMenu.vue'
 import { FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE } from '@/constants/app_constants.js'
 
 export default {
-  name: 'EventCompareDialog',
+  name: 'CompareEventsDialog',
   components: {
     TsEventTagMenu,
   },
@@ -129,7 +122,7 @@ export default {
       const eventFilteredSources = this.events.map((ev) => {
         const source = (ev && ev._source) || {}
         const filtered = Object.keys(source)
-          .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && source[key] !== '')
+          .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && !key.startsWith('norm__') && source[key] !== '')
           .reduce((obj, key) => {
             obj[key] = source[key]
             return obj
@@ -191,10 +184,12 @@ export default {
         ev._source.starred = 0
         const idx = ev._source.labels.indexOf('starred')
         if (idx > -1) ev._source.labels.splice(idx, 1)
+        this.$store.dispatch('updateEventLabels', { label: 'starred', num: -1 })
         DB.removeLabelEvent([ev._id], ['starred']).catch((e) => console.error(e))
       } else {
         ev._source.starred = 1
         ev._source.labels.push('starred')
+        this.$store.dispatch('updateEventLabels', { label: 'starred', num: 1 })
         DB.addLabelEvent([ev._id], ['starred']).catch((e) => console.error(e))
       }
     },

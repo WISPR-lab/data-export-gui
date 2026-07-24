@@ -188,19 +188,17 @@
     </v-slide-y-transition>
 
     <!-- Info Modal -->
-    <v-dialog v-model="infoModal.open" max-width="500">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="text-h6 font-weight-bold text--primary pb-2 pt-1 px-4">
-          {{ infoModal.title }}
+    <v-dialog v-model="infoModal.open" max-width="450">
+      <v-card class="rounded-xl">
+        <v-card-title class="d-flex justify-space-between align-center text-h6 font-weight-bold pt-4 pb-2 px-6">
+          <span>{{ infoModal.title }}</span>
+          <v-btn icon small @click="infoModal.open = false" title="Close dialog">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-card-title>
-        <v-card-text class="text-body-1 text--secondary px-4 py-2" style="line-height: 1.6;">
+        <v-card-text class="text-body-2 text--secondary px-6 pb-6 pt-2" style="line-height: 1.6;">
           {{ infoModal.description }}
         </v-card-text>
-        <v-card-actions class="justify-end pt-3 pb-1 px-4">
-          <v-btn color="primary" text class="text-capitalize" @click="infoModal.open = false">
-            Close
-          </v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
   </v-card>

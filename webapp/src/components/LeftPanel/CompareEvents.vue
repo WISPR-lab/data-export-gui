@@ -25,20 +25,18 @@
       </div>
     </div>
 
-    <!-- Help Dialog -->
+    <!--=Help  Dialog -->
     <v-dialog v-model="helpDialog" max-width="450">
-      <v-card>
-        <v-card-title class="text-h6 font-weight-bold">
-          Event Comparison
-        </v-card-title>
-        <v-card-text class="text-body-2 text--secondary">
-          Select <strong>"Pin for comparison"</strong> in any event's action menu <v-icon small>mdi-dots-vertical</v-icon> to pin up to 4 events and compare their attributes side-by-side.
-        </v-card-text>
-        <v-card-actions class="justify-end">
-          <v-btn text color="primary" @click="helpDialog = false">
-            Close
+      <v-card class="rounded-xl">
+        <v-card-title class="d-flex justify-space-between align-center text-h6 font-weight-bold pt-4 pb-2 px-6">
+          <span>Event Comparison</span>
+          <v-btn icon small @click="helpDialog = false" title="Close dialog">
+            <v-icon>mdi-close</v-icon>
           </v-btn>
-        </v-card-actions>
+        </v-card-title>
+        <v-card-text class="text-body-2 text--secondary px-6 pb-6 pt-2" style="line-height: 1.6;">
+          Select <strong>"Pin for comparison"</strong> in any event's  menu <v-icon small>mdi-dots-vertical</v-icon> to pin up to 5 events and compare their attributes side-by-side.
+        </v-card-text>
       </v-card>
     </v-dialog>
 
