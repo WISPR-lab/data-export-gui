@@ -22,17 +22,16 @@ except ImportError:
     from python_core.errors import FileLevelError
 
 
-def _file_size_bytes(filepath: str, is_firefox: bool = False) -> int:
-    if is_firefox:
+def _file_size_bytes(filepath: str, use_memfs: bool = False) -> int:
+    if use_memfs:
         return safefileutils.getsize(filepath)
     else:
         stat = os.stat(filepath)
-        file_size_bytes = stat.st_size
-        return file_size_bytes
+        return stat.st_size
 
 
-def _file_hash(filepath: str, alg: str = "sha256", is_firefox: bool = False) -> str:
-    if is_firefox:
+def _file_hash(filepath: str, alg: str = "sha256", use_memfs: bool = False) -> str:
+    if use_memfs:
         return safefileutils.file_hash(filepath, alg)
     else:
         with open(filepath, "rb") as f:
@@ -40,9 +39,8 @@ def _file_hash(filepath: str, alg: str = "sha256", is_firefox: bool = False) -> 
         return hash_object.hexdigest()
 
 
-def _file_read(filepath: str, is_firefox: bool = False) -> str:
-    if is_firefox:
-        print(f"[Extractor] Reading file with Firefox workaround: {filepath}")
+def _file_read(filepath: str, use_memfs: bool = False) -> str:
+    if use_memfs:
         content = safefileutils.read_text(filepath)
     else:
         with open(filepath, "r", encoding="utf-8", errors="replace") as f:
@@ -56,13 +54,12 @@ def extract(
     db_path: str = None,
     tmp_storage_dir: str = None,
     manifest_dir: str = None,
-    is_firefox: bool = False,
 ) -> dict:
 
     db_path = db_path or get_config_value("DB_PATH")
     tmp_storage_dir = tmp_storage_dir or get_config_value("TEMP_ZIP_DATA_STORAGE")
     manifest_dir = manifest_dir or get_config_value("MANIFESTS_DIR")
-    is_firefox = is_firefox or get_config_value("IS_FIREFOX")
+    use_memfs = get_config_value("IS_FIREFOX") or get_config_value("IS_SAFARI")
 
     print(
         f"[Extractor] Extracting '{platform}' files from {tmp_storage_dir} using manifest from {manifest_dir}..."
@@ -164,7 +161,7 @@ def extract(
                         success = False
                         continue
 
-                    content = _file_read(opfs_filepath, is_firefox)
+                    content = _file_read(opfs_filepath, use_memfs)
 
                     records = parser.extract(content, parser_cfg, opfs_filename)
                     if not records:
@@ -184,9 +181,9 @@ def extract(
                         upload_id,
                         opfs_filename,
                         manifest_filename,
-                        _file_hash(opfs_filepath, is_firefox=is_firefox),
+                        _file_hash(opfs_filepath, use_memfs=use_memfs),
                         ts,
-                        _file_size_bytes(opfs_filepath, is_firefox=is_firefox),
+                        _file_size_bytes(opfs_filepath, use_memfs=use_memfs),
                         "success" if success else "failure",
                     )
                     conn.execute(

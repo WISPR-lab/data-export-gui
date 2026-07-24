@@ -12,4 +12,4 @@ paths:
   python_core: "/python_core"
   manifests: "/manifests"
   schema: "/schema.sql"
-  wheels: "/wheels"
+  wheels: "/pyodide"

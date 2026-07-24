@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <span>
     <v-menu v-model="showMenu" offset-y transition="slide-y-transition">
@@ -20,24 +21,18 @@ limitations under the License.
         <v-icon title="Event Action Menu" v-bind="attrs" v-on="on" class="ml-1">mdi-dots-vertical</v-icon>
       </template>
       <v-list dense class="mx-auto">
-        <!-- <v-list-item style="cursor: pointer" @click="copyEventUrlToClipboard()">
+        <v-list-item style="cursor: pointer" @click="handleCompareClick()">
           <v-list-item-icon>
-            <v-icon small>mdi-link-variant</v-icon>
+            <v-icon small>mdi-pin-outline</v-icon>
           </v-list-item-icon>
-          <v-list-item-title>Copy link to event</v-list-item-title>
-        </v-list-item> -->
+          <v-list-item-title>{{ compareActionLabel }}</v-list-item-title>
+        </v-list-item>
         <v-list-item style="cursor: pointer" @click="copyEventAsJSON()">
           <v-list-item-icon>
             <v-icon small>mdi-code-json</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Copy event data as JSON</v-list-item-title>
         </v-list-item>
-        <!-- <v-list-item style="cursor: pointer" @click="showContextWindow()">
-          <v-list-item-icon>
-            <v-icon small>mdi-magnify-plus-outline</v-icon>
-          </v-list-item-icon>
-          <v-list-item-title>Context search</v-list-item-title>
-        </v-list-item> -->
       </v-list>
     </v-menu>
   </span>
@@ -61,8 +56,23 @@ export default {
     settings() {
       return this.$store.state.settings
     },
+    compareEvents() {
+      return this.$store.state.compareEvents || []
+    },
+    isSelectedForCompare() {
+      return this.compareEvents.some((e) => e._id === this.event._id)
+    },
+    compareActionLabel() {
+      if (this.isSelectedForCompare) {
+        return 'Unpin event'
+      }
+      return 'Pin for comparison'
+    },
   },
   methods: {
+    handleCompareClick() {
+      this.$store.commit('TOGGLE_COMPARE_EVENT', this.event)
+    },
     showContextWindow() {
       EventBus.$emit('showContextWindow', this.event)
     },

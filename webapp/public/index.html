@@ -20,12 +20,25 @@ limitations under the License.
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta 
+      http-equiv="Content-Security-Policy" 
+      content="
+        default-src 'self'; 
+        script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; 
+        connect-src 'self' blob: data: <%= process.env.NODE_ENV === 'development' ? 'ws: wss: http: https:' : '' %>; 
+        style-src 'self' 'unsafe-inline'; 
+        img-src 'self' data: blob:; 
+        font-src 'self' data:; 
+        worker-src 'self' blob:;
+      "
+    >
     <!-- <link rel="icon" href="<%= BASE_URL %>favicon.ico" /> -->
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet" />
+    <link href="/fonts/roboto.css" rel="stylesheet" />
     <title>LEStrADE</title>
-    <script src="./coi-serviceworker.min.js"></script>
+    <script src="/vendor/coi-serviceworker.min.js"></script>
   </head>
   <body>
     <div id="app"></div>
   </body>
 </html>
+

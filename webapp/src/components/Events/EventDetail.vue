@@ -165,6 +165,7 @@ import TsFormatXmlString from './FormatXMLString.vue'
 import TsLinkRedirectWarning from './LinkRedirectWarning.vue'
 import TsComments from './Comments.vue'
 import TsUnfurlDialog from './UnfurlDialog.vue'
+import { FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE } from '@/constants/app_constants.js'
 
 export default {
   components: {
@@ -203,26 +204,8 @@ export default {
     },
     fullEventFiltered() {
       const source = this.event._source || {}
-      
-      const internalFilters = [
-        'label',
-        'starred', 
-        '__ts_comment',
-        '_index', 
-        '_id', 
-        '_type', 
-        'tag'
-      ]
-      
-      const availableFieldNames = this.availableColumns ? this.availableColumns.map(col => col.field) : null
-      
       return Object.keys(source)
-        .filter(key => {
-          if (internalFilters.includes(key) || key.startsWith('__ts')) return false
-          if (availableFieldNames && !availableFieldNames.includes(key)) return false
-          if (source[key] === '') return false
-          return true
-        })
+        .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && !key.startsWith('norm__') && source[key] !== '')
         .reduce((obj, key) => {
           obj[key] = source[key]
           return obj

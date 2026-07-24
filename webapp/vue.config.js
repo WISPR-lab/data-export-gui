@@ -46,6 +46,7 @@ module.exports = {
   devServer: {
     // See https://cli.vuejs.org/config/#devserver for more options
     port: 5001,
+    sockPath: '/sockjs-node',
     // Required headers for OPFS (Origin Private File System) with SQLite WASM
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',

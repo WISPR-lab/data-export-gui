@@ -67,6 +67,9 @@ export default {
     EventBus.$off('searchResultsCounts', this.onSearchResultsCounts)
   },
   computed: {
+    project() {
+      return this.$store.state.project
+    },
     ipAddresses() {
       return [...this.ips]
     },
@@ -85,6 +88,20 @@ export default {
     },
   },
   watch: {
+    'project.dataExports': {
+      async handler() {
+        try {
+          this.ips = await DB.getIPAddresses()
+          var self = this
+          this.ips.forEach(function(ip) { if (ip.count > 0) self.seenKeys[ip.client_ip] = true })
+          this.isFiltered = false
+          this.$emit('filtered-count', null)
+        } catch (e) {
+          console.error('Error reloading IP addresses:', e)
+        }
+      },
+      deep: true
+    },
     nonZeroItems: function(val) {
       this.$emit('filtered-count', this.isFiltered ? val.length : null)
     },

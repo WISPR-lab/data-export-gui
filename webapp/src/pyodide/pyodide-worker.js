@@ -4,11 +4,10 @@
 // NOTE: This file is automatically copied to public/ during build (npm run sync-assets).
 // DO NOT EDIT the version in the public/ folder.
 
-// const { reject } = require("lodash");
 
-// importScripts('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js');
-importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js');
-importScripts('https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js');
+importScripts('/vendor/js-yaml.min.js');
+importScripts("/pyodide/pyodide.js");
+
 
 let pyodide;
 let pyodideReadyPromise;
@@ -16,6 +15,7 @@ let config = null;
 let baseUrl = null; // e.g. "https://.../data-export-gui/"
 let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
 const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent); // excludes Chrome (which also contains 'Safari')
 
 function getBaseUrl() {
   const workerUrl = self.location.href;
@@ -117,96 +117,49 @@ os.remove(zip_path)
 
 
 async function installDeps(pyodide) {
-  /* Loads Pyodide builtins first, then micropip-installs the small browser-only list. */
-
-  const packages = [
-    { spec: 'micropip', source: 'builtin' },
-    { spec: 'pyyaml', source: 'builtin' },
-    { spec: 'regex', source: 'builtin' },
-    { spec: 'aiohttp', source: 'builtin' },
-    { spec: 'pytz', source: 'builtin' },
-    { spec: 'pandas', source: 'builtin' },
-    { spec: 'sqlite3', source: 'builtin' },
-    { spec: 'hjson', source: 'micropip' },
-    { spec: 'json5', source: 'micropip' },
-    { spec: 'tenacity', source: 'micropip' },
-    { spec: 'rich==13.7.1', source: 'micropip' },
-    { spec: "typer==0.9.0", source: "micropip" },
-    { spec: 'exrex', source: 'micropip' },
-    { spec: 'beautifulsoup4', source: 'micropip' },
-    { spec: 'packaging', source: 'micropip' },
-  ];
+  /* 1. Load Pyodide-native packages (+ their transitive deps) via loadPackage — served from /pyodide/.
+     2. micropip.install pure-Python wheels from /wheels/ (no network calls). */
 
   const failedPackages = [];
-  for (const entry of packages) {
-    if (entry.source !== 'builtin') continue;
-    try {
-      await pyodide.loadPackage(entry.spec);
-    } catch (error) {
-      console.error(`[Pyodide Worker] Failed to load ${entry.spec}:`, error.message || String(error));
-      failedPackages.push(entry.spec);
-    }
+
+  // Step 1: Pyodide-native packages (built for emscripten; must come from indexURL=/pyodide/)
+  try {
+    const pkgIndexRes = await fetch('/pyodide/pyodide_packages_index.json');
+    if (!pkgIndexRes.ok) throw new Error('pyodide_packages_index.json missing');
+    const pkgNames = await pkgIndexRes.json();
+    console.log('[Pyodide Worker] Loading Pyodide-native packages:', pkgNames);
+    await pyodide.loadPackage(pkgNames);
+  } catch (error) {
+    console.error('[Pyodide Worker] Failed to load Pyodide packages:', error.message || String(error));
+    failedPackages.push('pyodide_packages_index');
   }
 
-  const micropip = pyodide.pyimport('micropip');
-  for (const entry of packages) {
-    if (entry.source !== 'micropip') {
-      continue;
+  // Step 2: Pure-Python wheels via micropip (hjson, json5, typer, tenacity, exrex, UA-Extract, etc.)
+  const wheelsBaseUrl = buildResourceUrl(config.paths.wheels);
+  try {
+    const indexResponse = await fetch(wheelsBaseUrl + '/wheels_index.json?t=' + Date.now());
+    if (!indexResponse.ok) throw new Error('wheels_index.json missing (' + indexResponse.status + ')');
+    const wheelFiles = await indexResponse.json();
+    const micropip = pyodide.pyimport('micropip');
+    for (var j = 0; j < wheelFiles.length; j++) {
+      var wheelUrl = wheelsBaseUrl + '/' + wheelFiles[j];
+      console.log('[Pyodide Worker] Installing wheel:', wheelUrl);
+      try {
+        await micropip.install(wheelUrl);
+      } catch (error) {
+        console.error('[Pyodide Worker] Failed to install ' + wheelFiles[j] + ':', error.message || String(error));
+        failedPackages.push(wheelFiles[j]);
+      }
     }
-    try {
-      await micropip.install(entry.spec);
-    } catch (error) {
-      console.error(`[Pyodide Worker] Failed to install ${entry.spec}:`, error.message || String(error));
-      failedPackages.push(entry.spec);
-    }
+  } catch (error) {
+    console.error('[Pyodide Worker] Failed to fetch wheels_index.json:', error.message || String(error));
+    failedPackages.push('wheels_index.json');
   }
+
   if (failedPackages.length > 0) {
     self.postMessage({ type: 'packageInstallFailure', packages: failedPackages });
   }
 }
-
-async function installUAExtract(pyodide) {
-  /* Fetches wheel filename from latest_wheel.txt pointer file, then micropip-installs the wheel by absolute URL. */
-  try {
-    console.log(`[Pyodide Worker] installing local ua-extract wheel`);
-    const micropip = pyodide.pyimport('micropip');
-    const wheelsBaseUrl = buildResourceUrl(config.paths.wheels);
-    const pointerUrl = `${wheelsBaseUrl}/latest_wheel.txt?t=${Date.now()}`;
-    const response = await fetch(pointerUrl);
-      if (!response.ok) {
-        throw new Error(`Pointer file missing at ${pointerUrl} (${response.status})`);
-    }
-    const wheelFilename = (await response.text()).trim();
-    if (!wheelFilename) throw new Error("latest_wheel.txt was empty");
-    
-    const wheelUrl = `${wheelsBaseUrl}/${wheelFilename}`;
-    console.log(`[Pyodide Worker] Installing from absolute URL: ${wheelUrl}`);
-    await micropip.install(wheelUrl);
-//   const vsfWheelPath = `/tmp/${wheelsPath.split('/').pop()}`;
-//   const wheelsResponse = await fetch(wheelsBaseUrl);
-//   if (!wheelsResponse.ok) {
-//     console.error(`[Pyodide Worker] Failed to fetch wheels directory: ${wheelsResponse.statusText}`);
-//     self.postMessage({ type: 'packageInstallFailure', packages: ['ua-extract'] });
-//     return;
-//   }
-//   const wheelsBuffer = await wheelsResponse.arrayBuffer();
-//   try {
-//     pyodide.FS.writeFile(vsfWheelPath, new Uint8Array(wheelsBuffer));
-//     await pyodide.runPythonAsync(`
-// import micropip
-// await micropip.install("emfs:${vsfWheelPath}")
-//       `);
-    console.log("[Pyodide Worker] ua-extract installed successfully.");
-    // pyodide.FS.unlink(vsfWheelPath);
-  } catch (error) {
-    console.error(`[Pyodide Worker] Failed to install ua-extract wheel:`, error.message || String(error));
-    self.postMessage({ type: 'packageInstallFailure', packages: ['ua-extract'] });
-  }
-  
-
-}
-
-
 
 async function loadManifestOnDemand(platform) {
   const manifestsPath = config.paths.manifests;
@@ -243,7 +196,7 @@ async function initPyodide() {
     baseUrl = getBaseUrl();
     console.log(`[Pyodide Worker] Computed base URL: ${baseUrl}`);
     
-    pyodide = await loadPyodide();
+    pyodide = await loadPyodide({indexURL: "/pyodide/"});
     
     const pyCorePath = config.paths.python_core;
     await extractPythonCoreZip(pyodide, pyCorePath);
@@ -271,13 +224,14 @@ builtins.SCHEMA_PATH = "${config.paths.schema}"
 builtins.TEMP_ZIP_DATA_STORAGE = "${config.storage.temp_zip_storage}"
 builtins.MANIFESTS_DIR = "${config.paths.manifests}"
 builtins.PYTHON_CORE = "${config.paths.python_core}"
-builtins.IS_FIREFOX = ${isFirefox? 'True' : 'False'}
+builtins.IS_FIREFOX = ${isFirefox ? 'True' : 'False'}
+builtins.IS_SAFARI = ${isSafari ? 'True' : 'False'}
     `);
 
     pyodide.FS.mkdir(config.paths.manifests);
 
     await installDeps(pyodide);
-    await installUAExtract(pyodide);
+
 
     await showPackages(pyodide);
 
@@ -343,10 +297,9 @@ pyodideReadyPromise = initPyodideWithRetry();
 
 
 async function flushOPFSDatabase() {
-  /* Firefox: bypasses Emscripten syncfs (crashes on stat()) by manually reading DB bytes and writing them to OPFS via SyncAccessHandle. Chrome: uses standard FS.syncfs. */
-  if (isFirefox) {
-    // Python already manually flushed the bytes to OPFS safely.
-    console.log("[Pyodide Worker] Firefox detected: manually syncing db to opfs without calling syncfs() to avoid Firefox stat() crash.");
+  /* Firefox/Safari: bypass Emscripten syncfs (crashes on stat()/BigInt) by manually writing DB bytes to OPFS via SyncAccessHandle. Chrome: standard FS.syncfs. */
+  if (isFirefox || isSafari) {
+    console.log('[Pyodide Worker] Firefox/Safari: manually syncing db to OPFS.');
     try {
       const dbBytes = pyodide.FS.readFile(config.database.db_path);
       const opfsRoot = await navigator.storage.getDirectory();
@@ -357,9 +310,9 @@ async function flushOPFSDatabase() {
       accessHandle.write(dbBytes, { at: 0 });
       accessHandle.flush();
       accessHandle.close();
-      return; 
+      return;
     } catch (e) {
-      console.error('[Pyodide Worker] Firefox manual OPFS sync failed:', e);
+      console.error('[Pyodide Worker] Manual OPFS sync failed:', e);
       return;
     }
   }
@@ -378,22 +331,21 @@ async function flushOPFSDatabase() {
 
 
 async function showPackages(pyodide) {
-  const packages = await pyodide.runPythonAsync(`
-      import micropip
-      packages = micropip.list()
-      packages
-  `);
-  if (packages && packages.toJs) {
-    console.log(`[Pyodide Worker] Installed packages:`, packages.toJs({ dict_converter: Object.fromEntries }));
-  } else {
-    console.warn('[Pyodide Worker] Could not retrieve installed packages list');
+  try {
+    const result = await pyodide.runPythonAsync(`
+import micropip, json
+json.dumps(list(micropip.list().keys()))
+    `);
+    console.log('[Pyodide Worker] Installed packages:', JSON.parse(result));
+  } catch (e) {
+    console.warn('[Pyodide Worker] Could not list packages:', e);
   }
-};
+}
 
 
 self.onmessage = async (event) => {
   const { id, command, args } = event.data;
-  console.log(`[PyodideWorker] Received message: command='${command}', id=${id}`);
+  // console.log(`[PyodideWorker] Received message: command='${command}', id=${id}`);
   
   try {
     // Wait for Pyodide to be ready

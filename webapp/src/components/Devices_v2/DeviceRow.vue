@@ -94,7 +94,7 @@
 </template>
 
 <script>
-import AttributesTable from '@/components/Devices/AttributesTable.vue';
+import AttributesTable from '@/components/Devices_v1_legacy/AttributesTable.vue';
 import { titleCase } from '@/filters/TitleCase.js';
 
 export default {

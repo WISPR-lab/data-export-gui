@@ -251,12 +251,12 @@ export class OPFSManager {
   
   async _saveFileEntry(filename, fflateFile) {
     /* Chains fflate ondata chunks into sequential OPFS writes with a 10s stall timeout; verifies non-zero file size on disk after close. */
-    console.log(`[OPFSManager] _saveFileEntry START: ${filename}`);
+    // console.log(`[OPFSManager] _saveFileEntry START: ${filename}`);
 
     let fileHandle;
     try {
       fileHandle = await this.storageDir.getFileHandle(filename, { create: true });
-      console.log(`[OPFSManager] Got file handle for: ${filename}`);
+      // console.log(`[OPFSManager] Got file handle for: ${filename}`);
     } catch (e) {
       console.error(`[OPFSManager] getFileHandle FAILED for ${filename}:`, e);
       throw e;

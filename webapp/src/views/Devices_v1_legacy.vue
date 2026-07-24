@@ -93,11 +93,11 @@
 </template>
 
 <script>
-import ProfileDropdown from '@/components/Devices/ProfileDropdown.vue';
-import ProfileHeader from '@/components/Devices/ProfileHeader.vue';
-import GroupModal from '@/components/Devices/GroupModal.vue';
-import JSONModal from '@/components/Devices/JSONModal.vue';
-import EditsHistoryTable from '@/components/Devices/EditsHistoryTable.vue';
+import ProfileDropdown from '@/components/Devices_v1_legacy/ProfileDropdown.vue';
+import ProfileHeader from '@/components/Devices_v1_legacy/ProfileHeader.vue';
+import GroupModal from '@/components/Devices_v1_legacy/GroupModal.vue';
+import JSONModal from '@/components/Devices_v1_legacy/JSONModal.vue';
+import EditsHistoryTable from '@/components/Devices_v1_legacy/EditsHistoryTable.vue';
 import { getDevices, updateProfile, getInstanceRawAttrs } from '@/database/queries/devices_v2.js';
 import { getUserDeviceEdits, moveInstancesToProfile, createProfileWithInstances } from '@/database/queries/user_device_edits.js';
 
