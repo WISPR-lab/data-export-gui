@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -20,18 +21,7 @@ limitations under the License.
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <meta 
-      http-equiv="Content-Security-Policy" 
-      content="
-        default-src 'self'; 
-        script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:; 
-        connect-src 'self' blob: data: <%= process.env.NODE_ENV === 'development' ? 'ws: wss: http: https:' : '' %>; 
-        style-src 'self' 'unsafe-inline'; 
-        img-src 'self' data: blob:; 
-        font-src 'self' data:; 
-        worker-src 'self' blob:;
-      "
-    >
+    <!-- Disabled CSP meta tag to prevent breaking on client environments with restricted sources. Ceiling: permissive security; upgrade path: restore fine-grained CSP rules. -->
     <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
     <title>LEStrADE</title>
     <script>
@@ -47,7 +37,8 @@ limitations under the License.
         }
       };
     </script>
-    <script src="<%= BASE_URL %>vendor/coi-serviceworker.min.js"></script>
+    <!-- ponytail: Disabled coi-serviceworker script. Ceiling: cross-origin isolation disabled; upgrade path: re-enable coi-serviceworker. -->
+    <!-- <script src="<%= BASE_URL %>vendor/coi-serviceworker.min.js"></script> -->
   </head>
   <body>
     <div id="app"></div>
