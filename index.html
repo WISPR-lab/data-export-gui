@@ -1,4 +1,7 @@
-<!DOCTYPE html><html lang=en><head><meta name=csrf-token content="{{ csrf_token() }}"><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><link rel=icon href=/data-export-gui/favicon.ico><title>LEStrADE</title><script>window.coi = {
+<!DOCTYPE html><html lang=en><head><meta name=csrf-token content="{{ csrf_token() }}"><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><link rel=icon href=/data-export-gui/favicon.ico><title>LEStrADE</title><script>if (window.crossOriginIsolated) {
+        sessionStorage.removeItem('coi_reload_attempted');
+      }
+      window.coi = {
         doReload: () => {
           const key = 'coi_reload_attempted';
           if (!sessionStorage.getItem(key)) {
@@ -8,4 +11,11 @@
             console.warn('[COI] Reload attempted, skipping further reloads to prevent loop.');
           }
         }
-      };</script><link href=/data-export-gui/css/chunk-vendors.8c6243fa.css rel=preload as=style><link href=/data-export-gui/css/index.35cc0850.css rel=preload as=style><link href=/data-export-gui/js/chunk-vendors.5a753127.js rel=preload as=script><link href=/data-export-gui/js/index.16d6d237.js rel=preload as=script><link href=/data-export-gui/css/chunk-vendors.8c6243fa.css rel=stylesheet><link href=/data-export-gui/css/index.35cc0850.css rel=stylesheet></head><body><div id=app></div><script src=/data-export-gui/js/chunk-vendors.5a753127.js></script><script src=/data-export-gui/js/index.16d6d237.js></script></body></html>
+      };
+      if (navigator.serviceWorker && !navigator.serviceWorker.controller) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!window.crossOriginIsolated) {
+            window.location.reload();
+          }
+        });
+      }</script><script src=/data-export-gui/coi-serviceworker.min.js></script><link href=/data-export-gui/css/chunk-vendors.8c6243fa.css rel=preload as=style><link href=/data-export-gui/css/index.4c769cf2.css rel=preload as=style><link href=/data-export-gui/js/chunk-vendors.5a753127.js rel=preload as=script><link href=/data-export-gui/js/index.dd2b521f.js rel=preload as=script><link href=/data-export-gui/css/chunk-vendors.8c6243fa.css rel=stylesheet><link href=/data-export-gui/css/index.4c769cf2.css rel=stylesheet></head><body><div id=app></div><script src=/data-export-gui/js/chunk-vendors.5a753127.js></script><script src=/data-export-gui/js/index.dd2b521f.js></script></body></html>
