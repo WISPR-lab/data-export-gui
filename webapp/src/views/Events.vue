@@ -398,7 +398,7 @@ export default {
 
     syncRouteFromState() {
       const qVal = this.currentQueryString || undefined;
-      let chipsStr = undefined;
+      let chipsStr;
       
       if (this.currentQueryFilter && Array.isArray(this.currentQueryFilter.chips) && this.currentQueryFilter.chips.length > 0) {
         const serialized = this.currentQueryFilter.chips

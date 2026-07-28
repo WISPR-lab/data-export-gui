@@ -1,3 +1,5 @@
+// modified for WISPR-lab/data-export-gui
+
 let sqlite3 = null;
 let initializedDbs = new Set(); // Track which DBs have been initialized
 
@@ -44,7 +46,7 @@ self.onmessage = async (e) => {
     
     const result = db.exec(args.sql, args.options);
     
-    db.close(); 
+    db.close();
     
     self.postMessage({ id, result, success: true });
   } catch (error) {

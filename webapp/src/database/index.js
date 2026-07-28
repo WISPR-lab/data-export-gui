@@ -5,6 +5,7 @@ import * as uploads from './queries/uploads.js';
 import * as comments from './queries/comments.js';
 import * as metadata from './queries/metadata.js';
 import { loadConfig } from '../utils/config.js';
+import EventBus from '../event-bus.js';
 
 
 let worker = null;
@@ -33,8 +34,6 @@ function callPyodideWorker(method, args) {
   });
 }
 
-let cachedPaths = null;
-
 async function getDbPaths() {
   const cfg = await loadConfig();
   const dbFilename = cfg.database.db_path.split('/').pop(); // e.g., "userdata.db"
@@ -57,11 +56,17 @@ export async function getDB() {
   return {
     async exec(sql, options) {
       const { schemaPath, dbPath } = await getDbPaths();
-      return callPyodideWorker('exec', { 
-        sql, 
+      return callPyodideWorker('exec', {
+        sql,
         options: options || {},
         schemaPath,
         dbPath,
+      }).catch(function(err) {
+        // OpfsDb not a constructor = OPFS unavailable (crossOriginIsolated false at worker init time)
+        if (err && err.message && err.message.indexOf('OpfsDb') !== -1 && err.message.indexOf('constructor') !== -1) {
+          EventBus.$emit('opfsUnavailable');
+        }
+        throw err;
       });
     }
   };

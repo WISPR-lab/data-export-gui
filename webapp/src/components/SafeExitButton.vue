@@ -27,6 +27,7 @@
 <script>
 import { terminatePyodideWorker } from '@/pyodide/pyodide-client.js'
 import { OPFSManager } from '@/storage/opfs_manager';   
+import EventBus from '@/event-bus.js'
 
 export default {
   name: 'SafeExitButton',
@@ -40,6 +41,12 @@ export default {
       try {
         console.log('[SafeExit] Initiating safe exit...')
         
+        // Unregister service workers (including coi-serviceworker) so they don't interfere on next visit
+        if (navigator.serviceWorker) {
+          const regs = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(regs.map(function(r) { return r.unregister(); }))
+        }
+
         terminatePyodideWorker();
         const opfsManager = new OPFSManager();
         await opfsManager.nukeAll();
@@ -55,6 +62,7 @@ export default {
         window.location.replace('https://www.google.com')
       } catch (error) {
         console.error('[SafeExit] Error during safe exit:', error)
+        EventBus.$emit('opfsUnavailable')
         window.close()
       }
     }
