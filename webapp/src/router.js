@@ -28,6 +28,7 @@ import Devices from './views/Devices_v1_legacy.vue'
 import DevicesMockup from './views/DevicesMockup.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
+import EventBus from './event-bus.js'
 
 import store from './store.js'
 import DB from './database/index.js'
@@ -57,12 +58,14 @@ const routes = [
         name: 'DemoEvents',
         component: Events,
         props: { projectId: 1 },
+        meta: { requiresOpfs: true },
       },
       {
         path: 'devices',
         name: 'DemoDevices',
         component: Devices,
         props: { projectId: 1 },
+        meta: { requiresOpfs: true },
       },
     ],
   },
@@ -87,18 +90,14 @@ const routes = [
         name: 'Events',
         component: Events,
         props: { projectId: 1 },
+        meta: { requiresOpfs: true },
       },
-      // {
-      //   path: 'devices',
-      //   name: 'Devices',
-      //   component: Devices,
-      //   props: { projectId: 1 },
-      // },
       {
         path: 'devices',
         name: 'DevicesMockup',
         component: DevicesMockup,
         props: { projectId: 1 },
+        meta: { requiresOpfs: true },
       },
     ],
   },
@@ -113,6 +112,18 @@ const router = new VueRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
+  // Block navigation to OPFS-dependent routes if cross-origin isolation is unavailable.
+  // Only trigger when coi_reload_attempted is set (reload already tried) OR COI is definitively false.
+  // This fires after the coi-serviceworker reload cycle, so false positives are avoided.
+  if (to.matched.some(function(r) { return r.meta && r.meta.requiresOpfs; })) {
+    if (!window.crossOriginIsolated) {
+      window.opfsUnavailable = true;
+      EventBus.$emit('opfsUnavailable');
+      next(false);
+      return;
+    }
+  }
+
   const isDemoRoute = to.path.startsWith('/demo')
   
   if (isDemoRoute) {

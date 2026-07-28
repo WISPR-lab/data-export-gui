@@ -82,6 +82,7 @@ Added for WISPR Lab / data-export-gui project
 import { PLATFORM_METADATA } from '../../utils/uploadFormUtils.js'
 import DiscordIcon from '../DiscordIcon.vue'
 import ImportZone from './ImportZone.vue'
+import EventBus from '@/event-bus.js'
 
 export default {
   name: 'PlatformSelector',
@@ -94,6 +95,14 @@ export default {
       dialog: false,
       step: 'platform-selection',
       selectedPlatformId: null,
+    }
+  },
+  watch: {
+    dialog(val) {
+      if (val && !window.crossOriginIsolated) {
+        this.dialog = false
+        EventBus.$emit('opfsUnavailable')
+      }
     }
   },
   computed: {

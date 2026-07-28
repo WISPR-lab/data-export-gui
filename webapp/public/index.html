@@ -25,6 +25,9 @@ limitations under the License.
     <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
     <title>LEStrADE</title>
     <script>
+      if (window.crossOriginIsolated) {
+        sessionStorage.removeItem('coi_reload_attempted');
+      }
       window.coi = {
         doReload: () => {
           const key = 'coi_reload_attempted';
@@ -36,9 +39,15 @@ limitations under the License.
           }
         }
       };
+      if (navigator.serviceWorker && !navigator.serviceWorker.controller) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!window.crossOriginIsolated) {
+            window.location.reload();
+          }
+        });
+      }
     </script>
-    <!-- ponytail: Disabled coi-serviceworker script. Ceiling: cross-origin isolation disabled; upgrade path: re-enable coi-serviceworker. -->
-    <!-- <script src="<%= BASE_URL %>vendor/coi-serviceworker.min.js"></script> -->
+    <script src="<%= BASE_URL %>coi-serviceworker.min.js"></script>
   </head>
   <body>
     <div id="app"></div>

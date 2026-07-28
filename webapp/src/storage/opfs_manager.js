@@ -1,6 +1,7 @@
 import { Unzip, UnzipInflate } from 'fflate';
 import jsyaml from 'js-yaml';
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js';
+import EventBus from '@/event-bus.js';
 
 export class OPFSManager {
   constructor() {
@@ -11,48 +12,54 @@ export class OPFSManager {
     this.isInitialized = false;
   }
 
-
-
-
   async init(platform) {
     /* Resolves OPFS subdirectory from config.yaml, verifies it's not root (safety), and loads glob whitelist from Python manifest if platform given. */
     if (this.isInitialized) return;
 
-    // 1. Read config and resolve OPFS storage path
-    const configResp = await fetch('./config.yaml');
-    if (!configResp.ok) throw new Error('[OPFSManager] Failed to fetch config.yaml');
-    const config = jsyaml.load(await configResp.text());
+    try {
+      if (!navigator.storage || !navigator.storage.getDirectory) {
+        throw new Error('[OPFSManager] OPFS storage.getDirectory is not available');
+      }
 
-    const storagePath = (config.storage || {}).temp_zip_storage;
-    if (!storagePath) {
-      throw new Error('[OPFSManager] storage.temp_zip_storage missing from config.yaml');
+      // 1. Read config and resolve OPFS storage path
+      const configResp = await fetch('./config.yaml');
+      if (!configResp.ok) throw new Error('[OPFSManager] Failed to fetch config.yaml');
+      const config = jsyaml.load(await configResp.text());
+
+      const storagePath = (config.storage || {}).temp_zip_storage;
+      if (!storagePath) {
+        throw new Error('[OPFSManager] storage.temp_zip_storage missing from config.yaml');
+      }
+
+      const dbPath = ((config.database || {}).db_path || '');
+      const dbPathParts = dbPath.split('/').filter(Boolean);
+      this.dbFilename = dbPathParts[dbPathParts.length - 1]; // e.g. "userdata.db"
+      const mountPrefix = '/' + dbPathParts.slice(0, -1).join('/'); // e.g. "/mnt/data"
+      const relativePath = storagePath.startsWith(mountPrefix)
+        ? storagePath.slice(mountPrefix.length)
+        : storagePath;
+
+      console.log(`[OPFSManager] Config: db_path=${dbPath}, temp_zip_storage=${storagePath}`);
+      console.log(`[OPFSManager] Mount prefix: "${mountPrefix}", relative storage path: "${relativePath}"`);
+
+      this.opfsRoot = await navigator.storage.getDirectory();
+      const segments = relativePath.split('/').filter(Boolean);
+      let currentDir = this.opfsRoot;
+      for (const segment of segments) {
+        currentDir = await currentDir.getDirectoryHandle(segment, { create: true });
+        console.log(`[OPFSManager] Created/opened OPFS dir segment: "${segment}"`);
+      }
+      this.storageDir = currentDir;
+
+      const rootEntries = [];
+      for await (const [name] of this.opfsRoot.entries()) rootEntries.push(name);
+      console.log(`[OPFSManager] OPFS root contents at init:`, rootEntries);
+      console.log(`[OPFSManager] Initialized. storageDir=[${segments.join('/')}], dbFilename=${this.dbFilename}`);
+    } catch (err) {
+      console.error('[OPFSManager] Init failed:', err);
+      EventBus.$emit('opfsUnavailable');
+      throw err;
     }
-
-    const dbPath = ((config.database || {}).db_path || '');
-    const dbPathParts = dbPath.split('/').filter(Boolean);
-    this.dbFilename = dbPathParts[dbPathParts.length - 1]; // e.g. "userdata.db"
-    const mountPrefix = '/' + dbPathParts.slice(0, -1).join('/'); // e.g. "/mnt/data"
-    const relativePath = storagePath.startsWith(mountPrefix)
-      ? storagePath.slice(mountPrefix.length)
-      : storagePath;
-
-    console.log(`[OPFSManager] Config: db_path=${dbPath}, temp_zip_storage=${storagePath}`);
-    console.log(`[OPFSManager] Mount prefix: "${mountPrefix}", relative storage path: "${relativePath}"`);
-
-    this.opfsRoot = await navigator.storage.getDirectory();
-    const segments = relativePath.split('/').filter(Boolean);
-    let currentDir = this.opfsRoot;
-    for (const segment of segments) {
-      currentDir = await currentDir.getDirectoryHandle(segment, { create: true });
-      console.log(`[OPFSManager] Created/opened OPFS dir segment: "${segment}"`);
-    }
-    this.storageDir = currentDir;
-
-
-    const rootEntries = [];
-    for await (const [name] of this.opfsRoot.entries()) rootEntries.push(name);
-    console.log(`[OPFSManager] OPFS root contents at init:`, rootEntries);
-    console.log(`[OPFSManager] Initialized. storageDir=[${segments.join('/')}], dbFilename=${this.dbFilename}`);
     
     // SAFETY: Verify storageDir is not the root
     if (this.storageDir === this.opfsRoot) {
@@ -243,6 +250,7 @@ export class OPFSManager {
       this.isInitialized = false;
     } catch (error) {
       console.error('[OPFSManager] Failed to nuke OPFS:', error);
+      EventBus.$emit('opfsUnavailable');
       throw error;
     }
   }

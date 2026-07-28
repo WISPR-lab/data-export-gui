@@ -224,7 +224,8 @@ if [ -f "$WEBAPP_DIR/node_modules/js-yaml/dist/js-yaml.min.js" ]; then
   cp -f "$WEBAPP_DIR/node_modules/js-yaml/dist/js-yaml.min.js" "$VENDOR_DIR/js-yaml.min.js"
 fi
 if [ -f "$WEBAPP_DIR/node_modules/coi-serviceworker/coi-serviceworker.min.js" ]; then
-  cp -f "$WEBAPP_DIR/node_modules/coi-serviceworker/coi-serviceworker.min.js" "$VENDOR_DIR/coi-serviceworker.min.js"
+  # cp -f "$WEBAPP_DIR/node_modules/coi-serviceworker/coi-serviceworker.min.js" "$VENDOR_DIR/coi-serviceworker.min.js"
+  cp -f "$WEBAPP_DIR/node_modules/coi-serviceworker/coi-serviceworker.min.js" "$WEBAPP_DIR/public/coi-serviceworker.min.js"
 fi
 
 # -------------------------------------

@@ -25,6 +25,9 @@ limitations under the License.
       </template>
     </v-snackbar>
 
+    <!-- OPFS / cross-origin isolation incompatibility warning -->
+    <opfs-compatibility-dialog v-model="opfsDialog" />
+
     <!-- Main router view -->
     <router-view></router-view>
 
@@ -44,19 +47,43 @@ import EventBus from './event-bus.js'
 import { initShutdownDetection } from '@/utils/shutdownDetection.js'
 import DemoOverlay from '@/components/Demo/DemoOverlay.vue'
 import CompareEventsDialog from '@/components/Events/CompareEventsDialog.vue'
+import OpfsCompatibilityDialog from '@/components/OpfsCompatibilityDialog.vue'
 
 export default {
   name: 'app',
   components: {
     DemoOverlay,
     CompareEventsDialog,
+    OpfsCompatibilityDialog,
+  },
+  data: function() {
+    return {
+      opfsDialog: false,
+    }
   },
   computed: {
     snackbar() {
       return this.$store.state.snackbar
     },
   },
+  watch: {
+    $route: function() {
+      if (this.checkOpfsIncompatibility()) {
+        this.opfsDialog = true
+      }
+    }
+  },
   methods: {
+    checkOpfsIncompatibility: function() {
+      if (window.crossOriginIsolated) return false
+
+      const sabMissing = typeof SharedArrayBuffer === 'undefined'
+      const reloadAttempted = !!sessionStorage.getItem('coi_reload_attempted')
+      const currentRoute = this.$route
+      const routeRequiresOpfs = currentRoute && currentRoute.meta && currentRoute.meta.requiresOpfs
+
+      return sabMissing || reloadAttempted || routeRequiresOpfs
+    },
     setErrorSnackBar: function (message) {
       const snackbar = {
         message: message,
@@ -72,6 +99,12 @@ export default {
   mounted() {
     // Listen on errors from REST API calls
     EventBus.$on('errorSnackBar', this.setErrorSnackBar)
+    // Show modal if DB layer or router guard emits opfsUnavailable
+    EventBus.$on('opfsUnavailable', function() { this.opfsDialog = true; }.bind(this))
+
+    if (window.opfsUnavailable || this.checkOpfsIncompatibility()) {
+      this.opfsDialog = true;
+    }
 
     const isDark = localStorage.getItem('isDarkTheme')
     if (isDark) {
@@ -88,6 +121,7 @@ export default {
   },
   beforeDestroy() {
     EventBus.$off('errorSnackBar')
+    EventBus.$off('opfsUnavailable')
   },
 }
 </script>

@@ -26,6 +26,8 @@ import '@/mixins/snackBar'
 import vuetify from '@/plugins/vuetify' // path to vuetify export
 import SafeExitButton from '@/components/SafeExitButton.vue'
 
+import { getPyodideWorker } from '@/pyodide/pyodide-client'
+
 require('./assets/main.scss')
 require('./assets/markdown.scss')
 require('./assets/roboto.css')
@@ -39,8 +41,6 @@ Vue.use(require('vue-moment'))
 
 // Disable warning during development
 Vue.config.productionTip = false
-
-import { getPyodideWorker } from '@/pyodide/pyodide-client'
 
 // Boot Pyodide worker immediately so packages load in the background on any route
 getPyodideWorker()
