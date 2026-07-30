@@ -40,8 +40,7 @@ rm -rf \
   "$PUBLIC/sqlite-worker.js" \
   "$PUBLIC/pyodide-worker.js" \
   "$PUBLIC/config.yaml" \
-  "$PUBLIC/schema.sql" \
-  "$PYODIDE_DIR"
+  "$PUBLIC/schema.sql"
 
 mkdir -p "$PYODIDE_DIR" "$PUBLIC" "$VENDOR_DIR"
 
