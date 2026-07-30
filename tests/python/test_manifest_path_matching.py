@@ -15,26 +15,26 @@ class TestManifestPathMatching:
         manifest = Manifest("google", manifest_dir="manifests", validate=False)
 
         # OPFS filename (flattened with ___)
-        opfs_filename = "google___Google Account___bob.researcher24.SubscriberInfo.html"
+        opfs_filename = "google___Google Account___alice.testuser99.SubscriberInfo.html"
 
         cfg = manifest.get_file_cfg(opfs_filename)
 
         assert cfg.get("id") == "ggl_subscriber_info", (
             f"Expected ggl_subscriber_info, got {cfg.get('id')}"
         )
-        assert cfg.get("path") == "Google Account/bob.researcher24.SubscriberInfo.html"
+        assert cfg.get("path") == "Google Account/*.SubscriberInfo.html"
 
     def test_matches_opfs_flattened_change_history(self):
         """Test matching ChangeHistory OPFS filename."""
         manifest = Manifest("google", manifest_dir="manifests", validate=False)
 
-        opfs_filename = "google___Google Account___bob.researcher24.ChangeHistory.html"
+        opfs_filename = "google___Google Account___alice.testuser99.ChangeHistory.html"
         cfg = manifest.get_file_cfg(opfs_filename)
 
         assert cfg.get("id") == "ggl_change_history", (
             f"Expected ggl_change_history, got {cfg.get('id')}"
         )
-        assert cfg.get("path") == "Google Account/bob.researcher24.ChangeHistory.html"
+        assert cfg.get("path") == "Google Account/*.ChangeHistory.html"
 
     def test_matches_opfs_flattened_devices_csv(self):
         """Test matching Devices CSV OPFS filename with wildcard in manifest."""

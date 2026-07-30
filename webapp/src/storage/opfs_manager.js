@@ -73,9 +73,9 @@ export class OPFSManager {
         const paths = await callPyodideWorker('get_whitelist', { platform });
         console.log(`[WHITELIST] Received paths from Python:`, paths);
         this.whitelistPatterns = (paths || []).map((p) => {
-          // Escape special chars first, then convert glob * to regex .*
-          const escaped = p.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
-          const withWildcard = escaped.replace(/\\\*/g, '.*');
+          // simple glob-to-regex converter. Escapes regex special chars (including * and ?) before replacing glob wildcards.
+          const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const withWildcard = escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
           const regex = new RegExp(`(^|/)${withWildcard}$`, 'i');
           // console.log(`[WHITELIST] Pattern: "${p}" -> Regex: ${regex}`);
           return regex;

@@ -1,7 +1,17 @@
+import glob
 import pytest
 import json
 from python_core.extractors.html_table import HTMLTableParser
 from python_core.errors import FileLevelError
+
+
+def _get_table_test_content(pattern: str) -> str:
+    matches = glob.glob(pattern)
+    if not matches:
+        pytest.skip(f"Test data file matching '{pattern}' not found")
+    with open(matches[0], "r", encoding="utf-8") as f:
+        return f.read()
+
 
 
 class TestHTMLTableParserBasic:
@@ -9,12 +19,7 @@ class TestHTMLTableParserBasic:
 
     def test_parser_extracts_table_from_change_history(self):
         """Test parsing ChangeHistory HTML returns table records."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -25,12 +30,7 @@ class TestHTMLTableParserBasic:
 
     def test_parser_extracts_ip_activity_table_from_subscriber_info(self):
         """Test parsing SubscriberInfo HTML with IP Activity table."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.SubscriberInfo.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.SubscriberInfo.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -53,12 +53,7 @@ class TestHTMLTableParserChangeHistory:
 
     def test_change_history_contains_required_columns(self):
         """Test that ChangeHistory table contains expected columns."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -79,12 +74,7 @@ class TestHTMLTableParserChangeHistory:
 
     def test_change_history_has_multiple_change_types(self):
         """Test that ChangeHistory contains different change types."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
         assert isinstance(result, list) and len(result) > 0
@@ -100,12 +90,7 @@ class TestHTMLTableParserChangeHistory:
 
     def test_change_history_timestamps_valid(self):
         """Test that timestamps in ChangeHistory are valid."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -122,12 +107,7 @@ class TestHTMLTableParserSubscriberInfo:
 
     def test_subscriber_info_ip_activity_has_ip_column(self):
         """Test that IP Activity table has IP Address column."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.SubscriberInfo.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.SubscriberInfo.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -149,12 +129,7 @@ class TestHTMLTableParserSubscriberInfo:
 
     def test_subscriber_info_ip_activity_contains_activity_types(self):
         """Test that IP Activity has Login/Logout activity types."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.SubscriberInfo.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.SubscriberInfo.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -186,12 +161,7 @@ class TestHTMLTableParserMultipleTables:
 
     def test_subscriber_info_returns_multiple_tables(self):
         """Test that SubscriberInfo with multiple tables returns dict with table keys."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.SubscriberInfo.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.SubscriberInfo.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -208,12 +178,7 @@ class TestHTMLTableParserMultipleTables:
 
     def test_single_table_returns_list(self):
         """Test that HTML with single table returns list, not dict."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -226,12 +191,7 @@ class TestHTMLTableParserDataTypes:
 
     def test_all_records_are_dicts(self):
         """Test that all records are dictionaries."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -243,12 +203,7 @@ class TestHTMLTableParserDataTypes:
 
     def test_empty_cells_filled_with_empty_string(self):
         """Test that empty table cells are filled with empty strings (not NaN)."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -262,12 +217,7 @@ class TestHTMLTableParserDataTypes:
 
     def test_string_values_from_table_cells(self):
         """Test that all values are converted to strings."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -287,12 +237,7 @@ class TestHTMLTableParserFieldNames:
 
     def test_headers_become_field_names(self):
         """Test that table headers are used as field names."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -315,12 +260,7 @@ class TestHTMLTableParserFieldNames:
 
     def test_field_names_preserved_correctly(self):
         """Test that field names are not modified."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.SubscriberInfo.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.SubscriberInfo.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -357,12 +297,7 @@ class TestHTMLTableParserEdgeCases:
 
     def test_change_type_values_not_empty(self):
         """Test that Change Type field always has a value."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -376,12 +311,7 @@ class TestHTMLTableParserConsistency:
 
     def test_all_records_have_same_fields(self):
         """Test that all records in table have same fields."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -397,12 +327,7 @@ class TestHTMLTableParserConsistency:
 
     def test_record_count_reasonable(self):
         """Test that number of records is reasonable."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -412,12 +337,7 @@ class TestHTMLTableParserConsistency:
 
     def test_timestamp_consistency(self):
         """Test that timestamps follow consistent format."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
@@ -434,12 +354,7 @@ class TestHTMLTableParserExactCounts:
 
     def test_change_history_has_11_rows_5_columns(self):
         """Test that ChangeHistory.html has exactly 11 rows and 5 columns."""
-        with open(
-            "tests/zip_data/google/Google Account/bob.researcher24.ChangeHistory.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_table_test_content("tests/zip_data/google/Google Account/*.ChangeHistory.html")
 
         result = HTMLTableParser.extract(content)
 
