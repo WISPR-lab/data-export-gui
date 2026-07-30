@@ -411,12 +411,12 @@ limitations under the License.
           <template v-slot:item._source.primary_timestamp="{ item }">
             <!-- <div v-bind:style="getDataExportColor(item)" class="datetime-table-cell"> -->
             <div class="datetime-table-cell">
-              <span v-if="(item._source.primary_timestamp !== null && item._source.primary_timestamp !== '')">
+              <span v-if="isDisplayableTimestamp(item._source.primary_timestamp)">
                 <!-- {{ item._source.primary_timestamp }} -->
                 <!-- {{ (item._source.primary_timestamp | formatTimestamp | shortDateTime ) }} -->
                   {{ $options.filters.shortDateTimeLocal(item._source.primary_timestamp) }}
               </span>
-              <span v-else style="font-style: italic">undated</span>
+              <span v-else class="text--secondary font-italic">N/A</span>
             </div>
           </template>
 
@@ -793,6 +793,10 @@ export default {
     },
   },
   methods: {
+    isDisplayableTimestamp(timestamp) {
+      const numericTimestamp = Number(timestamp)
+      return Number.isFinite(numericTimestamp) && numericTimestamp > 0
+    },
     toggleCompareEvent(item) {
       this.$store.commit('TOGGLE_COMPARE_EVENT', item)
     },

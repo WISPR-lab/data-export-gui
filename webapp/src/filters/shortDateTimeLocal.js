@@ -18,6 +18,10 @@ import dayjs from '@/plugins/dayjs'
 export default {
   name: 'shortDateTimeLocal',
   filter: function (date) {
-    return dayjs.utc(date).local().format('MM/DD/YY hh:mm A')
+    const numericDate = Number(date)
+    if (!Number.isFinite(numericDate) || numericDate <= 0) {
+      return 'N/A'
+    }
+    return dayjs.utc(numericDate).local().format('MM/DD/YY hh:mm A')
   },
 }
