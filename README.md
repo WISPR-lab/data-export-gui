@@ -138,9 +138,9 @@ Feel free to submit UI bugs under Issues or post there if you're interested in c
 To add support for a new platform (or augment supported keys for an existing one), follow the instructions in the [Manifests Schema Guide](manifests/README.md). 
 
 ### Repository Structure                                                                                                                                                                                                                    
-* **`webapp/`**: Vue 2 / Vuetify frontend (modified Google Timesketch derivative, Apache 2.0).
-* **`python_core/`**: Python parsing and database logic (runs inside Pyodide in the browser; GPLv3 Copyleft).
-* **`manifests/`**: Platform YAML configurations defining mappings to ECS (GPLv3 Copyleft).
+* **`webapp/`**: Vue 2 / Vuetify frontend (modified Google Timesketch derivative).
+* **`python_core/`**: Python parsing and database logic (runs inside Pyodide in the browser).
+* **`manifests/`**: Platform YAML configurations defining mappings to ECS.
 * **`paper/`**: Academic paper replication package, figure scripts, and `paper/entity_resolution_evaluation/`.
 * **`schema.sql`**: SQLite database schema. Both JS and Pyodide read/write to this DB, but never at the same time.
 * **`tests/`**: Vitest (JS) and Pytest (Python) integration tests.
@@ -168,9 +168,4 @@ uv run pytest tests/python/test_device_grouping2.py # or a specific test
 
 ## License
 
-This repository uses a dual-licensing structure to protect different components:
-
-- **`webapp/`**: Forked and heavily modified from Google's [Timesketch](https://timesketch.org/) (`timesketch/frontend-ng`), licensed under the **Apache License 2.0**. See `webapp/LICENSE`. Modified files contain notice annotations as required by Apache 2.0.
-- **`python_core/` & `manifests/`**: Parsing engine logic and schema definitions are protected under the **GNU General Public License v3.0 (GPLv3)** (or AGPLv3) copyleft license to prevent proprietary misuse. See `python_core/LICENSE` and `manifests/LICENSE`.
-- **Root**: See [LICENSE](LICENSE) for the main project licensing details.
-
+This repository uses multiple licenses to protect different components. See `LICENSE` for more details.
