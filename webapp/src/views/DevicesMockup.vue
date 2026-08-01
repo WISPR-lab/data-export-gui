@@ -17,6 +17,7 @@
 </template>
 
 <script>
+import EventBus from '@/event-bus.js';
 import PlatformCard from '@/components/Devices_v2/PlatformCard.vue';
 import { getResolvedSessionsRegistrations } from '@/database/queries/resolved_sessions_registrations.js';
 import { getUnlinkedClusters } from '@/database/queries/instances_v2.js';
@@ -165,8 +166,17 @@ export default {
       PAGE_SIZE: 5
     };
   },
+  computed: {
+    project() {
+      return this.$store.state.project || {};
+    },
+  },
   mounted() {
+    EventBus.$on('data-export-updated', this.fetchLiveData);
     this.fetchLiveData();
+  },
+  beforeDestroy() {
+    EventBus.$off('data-export-updated', this.fetchLiveData);
   },
   methods: {
     async fetchLiveData() {

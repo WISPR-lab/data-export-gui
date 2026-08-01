@@ -1,9 +1,11 @@
-import os
-from python_core.extractors.html_key_val import HTMLKeyValParser
+import glob
 
 def run_test():
-    filepath = "/Users/julianonn/uw/takeout-tool/tests/zip_data/google/Devices*.html"
-    with open(filepath, "r") as f:
+    matches = glob.glob("tests/zip_data/google/Devices*.html")
+    if not matches:
+        print("Skipping test: test file not found")
+        return
+    with open(matches[0], "r", encoding="utf-8") as f:
         content = f.read()
     
     parser = HTMLKeyValParser()

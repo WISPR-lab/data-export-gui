@@ -1,7 +1,16 @@
+import os
 import pytest
 import json
 from python_core.extractors.html_ggl_myactivity import HTMLMyActvityParser
 from python_core.errors import FileLevelError
+
+
+def _get_myactivity_test_content(filepath: str) -> str:
+    if not os.path.exists(filepath):
+        pytest.skip(f"Test data file '{filepath}' not found")
+    with open(filepath, "r", encoding="utf-8") as f:
+        return f.read()
+
 
 
 class TestHTMLMyActivityParserBasic:
@@ -9,12 +18,7 @@ class TestHTMLMyActivityParserBasic:
 
     def test_parser_extracts_records_from_search_activity(self):
         """Test parsing Search activity HTML returns multiple records."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -26,12 +30,7 @@ class TestHTMLMyActivityParserBasic:
 
     def test_parser_extracts_records_from_gmail_activity(self):
         """Test parsing Gmail activity HTML returns records."""
-        with open(
-            "tests/zip_data/google/My Activity/Gmail/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Gmail/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -54,12 +53,7 @@ class TestHTMLMyActivityParserFields:
 
     def test_record_contains_platform_field(self):
         """Test that extracted records contain Platform field."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
         assert len(records) > 0
@@ -75,12 +69,7 @@ class TestHTMLMyActivityParserFields:
 
     def test_record_contains_activity_field(self):
         """Test that records contain Activity field."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
         assert len(records) > 0
@@ -91,12 +80,7 @@ class TestHTMLMyActivityParserFields:
 
     def test_record_contains_timestamp_field(self):
         """Test that records contain Timestamp field."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
         assert len(records) > 0
@@ -114,12 +98,7 @@ class TestHTMLMyActivityParserURLExtraction:
 
     def test_url_extracted_from_search_query(self):
         """Test that URLs are extracted from search query links."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -137,12 +116,7 @@ class TestHTMLMyActivityParserURLExtraction:
 
     def test_url_field_optional(self):
         """Test that URL field is optional (not all activities have links)."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -160,12 +134,7 @@ class TestHTMLMyActivityParserLocationExtraction:
 
     def test_location_fields_extracted_when_present(self):
         """Test that location data is extracted when available."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -182,12 +151,7 @@ class TestHTMLMyActivityParserLocationExtraction:
 
     def test_location_url_extracted_for_maps(self):
         """Test that location URLs are properly extracted."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -206,12 +170,7 @@ class TestHTMLMyActivityParserProductsField:
 
     def test_products_field_extracted(self):
         """Test that Products field is extracted from context."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -226,12 +185,7 @@ class TestHTMLMyActivityParserDataIntegrity:
 
     def test_all_records_are_dicts(self):
         """Test that all returned records are dictionaries."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -242,12 +196,7 @@ class TestHTMLMyActivityParserDataIntegrity:
 
     def test_no_duplicate_keys_in_record(self):
         """Test that records don't have duplicate keys."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -260,12 +209,7 @@ class TestHTMLMyActivityParserDataIntegrity:
 
     def test_no_none_values_in_required_fields(self):
         """Test that required fields are never None."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -288,12 +232,7 @@ class TestHTMLMyActivityParserMultipleActivities:
     def test_drive_activity_extraction(self):
         """Test extraction from Drive activity file."""
         try:
-            with open(
-                "tests/zip_data/google/My Activity/Drive/MyActivity.html",
-                "r",
-                encoding="utf-8",
-            ) as f:
-                content = f.read()
+            content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Drive/MyActivity.html")
         except FileNotFoundError:
             pytest.skip("Drive activity file not found")
 
@@ -306,12 +245,7 @@ class TestHTMLMyActivityParserMultipleActivities:
     def test_maps_activity_extraction(self):
         """Test extraction from Maps activity file."""
         try:
-            with open(
-                "tests/zip_data/google/My Activity/Maps/MyActivity.html",
-                "r",
-                encoding="utf-8",
-            ) as f:
-                content = f.read()
+            content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Maps/MyActivity.html")
         except FileNotFoundError:
             pytest.skip("Maps activity file not found")
 
@@ -327,12 +261,7 @@ class TestHTMLMyActivityParserWhitespace:
 
     def test_multiple_spaces_normalized_in_activity(self):
         """Test that multiple spaces in activity are normalized."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -345,12 +274,7 @@ class TestHTMLMyActivityParserWhitespace:
 
     def test_leading_trailing_whitespace_stripped(self):
         """Test that leading/trailing whitespace is stripped from fields."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         records = HTMLMyActvityParser.extract(content)
 
@@ -386,12 +310,7 @@ class TestHTMLMyActivityParserExactCounts:
 
     def test_search_myactivity_has_56_records(self):
         """Test that Search MyActivity.html extracts exactly 56 records."""
-        with open(
-            "tests/zip_data/google/My Activity/Search/MyActivity.html",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            content = f.read()
+        content = _get_myactivity_test_content("tests/zip_data/google/My Activity/Search/MyActivity.html")
 
         result = HTMLMyActvityParser.extract(content)
 

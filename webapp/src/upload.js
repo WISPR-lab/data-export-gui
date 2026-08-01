@@ -2,6 +2,7 @@ import { OPFSManager } from '@/storage/opfs_manager.js';
 import { ERROR_TYPES } from '@/constants/error_types';
 import DB from '@/database/index.js';
 import { executeUpload } from '@/pyodide/pyodide-client.js';
+import EventBus from '@/event-bus.js';
 
 const DEBUG_LOGGING = true;
 
@@ -86,6 +87,7 @@ export async function processUpload(file, platform, givenName, projectId, store)
       if (newIds.length > 0) {
         store.commit('SET_ENABLED_DATA_EXPORTS', newIds);
       }
+      EventBus.$emit('data-export-updated', newIds);
       summary.success = true;
       store.commit('COMPLETE_UPLOAD', summary);
       log('Upload complete');

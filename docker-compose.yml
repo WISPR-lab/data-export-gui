@@ -13,7 +13,7 @@ services:
     build: .
     volumes:
       - .:/workspace
-      - data_raw:/workspace/entity_resolution_evaluation/data/raw
+      - data_raw:/workspace/paper/entity_resolution_evaluation/data/raw
       - /workspace/node_modules
       - /workspace/webapp/node_modules
     working_dir: /workspace

@@ -7,13 +7,13 @@ last_updated: "2025-03-20"
 files:
   # Security & Account Data
   - id: "ggl_subscriber_info"
-    path: "Google Account/bob.researcher24.SubscriberInfo.html"
+    path: "Google Account/*.SubscriberInfo.html"
     parser:
       format: "html_ggl_subscriber_info"
 
 
   - id: "ggl_change_history"
-    path: "Google Account/bob.researcher24.ChangeHistory.html"
+    path: "Google Account/*.ChangeHistory.html"
     parser:
       format: "html_table"
 
