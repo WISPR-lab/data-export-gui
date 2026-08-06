@@ -139,8 +139,10 @@ limitations under the License.
                   </td>
 
                   <!-- Event field value -->
-                  <td width="100%" class="pl-0">
-                    {{ value }}
+                  <td class="pl-0 event-value-cell">
+                    <div class="event-value">
+                      {{ value }}
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -354,5 +356,16 @@ export default {
 .flexcard {
   display: flex;
   flex-direction: column;
+}
+
+.event-value-cell {
+  width: 100%;
+}
+
+.event-value {
+  width: 100%;
+  white-space: normal;     
+  overflow-wrap: anywhere;  
+  word-break: break-word;  
 }
 </style>
