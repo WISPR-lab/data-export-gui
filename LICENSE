@@ -18,6 +18,6 @@ manifests/
   surveillance infrastructure.
 
 --------------------------------------------------------------------------------
-All other files in this repository (paper/, tests/, schema.sql, etc.) are
+All other files in this repository (evaluation/, supplementary_materials/ tests/, schema.sql, etc.) are
 copyright WISPR-lab and are made available for academic research and
 non-commercial use only.

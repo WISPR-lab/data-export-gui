@@ -17,10 +17,10 @@ EXPECTED_FP_STALKER_ROWS = 15000
 EXPECTED_RBA_ROWS = 31269264
 
 try:
-    import paper.entity_resolution_evaluation.config as cf
+    import evaluation.entity_resolution.config as cf
 except ImportError:
     try:
-        import entity_resolution_evaluation.config as cf
+        import entity_resolution.config as cf
     except ImportError:
         import config as cf
 
