@@ -3,6 +3,7 @@ FP Stalker entity-resolution evaluation.
 
 Usage:
     uv run python -m evaluation.entity_resolution.run
+    uv run python -m evaluation.entity_resolution.run --concurrent
     uv run python -m evaluation.entity_resolution.run --trials 1000
     uv run python -m evaluation.entity_resolution.run --no-download
 """
@@ -60,13 +61,15 @@ def main():
                         help="K values to sweep (default: %(default)s)")
     parser.add_argument("--days", type=int, nargs="+", default=cf.MAX_DAYS_CLIENT_OPTIONS,
                         help="max_days_client values to sweep (default: %(default)s)")
+    parser.add_argument("--concurrent", action="store_true",
+                        help="Sample devices active in the same max_days time window")
     parser.add_argument("--no-download", action="store_true",
                         help="Skip the download prompt; fail if DB is not already present")
 
     args = parser.parse_args()
 
     print("=== FP Stalker Evaluation ===")
-    print(f"Trials per cell: {args.trials} | Seed: {args.seed}")
+    print(f"Concurrent: {args.concurrent} | Trials per cell: {args.trials} | Seed: {args.seed}")
     print(f"K: {args.k} | max_days: {args.days}")
 
     if args.no_download:
@@ -80,8 +83,14 @@ def main():
     print(f"  {len(df)} rows, {df['tracking_id'].nunique()} unique tracking IDs")
 
     start = datetime.datetime.now()
-    results = sweep.run_sweep(df, k_options=args.k, max_days_options=args.days,
-                              n_trials=args.trials, seed=args.seed)
+    results = sweep.run_sweep(
+        df,
+        k_options=args.k,
+        max_days_options=args.days,
+        n_trials=args.trials,
+        seed=args.seed,
+        concurrent=args.concurrent,
+    )
     elapsed = datetime.datetime.now() - start
 
     ts = start.isoformat().replace(":", "-").replace(".", "-")
@@ -90,9 +99,15 @@ def main():
 
     summary = {
         "run": {
-            "description": "FP Stalker BCubed eval — independent sampling",
+            "description": f"FP Stalker BCubed eval (concurrent={args.concurrent})",
             "start_time": start.isoformat(),
             "duration": str(elapsed),
+            "concurrent": (
+                args.concurrent,
+                "Filter dataset to a random max_days timestamp window, then draw K tracking_ids active in that window."
+                if args.concurrent
+                else "Draw K tracking_ids at random from all tracking_ids in dataset.",
+            ),
             "n_trials": args.trials,
             "seed": args.seed,
             "k_options": args.k,

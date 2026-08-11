@@ -122,13 +122,13 @@ Running outside of Docker is not recommended. You must change your Docker/VM set
    This will put you in an interactive bash session inside the container (at `/workspace`). The raw datasets will be downloaded to Docker named volume (`data_raw`) mounted at `evaluation/entity_resolution/data/raw` to speed up the SQLite writes.
 
 
-2. Inside the container shell, **download the datasets**:
+2. Inside the container shell, **download data and run evaluation**:
    ```bash
-   uv run python -m evaluation.entity_resolution.fetch_data
-   ```
-   The script autodetects container RAM to pick an appropriate chunk size. Override via `--chunksize <size>` or `-c <size>` if needed.*
+   uv run python -m evaluation.entity_resolution.run
 
-3. TODO...
+   # Draw K tracking_ids active within the same max_days window:
+   uv run python -m evaluation.entity_resolution.run --concurrent
+   ```
 
 
 --- 

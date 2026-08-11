@@ -21,7 +21,7 @@ def _bcubed(df: pd.DataFrame, pred_col: str) -> tuple[float, float]:
 
 def _run_trial(trial_df: pd.DataFrame, max_days_client: int) -> tuple[float, float]:
     """
-    trial_df: rows for exactly k tracking IDs, all under synth_user_id = 0.
+    trial_df: DataFrame containing all records for K sampled tracking_ids.
     Returns (bcubed_precision, bcubed_recall).
     """
     trial_df = trial_df.copy()
@@ -35,21 +35,33 @@ def _run_trial(trial_df: pd.DataFrame, max_days_client: int) -> tuple[float, flo
     return _bcubed(trial_df, "_pred")
 
 
+def _get_window_df(df: pd.DataFrame, days: int, rng: np.random.Generator) -> pd.DataFrame:
+    """ Filter dataset to a random [t0, t0 + days] timestamp window. """
+    t0 = rng.choice(df["timestamp"].values)
+    return df[(df["timestamp"] >= t0) & (df["timestamp"] <= t0 + pd.Timedelta(days=days))]
+
+
 def run_sweep(
     df: pd.DataFrame,
     k_options: list,
     max_days_options: list,
     n_trials: int,
     seed: int,
+    concurrent: bool = False,
 ) -> list[dict]:
     """
     Returns a list of result dicts, one per (k, max_days, trial) combination.
     Caller can aggregate however they like.
     """
     rng = np.random.default_rng(seed)
+    df = df.copy()
+    if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.dropna(subset=["timestamp"])
+
     all_ids = df["tracking_id"].dropna().unique()
     print(f"\nPool: {len(all_ids)} unique tracking IDs")
-    print(f"Sweep: K={k_options}, max_days={max_days_options}, {n_trials} trials each\n")
+    print(f"Sweep: K={k_options}, max_days={max_days_options}, {n_trials} trials each (concurrent={concurrent})\n")
 
     results = []
     total_cells = len(k_options) * len(max_days_options)
@@ -64,9 +76,14 @@ def run_sweep(
             print(f"[{cell}/{total_cells}] k={k}, max_days={max_days} — running {n_trials} trials ...")
 
             precisions, recalls = [], []
-            for t in range(n_trials):
-                sampled_ids = rng.choice(all_ids, size=k, replace=False)
-                trial_df = df[df["tracking_id"].isin(sampled_ids)].copy()
+            while len(precisions) < n_trials:
+                sub_df = _get_window_df(df, max_days, rng) if concurrent else df
+                pool = sub_df["tracking_id"].dropna().unique() if concurrent else all_ids
+                if len(pool) < k:
+                    continue
+
+                sampled_ids = rng.choice(pool, size=k, replace=False)
+                trial_df = sub_df[sub_df["tracking_id"].isin(sampled_ids)].copy()
                 p, r = _run_trial(trial_df, max_days_client=max_days)
                 precisions.append(p)
                 recalls.append(r)
@@ -80,7 +97,7 @@ def run_sweep(
             results.append({
                 "k": k,
                 "max_days_client": max_days,
-                "n_trials": n_trials,
+                "n_trials": len(precisions),
                 "mean_bcubed_precision": mean_p,
                 "mean_bcubed_recall": mean_r,
                 "bcubed_f1": f1,
