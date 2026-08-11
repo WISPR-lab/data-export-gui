@@ -8,7 +8,7 @@ runs the device grouping heuristic, and computes BCubed precision/recall.
 import numpy as np
 import pandas as pd
 
-from python_core.device_grouping2 import client_os_upgrades
+import python_core.device_grouping2.client_os_upgrades as client_os_upgrades
 from python_core.device_grouping2.instances import DeviceInstanceGraph
 
 
@@ -75,7 +75,7 @@ def run_sweep(
             mean_r = float(np.mean(recalls))
             f1 = 2 * mean_p * mean_r / (mean_p + mean_r) if (mean_p + mean_r) > 0 else 0.0
             f05 = 1.25 * mean_p * mean_r / (0.25 * mean_p + mean_r) if (0.25 * mean_p + mean_r) > 0 else 0.0
-            print(f"  → precision={mean_p:.4f}  recall={mean_r:.4f}  F1={f1:.4f}  F0.5={f05:.4f}")
+            print(f"  → bcubed_precision={mean_p:.4f}  bcubed_recall={mean_r:.4f}  bcubed_f1={f1:.4f}  bcubed_f05={f05:.4f}")
 
             results.append({
                 "k": k,
@@ -85,8 +85,8 @@ def run_sweep(
                 "mean_bcubed_recall": mean_r,
                 "bcubed_f1": f1,
                 "bcubed_f05": f05,
-                "std_precision": float(np.std(precisions)),
-                "std_recall": float(np.std(recalls)),
+                "std_bcubed_precision": float(np.std(precisions)),
+                "std_bcubed_recall": float(np.std(recalls)),
             })
 
     return results

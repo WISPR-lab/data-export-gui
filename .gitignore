@@ -111,3 +111,4 @@ webapp/public/vendor/
 webapp/public/pyodide/
 evaluation/old/demo/runs/*
 evaluation/old/demo/*.duckdb
+evaluation/entity_resolution/runs/*

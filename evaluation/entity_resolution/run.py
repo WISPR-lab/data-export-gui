@@ -10,6 +10,13 @@ import argparse
 import datetime
 import json
 import sys
+from pathlib import Path
+
+# python_core/ isn't a proper package for pyodide reasons
+_python_core = Path(__file__).resolve().parent.parent.parent / "python_core"
+if str(_python_core) not in sys.path:
+    sys.path.insert(0, str(_python_core))
+
 import duckdb
 import pandas as pd
 from tqdm import tqdm
