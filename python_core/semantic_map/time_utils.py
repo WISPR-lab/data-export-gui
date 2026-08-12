@@ -90,18 +90,14 @@ def parse_date(
                 return datetime.fromtimestamp(ts, tz=pytz.UTC)
             raise ValueError("Not a valid Unix timestamp")
         else:
-            default_datetime = datetime.now().replace(
-                day=1,
-                month=1,
-                year=2000,
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0,
-                tzinfo=pytz.timezone(default_origin_tz),
-            )
-            date = parser.parse(date_str, fuzzy=fuzzy, default=default_datetime)
-            # logging.debug(f"date: {date}")
+            try:
+                # ISO 8601 is unambiguous, same idea as the digit/Unix check above.
+                date = parser.isoparse(date_str)
+            except ValueError:
+                default_datetime = datetime(
+                    2000, 1, 1, tzinfo=pytz.timezone(default_origin_tz)
+                )
+                date = parser.parse(date_str, fuzzy=fuzzy, default=default_datetime)
             if date.tzinfo is None:
                 date = date.replace(tzinfo=pytz.timezone(default_origin_tz))
         return date.astimezone(pytz.timezone(user_tz))
