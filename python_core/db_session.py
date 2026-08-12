@@ -1,9 +1,11 @@
 import sqlite3
 import os
-import logging
 import json
 import python_core.runtime.safe_file_utils as safefileutils
 from python_core.runtime.pyodide_utils import get_config_value
+from python_core.logger import get_logger
+
+logger = get_logger("DBSession")
 
 
 def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -> dict:
@@ -140,7 +142,7 @@ class DatabaseSession:
                 self.firefox_internal_temp_path
             ):
                 os.remove(self.firefox_internal_temp_path)
-            print(f"[DBSession] Error during __enter__: {type(e).__name__}: {e}")
+            logger.error(f"Error during __enter__: {type(e).__name__}: {e}")
             import traceback
 
             traceback.print_exc()
@@ -162,7 +164,7 @@ class DatabaseSession:
                         os.remove(self.firefox_internal_temp_path)
 
             except Exception as e:
-                print(f"[DBSession] Error during __exit__: {type(e).__name__}: {e}")
+                logger.error(f"Error during __exit__: {type(e).__name__}: {e}")
                 import traceback
 
                 traceback.print_exc()
