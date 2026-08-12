@@ -2,6 +2,9 @@ import yaml
 import os
 import builtins
 import fnmatch
+from python_core.logger import get_logger
+
+logger = get_logger("manifest")
 
 
 class Manifest:
@@ -30,20 +33,20 @@ class Manifest:
 
     def validate(self) -> bool:
         if "files" not in self.config:
-            print(f"[Manifest] {self.platform} missing 'files' section.")
+            logger.warning("%s missing 'files' section.", self.platform)
             return False
 
         for fs in self.config.get("files", []):
             if "id" not in fs or "path" not in fs:
-                print(f"[Manifest] file entry missing 'id' or 'path': {fs}")
+                logger.warning("file entry missing 'id' or 'path': %s", fs)
                 return False
 
         if "views" not in self.config:
-            print(f"[Manifest] {self.platform} missing 'views' section.")
+            logger.warning("%s missing 'views' section.", self.platform)
             return False
         for v in self.config.get("views", []):
             if "file" not in v or "id" not in v["file"]:
-                print(f"[Manifest] view entry missing 'file.id': {v}")
+                logger.warning("view entry missing 'file.id': %s", v)
                 return False
         return True
 

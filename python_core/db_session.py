@@ -100,14 +100,7 @@ class DatabaseSession:
 
         try:
             if self.is_firefox or self.is_safari:
-                browser = "Safari" if self.is_safari else "Firefox"
-                print(
-                    f"[DBSession] {browser} detected, applying OPFS to MEMFS workaround for DB path: {self.db_path_orig}"
-                )
                 self.db_path_target = self._firefox_workaround_opfs_to_memfs()
-                print(
-                    f"[DBSession] Using temporary MEMFS path for SQLite connection: {self.db_path_target}"
-                )
             else:
                 db_dir = os.path.dirname(self.db_path_orig)
                 if db_dir and not os.path.exists(db_dir):
@@ -117,7 +110,6 @@ class DatabaseSession:
             self.conn = sqlite3.connect(
                 self.db_path_target, timeout=10.0, check_same_thread=False
             )
-            print(f"[DB] Successfully connected to {self.db_path_target}")
 
             if self.use_dict_factory:
                 self.conn.row_factory = lambda cursor, row: dict_factory(

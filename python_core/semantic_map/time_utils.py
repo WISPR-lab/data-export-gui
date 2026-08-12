@@ -8,7 +8,9 @@ from datetime import datetime
 import pandas as pd
 import re
 import pytz
-import logging
+from python_core.logger import get_logger
+
+logger = get_logger(__name__)
 
 JAN_1_2000_UNIX = 946702800
 JAN_1_2050_UNIX = 2524608000
@@ -105,7 +107,7 @@ def parse_date(
         if fail_action == "raise":
             raise ValueError("Invalid date format")
         elif fail_action == "ignore":
-            logging.debug(f"Ignore -- Failed to parse date: {date_str} -- {e}")
+            logger.debug(f"Ignore -- Failed to parse date: {date_str} -- {e}")
             # logging.debug(f"Error: {e}")
             # traceback.print_exc()
             return None

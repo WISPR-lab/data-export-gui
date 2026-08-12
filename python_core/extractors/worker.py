@@ -13,6 +13,9 @@ from manifest import Manifest
 from db_session import DatabaseSession
 from extractors import get_parser
 from python_core.errors import FileLevelError
+from python_core.logger import get_logger
+
+logger = get_logger("extractors")
 
 
 def _file_size_bytes(filepath: str, use_memfs: bool = False) -> int:
@@ -49,13 +52,9 @@ def extract(
     manifest: Manifest = None,
 ) -> dict:
 
-    db_path = db_path or get_config_value("DB_PATH")
     tmp_storage_dir = tmp_storage_dir or get_config_value("TEMP_ZIP_DATA_STORAGE")
     use_memfs = get_config_value("IS_FIREFOX") or get_config_value("IS_SAFARI")
 
-    print(
-        f"[Extractor] Extracting '{platform}' files from {tmp_storage_dir}..."
-    )
     ts = datetime.now(timezone.utc).timestamp()
     upload_id = uuid.uuid4().hex
 
@@ -64,18 +63,7 @@ def extract(
 
         with DatabaseSession(db_path) as conn:
             if not safefileutils.exists(tmp_storage_dir):
-                print(
-                    f"[Extractor] temp storage directory not found: {tmp_storage_dir}"
-                )
-                parent = os.path.dirname(tmp_storage_dir)
-                if safefileutils.exists(parent):
-                    print(
-                        f"[Extractor] Parent dir '{parent}' contents: {os.listdir(parent)}"
-                    )
-                else:
-                    print(
-                        f"[Extractor] Parent dir '{parent}' also does not exist. Check OPFS mount."
-                    )
+                logger.error("Temp storage directory not found: %s", tmp_storage_dir)
                 return {
                     "status": "failure",
                     "error": f"Temp storage directory not found: {tmp_storage_dir}",
@@ -86,9 +74,8 @@ def extract(
                 for f in os.listdir(tmp_storage_dir)
                 if safefileutils.isfile(os.path.join(tmp_storage_dir, f))
             ]
-            print(f"[Extractor] Found {len(files)} files in {tmp_storage_dir}.")
             if len(files) == 0:
-                print(f"[Extractor] Raw dir listing: {os.listdir(tmp_storage_dir)}")
+                logger.warning("No files found in %s.", tmp_storage_dir)
                 return {
                     "status": "failure",
                     "error": f"OPFS_EMPTY: No files found in {tmp_storage_dir}. Files were written by JS but are not visible to Python — likely an OPFS/NativeFS sync issue.",
@@ -144,12 +131,11 @@ def extract(
                     continue
 
                 fmt = parser_cfg.get("format")
-                # print(f"[Extractor] Processing {opfs_filename} -> Source: {manifest_file_id} (Format: {fmt})")
 
                 try:
                     parser = get_parser(fmt)
                     if not parser:
-                        print(f"[Extractor] No parser found for format: {fmt}")
+                        logger.warning("No parser found for format '%s' (file '%s')", fmt, opfs_filename)
                         success = False
                         continue
 
@@ -157,13 +143,11 @@ def extract(
 
                     records = parser.extract(content, parser_cfg, opfs_filename)
                     if not records:
-                        print(f"  -> No records extracted from {opfs_filename}")
+                        logger.warning("No records extracted from file '%s' (manifest_file_id='%s')", opfs_filename, manifest_file_id)
                         success = False
                         continue
-                    # print(f"  -> Extracted {len(records)} records. Inserting...")
-                    print(
-                        f"[Extractor] Extracted {len(records)} records from {manifest_file_id}"
-                    )
+
+                    logger.debug("Extracted %d records from %s", len(records), manifest_file_id)
 
                     # read into db
                     file_id = uuid.uuid4().hex
@@ -207,21 +191,20 @@ def extract(
                     # print(f"  -> Total raw_data rows in DB: {row[0] if row else 'unknown'}")
 
                 except FileLevelError as e:
-                    print(
-                        f"[Extractor] File-level parse error for {opfs_filename}: {e}"
-                    )
+                    logger.error("File-level parse error for %s: %s", opfs_filename, e)
                     partial_errors.append(
                         {"file": opfs_filename, "level": "error", "msg": str(e)}
                     )
                     success = False
                 except Exception as e:
-                    print(f"[Extractor] Error processing {opfs_filename}: {e}")
+                    logger.error("Error processing %s: %s", opfs_filename, e)
                     traceback.print_exc()
                     partial_errors.append(
                         {"file": opfs_filename, "level": "error", "msg": str(e)}
                     )
                     success = False
 
+            logger.info("Extraction completed for upload_id: %s (%d files processed)", upload_id, len(files))
             return {
                 "status": "success",
                 "upload_id": upload_id,
@@ -229,7 +212,7 @@ def extract(
             }
 
     except Exception as e:
-        print(f"[Extractor] Fatal Database Error: {e}")
+        logger.error("Fatal Database Error: %s", e)
         return {"status": "failure", "error": str(e)}
 
 

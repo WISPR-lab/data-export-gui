@@ -1,6 +1,10 @@
 import re
 from ua_extract import DeviceDetector
 import field_normalization.device_lookup as dl
+from python_core.logger import get_logger
+
+logger = get_logger("user_agent")
+
 
 class UserAgentParser:
     def __init__(self):
@@ -40,9 +44,7 @@ class UserAgentParser:
                 ua_string, skip_bot_detection=skip_bot_detection
             ).parse()
         except Exception as e:
-            print(
-                f"[ua_normalize] ERROR parsing {ua_string[:80]!r}: {type(e).__name__}: {e}"
-            )
+            logger.warning("DeviceDetector parse failure on UA '%s': %s", ua_string[:80], e)
             self._cache[ua_string] = {}
             return {}
 
@@ -173,5 +175,5 @@ class UserAgentParser:
                     app = bundle_id[1]
                 break
         UA = f"{app}/{app_ver} ({os_fragment})"
-        print(f"[UA Parser] Synthesized Google UA: {UA}")
+        logger.debug("Synthesized Google UA: %s", UA)
         return UA

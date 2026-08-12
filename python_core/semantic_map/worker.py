@@ -7,7 +7,9 @@ from db_session import DatabaseSession
 import semantic_map.views as sm_views
 import semantic_map.action_message_builder as sm_amb
 from semantic_map.deduplicate_events import deduplicate_events
-from python_core.runtime.pyodide_utils import get_config_value
+from python_core.logger import get_logger
+
+logger = get_logger("semantic_map")
 
 
 def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
@@ -18,9 +20,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
         group_list = list(group)
         views = manifest.views(manifest_file_id)
         if not views:
-            print(
-                f"[SemanticMapWorker] No views for manifest_file_id: {manifest_file_id}"
-            )
+            logger.warning("No manifest views found for file ID '%s'", manifest_file_id)
             continue
 
         # `where` filters and `static` fields are invariant per view — compile them
@@ -31,16 +31,11 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
             try:
                 record = json.loads(raw_data)
             except Exception as e:
-                print(
-                    f"[SemanticMapWorker] JSON parse error for raw_data_id {raw_data_id}: {e}"
-                )
+                logger.warning("JSON parse error for raw_data_id %s: %s", raw_data_id, e)
                 continue
 
             if not isinstance(record, dict):
-                print(
-                    f"[SemanticMapWorker] Warning: expected dict after JSON parse for raw_data_id {raw_data_id} in {file_id}. Got {type(record)}. Skipping."
-                )
-                print(f"Raw data content: {raw_data[:200]}...")
+                logger.warning("Expected dict after JSON parse for raw_data_id %s in %s (got %s). Skipping.", raw_data_id, file_id, type(record).__name__)
                 continue
 
             view_indices = list(
@@ -107,9 +102,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                             }
                         )
                 else:
-                    print(
-                        f"[SemanticMapWorker] Unhandled event_kind '{event_kind}' for raw_data_id {raw_data_id}"
-                    )
+                    logger.warning("Unhandled event_kind '%s' for raw_data_id %s", event_kind, raw_data_id)
                     continue
 
     return event_rows, auth_device_rows  # add more as we create more tables
@@ -144,18 +137,10 @@ def _stringify(rows: list[dict]) -> list[dict]:
 
 def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest = None):
 
-    db_path = db_path or get_config_value("DB_PATH")
-
-    print(f"[SemanticMapWorker] Starting mapping for upload_id: {upload_id}")
-
     try:
         manifest = manifest or Manifest(platform=platform)
-        print(f"[SemanticMapWorker] Manifest loaded for platform: {platform}")
 
         with DatabaseSession(db_path) as conn:
-            print(f"[SemanticMapWorker] Database connection opened: {type(conn)}")
-
-            print(f"[SemanticMapWorker] Executing query for upload_id: {upload_id}")
             cursor = conn.execute(
                 """
                 SELECT 
@@ -166,7 +151,7 @@ def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest =
                 FROM raw_data r
                 JOIN uploaded_files f ON r.file_id = f.id
                 WHERE r.upload_id = ?
-                ORDER BY r.id ASC
+                ORDER BY f.manifest_file_id ASC, r.id ASC
                 """,
                 (upload_id,),
             )
@@ -174,37 +159,20 @@ def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest =
             if cursor is None:
                 raise RuntimeError("Database cursor is None after execute()")
 
-            print(f"[SemanticMapWorker] Cursor obtained: {type(cursor)}")
-
             rows = cursor.fetchall()
-            print(
-                f"[SemanticMapWorker] Fetched {len(rows) if rows else 0} rows from raw_data"
-            )
-
             if not rows:
-                print(
-                    f"[SemanticMapWorker] No raw_data found for upload_id: {upload_id}"
-                )
+                logger.warning("No raw_data found for upload_id: %s", upload_id)
                 return
 
             event_rows, auth_device_rows = _generate_table_rows(
                 rows, manifest, upload_id
             )
-            print(
-                f"[SemanticMapWorker] Generated {len(event_rows)} event rows and {len(auth_device_rows)} auth device rows"
-            )
 
             event_rows = deduplicate_events(event_rows)
-            print(
-                f"[SemanticMapWorker] After deduplication: {len(event_rows)} event rows"
-            )
-
             event_rows = _stringify(event_rows)
             auth_device_rows = _stringify(auth_device_rows)
 
-            # Insert into events table
             if event_rows:
-                print(f"[SemanticMapWorker] Inserting {len(event_rows)} events...")
                 conn.executemany(
                     """
                     INSERT INTO events (id, upload_id, file_ids, raw_data_ids, timestamp, event_action, event_kind, event_category, event_type, event_type_msg, attributes, deduplicated, extra_timestamps)
@@ -212,13 +180,8 @@ def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest =
                     """,
                     event_rows,
                 )
-                print(f"[SemanticMapWorker] Events inserted successfully")
 
-            # Insert into auth_device table
             if auth_device_rows:
-                print(
-                    f"[SemanticMapWorker] Inserting {len(auth_device_rows)} auth devices..."
-                )
                 conn.executemany(
                     """
                     INSERT INTO devices_raw (id, upload_id, file_id, raw_data_id, entity_type, event_kind, attributes)
@@ -226,15 +189,12 @@ def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest =
                     """,
                     auth_device_rows,
                 )
-                print(f"[SemanticMapWorker] Auth devices inserted successfully")
 
             conn.commit()
-            print(
-                f"[SemanticMapWorker] Mapping completed for upload_id: {upload_id}. Inserted {len(event_rows)} events and {len(auth_device_rows)} auth/device entities."
-            )
+            logger.info("Mapped %d events and %d auth devices", len(event_rows), len(auth_device_rows))
 
     except Exception as e:
-        print(f"[SemanticMapWorker] Fatal Database Error: {type(e).__name__}: {e}")
+        logger.error("Fatal Database Error: %s: %s", type(e).__name__, e)
         traceback.print_exc()
         return
 

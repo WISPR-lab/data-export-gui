@@ -9,11 +9,12 @@ from .instances import DeviceInstanceGraph
 from .resolved_sessions_registrations import resolve
 from . import profiles
 
-from python_core.runtime.pyodide_utils import get_config_value
+from python_core.logger import get_logger
+
+logger = get_logger("grouping")
 
 
 def group(upload_id: str, db_path: str = None) -> None:
-    db_path = db_path or get_config_value("DB_PATH")
     json_columns = [
         "attributes",
         "origins",
@@ -80,9 +81,7 @@ def group(upload_id: str, db_path: str = None) -> None:
         
         resolved_sessions_registration_rows = resolve(raw_rows, event_rows)
 
-        if not resolved_sessions_registration_rows:
-            print(f"No resolved sessions or registrations found for upload_id: {upload_id}")
-        else:
+        if resolved_sessions_registration_rows:
             conn.executemany(
                 """
                 INSERT INTO resolved_sessions_registrations (

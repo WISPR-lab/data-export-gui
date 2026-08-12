@@ -5,7 +5,9 @@ from field_normalization.device import normalize_device_fields
 from field_normalization.geo import normalize_geo_fields
 from field_normalization.origin import determine_origin
 from field_normalization.auth_related_events import treat_event_as_auth_device
-from python_core.runtime.pyodide_utils import get_config_value
+from python_core.logger import get_logger
+
+logger = get_logger("normalize")
 
 
 def _normalize(rows, platform, ua_parser, file_map, table=""):
@@ -32,15 +34,10 @@ def _normalize(rows, platform, ua_parser, file_map, table=""):
 
 
 def normalize(upload_id: str, db_path: str = None) -> dict:
-    db_path = db_path or get_config_value("DB_PATH")
 
     with DatabaseSession(
         db_path, use_dict_factory=True, json_columns=["attributes", "events_category"]
     ) as conn:
-        print(
-            f"[FieldNormalizeWorker] Starting normalization for upload_id={upload_id}"
-        )
-
         # Get platform from uploads table
         upload = conn.execute(
             "SELECT platform FROM uploads WHERE id = ?", (upload_id,)
@@ -66,9 +63,10 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
             """,
             (upload_id,),
         ).fetchall()
+        logger.debug("Fetched %d devices_raw rows for normalization", len(rows))
 
         if rows:
-            updates = _normalize(rows, platform, ua_parser, file_map, table="devices")
+            updates = _normalize(rows, platform, ua_parser, file_map, table="devices_raw")
             conn.executemany(
                 """
                 UPDATE devices_raw
@@ -78,22 +76,17 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
                 updates,
             )
             records_normalized += len(updates)
-        else:
-            print(
-                f"[FieldNormalizeWorker] No devices_raw rows for upload_id={upload_id}"
-            )
 
         # ----- events normalization -------
-
-        print(f"[FieldNormalizeWorker] Normalizing events for upload_id={upload_id}")
         rows = conn.execute(
             """
-            SELECT id, attributes, event_action as action, event_category as category
+            SELECT id, attributes, event_action, event_type, event_kind, origin
             FROM events
             WHERE upload_id = ?
             """,
             (upload_id,),
         ).fetchall()
+        logger.debug("Fetched %d events rows for normalization", len(rows))
 
         if rows:
             updates = _normalize(rows, platform, ua_parser, file_map, table="events")
@@ -106,22 +99,10 @@ def normalize(upload_id: str, db_path: str = None) -> dict:
                 updates,
             )
             records_normalized += len(updates)
-        else:
-            print(f"[FieldNormalizeWorker] No events rows for upload_id={upload_id}")
 
         conn.commit()
+        logger.info("Normalized %d records for upload_id=%s", records_normalized, upload_id)
 
-        print(f"[FieldNormalizeWorker] Normalization Complete")
-
-        if records_normalized == 0:
-            return {
-                "status": "success",
-                "message": "No records to normalize",
-                "records_normalized": 0,
-                "unique_uas_parsed": 0,
-            }
-
-        print(f"[normalize] Normalized {records_normalized} records")
         return {
             "status": "success",
             "message": f"Normalized {records_normalized} records",

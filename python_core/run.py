@@ -5,7 +5,6 @@ import semantic_map.worker as semantic_map_worker
 from field_normalization import worker as norm_worker
 import device_grouping2.worker as device_grouping2_worker
 from semantic_map.worker import get_counts
-from python_core.runtime.pyodide_utils import get_config_value
 
 
 def run(platform: str, given_name: str) -> dict:
