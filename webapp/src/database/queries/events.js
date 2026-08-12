@@ -2,6 +2,9 @@
 
 import { getDB } from '../index.js';
 import { buildWhereClause, buildOrderClause, buildPaginationClause } from './eventQueryBuilder.js';
+import { getLogger } from '@/utils/logger.js';
+
+const logger = getLogger('EventQueries');
 
 /*
 example of 'filter' object
@@ -67,8 +70,8 @@ export async function searchEvents(queryString = '', filter = {}) {
       returnValue: 'resultRows',
       rowMode: 'object'
     });
-    console.log(`[searchEvents] Executed SQL: ${sql}`);
-    console.log(`[searchEvents] With params: ${JSON.stringify(allParams)}`);
+    logger.debug(`Executed SQL: ${sql}`);
+    logger.debug(`With params: ${JSON.stringify(allParams)}`);
     
     const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
     const countPerDataExport = await _getEventsCountPerTimeline(db, whereClause, whereParams);
@@ -152,7 +155,7 @@ export async function searchEvents(queryString = '', filter = {}) {
       return _formatEventObject(row, filenames, [...new Set(flatLineNumbers)], sourcesInfo);
     });
     
-    console.log(`[Search] "${queryString}" --> ${totalCount} results`);
+    logger.debug(`[Search] "${queryString}" --> ${totalCount} results`);
     return {
       objects,
       meta: {
@@ -176,7 +179,7 @@ export async function getEventCount() {
     rowMode: 'object'
   });
   const count = (result[0] && result[0].count) || 0;
-  console.log('[getEventCount] Total events in DB:', count);
+  logger.debug('[getEventCount] Total events in DB:', count);
   return count;
 }
 
@@ -611,7 +614,7 @@ export async function updateEventTags(eventId, tags) {
 
 export async function clearAllTags() {
   const db = await getDB();
-  console.log('[Database] Clearing all tags from events');
+  logger.debug('[Database] Clearing all tags from events');
   await db.exec("UPDATE events SET tags = '[]'");
 }
 

@@ -5,8 +5,9 @@ import * as uploads from './queries/uploads.js';
 import * as comments from './queries/comments.js';
 import * as metadata from './queries/metadata.js';
 import { loadConfig } from '../utils/config.js';
-import EventBus from '../event-bus.js';
+import { getLogger } from '../utils/logger.js';
 
+const logger = getLogger('Database');
 
 let worker = null;
 let messageId = 0;
@@ -170,7 +171,7 @@ export default {
   // DB switching
   setActiveDatabase(dbName) {
     activeDbName = dbName; // 'userdata' or 'demo'
-    console.log(`[Database] Switched to ${dbName} database`);
+    logger.info(`Switched to ${dbName} database`);
   },
   getActiveDatabase() {
     return activeDbName;

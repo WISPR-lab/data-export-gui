@@ -224,6 +224,7 @@ builtins.SCHEMA_PATH = "${config.paths.schema}"
 builtins.TEMP_ZIP_DATA_STORAGE = "${config.storage.temp_zip_storage}"
 builtins.MANIFESTS_DIR = "${config.paths.manifests}"
 builtins.PYTHON_CORE = "${config.paths.python_core}"
+builtins.LOG_LEVEL = "${config.LOG_LEVEL || (typeof process !== 'undefined' && process.env && process.env.VUE_APP_LOG_LEVEL) || 'INFO'}"
 builtins.IS_FIREFOX = ${isFirefox ? 'True' : 'False'}
 builtins.IS_SAFARI = ${isSafari ? 'True' : 'False'}
     `);
