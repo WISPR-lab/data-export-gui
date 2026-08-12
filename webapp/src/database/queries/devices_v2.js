@@ -378,7 +378,7 @@ export async function getProfileNotes(profileId) {
     WHERE device_profile_id = ? 
     ORDER BY created_at ASC
   `;
-  return await db.exec(sql, {
+  return db.exec(sql, {
     bind: [profileId],
     returnValue: 'resultRows',
     rowMode: 'object'
