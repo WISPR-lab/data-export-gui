@@ -13,14 +13,14 @@ def run(platform: str, given_name: str) -> dict:
 
     # 1. Extract
     js.reportProgress("extract", 30)
-    extract_res = extractor_worker.extract(platform, given_name, manifest)
+    extract_res = extractor_worker.extract(platform, given_name, manifest=manifest)
     upload_id = extract_res.get("upload_id")
     if not upload_id:
         raise ValueError("Extraction failed to return an upload_id")
 
     # 2. Semantic Map
     js.reportProgress("semantic_map", 40)
-    semantic_map_worker.map(platform, upload_id, manifest)
+    semantic_map_worker.map(platform, upload_id, manifest=manifest)
 
     # 3. Normalize
     js.reportProgress("normalize", 60)
