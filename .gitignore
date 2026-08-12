@@ -105,7 +105,7 @@ docs*
 
 .pytest_cache/*
 .ruff_cache
-evaluation/entity_resolution/data/
+evaluation/entity_resolution/data_raw/
 uv.lock
 webapp/public/vendor/
 webapp/public/pyodide/

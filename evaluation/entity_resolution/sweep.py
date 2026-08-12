@@ -47,7 +47,7 @@ def run_sweep(
     max_days_options: list,
     n_trials: int,
     seed: int,
-    concurrent: bool = False,
+    window_days: int = None,
 ) -> list[dict]:
     """
     Returns a list of result dicts, one per (k, max_days, trial) combination.
@@ -61,7 +61,7 @@ def run_sweep(
 
     all_ids = df["tracking_id"].dropna().unique()
     print(f"\nPool: {len(all_ids)} unique tracking IDs")
-    print(f"Sweep: K={k_options}, max_days={max_days_options}, {n_trials} trials each (concurrent={concurrent})\n")
+    print(f"Sweep: K={k_options}, max_days={max_days_options}, {n_trials} trials each (window_days={window_days})\n")
 
     results = []
     total_cells = len(k_options) * len(max_days_options)
@@ -75,11 +75,12 @@ def run_sweep(
             cell += 1
             print(f"[{cell}/{total_cells}] k={k}, max_days={max_days} — running {n_trials} trials ...")
 
-            precisions, recalls = [], []
+            precisions, recalls, skips = [], [], 0
             while len(precisions) < n_trials:
-                sub_df = _get_window_df(df, max_days, rng) if concurrent else df
-                pool = sub_df["tracking_id"].dropna().unique() if concurrent else all_ids
+                sub_df = _get_window_df(df, window_days, rng) if window_days else df
+                pool = sub_df["tracking_id"].dropna().unique() if window_days else all_ids
                 if len(pool) < k:
+                    skips += 1
                     continue
 
                 sampled_ids = rng.choice(pool, size=k, replace=False)
@@ -98,6 +99,7 @@ def run_sweep(
                 "k": k,
                 "max_days_client": max_days,
                 "n_trials": len(precisions),
+                "skipped_trials": skips,
                 "mean_bcubed_precision": mean_p,
                 "mean_bcubed_recall": mean_r,
                 "bcubed_f1": f1,

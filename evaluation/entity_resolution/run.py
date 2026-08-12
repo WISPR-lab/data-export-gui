@@ -3,8 +3,8 @@ FP Stalker entity-resolution evaluation.
 
 Usage:
     uv run python -m evaluation.entity_resolution.run
-    uv run python -m evaluation.entity_resolution.run --concurrent
-    uv run python -m evaluation.entity_resolution.run --trials 1000
+    uv run python -m evaluation.entity_resolution.run --window-days 30
+    uv run python -m evaluation.entity_resolution.run --trials 1000 --window-days 30
     uv run python -m evaluation.entity_resolution.run --no-download
 """
 import argparse
@@ -24,6 +24,7 @@ from tqdm import tqdm
 
 import evaluation.entity_resolution.config as cf
 from evaluation.entity_resolution import fetch_data, sweep
+from evaluation.entity_resolution.plot import plot_all
 import python_core.field_normalization.user_agent as ua
 from python_core.field_normalization.device import normalize_device_fields
 
@@ -61,15 +62,19 @@ def main():
                         help="K values to sweep (default: %(default)s)")
     parser.add_argument("--days", type=int, nargs="+", default=cf.MAX_DAYS_CLIENT_OPTIONS,
                         help="max_days_client values to sweep (default: %(default)s)")
-    parser.add_argument("--concurrent", action="store_true",
-                        help="Sample devices active in the same max_days time window")
+    parser.add_argument("--window-days", type=int, default=None,
+                        help="Filter dataset to a random N-day timestamp window before drawing K tracking_ids. None = full dataset.")
     parser.add_argument("--no-download", action="store_true",
                         help="Skip the download prompt; fail if DB is not already present")
+    parser.add_argument("--no-plot", action="store_true",
+                        help="Skip heatmap generation after sweep")
+    parser.add_argument("--vmin", type=float, default=None,
+                        help="Override default vmin for all plot gradients.")
 
     args = parser.parse_args()
 
     print("=== FP Stalker Evaluation ===")
-    print(f"Concurrent: {args.concurrent} | Trials per cell: {args.trials} | Seed: {args.seed}")
+    print(f"Window days: {args.window_days} | Trials per cell: {args.trials} | Seed: {args.seed}")
     print(f"K: {args.k} | max_days: {args.days}")
 
     if args.no_download:
@@ -89,7 +94,7 @@ def main():
         max_days_options=args.days,
         n_trials=args.trials,
         seed=args.seed,
-        concurrent=args.concurrent,
+        window_days=args.window_days,
     )
     elapsed = datetime.datetime.now() - start
 
@@ -99,13 +104,13 @@ def main():
 
     summary = {
         "run": {
-            "description": f"FP Stalker BCubed eval (concurrent={args.concurrent})",
+            "description": f"FP Stalker BCubed eval (window_days={args.window_days})",
             "start_time": start.isoformat(),
             "duration": str(elapsed),
-            "concurrent": (
-                args.concurrent,
-                "Filter dataset to a random max_days timestamp window, then draw K tracking_ids active in that window."
-                if args.concurrent
+            "window_days": (
+                args.window_days,
+                "Filter dataset to a random N-day timestamp window, then draw K tracking_ids active in that window."
+                if args.window_days
                 else "Draw K tracking_ids at random from all tracking_ids in dataset.",
             ),
             "n_trials": args.trials,
@@ -130,6 +135,10 @@ def main():
 
     print("\n" + results_df.sort_values(["k", "max_days_client"]).to_string(index=False))
     print(f"\nDone in {elapsed}. Output: {run_dir}")
+
+    if not args.no_plot:
+        for out in plot_all(run_dir, vmin=args.vmin):
+            print(f"Plot: {out}")
 
 
 if __name__ == "__main__":

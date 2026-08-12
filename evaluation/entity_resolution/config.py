@@ -2,7 +2,7 @@ from pathlib import Path
 
 # Base directories
 EVAL_DIR = Path(__file__).resolve().parent
-RAW_DATA_DIR = EVAL_DIR / "data" / "raw"
+RAW_DATA_DIR = EVAL_DIR / "data_raw"
 # URLs
 FP_STALKER_URL_1 = "https://raw.githubusercontent.com/Spirals-Team/FPStalker/master/extension1.txt.tar.gz"
 FP_STALKER_URL_2 = "https://raw.githubusercontent.com/Spirals-Team/FPStalker/master/extension2.txt.tar.gz"
