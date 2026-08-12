@@ -1,4 +1,7 @@
 import { getDB } from '../index.js';
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('uploadDB');
 
 export async function getUploads() {
   const db = await getDB();
@@ -76,7 +79,7 @@ export async function updateUpload(uploadId, updates) {
   }
   
   if (setClauses.length === 0) {
-    console.log('[uploadDB.updateUpload] No allowed fields found to update');
+    logger.debug('updateUpload: No allowed fields found to update');
     return;
   }
   

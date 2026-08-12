@@ -183,6 +183,9 @@ limitations under the License.
 
 <script>
 import EventBus from '../event-bus.js'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('Events');
 
 import { dragscroll } from 'vue-dragscroll'
 
@@ -308,7 +311,7 @@ export default {
     },
     hasDataExports(newVal) {
       if (newVal && this.$route.name === 'DemoEvents') {
-        console.log('[Events] Data loaded for DemoEvents, auto-starting demo');
+        logger.debug('Data loaded for DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
@@ -316,7 +319,7 @@ export default {
     },
     $route(to) {
       if (to.name === 'DemoEvents' && this.hasDataExports) {
-        console.log('[Events] Route changed to DemoEvents, auto-starting demo');
+        logger.debug('Route changed to DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
@@ -443,7 +446,7 @@ export default {
       }
     },
     startDemo() {
-      console.log('[Events] Starting interactive demo');
+      logger.debug('Starting interactive demo');
       const DemoController = require('@/demo/DemoController.js').default
       DemoController.start(this.$store)
     },
@@ -770,7 +773,7 @@ export default {
     
     // Auto-start demo if in DemoEvents route
     if (this.$route.name === 'DemoEvents' && this.hasDataExports) {
-      console.log('[Events] Auto-starting demo on mount');
+      logger.debug('Auto-starting demo on mount');
       this.$nextTick(() => {
         this.startDemo();
       });

@@ -1,5 +1,8 @@
 import DB from '@/database/index.js'
 import { demoInstagramSql } from './demoData.js'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('DemoDatabaseLoader');
 
 /**
  * DemoDatabaseLoader manages the database state for the demo.
@@ -17,22 +20,22 @@ class DemoDatabaseLoader {
     if (this.demoDbLoaded) return
 
     try {
-      console.log('[DemoDatabaseLoader] Initializing demo database...')
+      logger.debug('Initializing demo database...')
       DB.setActiveDatabase('demo')
 
       // Clear any pre-existing demo data to avoid PK conflicts from persistent OPFS
       await DB.clearAllTables()
 
       const sqlContent = demoInstagramSql
-      console.log(`[DemoDatabaseLoader] Executing SQL script`)
+      logger.debug('Executing SQL script')
 
       const db = await DB.getDB()
       await db.exec(sqlContent)
 
       this.demoDbLoaded = true
-      console.log('[DemoDatabaseLoader] Demo database initialized successfully')
+      logger.debug('Demo database initialized successfully')
     } catch (e) {
-      console.error('[DemoDatabaseLoader] Critical initialization error:', e)
+      logger.error('Critical initialization error:', e)
       throw e
     }
   }
@@ -51,9 +54,9 @@ class DemoDatabaseLoader {
     try {
       await DB.clearAllTables()
       this.demoDbLoaded = false
-      console.log('[DemoDatabaseLoader] Demo database cleared')
+      logger.debug('Demo database cleared')
     } catch (e) {
-      console.error('[DemoDatabaseLoader] Failed to clear demo database:', e)
+      logger.error('Failed to clear demo database:', e)
     }
   }
 }

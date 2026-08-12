@@ -10,39 +10,57 @@ const LOG_LEVELS = {
   SILENT: 50,
 };
 
+var overrideLogLevel = null;
+var showPrefix = true;
+
 function getSystemLogLevel() {
-  var envLevel = process.env.VUE_APP_LOG_LEVEL || 'INFO';
+  if (overrideLogLevel !== null) return overrideLogLevel;
+  var envLevel = (typeof process !== 'undefined' && process.env && process.env.VUE_APP_LOG_LEVEL) || 'INFO';
   var upper = String(envLevel).toUpperCase();
   return LOG_LEVELS[upper] !== undefined ? LOG_LEVELS[upper] : LOG_LEVELS.INFO;
 }
 
+export function setLogLevel(level) {
+  var upper = String(level).toUpperCase();
+  if (LOG_LEVELS[upper] !== undefined) {
+    overrideLogLevel = LOG_LEVELS[upper];
+  }
+}
+
+export function setShowPrefix(enable) {
+  showPrefix = !!enable;
+}
+
 export function getLogger(name) {
   var prefix = '[' + (name || 'App') + ']';
-  var currentLevel = getSystemLogLevel();
 
   return {
     debug: function () {
-      if (currentLevel <= LOG_LEVELS.DEBUG) {
+      if (getSystemLogLevel() <= LOG_LEVELS.DEBUG) {
         var args = Array.prototype.slice.call(arguments);
-        console.log.apply(console, [prefix, 'DEBUG:'].concat(args));
+        var prefixArgs = showPrefix ? [prefix] : [];
+        console.debug.apply(console, prefixArgs.concat(args));
       }
     },
     info: function () {
-      if (currentLevel <= LOG_LEVELS.INFO) {
+      if (getSystemLogLevel() <= LOG_LEVELS.INFO) {
         var args = Array.prototype.slice.call(arguments);
-        console.info.apply(console, [prefix, 'INFO:'].concat(args));
+        var prefixArgs = showPrefix ? [prefix] : [];
+        console.info.apply(console, prefixArgs.concat(args));
       }
     },
     warn: function () {
-      if (currentLevel <= LOG_LEVELS.WARN) {
+      if (getSystemLogLevel() <= LOG_LEVELS.WARN) {
         var args = Array.prototype.slice.call(arguments);
-        console.warn.apply(console, [prefix, 'WARN:'].concat(args));
+        var prefixArgs = showPrefix ? [prefix] : [];
+        console.warn.apply(console, prefixArgs.concat(args));
       }
     },
     error: function () {
-      if (currentLevel <= LOG_LEVELS.ERROR) {
+      if (getSystemLogLevel() <= LOG_LEVELS.ERROR) {
         var args = Array.prototype.slice.call(arguments);
-        console.error.apply(console, [prefix, 'ERROR:'].concat(args));
+        var prefixArgs = showPrefix ? [prefix] : [];
+        console.error.apply(console, prefixArgs.concat(args));
       }
     },
   };

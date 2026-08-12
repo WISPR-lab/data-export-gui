@@ -2,6 +2,9 @@ import { Unzip, UnzipInflate } from 'fflate';
 import jsyaml from 'js-yaml';
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js';
 import EventBus from '@/event-bus.js';
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('OPFSManager');
 
 export class OPFSManager {
   constructor() {
@@ -39,31 +42,31 @@ export class OPFSManager {
         ? storagePath.slice(mountPrefix.length)
         : storagePath;
 
-      console.log(`[OPFSManager] Config: db_path=${dbPath}, temp_zip_storage=${storagePath}`);
-      console.log(`[OPFSManager] Mount prefix: "${mountPrefix}", relative storage path: "${relativePath}"`);
+      logger.debug(`Config: db_path=${dbPath}, temp_zip_storage=${storagePath}`);
+      logger.debug(`Mount prefix: "${mountPrefix}", relative storage path: "${relativePath}"`);
 
       this.opfsRoot = await navigator.storage.getDirectory();
       const segments = relativePath.split('/').filter(Boolean);
       let currentDir = this.opfsRoot;
       for (const segment of segments) {
         currentDir = await currentDir.getDirectoryHandle(segment, { create: true });
-        console.log(`[OPFSManager] Created/opened OPFS dir segment: "${segment}"`);
+        logger.debug(`Created/opened OPFS dir segment: "${segment}"`);
       }
       this.storageDir = currentDir;
 
       const rootEntries = [];
       for await (const [name] of this.opfsRoot.entries()) rootEntries.push(name);
-      console.log(`[OPFSManager] OPFS root contents at init:`, rootEntries);
-      console.log(`[OPFSManager] Initialized. storageDir=[${segments.join('/')}], dbFilename=${this.dbFilename}`);
+      logger.debug(`OPFS root contents at init:`, rootEntries);
+      logger.debug(`Initialized. storageDir=[${segments.join('/')}], dbFilename=${this.dbFilename}`);
     } catch (err) {
-      console.error('[OPFSManager] Init failed:', err);
+      logger.error('Init failed:', err);
       EventBus.$emit('opfsUnavailable');
       throw err;
     }
     
     // SAFETY: Verify storageDir is not the root
     if (this.storageDir === this.opfsRoot) {
-      console.error('[OPFSManager] ERROR: storageDir is pointing to OPFS root! This would delete the database on cleanup.');
+      logger.error('ERROR: storageDir is pointing to OPFS root! This would delete the database on cleanup.');
       throw new Error('OPFSManager storageDir misconfiguration: pointing to OPFS root');
     }
 
@@ -71,7 +74,7 @@ export class OPFSManager {
     if (platform) {
       try {
         const paths = await callPyodideWorker('get_whitelist', { platform });
-        console.log(`[WHITELIST] Received paths from Python:`, paths);
+        console.debug(`[WHITELIST] Received paths from Python:`, paths);
         this.whitelistPatterns = (paths || []).map((p) => {
           // simple glob-to-regex converter. Escapes regex special chars (including * and ?) before replacing glob wildcards.
           const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -81,7 +84,7 @@ export class OPFSManager {
           return regex;
         });
       } catch (err) {
-        console.warn('[OPFSManager] Failed to load whitelist – accepting all files:', err);
+        logger.warn('Failed to load whitelist – accepting all files:', err);
         this.whitelistPatterns = [];
       }
     }
@@ -129,7 +132,7 @@ export class OPFSManager {
             .then(() => { writeSuccesses++; })
             .catch((err) => {
               writeFailures++;
-              console.error(`[OPFSManager] WRITE FAILED for ${safeName}:`, err);
+              logger.error(`WRITE FAILED for ${safeName}:`, err);
             });
           savedPromises.push(p);
         } else {
@@ -157,12 +160,12 @@ export class OPFSManager {
             unzipStream.push(new Uint8Array(0), true);
             await Promise.all(savedPromises);
 
-            console.log(`[OPFSManager] ZIP done: ${totalSeen} scanned, ${totalAccepted} accepted, ${writeSuccesses} written, ${writeFailures} failed.`);
+            logger.debug(`ZIP done: ${totalSeen} scanned, ${totalAccepted} accepted, ${writeSuccesses} written, ${writeFailures} failed.`);
             const verifyNames = [];
             for await (const [name] of storageDir.entries()) {
               verifyNames.push(name);
             }
-            console.log(`[OPFSManager] VERIFICATION: storageDir contains ${verifyNames.length} file(s):`, verifyNames);
+            logger.debug(`VERIFICATION: storageDir contains ${verifyNames.length} file(s):`, verifyNames);
 
             if (writeFailures > 0) {
               reject(new Error(`${writeFailures} of ${totalAccepted} OPFS writes failed — check console for details.`));
@@ -192,7 +195,7 @@ export class OPFSManager {
       
       // SAFETY: delete temp subdirectory
       if (!this.storageDir || this.storageDir === this.opfsRoot) {
-        console.warn('[OPFSManager] Safety check: storageDir is root or null, aborting cleanup');
+        logger.warn('Safety check: storageDir is root or null, aborting cleanup');
         return;
       }
       

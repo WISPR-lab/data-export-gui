@@ -773,7 +773,6 @@ export default {
           sortable: false,
         })
       }
-      // console.log('[EventList.headers] Generated headers:', baseHeaders)
       return baseHeaders
     },
 

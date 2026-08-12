@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "sync-assets": "bash sync_assets.sh",
-    "serve": "VUE_APP_LOG_LEVEL=${LOG_LEVEL:-INFO} npm run sync-assets && NODE_ENV=development VUE_APP_LOG_LEVEL=${LOG_LEVEL:-INFO} NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
+    "serve": "VUE_APP_LOG_LEVEL=${LOG_LEVEL:-INFO} bash sync_assets.sh && NODE_ENV=development VUE_APP_LOG_LEVEL=${LOG_LEVEL:-INFO} NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
     "build": "VUE_APP_LOG_LEVEL=${LOG_LEVEL:-INFO} bash sync_assets.sh && VUE_APP_LOG_LEVEL=${LOG_LEVEL:-INFO} NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
     "lint": "NODE_OPTIONS=--openssl-legacy-provider vue-cli-service lint",
     "test": "vitest --dom",
