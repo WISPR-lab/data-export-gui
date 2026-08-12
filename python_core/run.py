@@ -1,5 +1,6 @@
 import js
 from manifest import Manifest
+from db_session import DatabaseSession
 from extractors import worker as extractor_worker
 import semantic_map.worker as semantic_map_worker
 from field_normalization import worker as norm_worker
@@ -10,26 +11,28 @@ from semantic_map.worker import get_counts
 def run(platform: str, given_name: str) -> dict:
     manifest = Manifest(platform=platform)
 
-    # 1. Extract
-    js.reportProgress("extract", 30)
-    extract_res = extractor_worker.extract(platform, given_name, manifest=manifest)
-    upload_id = extract_res.get("upload_id")
-    if not upload_id:
-        raise ValueError("Extraction failed to return an upload_id")
+    with DatabaseSession() as conn:
+        # 1. Extract
+        js.reportProgress("extract", 30)
+        extract_res = extractor_worker.extract(platform, given_name, manifest=manifest, conn=conn)
+        upload_id = extract_res.get("upload_id")
+        if not upload_id:
+            raise ValueError("Extraction failed to return an upload_id")
 
-    # 2. Semantic Map
-    js.reportProgress("semantic_map", 40)
-    semantic_map_worker.map(platform, upload_id, manifest=manifest)
+        # 2. Semantic Map
+        js.reportProgress("semantic_map", 40)
+        semantic_map_worker.map(platform, upload_id, manifest=manifest, conn=conn)
 
-    # 3. Normalize
-    js.reportProgress("normalize", 60)
-    norm_worker.normalize(upload_id)
+        # 3. Normalize
+        js.reportProgress("normalize", 60)
+        norm_worker.normalize(upload_id, conn=conn)
 
-    # 4. Group
-    js.reportProgress("group", 85)
-    device_grouping2_worker.group(upload_id)
+        # 4. Group
+        js.reportProgress("group", 85)
+        device_grouping2_worker.group(upload_id, conn=conn)
 
-    counts = get_counts(upload_id)
+        counts = get_counts(upload_id, conn=conn)
+
     return {
         "status": "success",
         "upload_id": upload_id,

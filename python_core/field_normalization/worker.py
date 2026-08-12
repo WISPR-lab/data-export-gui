@@ -33,10 +33,13 @@ def _normalize(rows, platform, ua_parser, file_map, table=""):
     return updates
 
 
-def normalize(upload_id: str, db_path: str = None) -> dict:
+def normalize(upload_id: str, db_path: str = None, conn=None) -> dict:
 
     with DatabaseSession(
-        db_path, use_dict_factory=True, json_columns=["attributes", "events_category"]
+        db_path,
+        use_dict_factory=True,
+        json_columns=["attributes", "events_category"],
+        existing_conn=conn,
     ) as conn:
         # Get platform from uploads table
         upload = conn.execute(

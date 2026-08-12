@@ -14,7 +14,7 @@ from python_core.logger import get_logger
 logger = get_logger("grouping")
 
 
-def group(upload_id: str, db_path: str = None) -> None:
+def group(upload_id: str, db_path: str = None, conn=None) -> None:
     json_columns = [
         "attributes",
         "origins",
@@ -27,7 +27,7 @@ def group(upload_id: str, db_path: str = None) -> None:
     ]
 
     with DatabaseSession(
-        db_path, use_dict_factory=True, json_columns=json_columns
+        db_path, use_dict_factory=True, json_columns=json_columns, existing_conn=conn
     ) as conn:
         events_df, devices_df = _deduplicate_and_fetch_inputs(conn, upload_id)
         if events_df.empty and devices_df.empty:

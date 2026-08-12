@@ -22,6 +22,15 @@ def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -
     return d
 
 
+def configure_row_factory(conn: sqlite3.Connection, use_dict_factory: bool = False, json_columns: set = None) -> None:
+    # Set/reset row_factory on an already-open connection
+    conn.row_factory = (
+        (lambda cursor, row: dict_factory(cursor, row, json_columns or set()))
+        if use_dict_factory
+        else None
+    )
+
+
 class DatabaseSession:
     """synchronous context manager for SQLite"""
 
@@ -31,6 +40,7 @@ class DatabaseSession:
         schema_path: str = None,
         use_dict_factory: bool = False,
         json_columns: list = None,
+        existing_conn: sqlite3.Connection = None,
     ) -> None:
         self.db_path_orig = db_path or get_config_value("DB_PATH")
         self.db_path_target = None
@@ -43,7 +53,11 @@ class DatabaseSession:
 
         self.use_dict_factory = use_dict_factory
         self.conn = None
-        self.logger = logging.getLogger(__name__)
+        # If set, __enter__/__exit__ borrow this connection (just reconfigure row_factory)
+        # instead of opening/closing/copying their own — lets pipeline stages share one
+        # connection across a run instead of each paying the Firefox/Safari OPFS<->MEMFS
+        # copy cost separately. See run.py.
+        self.existing_conn = existing_conn
 
     def _wrap_json_serialization(self) -> None:
         orig_execute = self.conn.execute
@@ -99,6 +113,10 @@ class DatabaseSession:
             self.firefox_internal_temp_path = None
 
     def __enter__(self) -> sqlite3.Connection:
+        if self.existing_conn is not None:
+            self.conn = self.existing_conn
+            configure_row_factory(self.conn, self.use_dict_factory, self.json_columns)
+            return self.conn
 
         try:
             if self.is_firefox or self.is_safari:
@@ -113,11 +131,7 @@ class DatabaseSession:
                 self.db_path_target, timeout=10.0, check_same_thread=False
             )
 
-            if self.use_dict_factory:
-                self.conn.row_factory = lambda cursor, row: dict_factory(
-                    cursor, row, self.json_columns
-                )
-            # else: defaults to tuple, used in worker bc more efficient
+            configure_row_factory(self.conn, self.use_dict_factory, self.json_columns)
 
             self.conn.execute("PRAGMA journal_mode = DELETE; ")
             self.conn.execute("PRAGMA foreign_keys = ON;")
@@ -149,6 +163,13 @@ class DatabaseSession:
             raise e
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        if self.existing_conn is not None:
+            # Borrowed connection — its owner (see run.py) closes/copies it once,
+            # after every stage sharing it has finished. Just commit this stage's work.
+            if self.conn and exc_type is None:
+                self.conn.commit()
+            return
+
         if self.conn:
             try:
                 if exc_type is None:

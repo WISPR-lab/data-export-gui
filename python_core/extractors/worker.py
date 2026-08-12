@@ -50,6 +50,7 @@ def extract(
     db_path: str = None,
     tmp_storage_dir: str = None,
     manifest: Manifest = None,
+    conn=None,
 ) -> dict:
 
     tmp_storage_dir = tmp_storage_dir or get_config_value("TEMP_ZIP_DATA_STORAGE")
@@ -61,7 +62,7 @@ def extract(
     try:
         manifest = manifest or Manifest(platform=platform)
 
-        with DatabaseSession(db_path) as conn:
+        with DatabaseSession(db_path, existing_conn=conn) as conn:
             if not safefileutils.exists(tmp_storage_dir):
                 logger.error("Temp storage directory not found: %s", tmp_storage_dir)
                 return {

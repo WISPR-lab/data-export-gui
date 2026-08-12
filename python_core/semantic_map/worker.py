@@ -135,12 +135,12 @@ def _stringify(rows: list[dict]) -> list[dict]:
     return rows
 
 
-def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest = None):
+def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest = None, conn=None):
 
     try:
         manifest = manifest or Manifest(platform=platform)
 
-        with DatabaseSession(db_path) as conn:
+        with DatabaseSession(db_path, existing_conn=conn) as conn:
             cursor = conn.execute(
                 """
                 SELECT 
@@ -199,10 +199,8 @@ def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest =
         return
 
 
-def get_counts(upload_id):
-    import builtins
-
-    with DatabaseSession(builtins.DB_PATH, use_dict_factory=True) as conn:
+def get_counts(upload_id, conn=None):
+    with DatabaseSession(use_dict_factory=True, existing_conn=conn) as conn:
         events_count = conn.execute(
             "SELECT COUNT(*) as count FROM events WHERE upload_id = ?", (upload_id,)
         ).fetchone()["count"]
