@@ -51,7 +51,7 @@ def calculate_profile_updates(
         if key in existing_profiles:
             profile_id = existing_profiles[key]
         else:
-            profile_id = str(uuid.uuid4())
+            profile_id = uuid.uuid4().hex
             device_profiles_v2_rows.append(
                 {
                     "id": profile_id,

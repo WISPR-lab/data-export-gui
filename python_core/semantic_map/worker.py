@@ -46,7 +46,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                 event_kind = fields.pop("event_kind", None)
 
                 shared = {
-                    "id": str(uuid.uuid4()),
+                    "id": uuid.uuid4().hex,
                     "upload_id": upload_id,
                     "file_ids": [file_id],
                     "raw_data_ids": [raw_data_id],
@@ -90,7 +90,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                     ):
                         auth_device_rows.append(
                             {
-                                "id": str(uuid.uuid4()),
+                                "id": uuid.uuid4().hex,
                                 "upload_id": upload_id,
                                 "file_id": file_id,
                                 "raw_data_id": raw_data_id,

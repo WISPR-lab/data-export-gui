@@ -14,7 +14,7 @@ def log_merge_event(
 ) -> str:
     # log a merge/unmerge operation
     db_path = builtins.DB_PATH
-    event_id = str(uuid.uuid4())
+    event_id = uuid.uuid4().hex
 
     with DatabaseSession(db_path) as conn:
         conn.execute(

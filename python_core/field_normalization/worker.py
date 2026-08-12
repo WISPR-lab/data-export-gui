@@ -21,7 +21,7 @@ def _normalize(rows, platform, ua_parser, file_map, table=""):
 
         dct = {
             "id": row["id"],
-            "attributes": json.dumps(attrs, sort_keys=True),
+            "attributes": json.dumps(attrs),
             "origin": origin,
         }
         if table == "events":

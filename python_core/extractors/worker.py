@@ -65,7 +65,7 @@ def extract(
         f"[Extractor] Extracting '{platform}' files from {tmp_storage_dir} using manifest from {manifest_dir}..."
     )
     ts = datetime.now(timezone.utc).timestamp()
-    upload_id = str(uuid.uuid4())
+    upload_id = uuid.uuid4().hex
 
     try:
         manifest = Manifest(platform=platform, manifest_dir=manifest_dir)
@@ -174,7 +174,7 @@ def extract(
                     )
 
                     # read into db
-                    file_id = str(uuid.uuid4())
+                    file_id = uuid.uuid4().hex
                     file_info = (
                         file_id,
                         manifest_file_id,
@@ -196,7 +196,7 @@ def extract(
                         line_numbers = r.pop("__line_numbers", [1])
                         raw_data_rows.append(
                             (
-                                str(uuid.uuid4()),
+                                uuid.uuid4().hex,
                                 upload_id,
                                 file_id,
                                 json.dumps(r),

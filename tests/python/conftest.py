@@ -241,7 +241,7 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
         with zipfile.ZipFile(facebook_zip_path, "r") as z:
             z.extractall(tmpdir)
 
-        upload_id = str(uuid.uuid4())
+        upload_id = uuid.uuid4().hex
         raw_data_count = 0
 
         schema_path = os.path.join(repo_root, "schema.sql")
@@ -266,7 +266,7 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
 
                         # Only insert files with valid manifest_file_id (files with views)
                         if manifest_file_id:
-                            file_id = str(uuid.uuid4())
+                            file_id = uuid.uuid4().hex
 
                             with open(
                                 filepath, "r", encoding="utf-8", errors="replace"
@@ -304,7 +304,7 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
                                 )
 
                                 for record in records:
-                                    raw_data_id = str(uuid.uuid4())
+                                    raw_data_id = uuid.uuid4().hex
                                     conn.execute(
                                         "INSERT INTO raw_data (id, upload_id, file_id, data) VALUES (?, ?, ?, ?)",
                                         (

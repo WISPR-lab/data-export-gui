@@ -10,7 +10,7 @@ class TestDeviceGrouping2:
     """Test device_grouping2 pipeline and its DB outputs."""
 
     def test_group_pipeline_outputs(self, test_db_path):
-        upload_id = "test-grouping2-" + str(uuid.uuid4())
+        upload_id = "test-grouping2-" + uuid.uuid4().hex
         schema_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "..", "schema.sql"
         )
@@ -21,7 +21,7 @@ class TestDeviceGrouping2:
                 (upload_id, "test", "test-group-2"),
             )
 
-            file_id = str(uuid.uuid4())
+            file_id = uuid.uuid4().hex
             conn.execute(
                 "INSERT INTO uploaded_files (id, upload_id, opfs_filename) VALUES (?, ?, ?)",
                 (file_id, upload_id, "test_file.json"),
@@ -185,7 +185,7 @@ class TestDeviceGrouping2:
                     "INSERT INTO uploads (id, platform, given_name) VALUES (?, ?, ?)",
                     (data["id"], "test", "given-" + data["id"]),
                 )
-                file_id = str(uuid.uuid4())
+                file_id = uuid.uuid4().hex
                 conn.execute(
                     "INSERT INTO uploaded_files (id, upload_id, opfs_filename) VALUES (?, ?, ?)",
                     (file_id, data["id"], "file_" + data["id"] + ".json"),
