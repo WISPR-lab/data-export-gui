@@ -220,8 +220,7 @@ class DeviceInstanceGraph:
         }
         if not self.edges_df.empty and "type" in self.edges_df.columns:
             edges_to_process = self.edges_df[self.edges_df["type"].isin(linkage_types)]
-            for _, edge in edges_to_process.iterrows():
-                id_a, id_b = edge["id_a"], edge["id_b"]
+            for id_a, id_b in edges_to_process[["id_a", "id_b"]].itertuples(index=False, name=None):
                 if id_a in self._parent and id_b in self._parent:
                     self._union(id_a, id_b)
 

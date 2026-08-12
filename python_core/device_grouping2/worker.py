@@ -9,7 +9,7 @@ from .instances import DeviceInstanceGraph
 from .resolved_sessions_registrations import resolve
 from . import profiles
 
-from python_core.utils.pyodide_utils import get_config_value
+from python_core.runtime.pyodide_utils import get_config_value
 
 
 def group(upload_id: str, db_path: str = None) -> None:

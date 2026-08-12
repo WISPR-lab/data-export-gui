@@ -1,22 +1,26 @@
 import js
+from manifest import Manifest
 from extractors import worker as extractor_worker
 import semantic_map.worker as semantic_map_worker
 from field_normalization import worker as norm_worker
 import device_grouping2.worker as device_grouping2_worker
 from semantic_map.worker import get_counts
+from python_core.runtime.pyodide_utils import get_config_value
 
 
 def run(platform: str, given_name: str) -> dict:
+    manifest = Manifest(platform=platform)
+
     # 1. Extract
     js.reportProgress("extract", 30)
-    extract_res = extractor_worker.extract(platform, given_name)
+    extract_res = extractor_worker.extract(platform, given_name, manifest)
     upload_id = extract_res.get("upload_id")
     if not upload_id:
         raise ValueError("Extraction failed to return an upload_id")
 
     # 2. Semantic Map
     js.reportProgress("semantic_map", 40)
-    semantic_map_worker.map(platform, upload_id)
+    semantic_map_worker.map(platform, upload_id, manifest)
 
     # 3. Normalize
     js.reportProgress("normalize", 60)

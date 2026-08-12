@@ -4,6 +4,7 @@ import uuid
 import os
 import builtins
 from db_session import DatabaseSession
+from manifest import Manifest
 from semantic_map.worker import map as semantic_map
 from field_normalization.worker import normalize
 
@@ -17,11 +18,12 @@ class TestFieldNormalization:
         """Verify that normalize() parses user_agent fields when they exist."""
         upload_id, _ = sample_upload_with_raw_data
 
+        manifest = Manifest(platform="facebook")
         semantic_map(
             platform="facebook",
             upload_id=upload_id,
+            manifest=manifest,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         result = normalize(upload_id, db_path=test_db_path)
@@ -63,11 +65,12 @@ class TestFieldNormalization:
         """Verify that device_manufacturer is parsed when UA data exists."""
         upload_id, _ = sample_upload_with_raw_data
 
+        manifest = Manifest(platform="facebook")
         semantic_map(
             platform="facebook",
             upload_id=upload_id,
+            manifest=manifest,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         normalize(upload_id, db_path=test_db_path)
@@ -102,11 +105,12 @@ class TestFieldNormalization:
         """Verify that normalize() caches UA parsing across multiple rows."""
         upload_id, _ = sample_upload_with_raw_data
 
+        manifest = Manifest(platform="facebook")
         semantic_map(
             platform="facebook",
             upload_id=upload_id,
+            manifest=manifest,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         result = normalize(upload_id, db_path=test_db_path)

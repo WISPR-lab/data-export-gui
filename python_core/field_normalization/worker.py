@@ -5,7 +5,7 @@ from field_normalization.device import normalize_device_fields
 from field_normalization.geo import normalize_geo_fields
 from field_normalization.origin import determine_origin
 from field_normalization.auth_related_events import treat_event_as_auth_device
-from python_core.utils.pyodide_utils import get_config_value
+from python_core.runtime.pyodide_utils import get_config_value
 
 
 def _normalize(rows, platform, ua_parser, file_map, table=""):

@@ -2,8 +2,8 @@ import sqlite3
 import os
 import logging
 import json
-import python_core.utils.safe_file_utils as safefileutils
-from python_core.utils.pyodide_utils import get_config_value
+import python_core.runtime.safe_file_utils as safefileutils
+from python_core.runtime.pyodide_utils import get_config_value
 
 
 def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -> dict:

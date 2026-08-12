@@ -241,7 +241,7 @@ builtins.IS_SAFARI = ${isSafari ? 'True' : 'False'}
 import sys
 sys.path.insert(0, '${config.paths.python_core}')
 sys.path.insert(0, '/')
-from utils.pyodide_utils import init_pyodide
+from runtime.pyodide_utils import init_pyodide
 init_pyodide()
     `);
     

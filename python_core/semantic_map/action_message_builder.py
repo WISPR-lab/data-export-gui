@@ -2,7 +2,7 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(__file__))
-from utils.misc import clean_target
+from semantic_map.views import clean_target
 
 
 def message(event_action, **kwargs):

@@ -5,21 +5,14 @@ import traceback
 from datetime import datetime, timezone
 import uuid
 import hashlib
-import python_core.utils.safe_file_utils as safefileutils
-from python_core.utils.pyodide_utils import get_config_value
+import python_core.runtime.safe_file_utils as safefileutils
+from python_core.runtime.pyodide_utils import get_config_value
 
 
-try:
-    from manifest import Manifest
-    from db_session import DatabaseSession
-    from extractors import get_parser
-    from python_core.errors import FileLevelError
-except ImportError:
-    sys.path.append(os.path.dirname(__file__))
-    from manifest import Manifest
-    from db_session import DatabaseSession
-    from extractors import get_parser
-    from python_core.errors import FileLevelError
+from manifest import Manifest
+from db_session import DatabaseSession
+from extractors import get_parser
+from python_core.errors import FileLevelError
 
 
 def _file_size_bytes(filepath: str, use_memfs: bool = False) -> int:
@@ -53,22 +46,21 @@ def extract(
     given_name: str,
     db_path: str = None,
     tmp_storage_dir: str = None,
-    manifest_dir: str = None,
+    manifest: Manifest = None,
 ) -> dict:
 
     db_path = db_path or get_config_value("DB_PATH")
     tmp_storage_dir = tmp_storage_dir or get_config_value("TEMP_ZIP_DATA_STORAGE")
-    manifest_dir = manifest_dir or get_config_value("MANIFESTS_DIR")
     use_memfs = get_config_value("IS_FIREFOX") or get_config_value("IS_SAFARI")
 
     print(
-        f"[Extractor] Extracting '{platform}' files from {tmp_storage_dir} using manifest from {manifest_dir}..."
+        f"[Extractor] Extracting '{platform}' files from {tmp_storage_dir}..."
     )
     ts = datetime.now(timezone.utc).timestamp()
     upload_id = uuid.uuid4().hex
 
     try:
-        manifest = Manifest(platform=platform, manifest_dir=manifest_dir)
+        manifest = manifest or Manifest(platform=platform)
 
         with DatabaseSession(db_path) as conn:
             if not safefileutils.exists(tmp_storage_dir):

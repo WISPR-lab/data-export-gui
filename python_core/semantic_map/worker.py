@@ -4,10 +4,10 @@ import uuid
 import traceback
 from manifest import Manifest
 from db_session import DatabaseSession
-import semantic_map.map_utils as map_utils
-import semantic_map.action_message_builder as amb
+import semantic_map.views as sm_views
+import semantic_map.action_message_builder as sm_amb
 from semantic_map.deduplicate_events import deduplicate_events
-from python_core.utils.pyodide_utils import get_config_value
+from python_core.runtime.pyodide_utils import get_config_value
 
 
 def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
@@ -22,6 +22,10 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                 f"[SemanticMapWorker] No views for manifest_file_id: {manifest_file_id}"
             )
             continue
+
+        # `where` filters and `static` fields are invariant per view — compile them
+        # once per file group instead of rebuilding on every record below.
+        compiled_views = sm_views.compile_views(views)
 
         for raw_data_id, file_id, raw_data, _manifest_file_id in group_list:
             try:
@@ -39,10 +43,13 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                 print(f"Raw data content: {raw_data[:200]}...")
                 continue
 
-            view_indices = list(map_utils.view_indexes_to_apply(record, views))
+            view_indices = list(
+                sm_views.view_indexes_to_apply(record, views, compiled_views)
+            )
 
             for vindex in view_indices:
-                fields = map_utils.fields(record, views[vindex])
+                cv = compiled_views[vindex]
+                fields = sm_views.fields(record, cv.view, static=cv.static)
                 event_kind = fields.pop("event_kind", None)
 
                 shared = {
@@ -66,7 +73,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                             "event_kind": event_kind,
                             "event_category": event_category,
                             "event_type": event_type,
-                            "event_type_msg": amb.message(event_action, **fields),
+                            "event_type_msg": sm_amb.message(event_action, **fields),
                             "attributes": fields,
                             "deduplicated": False,  # taken care of in deduplication step
                             "extra_timestamps": [],  # ^^
@@ -135,15 +142,14 @@ def _stringify(rows: list[dict]) -> list[dict]:
     return rows
 
 
-def map(platform, upload_id, db_path=None, manifest_dir=None):
+def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest = None):
 
     db_path = db_path or get_config_value("DB_PATH")
-    manifest_dir = manifest_dir or get_config_value("MANIFESTS_DIR")
 
     print(f"[SemanticMapWorker] Starting mapping for upload_id: {upload_id}")
 
     try:
-        manifest = Manifest(platform=platform, manifest_dir=manifest_dir)
+        manifest = manifest or Manifest(platform=platform)
         print(f"[SemanticMapWorker] Manifest loaded for platform: {platform}")
 
         with DatabaseSession(db_path) as conn:
