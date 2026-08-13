@@ -27,6 +27,8 @@ limitations under the License.
 
     <!-- OPFS / cross-origin isolation incompatibility warning -->
     <opfs-compatibility-dialog v-model="opfsDialog" />
+    <!-- shown when a SQL query fails with "no such table/column") -->
+    <schema-refresh-dialog v-model="schemaDialog" />
 
     <!-- Main router view -->
     <router-view></router-view>
@@ -48,6 +50,7 @@ import { initShutdownDetection } from '@/utils/shutdownDetection.js'
 import DemoOverlay from '@/components/Demo/DemoOverlay.vue'
 import CompareEventsDialog from '@/components/Events/CompareEventsDialog.vue'
 import OpfsCompatibilityDialog from '@/components/OpfsCompatibilityDialog.vue'
+import SchemaRefreshDialog from '@/components/SchemaRefreshDialog.vue'
 
 export default {
   name: 'app',
@@ -55,10 +58,12 @@ export default {
     DemoOverlay,
     CompareEventsDialog,
     OpfsCompatibilityDialog,
+    SchemaRefreshDialog,
   },
   data: function() {
     return {
       opfsDialog: false,
+      schemaDialog: false,
     }
   },
   computed: {
@@ -101,6 +106,7 @@ export default {
     EventBus.$on('errorSnackBar', this.setErrorSnackBar)
     // Show modal if DB layer or router guard emits opfsUnavailable
     EventBus.$on('opfsUnavailable', function() { this.opfsDialog = true; }.bind(this))
+    EventBus.$on('schemaMismatch', function() { this.schemaDialog = true; }.bind(this))
 
     if (window.opfsUnavailable || this.checkOpfsIncompatibility()) {
       this.opfsDialog = true;
@@ -122,6 +128,7 @@ export default {
   beforeDestroy() {
     EventBus.$off('errorSnackBar')
     EventBus.$off('opfsUnavailable')
+    EventBus.$off('schemaMismatch')
   },
 }
 </script>

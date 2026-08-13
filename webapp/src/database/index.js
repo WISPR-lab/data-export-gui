@@ -139,25 +139,15 @@ export async function closeDB() {
   if (worker) {
     worker.terminate();
     worker = null;
-    // [Database] Closed
+    logger.debug('Worker terminated');
   }
-  // if (db) {
-  //   await db.close();
-  //   if (worker) {
-  //     worker.terminate();
-  //     worker = null;
-  //   }
-  //   db = null;
-  //   initPromise = null;
-  //   console.log('[Database] Connection closed');
-  // }
 }
 
-export async function resetAllLocalData() {
+export async function resetAllLocalData({ unregisterServiceWorkers = false } = {}) {
   /* Shared "hard refresh" mechanism: closes the sqlite worker and the pyodide worker
      (so no open OPFS file handles block deletion), then recursively wipes OPFS and
-     browser storage. Mirrors DebugOPFS.vue's "Nuke All" sequence; reused by
-     SchemaRefreshDialog so there's a single place this logic lives. */
+     browser storage. Single place this logic lives - reused by SafeExitButton,
+     DebugOPFS's "Nuke All", OpfsCompatibilityDialog, and SchemaRefreshDialog. */
   await closeDB();
   terminatePyodideWorker();
 
@@ -166,6 +156,11 @@ export async function resetAllLocalData() {
 
   localStorage.clear();
   sessionStorage.clear();
+
+  if (unregisterServiceWorkers && navigator.serviceWorker) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+  }
 }
 
 export async function clearAllTables() {
@@ -183,7 +178,7 @@ export async function clearAllTables() {
   for (const table of tables) {
     await db.exec(`DELETE FROM ${table};`);
   }
-  // [Database] Data cleared
+  logger.debug(`Cleared all DB tables`);
 }
 
 

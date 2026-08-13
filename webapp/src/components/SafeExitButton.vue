@@ -25,8 +25,7 @@
 </template>
 
 <script>
-import { terminatePyodideWorker } from '@/pyodide/pyodide-client.js'
-import { OPFSManager } from '@/storage/opfs_manager';   
+import { resetAllLocalData } from '@/database/index.js'
 import EventBus from '@/event-bus.js'
 import { getLogger } from '@/utils/logger';
 
@@ -43,17 +42,8 @@ export default {
     async safeExit() {
       try {
         logger.debug('Initiating safe exit...')
-        
-        // Unregister service workers (including coi-serviceworker) so they don't interfere on next visit
-        if (navigator.serviceWorker) {
-          const regs = await navigator.serviceWorker.getRegistrations()
-          await Promise.all(regs.map(function(r) { return r.unregister(); }))
-        }
 
-        terminatePyodideWorker();
-        const opfsManager = new OPFSManager();
-        await opfsManager.nukeAll();
-        localStorage.clear();
+        await resetAllLocalData({ unregisterServiceWorkers: true })
         this.$store.commit('RESET_STATE')
         
         document.body.innerHTML = ''

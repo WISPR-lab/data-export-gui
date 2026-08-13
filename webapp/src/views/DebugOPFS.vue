@@ -114,7 +114,7 @@
 </template>
 
 <script>
-import { getDB, closeDB } from '@/database/index.js';
+import { getDB, resetAllLocalData } from '@/database/index.js';
 import { OPFSManager } from '@/storage/opfs_manager.js';
 
 export default {
@@ -237,14 +237,9 @@ export default {
       if (!confirm('Delete everything in OPFS (including database)?')) return;
 
       try {
-        this.opfsStatus = 'closing db...';
-        await closeDB();
-        
         this.opfsStatus = 'nuking OPFS...';
-        const opfsManager = new OPFSManager();
-        await opfsManager.nukeAll();
-        localStorage.clear();
-        
+        await resetAllLocalData();
+
         this.opfsStatus = 'Nuked.';
         await this.refreshOPFS();
       } catch (e) {
