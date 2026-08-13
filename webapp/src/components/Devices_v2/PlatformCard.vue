@@ -1,6 +1,6 @@
 // added for WISPR-lab/data-export-gui
 <template>
-  <v-card outlined class="rounded-xl mb-6 shadow-sm overflow-hidden" style="background-color: white;">
+  <v-card outlined class="rounded-lg mb-6 overflow-hidden" style="background-color: white;">
 
     <!-- Header / collapse toggle -->
     <div
@@ -87,7 +87,7 @@
               </div> -->
 
               <!-- Expansion Panels for Records -->
-              <v-expansion-panels flat class="device-panels">
+              <v-expansion-panels multiple flat class="device-panels">
                 <device-row
                   v-for="(entry, eIdx) in pageSlice(section)"
                   :key="section.key + '-' + eIdx"
@@ -124,7 +124,7 @@
 
             <div
               v-if="!activeSections.length"
-              class="text-body-2 text--secondary italic pa-6 text-center grey lighten-5 rounded-xl"
+              class="text-body-2 text--secondary italic pa-6 text-center grey lighten-5 rounded-lg"
             >
               No platform records found for this account.
             </div>
@@ -143,14 +143,14 @@
 
             <div
               v-if="!platform.clusters.length"
-              class="text-body-2 text--secondary italic pa-6 text-center grey lighten-5 rounded-xl"
+              class="text-body-2 text--secondary italic pa-6 text-center grey lighten-5 rounded-lg"
             >
               No event groups detected for this account.
             </div>
 
             <div v-else>
               <!-- Cluster Rows using DeviceRow wrapped in expansion panels to match structure/styling -->
-              <v-expansion-panels flat class="device-panels">
+              <v-expansion-panels multiple flat class="device-panels">
                 <device-row
                   v-for="(cluster, cIdx) in currentClusterPage"
                   :key="'cluster-' + cIdx"
@@ -191,7 +191,7 @@
 
     <!-- Info Modal -->
     <v-dialog v-model="infoModal.open" max-width="450">
-      <v-card class="rounded-xl">
+      <v-card class="rounded-lg">
         <v-card-title class="d-flex justify-space-between align-center text-h6 font-weight-bold pt-4 pb-2 px-6">
           <span>{{ infoModal.title }}</span>
           <v-btn icon small @click="infoModal.open = false" title="Close dialog">

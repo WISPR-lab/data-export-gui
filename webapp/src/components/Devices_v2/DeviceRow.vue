@@ -1,7 +1,8 @@
 // added for WISPR-lab/data-export-gui
 <template>
   <v-expansion-panel
-    class="mb-2 border rounded-xl overflow-hidden"
+    active-class="grey lighten-5"
+    class="device-row-panel"
   >
     <v-expansion-panel-header class="py-3 px-4">
       <template v-slot:default>
@@ -84,7 +85,7 @@
       </template>
     </v-expansion-panel-header>
 
-    <v-expansion-panel-content class="grey lighten-5 border-top">
+    <v-expansion-panel-content class="transparent">
       <div class="pa-4">
         <div class="text-body-2 font-weight-medium text--secondary mb-3">{{ detailLabel }}</div>
         <attributes-table :attributes="displayAttributes" />
@@ -222,6 +223,19 @@ export default {
 .border     { border: 1px solid #e0e0e0; }
 .border-top { border-top: 1px solid #e0e0e0; }
 .cursor-pointer { cursor: pointer; }
+.device-row-panel {
+  border: none !important;
+  border-radius: 0 !important;
+}
+.device-row-panel > .v-expansion-panel-header {
+  border-top: 1px solid #e0e0e0;
+}
+.device-row-panel:last-child {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+.device-row-panel::before {
+  box-shadow: none !important;
+}
 .masked-glossary {
   display: inline-flex;
   align-items: center;
