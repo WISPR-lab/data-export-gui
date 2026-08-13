@@ -22,7 +22,7 @@
               <!-- Title & Badges block -->
               <v-col cols="12" md="6" class="pr-2 py-0.5">
                 <div class="text-body-2 font-weight-medium text--primary" style="line-height: 1.3; min-width: 0;">
-                  {{ titleCase(title) }}
+                  {{ capitalize(title) }}
                   <span v-if="clientName" class="text-body-2 text--secondary font-weight-regular ml-1">via {{ clientName }}</span>
                   
                   <!-- Inline Masked link -->
@@ -95,7 +95,7 @@
 
 <script>
 import AttributesTable from '@/components/Devices_v2/AttributesTable.vue';
-import { titleCase } from '@/filters/TitleCase.js';
+import { capitalize } from '@/filters/Capitalize.js';
 
 export default {
   name: 'DeviceRow',
@@ -208,7 +208,7 @@ export default {
     }
   },
   methods: {
-    titleCase,
+    capitalize,
     triggerInfoModal() {
       this.$emit('show-info', {
         title: 'Masked User Agent',

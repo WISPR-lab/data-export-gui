@@ -74,7 +74,7 @@ limitations under the License.
 
                   <!-- Event field name -->
                   <td>
-                    {{ key }}
+                    {{ formatAttributeLabel(key) }}
                   </td>
 
                   <!-- Event field value action icons -->
@@ -168,6 +168,7 @@ import TsLinkRedirectWarning from './LinkRedirectWarning.vue'
 import TsComments from './Comments.vue'
 import TsUnfurlDialog from './UnfurlDialog.vue'
 import { FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE } from '@/constants/app_constants.js'
+import { formatAttributeLabel } from '@/filters/FormatAttributeLabel.js'
 
 export default {
   components: {
@@ -225,6 +226,7 @@ export default {
     },
   },
   methods: {
+    formatAttributeLabel,
     getEvent: function () {
       // Event data is already available via this.event._source - no API call needed
       const source = this.event._source || {}

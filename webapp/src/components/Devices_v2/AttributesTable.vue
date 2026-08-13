@@ -43,7 +43,7 @@
                     </v-tooltip>
                   </template>
                   <span v-else-if="attr.isTimestamp">{{ item | longDateTimeLocal }}</span>
-                  <span v-else>{{ item | formatDeviceDetails }}</span>
+                  <span v-else>{{ item | capitalize }}</span>
                   <span v-if="idx < getDisplayValue(attr).length - 1" style="margin-right: 6px;">,</span>
                 </span>
                 <template v-if="hasSeeMore(attr)">

@@ -207,6 +207,9 @@ limitations under the License.
                         dense
                         @input="updateSelectedFields"
                       >
+                        <template v-slot:item.field="{ item }">
+                          {{ formatAttributeLabel(item.field) }}
+                        </template>
                       </v-data-table>
                     </v-card-text>
 
@@ -526,6 +529,7 @@ limitations under the License.
 <script>
 import DB from '@/database/index.js'
 import EventBus from '@/event-bus.js'
+import { formatAttributeLabel } from '@/filters/FormatAttributeLabel.js'
 
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
@@ -732,7 +736,7 @@ export default {
       let extraHeaders = []
       this.selectedFields.forEach((field) => {
         let header = {
-          text: field.field !== 'event_type_msg' ? field.field : 'Event Type',
+          text: formatAttributeLabel(field.field),
           align: 'start',
           value: '_source.' + field.field,
           sortable: false,
@@ -792,6 +796,7 @@ export default {
     },
   },
   methods: {
+    formatAttributeLabel,
     isDisplayableTimestamp(timestamp) {
       const numericTimestamp = Number(timestamp)
       return Number.isFinite(numericTimestamp) && numericTimestamp > 0
