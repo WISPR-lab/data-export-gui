@@ -14,6 +14,17 @@ function nullTs(val) {
 
 var EPOCH_ZERO_KEYS = ['entity_first_seen_timestamp', 'entity_last_seen_timestamp', 'timestamp'];
 
+function parseTags(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (!raw) return [];
+  try {
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 export async function getResolvedSessionsRegistrations() {
   const db = await getDB();
 
@@ -118,7 +129,8 @@ export async function getResolvedSessionsRegistrations() {
       platform: row.upload_platform,
       attributes: attrs,
       events_query: eventsQuery,
-      event_count: eventCount
+      event_count: eventCount,
+      tags: parseTags(row.tags)
     });
   }
 

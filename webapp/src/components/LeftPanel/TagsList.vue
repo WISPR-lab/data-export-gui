@@ -71,16 +71,11 @@ limitations under the License.
 
 <script>
 import EventBus from '../../event-bus.js'
+import { getQuickTag } from '../Events/EventTags.vue'
 
 export default {
   data: function () {
     return {
-      // TODO: Refactor this into a configurable option
-      quickTags: [
-        { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-      ],
       itemsPerPage: 10,
       search: '',
       isFiltered: false,
@@ -176,9 +171,7 @@ export default {
     }
   },
   methods: {
-    getQuickTag(tag) {
-      return this.quickTags.find((el) => el.tag === tag)
-    },
+    getQuickTag,
     onSearchResultsCounts(payload) {
       this.filteredCounts = payload.countPerTagOrLabel || {}
       this.isFiltered = true

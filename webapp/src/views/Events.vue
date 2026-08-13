@@ -185,8 +185,6 @@ limitations under the License.
 import EventBus from '../event-bus.js'
 import { getLogger } from '@/utils/logger';
 
-const logger = getLogger('Events');
-
 import { dragscroll } from 'vue-dragscroll'
 
 import DataExportPicker from '../components/Events/DataExportPicker.vue'
@@ -196,6 +194,8 @@ import TsAddManualEvent from '../components/Events/AddManualEvent.vue'
 import EventList from '../components/Events/EventList.vue'
 import SearchBar from '../components/Events/SearchBar.vue'
 import FilterChip from '../components/Events/FilterChip.vue'
+
+const logger = getLogger('Events');
 
 const defaultQueryFilter = () => {
   return {
@@ -246,12 +246,6 @@ export default {
         x: 0,
         y: 0,
       },
-      // TODO: Refactor this into a configurable option
-      quickTags: [
-        { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-      ],
       showDataExports: true,
     }
   },
@@ -333,9 +327,6 @@ export default {
     },
   },
   methods: {
-    getQuickTag(tag) {
-      return this.quickTags.find((el) => el.tag === tag)
-    },
     parseRouteParams(query = {}) {
       let doSearch = false;
       

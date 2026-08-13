@@ -3,16 +3,30 @@ import { getDB } from '../index.js';
 import { hexColor } from '@/utils/hex.js';
 import { getUASummary } from './ua_summary.js';
 
+
+var TAG_TABLES = { record: 'resolved_sessions_registrations', activity: 'device_groups' };
+
+function parseTags(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (!raw) return [];
+  try {
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 export async function getUnlinkedGroups() {
   const db = await getDB();
-  
+
   const sql = `
     SELECT dg.*, u.color as upload_color, u.platform as upload_platform
     FROM device_groups dg
     LEFT JOIN uploads u ON dg.upload_id = u.id
     ORDER BY dg.last_seen DESC
   `;
-  
+
   const rows = await db.exec(sql, {
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -34,7 +48,18 @@ export async function getUnlinkedGroups() {
       last_seen: row.last_seen || null,
       event_count: row.event_count || 0,
       query: 'device_group_id:' + row.id,
-      upload_color: hexColor(row.upload_color)
+      upload_color: hexColor(row.upload_color),
+      tags: parseTags(row.tags)
     };
   });
+}
+
+export async function updateDeviceTags(entityType, id, tags) {
+  var table = TAG_TABLES[entityType] || TAG_TABLES.record;
+  if (!id) return;
+  const db = await getDB();
+  await db.exec(
+    `UPDATE ${table} SET tags = ? WHERE id = ?`,
+    { bind: [JSON.stringify(tags || []), id] }
+  );
 }

@@ -120,12 +120,13 @@ CREATE TABLE IF NOT EXISTS device_groups (
     latest_client_version TEXT,        
     latest_client_ip TEXT, 
     --           
-    os_versions TEXT,    -- TODO jsonstring????               
-    client_versions TEXT,         -- -- TODO jsonstring????              
-    client_ips TEXT,                 -- -- TODO jsonstring????         
-    locations TEXT,  -- -- TODO jsonstring????         
-    --                  
+    os_versions TEXT,    -- TODO jsonstring????
+    client_versions TEXT,         -- -- TODO jsonstring????
+    client_ips TEXT,                 -- -- TODO jsonstring????
+    locations TEXT,  -- -- TODO jsonstring????
+    --
     created_at REAL,
+    tags JSONTEXT DEFAULT '[]',
     --
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
@@ -163,6 +164,7 @@ CREATE TABLE IF NOT EXISTS resolved_sessions_registrations (
     has_passkey INTEGER DEFAULT 0,
     registration_device TEXT,
     event_count INTEGER DEFAULT 0,
+    tags JSONTEXT DEFAULT '[]',
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 

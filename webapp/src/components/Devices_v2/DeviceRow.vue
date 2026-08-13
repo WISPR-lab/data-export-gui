@@ -12,10 +12,12 @@
           <!-- Leftmost: Tag button & menu using shared TsEventTagMenu -->
           <div class="flex-shrink-0 mr-2" @click.stop>
             <ts-event-tag-menu
-              :event="{ _source: { tags: localTags } }"
+              :event="{ _id: deviceId, _source: { tags: localTags } }"
               :show-propagate-option="true"
               :event-count="eventCount"
               :events-query="eventsQuery"
+              :persist="persistDeviceTags"
+              silent
               @tag-added="handleTagAdded"
               @tag-removed="handleTagRemoved"
             />
@@ -124,13 +126,15 @@ export default {
   components: { AttributesTable, TsEventTags, TsEventTagMenu, TagPropagateModal },
   data() {
     return {
-      localTags: [],
+      localTags: Array.isArray(this.tags) ? this.tags.slice() : [],
       showPropagateModal: false,
       pendingTagAction: { action: 'add', tag: '' }
     };
   },
   props: {
     type:        { type: String,  default: 'record' },
+    id:          { type: [String, Number], default: null },
+    tags:        { type: Array,   default: function() { return []; } },
     title:       { type: String,  default: 'Unknown Device' },
     clientName:  { type: String,  default: '' },
     icon:        { type: String,  default: 'mdi-devices' },
@@ -145,9 +149,18 @@ export default {
     eventCount: { type: Number, default: 0 },
     groupRaw: { type: Object, default: function() { return {}; } }
   },
+  watch: {
+    // reset local tags when the source row is refetched, so remounts don't drop persisted tags
+    tags(newVal) {
+      this.localTags = Array.isArray(newVal) ? newVal.slice() : [];
+    }
+  },
   computed: {
     isRecord() {
       return this.type === 'record';
+    },
+    deviceId() {
+      return this.isRecord ? this.id : (this.groupRaw && this.groupRaw.id) || null;
     },
     buttonText() {
       var count = this.eventCount;
@@ -246,6 +259,9 @@ export default {
         description: 'To prevent browser fingerprinting, Apple devices (like iPhones running Mobile Safari) return simplified, generic user agent strings. This hides the specific device model details from websites and exports.'
       });
     },
+    async persistDeviceTags(id, tags) {
+      await DB.updateDeviceTags(this.type, id || this.deviceId, tags);
+    },
     async handleTagAdded(tag) {
       if (tag && !this.localTags.includes(tag)) {
         this.localTags.push(tag);
@@ -259,14 +275,15 @@ export default {
       await this.processTagAction('remove', tag);
     },
     async processTagAction(action, tag) {
+      // handles only the opt-in "also apply to matching events" propagation; the tag itself is already persisted by persistDeviceTags
       if (!tag || this.eventCount === 0 || !this.eventsQuery) return;
       var storageKey = action === 'add' ? 'takeout_tag_propagate_add' : 'takeout_tag_propagate_remove';
       var savedPref = localStorage.getItem(storageKey);
 
       if (savedPref === 'always') {
-        await DB.addTagToEventsQuery(this.eventsQuery, tag, action === 'remove');
+        await this.propagateToEvents(tag, action === 'remove');
       } else if (savedPref === 'never') {
-        // Device only, do nothing for events
+        // device only
       } else {
         this.pendingTagAction = { action: action, tag: tag };
         this.showPropagateModal = true;
@@ -282,7 +299,13 @@ export default {
       }
 
       if (propagate && this.eventsQuery) {
-        await DB.addTagToEventsQuery(this.eventsQuery, tag, action === 'remove');
+        await this.propagateToEvents(tag, action === 'remove');
+      }
+    },
+    async propagateToEvents(tag, remove) {
+      var changedCount = await DB.addTagToEventsQuery(this.eventsQuery, tag, remove);
+      if (changedCount) {
+        this.$store.dispatch('updateEventLabels', { label: tag, num: remove ? -changedCount : changedCount });
       }
     }
   }

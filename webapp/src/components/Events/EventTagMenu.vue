@@ -26,6 +26,8 @@ limitations under the License.
       :show-propagate-option="showPropagateOption"
       :event-count="eventCount"
       :events-query="eventsQuery"
+      :persist="persist"
+      :silent="silent"
       @close="showMenu = false"
       @tag-added="$emit('tag-added', $event)"
       @tag-removed="$emit('tag-removed', $event)"
@@ -57,19 +59,19 @@ export default {
     eventsQuery: {
       type: String,
       default: ''
+    },
+    persist: {
+      type: Function,
+      default: null
+    },
+    silent: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
     return {
       showMenu: false,
-      selectedTags: null,
-      // TODO: Refactor this into a configurable option
-      quickTags: [
-        { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-      ],
-      search: null,
     }
   },
   watch: {

@@ -91,6 +91,7 @@ limitations under the License.
 
 <script>
 import DB from '@/database/index.js'
+import { QUICK_TAGS, getQuickTag } from './EventTags.vue'
 
 export default {
   props: {
@@ -109,6 +110,16 @@ export default {
     eventsQuery: {
       type: String,
       default: ''
+    },
+    // (id, tags) => Promise; defaults to DB.updateEventTags
+    persist: {
+      type: Function,
+      default: null
+    },
+    // true when persist doesn't touch the events index (e.g. device tags) - skips the left-panel count bump
+    silent: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -116,12 +127,7 @@ export default {
       listItems: [],
       selectedTags: null,
       propagateToEvents: false,
-      // TODO: Refactor this into a configurable option
-      quickTags: [
-        { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-      ],
+      quickTags: QUICK_TAGS,
       search: null,
     }
   },
@@ -172,8 +178,9 @@ export default {
     },
   },
   methods: {
-    getQuickTag(tag) {
-      return this.quickTags.find((el) => el.tag === tag)
+    getQuickTag,
+    persistTags(id, tags) {
+      return this.persist ? this.persist(id, tags) : DB.updateEventTags(id, tags)
     },
     async removeTags(tag) {
       if (this.events && this.events.length > 0) {
@@ -181,13 +188,13 @@ export default {
           if (event && event._source && event._source.tags) {
             const newTags = event._source.tags.filter(t => t !== tag)
             if (newTags.length !== event._source.tags.length) {
-              await DB.updateEventTags(event._id, newTags)
+              await this.persistTags(event._id, newTags)
               event._source.tags = newTags
             }
           }
         }
       }
-      this.$store.dispatch('updateEventLabels', { label: tag, num: -1 })
+      if (!this.silent) this.$store.dispatch('updateEventLabels', { label: tag, num: -1 })
       this.$emit('tag-removed', tag)
     },
     async addTags(tagToAdd) {
@@ -203,7 +210,7 @@ export default {
           // Merge unique
           const newTags = [...new Set([...currentTags, ...tagList])]
           try {
-            await DB.updateEventTags(event._id, newTags)
+            await this.persistTags(event._id, newTags)
             // Update local state
             if (!event._source) event._source = {}
             event._source.tags = newTags
@@ -215,8 +222,8 @@ export default {
 
       this.$emit('close')
       this.$emit('tag-added', tagList[0])
-      this.$store.dispatch('updateEventLabels', { label: tagList[0], num: 1 })
-      
+      if (!this.silent) this.$store.dispatch('updateEventLabels', { label: tagList[0], num: 1 })
+
       if (this.$store.state.demoMode) {
         const EventBus = require('@/event-bus.js').default
         EventBus.$emit('demo:action', 'tag-added')

@@ -612,7 +612,7 @@ export async function clearAllTags() {
 }
 
 export async function addTagToEventsQuery(eventsQuery, tag, remove = false) {
-  if (!eventsQuery || !tag) return;
+  if (!eventsQuery || !tag) return 0;
   const db = await getDB();
   let eventsToUpdate = [];
 
@@ -638,6 +638,7 @@ export async function addTagToEventsQuery(eventsQuery, tag, remove = false) {
     );
   }
 
+  let changedCount = 0;
   if (eventsToUpdate && eventsToUpdate.length > 0) {
     for (const ev of eventsToUpdate) {
       let currentTags = [];
@@ -656,8 +657,10 @@ export async function addTagToEventsQuery(eventsQuery, tag, remove = false) {
       }
       if (JSON.stringify(newTags) !== JSON.stringify(currentTags)) {
         await db.exec('UPDATE events SET tags = ? WHERE id = ?', { bind: [JSON.stringify(newTags), ev.id] });
+        changedCount++;
       }
     }
   }
+  return changedCount;
 }
 

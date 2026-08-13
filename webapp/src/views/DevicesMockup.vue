@@ -117,7 +117,8 @@ function buildEntry(s) {
     has_passkey: s.has_passkey,
     event_count: s.event_count,
     events_query: s.events_query,
-    formatted_attributes: formattedAttrs
+    formatted_attributes: formattedAttrs,
+    tags: Array.isArray(s.tags) ? s.tags : []
   };
 }
 

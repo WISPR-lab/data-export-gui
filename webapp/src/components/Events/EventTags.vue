@@ -33,6 +33,17 @@ limitations under the License.
 </template>
 
 <script>
+export const QUICK_TAGS = [
+  { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
+  { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
+  { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' }
+]
+export const getQuickTag = (tag) => QUICK_TAGS.find((t) => t.tag === tag)
+export const QUICK_TAG_CONFIG = QUICK_TAGS.reduce((acc, t) => {
+  acc[t.tag] = { color: t.color, textColor: t.textColor, label: t.label }
+  return acc
+}, {})
+
 export default {
   props: {
     item: {
@@ -41,11 +52,7 @@ export default {
     },
     tagConfig: {
       type: Object,
-      default: () => ({
-        bad: { color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        suspicious: { color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        good: { color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' }
-      })
+      default: () => QUICK_TAG_CONFIG
     },
     showDetails: Boolean
   },
