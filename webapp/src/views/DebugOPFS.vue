@@ -310,12 +310,12 @@ export default {
           'raw_data',
           'events',
           'devices_raw',
-          'device_instances',
+          'device_groups',
           'resolved_sessions_registrations',
-          'device_instance_edges',
+          'device_group_edges',
           'event_comments',
-          'device_instance_events',
-          'device_instance_raw_devices',
+          'device_group_events',
+          'device_group_raw_devices',
         ];
 
         var tables = this.DB_TABLES.slice().sort(function(a, b) {

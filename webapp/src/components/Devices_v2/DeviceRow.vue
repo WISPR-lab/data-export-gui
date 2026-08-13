@@ -133,7 +133,7 @@ export default {
       if (this.isRecord) {
         return 'See ' + eventsText + ' with this session ID';
       }
-      return 'See ' + eventsText + ' in this activity cluster';
+      return 'See ' + eventsText + ' in this event group';
     },
     activeDateLabel() {
       var fmt = this.$options.filters && this.$options.filters.dateRange;

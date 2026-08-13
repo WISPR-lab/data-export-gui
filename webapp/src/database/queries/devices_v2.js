@@ -7,10 +7,10 @@ export async function getUnlinkedClusters() {
   const db = await getDB();
   
   const sql = `
-    SELECT di.*, u.color as upload_color, u.platform as upload_platform
-    FROM device_instances di
-    LEFT JOIN uploads u ON di.upload_id = u.id
-    ORDER BY di.last_seen DESC
+    SELECT dg.*, u.color as upload_color, u.platform as upload_platform
+    FROM device_groups dg
+    LEFT JOIN uploads u ON dg.upload_id = u.id
+    ORDER BY dg.last_seen DESC
   `;
   
   const rows = await db.exec(sql, {
@@ -47,7 +47,7 @@ export async function getUnlinkedClusters() {
       last_seen: row.last_seen || null,
       dateString: dateStr || '',
       event_count: row.event_count || 0,
-      query: 'device_instance_id:' + row.id,
+      query: 'device_group_id:' + row.id,
       upload_color: hexColor(row.upload_color)
     };
   });

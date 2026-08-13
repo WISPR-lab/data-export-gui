@@ -64,15 +64,16 @@
               class="mb-8"
             >
               <!-- Section Header -->
-              <div class="d-flex align-center mb-3">
+              <div class="mb-6">
                 <h3 class="text-body-1 font-weight-bold text--primary mb-0 mr-2">{{ section.label }}</h3>
-                <v-btn
+                <!-- <v-btn
                   v-if="section.description"
                   icon x-small color="blue darken-2"
                   @click.stop="openInfoModal(section.label, section.description)"
                 >
                   <v-icon size="16">mdi-information-outline</v-icon>
-                </v-btn>
+                </v-btn> -->
+                <p class="text-body-2 text--secondary mb-0" style="line-height: 1.6;">{{ section.description }} </p>
               </div>
 
               <!-- Platform-inferred badge -->
@@ -129,13 +130,14 @@
             </div>
           </v-tab-item>
 
-          <!-- TAB 2: Inferred Activity Clusters -->
+          <!-- TAB 2: groups -->
           <v-tab-item>
-            <div class="mb-4">
+            <div class="mb-6">
               <p class="text-body-2 text--secondary mb-0" style="line-height: 1.6;">
-                LEStrADE's analysis of different possible device fingerprints corresponding to different events (e.g., logins, password changes).
-                This is a <strong>conservative</strong> estimate: multiple clusters may actually belong to the same device,
-                especially on iOS where Apple's privacy features make devices harder to distinguish.
+                LEStrADE's analysis of different possible device fingerprints corresponding to different events (e.g., logins, password changes). 
+                Each of the following is an "event group" that may correspond to a single device. 
+                Not every event in the database may be linked to one of the below event groups as some events are recorded without any device information. 
+                This is a <strong>conservative</strong> estimate: multiple event groups may actually originate from the same device, especially on iOS where Apple's privacy features make devices harder to distinguish.
               </p>
             </div>
 
@@ -143,7 +145,7 @@
               v-if="!platform.clusters.length"
               class="text-body-2 text--secondary italic pa-6 text-center grey lighten-5 rounded-xl"
             >
-              No activity clusters detected for this account.
+              No event groups detected for this account.
             </div>
 
             <div v-else>
@@ -226,7 +228,7 @@ export default {
       return 'Devices & Sessions reported by ' + this.platform.displayName;
     },
     tab2Label() {
-      return 'Additional Activity Clusters Inferred by LEStrADE';
+      return 'Event groups that may be linked to devices';
     },
     // platformBadgeText() {
     //   return 'Reported directly by ' + this.platform.displayName + ' — this is the platform\'s own device recognition.';

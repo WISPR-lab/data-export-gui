@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS devices_raw ( -- filled during semantic map
     FOREIGN KEY(raw_data_id) REFERENCES raw_data(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS device_instance_edges ( -- for device/event grouping
+CREATE TABLE IF NOT EXISTS device_group_edges ( -- for device/event grouping
     id_a TEXT, 
     id_b TEXT,  -- dropped from main dataframe in level0
     type TEXT,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS device_instance_edges ( -- for device/event grouping
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS device_instances (
+CREATE TABLE IF NOT EXISTS device_groups (
     id TEXT PRIMARY KEY,
     upload_id TEXT,
     --
@@ -130,19 +130,19 @@ CREATE TABLE IF NOT EXISTS device_instances (
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS device_instance_events (
-    device_instance_id TEXT,
+CREATE TABLE IF NOT EXISTS device_group_events (
+    device_group_id TEXT,
     event_id TEXT,
-    PRIMARY KEY (device_instance_id, event_id),
-    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE,
+    PRIMARY KEY (device_group_id, event_id),
+    FOREIGN KEY(device_group_id) REFERENCES device_groups(id) ON DELETE CASCADE,
     FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS device_instance_raw_devices (
-    device_instance_id TEXT,
+CREATE TABLE IF NOT EXISTS device_group_raw_devices (
+    device_group_id TEXT,
     devices_raw_id TEXT,
-    PRIMARY KEY (device_instance_id, devices_raw_id),
-    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE,
+    PRIMARY KEY (device_group_id, devices_raw_id),
+    FOREIGN KEY(device_group_id) REFERENCES device_groups(id) ON DELETE CASCADE,
     FOREIGN KEY(devices_raw_id) REFERENCES devices_raw(id) ON DELETE CASCADE
 );
 

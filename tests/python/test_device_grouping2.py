@@ -117,20 +117,20 @@ class TestDeviceGrouping2:
         # Validate outputs in SQLite
         with DatabaseSession(test_db_path, use_dict_factory=True) as conn:
             # Check edge tables (Deduplication and Hardware matching)
-            edges = conn.execute("SELECT * FROM device_instance_edges").fetchall()
+            edges = conn.execute("SELECT * FROM device_group_edges").fetchall()
             assert len(edges) >= 2
             edge_types = {e["type"] for e in edges}
             assert "Deduplication" in edge_types
             assert "Hardware" in edge_types
 
-            # Verify device_instances are created
-            instances = conn.execute("SELECT * FROM device_instances").fetchall()
-            assert len(instances) >= 2
-            inst_ids = {i["id"] for i in instances}
+            # Verify device_groups are created
+            groups = conn.execute("SELECT * FROM device_groups").fetchall()
+            assert len(groups) >= 2
+            inst_ids = {i["id"] for i in groups}
 
             # Verify mapping tables are populated
             inst_events = conn.execute(
-                "SELECT * FROM device_instance_events"
+                "SELECT * FROM device_group_events"
             ).fetchall()
             assert (
                 len(inst_events) >= 3
@@ -139,5 +139,5 @@ class TestDeviceGrouping2:
     # test_multi_upload_order_independence was removed: it verified that
     # cross-upload device-profile merging was order-independent, but that
     # behavior no longer exists now that device profile computation
-    # (device_profiles_v2 / device_profile_instances) was deprecated and
+    # (device_profiles_v2 / device_profile_groups) was deprecated and
     # removed along with the underlying tables.

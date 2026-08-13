@@ -27,7 +27,7 @@ export async function searchEvents(queryString = '', filter = {}) {
   /* Builds WHERE/ORDER/PAGINATION, batch-resolves file refs and raw_data line numbers, returns Elasticsearch-shaped {_id, _index, _source} hit objects. */
   const db = await getDB();
   
-  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'di.model', 'die.device_instance_id', 'u.platform'];
+  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'dg.model', 'dge.device_group_id', 'u.platform'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
@@ -51,12 +51,12 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.starred,
       u.given_name AS data_export_name,
       u.platform AS platform,
-      di.model AS device_model,
-      die.device_instance_id
+      dg.model AS device_model,
+      dge.device_group_id
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${whereClause}
     ${orderClause}
     ${paginationClause}
@@ -320,7 +320,7 @@ export async function getIPAddresses() {
 }
 
 async function _getEventsTotalCount(db, whereClause, whereParams) {
-  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN device_instance_events die ON e.id = die.event_id LEFT JOIN device_instances di ON die.device_instance_id = di.id ${whereClause}`;
+  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN device_group_events dge ON e.id = dge.event_id LEFT JOIN device_groups dg ON dge.device_group_id = dg.id ${whereClause}`;
   const result = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
@@ -334,8 +334,8 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
     SELECT e.upload_id, COUNT(*) as count 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${whereClause}
     GROUP BY e.upload_id
   `;
@@ -360,8 +360,8 @@ async function _getEventsCountPerEventType(db, whereClause, whereParams) {
     SELECT e.event_type_msg, COUNT(*) as count 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${combinedWhere}
     GROUP BY e.event_type_msg
   `;
@@ -385,8 +385,8 @@ async function _getEventsCountPerIPAddress(db, whereClause, whereParams) {
     SELECT e.attributes 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${combinedWhere}
   `;
   const rows = await db.exec(sql, {
@@ -416,7 +416,7 @@ async function _getEventsCountPerTagOrLabel(db, filter, queryString) {
     SELECT e.tags, e.labels 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
     ${whereClause}
   `;
   const rows = await db.exec(sql, {

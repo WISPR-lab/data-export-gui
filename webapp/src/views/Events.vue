@@ -342,7 +342,7 @@ export default {
       // 1. Text Search Bar (q=)
       if (query.q !== undefined) {
         let qStr = query.q || '';
-        const match = qStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+        const match = qStr.match(/^(client_session_id|device_group_id|device_serial_number|client_ip):"?([^"]+)"?$/);
         if (match) {
           this.addQueryChip(match[1], match[2], true);
           if (this.currentQueryString !== '') {
