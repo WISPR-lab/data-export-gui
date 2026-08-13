@@ -3,8 +3,8 @@
 # This module clusters raw telemetry records (events and devices_raw) and their computed linkage edges
 # (deduplication, static IDs, and version upgrades) using a Union-Find algorithm.
 #
-# The resulting connected components serve as heuristic groupings (represented by DeviceInstance objects).
-# These represent a best-effort attempt to aggregate events associated with the same logical device instance,
+# The resulting connected components serve as heuristic groupings (represented by DeviceGroup objects).
+# These represent a best-effort attempt to aggregate events associated with the same logical device group,
 # though they may over-merge or under-merge records depending on the confidence of the computed edges.
 #
 # Chronological order is maintained by sorting the DataFrame by 'timestamp' during initialization.
@@ -12,7 +12,7 @@
 #
 # Relationship Hierarchy:
 #
-#          [ Device Instance A ]        [ Device Instance B ]
+#          [ Device group A ]        [ Device group B ]
 #             (Client: Google)             (Client: Facebook)
 #              /          \                 /          \
 #             /            \               /            \
@@ -26,12 +26,12 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 
-class DeviceInstance:
+class DeviceGroup:
     # Abstractly, this represents a represents a single logical device sequence over time.
     # It is our best-effort reconstruction of a single physical device's timeline based on the computed database linkages.
     #
     # Concretely, it  wraps a Pandas  DataFrame  containing the subset of events and raw device rows
-    # associated with that cluster and calculates aggregations over it that the DB can reference.
+    # associated with that group/cluster and calculates aggregations over it that the DB can reference.
     def __init__(self, root_id: str, df: pd.DataFrame):
         self.root_id = root_id
         self.df = df.sort_values(by="timestamp")
@@ -102,8 +102,8 @@ class DeviceInstance:
     def _evaluate_apple_masking(self) -> Optional[int]:
         # Apple's Safari browser intentionally masks device hardware details within the User Agent string
         # to prevent browser fingerprint tracking (e.g. reporting a generic 'Macintosh' with no specific macOS
-        # version or 'iPhone' with no specific model version). This function flags instances where this privacy
-        # masking is occurring to inform downstream clustering.
+        # version or 'iPhone' with no specific model version). This function flags groups where this privacy
+        # masking is occurring to inform downstream grouping/clustering.
         os_val = (
             (self._find_best_attribute("attr__norm__os_name") or "").strip().lower()
         )
@@ -143,7 +143,7 @@ class DeviceInstance:
         return 1
 
     def export_as_dict(self) -> dict:
-        # Serializes the instance data into a flat database-compatible dictionary, retrieving the latest versions/IPs
+        # Serializes the group data into a flat database-compatible dictionary, retrieving the latest versions/IPs
         # by selecting the last elements of the chronologically-sorted telemetry arrays.
         return {
             "id": self.root_id,
@@ -175,10 +175,10 @@ class DeviceInstance:
         }
 
 
-class DeviceInstanceGraph:
+class DeviceGroupGraph:
     # This is really just a memory utility class that takes the raw vertices and edges tables and actually computes
-    # the subgraphs, which are the Device "instances" as seen before.
-    # The main algorithmic work happens in get_instances(), which runs a connected components algorithm (via Union-Find).
+    # the subgraphs, which are the Device "groups" as seen before.
+    # The main algorithmic work happens in get_groups(), which runs a connected components algorithm (via Union-Find).
     def __init__(self, vertices_df: pd.DataFrame, edges_df: pd.DataFrame):
         self.vertices_df = self.vertices_df = vertices_df.copy()
         self.edges_df = edges_df.copy()
@@ -195,10 +195,10 @@ class DeviceInstanceGraph:
         if root_x != root_y:
             self._parent[root_x] = root_y
 
-    def get_instances(self) -> List[DeviceInstance]:
+    def get_groups(self) -> List[DeviceGroup]:
         # Runs a connected components algorithm to merge event and device records into subgraphs based on the
         # linkages we created (deterministic hardware/session IDs, metadata deduplication, and client/OS upgrades).
-        # The result is a list of DeviceInstance containers, each holding its respective rows.
+        # The result is a list of DeviceGroup containers, each holding its respective rows.
         for vid in self._parent:
             self._parent[vid] = vid
 
@@ -219,11 +219,11 @@ class DeviceInstanceGraph:
         root_map = {vid: self._find(vid) for vid in self._parent}
         self.vertices_df["component_root"] = self.vertices_df["id"].map(root_map)
 
-        instances = []
+        groups = []
         for root_id, group_df in self.vertices_df.groupby("component_root"):
-            instances.append(DeviceInstance(root_id, group_df))
+            groups.append(DeviceGroup(root_id, group_df))
 
-        return instances
+        return groups
 
     @staticmethod
     def format_initial(

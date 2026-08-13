@@ -21,8 +21,6 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import { getLogger } from '@/utils/logger';
 
-const logger = getLogger('Router');
-
 import Home from './views/Home.vue'
 import Events from './views/Events.vue'
 import Project from './views/Project.vue'
@@ -35,6 +33,8 @@ import EventBus from './event-bus.js'
 import store from './store.js'
 import DB from './database/index.js'
 import demoDatabaseLoader from '@/demo/DemoDatabaseLoader.js'
+
+const logger = getLogger('Router');
 
 Vue.use(VueRouter)
 

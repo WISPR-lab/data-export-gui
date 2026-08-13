@@ -15,11 +15,13 @@ limitations under the License.
 -->
 <template>
   <v-card min-width="500px" class="mx-auto" max-width="500px" min-height="260px">
-    <v-btn class="float-right mr-1 mt-1" icon @click="$emit('close')">
-      <v-icon title="Close dialog">mdi-close</v-icon>
-    </v-btn>
     <v-card-text>
-      <strong>Quick tags</strong>
+      <div class="d-flex justify-space-between align-center">
+        <strong>Quick tags</strong>
+        <v-btn icon small @click="$emit('close')">
+          <v-icon title="Close dialog">mdi-close</v-icon>
+        </v-btn>
+      </div>
       <v-chip-group>
         <v-chip
           v-for="tag in quickTags"
@@ -91,23 +93,54 @@ limitations under the License.
 
 <script>
 import DB from '@/database/index.js'
+import { QUICK_TAGS, getQuickTag } from './EventTags.vue'
 
 export default {
-  props: ['events'],
+  props: {
+    events: {
+      type: Array,
+      default: () => []
+    },
+    showPropagateOption: {
+      type: Boolean,
+      default: false
+    },
+    eventCount: {
+      type: Number,
+      default: 0
+    },
+    eventsQuery: {
+      type: String,
+      default: ''
+    },
+    // (id, tags) => Promise; defaults to DB.updateEventTags
+    persist: {
+      type: Function,
+      default: null
+    },
+    // true when persist doesn't touch the events index (e.g. device tags) - skips the left-panel count bump
+    silent: {
+      type: Boolean,
+      default: false
+    }
+  },
   data() {
     return {
       listItems: [],
       selectedTags: null,
-      // TODO: Refactor this into a configurable option
-      quickTags: [
-        { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-      ],
+      propagateToEvents: false,
+      quickTags: QUICK_TAGS,
       search: null,
     }
   },
   computed: {
+    shouldShowCheckbox() {
+      return this.showPropagateOption && this.eventCount > 0;
+    },
+    checkboxLabel() {
+      if (this.eventCount === 1) return 'Apply tag to 1 matching event';
+      return `Apply tag to all ${this.eventCount} matching events`;
+    },
     project() {
       return this.$store.state.project
     },
@@ -115,27 +148,30 @@ export default {
       return this.$store.state.tags.map((tag) => tag.tag)
     },
     event() {
-      return this.events[0];
+      return (this.events && this.events.length > 0) ? this.events[0] : null;
     },
     assignedTags() {
       let tags = new Set();
-      for (const event of this.events) {
-        if (event._source.tags && Array.isArray(event._source.tags)) {
-          event._source.tags.forEach(e => tags.add(e))
+      if (this.events && Array.isArray(this.events)) {
+        for (const event of this.events) {
+          if (event && event._source && event._source.tags && Array.isArray(event._source.tags)) {
+            event._source.tags.forEach(e => tags.add(e))
+          }
         }
       }
       return [...tags];
     },
     tagsAssignedToAll() {
+      if (!this.events || this.events.length === 0) return [];
       return this.quickTags.filter((el) =>
         this.events.every(ev => {
-          const tags = ev._source.tags || []
+          const tags = (ev && ev._source && ev._source.tags) || []
           return tags.includes(el.tag)
         })
       ).map(t => t.tag);
     },
     customTags() {
-      if (!this.events.every(ev => !ev._source.tags)) return []
+      if (this.events && this.events.length > 0 && !this.events.every(ev => !ev || !ev._source || !ev._source.tags)) return []
       // returns all custom tags available for a sketch without the ones that are already applied to an event
       let customTags = this.tags.filter((tag) => !this.getQuickTag(tag))
       customTags = customTags.filter((tag) => !this.assignedTags.includes(tag))
@@ -144,43 +180,52 @@ export default {
     },
   },
   methods: {
-    getQuickTag(tag) {
-      return this.quickTags.find((el) => el.tag === tag)
+    getQuickTag,
+    persistTags(id, tags) {
+      return this.persist ? this.persist(id, tags) : DB.updateEventTags(id, tags)
     },
     async removeTags(tag) {
-      for (const event of this.events) {
-        if (event._source && event._source.tags) {
-          const newTags = event._source.tags.filter(t => t !== tag)
-          if (newTags.length !== event._source.tags.length) {
-            await DB.updateEventTags(event._id, newTags)
-            event._source.tags = newTags
+      if (this.events && this.events.length > 0) {
+        for (const event of this.events) {
+          if (event && event._source && event._source.tags) {
+            const newTags = event._source.tags.filter(t => t !== tag)
+            if (newTags.length !== event._source.tags.length) {
+              await this.persistTags(event._id, newTags)
+              event._source.tags = newTags
+            }
           }
         }
       }
-      this.$store.dispatch('updateEventLabels', { label: tag, num: -1 })
+      if (!this.silent) this.$store.dispatch('updateEventLabels', { label: tag, num: -1 })
+      this.$emit('tag-removed', tag)
     },
     async addTags(tagToAdd) {
       if (!tagToAdd) return
       
       const tagList = Array.isArray(tagToAdd) ? tagToAdd : [tagToAdd]
       
-      for (const event of this.events) {
-        const source = event._source || {}
-        const currentTags = source.tags || []
-        // Merge unique
-        const newTags = [...new Set([...currentTags, ...tagList])]
-        try {
-          await DB.updateEventTags(event._id, newTags)
-          // Update local state
-          if (!event._source) event._source = {}
-          event._source.tags = newTags
-        } catch (e) {
-          console.error(e)
+      if (this.events && this.events.length > 0) {
+        for (const event of this.events) {
+          if (!event) continue;
+          const source = event._source || {}
+          const currentTags = source.tags || []
+          // Merge unique
+          const newTags = [...new Set([...currentTags, ...tagList])]
+          try {
+            await this.persistTags(event._id, newTags)
+            // Update local state
+            if (!event._source) event._source = {}
+            event._source.tags = newTags
+          } catch (e) {
+            console.error(e)
+          }
         }
       }
+
       this.$emit('close')
-      this.$store.dispatch('updateEventLabels', { label: tagList[0], num: 1 })
-      
+      this.$emit('tag-added', tagList[0])
+      if (!this.silent) this.$store.dispatch('updateEventLabels', { label: tagList[0], num: 1 })
+
       if (this.$store.state.demoMode) {
         const EventBus = require('@/event-bus.js').default
         EventBus.$emit('demo:action', 'tag-added')

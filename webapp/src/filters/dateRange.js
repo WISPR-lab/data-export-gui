@@ -1,17 +1,24 @@
 // added for WISPR-lab/data-export-gui
-import dayjs from '@/plugins/dayjs'
+import dayjs from '@/plugins/dayjs';
 
-// Formats a [firstVal, lastVal] pair as a compact date range string.
-// Examples:
-//   same day      → "Aug 24, 2025"
-//   same year     → "Mar 6 – Aug 7, 2025"
-//   different year → "Dec 1, 2024 – Jan 15, 2025"
+function normalize(val) {
+  if (val === null || val === undefined || val === '') return null;
+  var num = Number(val);
+  if (!isNaN(num)) {
+    if (num < 10000000000) return num * 1000;
+    return num;
+  }
+  return val;
+}
+
 export default {
   name: 'dateRange',
   filter: function (vals) {
     if (!Array.isArray(vals) || vals.length < 2) return '';
-    var first = vals[0] ? dayjs.utc(vals[0]) : null;
-    var last  = vals[1] ? dayjs.utc(vals[1]) : null;
+    var normFirst = normalize(vals[0]);
+    var normLast  = normalize(vals[1]);
+    var first = normFirst ? dayjs.utc(normFirst) : null;
+    var last  = normLast  ? dayjs.utc(normLast)  : null;
 
     if (first && !first.isValid()) first = null;
     if (last  && !last.isValid())  last  = null;

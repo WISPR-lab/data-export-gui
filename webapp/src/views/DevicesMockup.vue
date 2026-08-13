@@ -11,7 +11,7 @@
       :key="'platform-' + idx"
       :platform="platform"
       :page-size="PAGE_SIZE"
-      @update:clusterPage="platform.clusterPage = $event"
+      @update:groupPage="platform.groupPage = $event"
     />
   </v-container>
 </template>
@@ -20,7 +20,7 @@
 import EventBus from '@/event-bus.js';
 import PlatformCard from '@/components/Devices_v2/PlatformCard.vue';
 import { getResolvedSessionsRegistrations } from '@/database/queries/resolved_sessions_registrations.js';
-import { getUnlinkedClusters } from '@/database/queries/devices_v2.js';
+import { getUnlinkedGroups } from '@/database/queries/devices_v2.js';
 import { getDB } from '@/database/index.js';
 import { hexColor } from '@/utils/hex.js';
 import { getUASummary } from '@/database/queries/ua_summary.js';
@@ -58,28 +58,24 @@ var SECTION_DEFS = [
     key: 'session',
     label: 'Sessions',
     description: 'Each entry is one recorded login. Many platforms assign a unique ID per session, so the same phone or laptop can appear multiple times if you\'ve logged in and out.',
-    detailLabel: 'Details',
     sortByGroup: true
   },
   {
     key: 'app_registration',
     label: 'App Installs',
     description: 'Records of individual app installations registered with this platform. Each install of the app on a device gets its own unique ID — used for push notifications and device-level tracking. A single phone with both the main app and a secondary app would appear as two separate entries.',
-    detailLabel: 'Details',
     sortByGroup: false
   },
   {
     key: 'hardware_registration',
     label: 'OS-Linked Devices',
     description: 'Physical devices connected to this account at the operating system level — like a phone signed in through its system account settings. These often include hardware identifiers like serial numbers or IMEIs.',
-    detailLabel: 'Details',
     sortByGroup: false
   },
   {
     key: 'platform_inferred_device',
     label: 'Devices Identified by This Platform',
-    description: 'Devices this platform directly recognizes using their own methods — persistent cookies, hardware IDs, or server-side fingerprinting. More reliable than our own analysis since they have access to signals we don\'t.',
-    detailLabel: 'Attributes',
+    description: 'This platform recognizes the following logged-in devices as unique, but does not specify whether each is a session or a device registration, but they are likely to be unique devices due to the platform\'s internal fingerprinting mechanisms.',
     sortByGroup: false
   }
 ];
@@ -109,7 +105,7 @@ function buildEntry(s) {
   return {
     id: s.id,
     entity_type: s.entity_type,
-    instance_id: s.instance_id || null,
+    group_id: s.group_id || null,
     title: s.model_name,
     client_name: clientLabel,
     icon: osIcon(s),
@@ -121,30 +117,32 @@ function buildEntry(s) {
     has_passkey: s.has_passkey,
     event_count: s.event_count,
     events_query: s.events_query,
-    formatted_attributes: formattedAttrs
+    formatted_attributes: formattedAttrs,
+    tags: Array.isArray(s.tags) ? s.tags : []
   };
 }
 
 function sortByGroup(entries) {
   var instMax = {};
   entries.forEach(function(e) {
-    if (!e.instance_id) return;
-    if (!instMax[e.instance_id] || e.lastSeen > instMax[e.instance_id]) {
-      instMax[e.instance_id] = e.lastSeen || '';
+    if (!e.group_id) return;
+    var maxVal = e.lastSeen || e.firstSeen || '';
+    if (!instMax[e.group_id] || maxVal > instMax[e.group_id]) {
+      instMax[e.group_id] = maxVal;
     }
   });
   return entries.slice().sort(function(a, b) {
-    var aKey = a.instance_id ? (instMax[a.instance_id] || '') : (a.lastSeen || '');
-    var bKey = b.instance_id ? (instMax[b.instance_id] || '') : (b.lastSeen || '');
+    var aKey = a.group_id ? (instMax[a.group_id] || '') : (a.lastSeen || a.firstSeen || '');
+    var bKey = b.group_id ? (instMax[b.group_id] || '') : (b.lastSeen || b.firstSeen || '');
     if (aKey !== bKey) return aKey < bKey ? 1 : -1;
-    var aL = a.lastSeen || ''; var bL = b.lastSeen || '';
+    var aL = a.lastSeen || a.firstSeen || ''; var bL = b.lastSeen || b.firstSeen || '';
     return aL < bL ? 1 : aL > bL ? -1 : 0;
   });
 }
 
 function sortByLastSeen(entries) {
   return entries.slice().sort(function(a, b) {
-    var aL = a.lastSeen || ''; var bL = b.lastSeen || '';
+    var aL = a.lastSeen || a.firstSeen || ''; var bL = b.lastSeen || b.firstSeen || '';
     if (!aL && !bL) return 0;
     if (!aL) return 1;
     if (!bL) return -1;
@@ -185,7 +183,7 @@ export default {
         var db = await getDB();
         var uploads = await db.exec('SELECT * FROM uploads', { returnValue: 'resultRows', rowMode: 'object' });
         var states = await getResolvedSessionsRegistrations();
-        var allClusters = await getUnlinkedClusters();
+        var allGroups = await getUnlinkedGroups();
 
         this.platforms = uploads.map(function(upload) {
           var key = (upload.platform || '').toLowerCase();
@@ -198,7 +196,7 @@ export default {
 
           var sections = SECTION_DEFS.map(function(def) { return buildSection(def, uploadEntries); });
           var totalGroundTruth = sections.reduce(function(sum, s) { return sum + s.entries.length; }, 0);
-          var clusters = allClusters.filter(function(c) { return c.upload_id === upload.id; });
+          var groups = allGroups.filter(function(c) { return c.upload_id === upload.id; });
 
           return {
             displayName: meta.displayName,
@@ -207,8 +205,8 @@ export default {
             color: dbColor || meta.color,
             sections: sections,
             totalGroundTruth: totalGroundTruth,
-            clusters: clusters,
-            clusterPage: 1
+            groups: groups,
+            groupPage: 1
           };
         });
 

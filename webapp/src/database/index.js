@@ -4,6 +4,7 @@ import * as events from './queries/events.js';
 import * as uploads from './queries/uploads.js';
 import * as comments from './queries/comments.js';
 import * as metadata from './queries/metadata.js';
+import * as devicesV2 from './queries/devices_v2.js';
 import { loadConfig } from '../utils/config.js';
 import { getLogger } from '../utils/logger.js';
 import EventBus from '../event-bus.js';
@@ -210,7 +211,9 @@ export default {
   removeLabelEvent: events.removeLabelEvent,
   updateEventTags: events.updateEventTags,
   clearAllTags: events.clearAllTags,
-  
+  addTagToEventsQuery: events.addTagToEventsQuery,
+  updateDeviceTags: devicesV2.updateDeviceTags,
+
   getUploads: uploads.getUploads,
   getUploadById: uploads.getUploadById,
   getUploadedFiles: uploads.getUploadedFiles,

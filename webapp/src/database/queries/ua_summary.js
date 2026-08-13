@@ -44,15 +44,15 @@ function formatAppService(serviceName) {
   return hasAppSuffix ? serviceName : `${serviceName} App`;
 }
 
-export function getUASummary(deviceInstances) {
-  if (!deviceInstances || deviceInstances.length === 0) {
+export function getUASummary(deviceGroups) {
+  if (!deviceGroups || deviceGroups.length === 0) {
     return [];
   }
 
   const uniqueSummaryItems = {};
 
-  deviceInstances.forEach(instance => {
-    const rawName = instance.client_name || '';
+  deviceGroups.forEach(group => {
+    const rawName = group.client_name || '';
     let primary = rawName;
     let secondary = '';
     
@@ -62,8 +62,8 @@ export function getUASummary(deviceInstances) {
       secondary = parts[1].trim();
     }
 
-    const platform = (instance.platform || '').trim();
-    const osType = (instance.os_type || '').toLowerCase();
+    const platform = (group.platform || '').trim();
+    const osType = (group.os_type || '').toLowerCase();
     const isMobile = ['ios', 'android'].includes(osType);
 
     const cleanPrimary = capitalize(primary);
@@ -126,7 +126,7 @@ export function getUASummary(deviceInstances) {
 
     const isUnknown = !platform || platform.toLowerCase() === 'unknown';
 
-    const color = instance.upload_color;
+    const color = group.upload_color;
     const displayPlatform = capitalize(platform);
     const key = `${displayPlatform}-${color}`;
     if (!uniqueSummaryItems[key]) {

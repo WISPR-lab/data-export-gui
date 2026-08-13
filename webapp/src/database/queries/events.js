@@ -27,7 +27,7 @@ export async function searchEvents(queryString = '', filter = {}) {
   /* Builds WHERE/ORDER/PAGINATION, batch-resolves file refs and raw_data line numbers, returns Elasticsearch-shaped {_id, _index, _source} hit objects. */
   const db = await getDB();
   
-  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'di.model', 'die.device_instance_id', 'u.platform'];
+  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'dg.model', 'dge.device_group_id', 'u.platform'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
@@ -51,12 +51,12 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.starred,
       u.given_name AS data_export_name,
       u.platform AS platform,
-      di.model AS device_model,
-      die.device_instance_id
+      dg.model AS device_model,
+      dge.device_group_id
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${whereClause}
     ${orderClause}
     ${paginationClause}
@@ -320,7 +320,7 @@ export async function getIPAddresses() {
 }
 
 async function _getEventsTotalCount(db, whereClause, whereParams) {
-  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN device_instance_events die ON e.id = die.event_id LEFT JOIN device_instances di ON die.device_instance_id = di.id ${whereClause}`;
+  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN device_group_events dge ON e.id = dge.event_id LEFT JOIN device_groups dg ON dge.device_group_id = dg.id ${whereClause}`;
   const result = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
@@ -334,8 +334,8 @@ async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
     SELECT e.upload_id, COUNT(*) as count 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${whereClause}
     GROUP BY e.upload_id
   `;
@@ -360,8 +360,8 @@ async function _getEventsCountPerEventType(db, whereClause, whereParams) {
     SELECT e.event_type_msg, COUNT(*) as count 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${combinedWhere}
     GROUP BY e.event_type_msg
   `;
@@ -385,8 +385,8 @@ async function _getEventsCountPerIPAddress(db, whereClause, whereParams) {
     SELECT e.attributes 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
-    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
+    LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${combinedWhere}
   `;
   const rows = await db.exec(sql, {
@@ -416,7 +416,7 @@ async function _getEventsCountPerTagOrLabel(db, filter, queryString) {
     SELECT e.tags, e.labels 
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_instance_events die ON e.id = die.event_id
+    LEFT JOIN device_group_events dge ON e.id = dge.event_id
     ${whereClause}
   `;
   const rows = await db.exec(sql, {
@@ -504,6 +504,7 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
     line_numbers: lineNumbers,
     sources,
     device_model: row.device_model || '',
+    ...(row.device_group_id ? { device_group_id: row.device_group_id } : {})
   };
   
   return {
@@ -608,5 +609,64 @@ export async function clearAllTags() {
   const db = await getDB();
   logger.debug('[Database] Clearing all tags from events');
   await db.exec("UPDATE events SET tags = '[]'");
+}
+
+export async function addTagToEventsQuery(eventsQuery, tag, remove = false) {
+  if (!eventsQuery || !tag) return 0;
+  const db = await getDB();
+  let eventsToUpdate = [];
+
+  if (eventsQuery.indexOf('client_session_id:') !== -1) {
+    var sid = eventsQuery.replace('client_session_id:', '').replace(/"/g, '');
+    var pattern = String(sid).replace(/\*/g, '%');
+    eventsToUpdate = await db.exec(
+      `SELECT id, tags FROM events WHERE json_extract(attributes, '$.client_session_id') LIKE ?`,
+      { bind: [pattern], returnValue: 'resultRows', rowMode: 'object' }
+    );
+  } else if (eventsQuery.indexOf('device_serial_number:') !== -1) {
+    var serial = eventsQuery.replace('device_serial_number:', '').replace(/"/g, '');
+    var pattern2 = String(serial).replace(/\*/g, '%');
+    eventsToUpdate = await db.exec(
+      `SELECT id, tags FROM events WHERE json_extract(attributes, '$.device_serial_number') LIKE ?`,
+      { bind: [pattern2], returnValue: 'resultRows', rowMode: 'object' }
+    );
+  } else if (eventsQuery.indexOf('device_group_id:') !== -1) {
+    var groupId = eventsQuery.replace('device_group_id:', '').replace(/"/g, '');
+    eventsToUpdate = await db.exec(
+      `SELECT e.id, e.tags FROM events e JOIN device_group_events dge ON e.id = dge.event_id WHERE dge.device_group_id = ?`,
+      { bind: [groupId], returnValue: 'resultRows', rowMode: 'object' }
+    );
+  } else if (eventsQuery.indexOf('client_ip:') !== -1) {
+    var ip = eventsQuery.replace('client_ip:', '').replace(/"/g, '');
+    eventsToUpdate = await db.exec(
+      `SELECT id, tags FROM events WHERE json_extract(attributes, '$.client_ip') = ?`,
+      { bind: [ip], returnValue: 'resultRows', rowMode: 'object' }
+    );
+  }
+
+  let changedCount = 0;
+  if (eventsToUpdate && eventsToUpdate.length > 0) {
+    for (const ev of eventsToUpdate) {
+      let currentTags = [];
+      try {
+        currentTags = typeof ev.tags === 'string' ? JSON.parse(ev.tags || '[]') : (ev.tags || []);
+      } catch (e) {
+        currentTags = [];
+      }
+      let newTags = [...currentTags];
+      if (remove) {
+        newTags = newTags.filter(t => t !== tag);
+      } else {
+        if (!newTags.includes(tag)) {
+          newTags.push(tag);
+        }
+      }
+      if (JSON.stringify(newTags) !== JSON.stringify(currentTags)) {
+        await db.exec('UPDATE events SET tags = ? WHERE id = ?', { bind: [JSON.stringify(newTags), ev.id] });
+        changedCount++;
+      }
+    }
+  }
+  return changedCount;
 }
 

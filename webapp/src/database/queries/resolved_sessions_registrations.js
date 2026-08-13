@@ -14,22 +14,33 @@ function nullTs(val) {
 
 var EPOCH_ZERO_KEYS = ['entity_first_seen_timestamp', 'entity_last_seen_timestamp', 'timestamp'];
 
+function parseTags(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (!raw) return [];
+  try {
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
 export async function getResolvedSessionsRegistrations() {
   const db = await getDB();
 
-  // Subquery pulls the device_instance_id for sessions via their client_session_id →
-  // events → device_instance_events join. LIMIT 1 handles the case where multiple
-  // events for the same session map to the same instance.
+  // Subquery pulls the device_group_id for sessions via their client_session_id →
+  // events → device_group_events join. LIMIT 1 handles the case where multiple
+  // events for the same session map to the same group.
   const sql = `
     SELECT rsr.*,
-      (SELECT die.device_instance_id
+      (SELECT die.device_group_id
        FROM events e
-       JOIN device_instance_events die ON e.id = die.event_id
+       JOIN device_group_events die ON e.id = die.event_id
        WHERE e.upload_id = rsr.upload_id
          AND json_extract(rsr.attributes, '$.client_session_id') IS NOT NULL
          AND json_extract(e.attributes, '$.client_session_id')
              = json_extract(rsr.attributes, '$.client_session_id')
-       LIMIT 1) AS instance_id,
+       LIMIT 1) AS group_id,
       u.color  AS upload_color,
       u.platform AS upload_platform
     FROM resolved_sessions_registrations rsr
@@ -107,7 +118,7 @@ export async function getResolvedSessionsRegistrations() {
       os_name: row.os_name,
       os_version: row.os_version,
       os_type: row.os_type,
-      instance_id: row.instance_id || null,
+      group_id: row.group_id || null,
       is_reduced_ua: !!row.is_reduced_ua,
       user_agent_original: attrs['user_agent_original'] || null,
       has_trusted_cookie: !!row.has_trusted_cookie,
@@ -118,7 +129,8 @@ export async function getResolvedSessionsRegistrations() {
       platform: row.upload_platform,
       attributes: attrs,
       events_query: eventsQuery,
-      event_count: eventCount
+      event_count: eventCount,
+      tags: parseTags(row.tags)
     });
   }
 

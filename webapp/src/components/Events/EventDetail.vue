@@ -19,7 +19,7 @@ limitations under the License.
     <v-row>
       <v-col :cols="event.showComments ? 8 : 0">
         <v-card outlined height="100%">
-          <v-simple-table dense>
+          <v-simple-table dense style="table-layout: fixed; width: 100%;">
             <template v-slot:default>
               <tbody>
                 <tr
@@ -73,7 +73,7 @@ limitations under the License.
                   </td>
 
                   <!-- Event field name -->
-                  <td>
+                  <td class="text-no-wrap font-weight-bold">
                     {{ formatAttributeLabel(key) }}
                   </td>
 
@@ -208,7 +208,8 @@ export default {
     fullEventFiltered() {
       const source = this.event._source || {}
       return Object.keys(source)
-        .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && !key.startsWith('norm__') && source[key] !== '')
+        .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && source[key] !== '')
+        .sort((a, b) => formatAttributeLabel(a).localeCompare(formatAttributeLabel(b)))
         .reduce((obj, key) => {
           obj[key] = source[key]
           return obj

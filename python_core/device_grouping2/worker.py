@@ -5,7 +5,7 @@ import pandas as pd
 from db_session import DatabaseSession
 from . import deterministic_ids
 from . import client_os_upgrades
-from .instances import DeviceInstanceGraph
+from .graph import DeviceGroupGraph
 from .resolved_sessions_registrations import resolve
 
 from python_core.logger import get_logger
@@ -31,14 +31,14 @@ def group(upload_id: str, db_path: str = None, conn=None) -> None:
         if events_df.empty and devices_df.empty:
             return
 
-        # df = DeviceInstanceGraph.format_initial(events_df, devices_df)
-        df = DeviceInstanceGraph.format_initial(events_df, devices_df.head(0)) # removing devices_raw for now
+        # df = DeviceGroupGraph.format_initial(events_df, devices_df)
+        df = DeviceGroupGraph.format_initial(events_df, devices_df.head(0)) # removing devices_raw for now
 
         identity_edges = deterministic_ids.get_edges(df)
         if not identity_edges.empty:
             identity_edges["upload_id"] = upload_id
             conn.executemany(
-                "INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance, upload_id) VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO device_group_edges (id_a, id_b, type, provenance, upload_id) VALUES (?, ?, ?, ?, ?)",
                 identity_edges[
                     ["id_a", "id_b", "type", "provenance", "upload_id"]
                 ].values.tolist(),
@@ -48,17 +48,17 @@ def group(upload_id: str, db_path: str = None, conn=None) -> None:
         if not upgrade_edges.empty:
             upgrade_edges["upload_id"] = upload_id
             conn.executemany(
-                "INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance, upload_id) VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO device_group_edges (id_a, id_b, type, provenance, upload_id) VALUES (?, ?, ?, ?, ?)",
                 upgrade_edges[
                     ["id_a", "id_b", "type", "provenance", "upload_id"]
                 ].values.tolist(),
             )
         conn.commit()
 
-        instances = _build_device_instances(conn, df)
+        groups = _build_device_groups(conn, df)
 
         ts = datetime.now(timezone.utc).timestamp()
-        _write_device_instances(conn, instances, ts)
+        _write_device_groups(conn, groups, ts)
 
         conn.execute("DELETE FROM resolved_sessions_registrations WHERE upload_id = ?", (upload_id,))
         raw_rows = conn.execute(
@@ -100,7 +100,7 @@ def _deduplicate_and_fetch_inputs(
     conn, upload_id: str
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     conn.execute(
-        """INSERT OR IGNORE INTO device_instance_edges (id_a, id_b, type, provenance, upload_id)
+        """INSERT OR IGNORE INTO device_group_edges (id_a, id_b, type, provenance, upload_id)
            WITH Ranked AS (
                SELECT id, MIN(id) OVER(PARTITION BY attributes, timestamp) as id_a
                FROM events WHERE upload_id = ? AND treat_as_auth_device = 1
@@ -138,38 +138,38 @@ def _deduplicate_and_fetch_inputs(
     return pd.DataFrame(events_rows), pd.DataFrame(devices_rows)
 
 
-def _build_device_instances(conn, df: pd.DataFrame) -> list:
+def _build_device_groups(conn, df: pd.DataFrame) -> list:
     vertex_ids = df["id"].tolist()
     placeholders = ",".join("?" for _ in vertex_ids)
 
     edges_rows = conn.execute(
-        f"""SELECT id_a, id_b, type FROM device_instance_edges 
+        f"""SELECT id_a, id_b, type FROM device_group_edges 
             WHERE id_a IN ({placeholders}) OR id_b IN ({placeholders})""",
         vertex_ids + vertex_ids,
     ).fetchall()
 
-    graph = DeviceInstanceGraph(df, pd.DataFrame(edges_rows))
-    return graph.get_instances()
+    graph = DeviceGroupGraph(df, pd.DataFrame(edges_rows))
+    return graph.get_groups()
 
 
-def _write_device_instances(conn, instances: list, ts: float) -> None:
-    instance_ids = [inst.root_id for inst in instances]
-    if not instance_ids:
+def _write_device_groups(conn, groups: list, ts: float) -> None:
+    group_ids = [group.root_id for group in groups]
+    if not group_ids:
         return
 
-    inst_placeholders = ",".join("?" for _ in instance_ids)
+    inst_placeholders = ",".join("?" for _ in group_ids)
     conn.execute(
-        f"DELETE FROM device_instances WHERE id IN ({inst_placeholders})", instance_ids
+        f"DELETE FROM device_groups WHERE id IN ({inst_placeholders})", group_ids
     )
 
-    for inst in instances:
-        export_data = inst.export_as_dict()
+    for group in groups:
+        export_data = group.export_as_dict()
         export_data["created_at"] = ts
         for list_col in ["os_versions", "client_versions", "client_ips", "locations"]:
             export_data[list_col] = json.dumps(export_data[list_col])
 
         conn.execute(
-            """INSERT INTO device_instances 
+            """INSERT INTO device_groups 
                (id, upload_id, platform, manufacturer, model, client_name, os_name, os_type, apple_masking, 
                 first_seen, last_seen, last_seen_dt, event_count, latest_os_version, latest_client_version, 
                 latest_client_ip, os_versions, client_versions, client_ips, locations, created_at)
@@ -180,20 +180,20 @@ def _write_device_instances(conn, instances: list, ts: float) -> None:
         )
 
         events_mapping = [
-            (inst.root_id, vid) for vid in inst.df[inst.df["table"] == "events"]["id"]
+            (group.root_id, vid) for vid in group.df[group.df["table"] == "events"]["id"]
         ]
         if events_mapping:
             conn.executemany(
-                "INSERT OR IGNORE INTO device_instance_events (device_instance_id, event_id) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO device_group_events (device_group_id, event_id) VALUES (?, ?)",
                 events_mapping,
             )
 
         devices_mapping = [
-            (inst.root_id, vid)
-            for vid in inst.df[inst.df["table"] == "devices_raw"]["id"]
+            (group.root_id, vid)
+            for vid in group.df[group.df["table"] == "devices_raw"]["id"]
         ]
         if devices_mapping:
             conn.executemany(
-                "INSERT OR IGNORE INTO device_instance_raw_devices (device_instance_id, devices_raw_id) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO device_group_raw_devices (device_group_id, devices_raw_id) VALUES (?, ?)",
                 devices_mapping,
             )

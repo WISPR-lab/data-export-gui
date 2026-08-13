@@ -512,7 +512,7 @@ import TsEventDetail from './EventDetail.vue'
 import TsEventTagMenu from './EventTagMenu.vue'
 import EventTagDialog from './EventTagDialog.vue'
 import TsEventActionMenu from './EventActionMenu.vue'
-import TsEventTags from './EventTags.vue'
+import TsEventTags, { QUICK_TAG_CONFIG } from './EventTags.vue'
 import WelcomeCard from './WelcomeCard.vue'
 import SearchNotFoundCard from './SearchNotFoundCard.vue'
 
@@ -609,11 +609,7 @@ export default {
       saveSearchFormName: '',
       saveSearchNameRules: [(v) => !!v || 'Name is required.', (v) => (v && v.length <= 255) || 'Name is too long.'],
       selectedEventTags: [],
-      tagConfig: {
-        good: { color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-        bad: { color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        suspicious: { color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-      },
+      tagConfig: QUICK_TAG_CONFIG,
       searchInProgress: false,
       exportDialog: false,
       currentPage: 1,
