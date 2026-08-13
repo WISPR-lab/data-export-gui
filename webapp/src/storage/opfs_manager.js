@@ -239,20 +239,37 @@ export class OPFSManager {
   }
 
   async nukeAll() {
-    /* Recursively deletes everything in OPFS root and resets all instance state. */
+    // Recursively deletes everything in OPFS root and resets all instance state 
     try {
       const root = await navigator.storage.getDirectory();
       const entries = [];
       for await (const [name] of root.entries()) entries.push(name);
+
+      const failures = [];
       for (const name of entries) {
-        await root.removeEntry(name, { recursive: true });
+        try {
+          await root.removeEntry(name, { recursive: true });
+        } catch (removeErr) {
+          logger.error(`Failed to remove "${name}" during nukeAll:`, removeErr);
+          failures.push(name);
+        }
       }
+
+      const remaining = [];
+      for await (const [name] of root.entries()) remaining.push(name);
+
       this.opfsRoot = null;
       this.storageDir = null;
       this.dbFilename = null;
       this.isInitialized = false;
+
+      if (remaining.length > 0) {
+        throw new Error(
+          `OPFS nuke incomplete — ${remaining.length} entr${remaining.length === 1 ? 'y' : 'ies'} still present after wipe: ${remaining.join(', ')}`
+        );
+      }
     } catch (error) {
-      console.error('[OPFSManager] Failed to nuke OPFS:', error);
+      logger.error('Failed to nuke OPFS:', error);
       EventBus.$emit('opfsUnavailable');
       throw error;
     }
@@ -261,15 +278,13 @@ export class OPFSManager {
 
   
   async _saveFileEntry(filename, fflateFile) {
-    /* Chains fflate ondata chunks into sequential OPFS writes with a 10s stall timeout; verifies non-zero file size on disk after close. */
-    // console.log(`[OPFSManager] _saveFileEntry START: ${filename}`);
 
     let fileHandle;
     try {
       fileHandle = await this.storageDir.getFileHandle(filename, { create: true });
-      // console.log(`[OPFSManager] Got file handle for: ${filename}`);
+
     } catch (e) {
-      console.error(`[OPFSManager] getFileHandle FAILED for ${filename}:`, e);
+      logger.error(`getFileHandle FAILED for ${filename}:`, e);
       throw e;
     }
 
@@ -277,7 +292,7 @@ export class OPFSManager {
     try {
       writable = await fileHandle.createWritable();
     } catch (e) {
-      console.error(`[OPFSManager] createWritable FAILED for ${filename}:`, e);
+      logger.error(`createWritable FAILED for ${filename}:`, e);
       throw e;
     }
 
@@ -293,7 +308,7 @@ export class OPFSManager {
         timeout = setTimeout(() => {
           if (!gotFinal) {
             const msg = `[OPFSManager] TIMEOUT: ${filename} stalled (${chunkCount} chunks, ${totalBytes} bytes)`;
-            console.error(msg);
+            logger.error(msg);
             writable.close().catch(() => {});
             reject(new Error(msg));
           }

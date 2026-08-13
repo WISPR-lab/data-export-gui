@@ -45,6 +45,12 @@ Vue.config.productionTip = false
 // Boot Pyodide worker immediately so packages load in the background on any route
 getPyodideWorker()
 
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    window.location.reload()
+  }
+})
+
 new Vue({
   router,
   store,

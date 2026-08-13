@@ -46,7 +46,7 @@ limitations under the License.
 
 <script>
 import EventBus from './event-bus.js'
-import { initShutdownDetection } from '@/utils/shutdownDetection.js'
+import { initShutdownDetection, initInactivityDetection } from '@/utils/shutdownDetection.js'
 import DemoOverlay from '@/components/Demo/DemoOverlay.vue'
 import CompareEventsDialog from '@/components/Events/CompareEventsDialog.vue'
 import OpfsCompatibilityDialog from '@/components/OpfsCompatibilityDialog.vue'
@@ -100,6 +100,11 @@ export default {
     _initShutdownDetection() {
       initShutdownDetection(this.$store)
     },
+    _initInactivityDetection() {
+      // Demo mode has no real local data to protect - skip.
+      if (this.$store.state.demoMode) return
+      initInactivityDetection(this.$store)
+    },
   },
   mounted() {
     // Listen on errors from REST API calls
@@ -124,6 +129,7 @@ export default {
     element.dataset.theme = this.$vuetify.theme.dark ? 'dark' : 'light'
 
     this._initShutdownDetection()
+    this._initInactivityDetection()
   },
   beforeDestroy() {
     EventBus.$off('errorSnackBar')

@@ -13,6 +13,8 @@
           dark
           v-bind="attrs"
           v-on="on"
+          :loading="exiting"
+          :disabled="exiting"
           @click="safeExit"
           class="mr-4 mb-4"
         >
@@ -33,6 +35,11 @@ const logger = getLogger('SafeExit');
 
 export default {
   name: 'SafeExitButton',
+  data: function() {
+    return {
+      exiting: false // race condition guard to prevent multiple clicks
+    }
+  },
   computed: {
     demoMode() {
       return this.$store.state.demoMode
@@ -40,21 +47,35 @@ export default {
   },
   methods: {
     async safeExit() {
+      if (this.exiting) return
+      this.exiting = true
+      logger.debug('Initiating safe exit...')
+
+      let dataFullyCleared = true
       try {
-        logger.debug('Initiating safe exit...')
-
         await resetAllLocalData({ unregisterServiceWorkers: true })
-        this.$store.commit('RESET_STATE')
-        
-        document.body.innerHTML = ''
-
-        window.close()
-        window.location.replace('https://www.google.com')
       } catch (error) {
-        logger.error('Error during safe exit:', error)
+        dataFullyCleared = false
+        logger.error('Error during safe exit — local data may not be fully cleared:', error)
         EventBus.$emit('opfsUnavailable')
-        window.close()
       }
+      try {
+        this.$store.commit('RESET_STATE')
+        document.body.innerHTML = ''
+      } catch (error) {
+        logger.error('Error clearing app state during safe exit:', error)
+      }
+      if (!dataFullyCleared) {
+        window.alert(
+          'Some local data may not have been fully cleared. Please close this browser tab/window manually to be safe.'
+        )
+      }
+      try {
+        window.close()
+      } catch (error) {
+        logger.error('window.close() failed:', error)
+      }
+      window.location.replace('https://www.google.com')
     }
   }
 }
