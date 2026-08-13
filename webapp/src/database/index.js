@@ -6,8 +6,16 @@ import * as comments from './queries/comments.js';
 import * as metadata from './queries/metadata.js';
 import { loadConfig } from '../utils/config.js';
 import { getLogger } from '../utils/logger.js';
+import EventBus from '../event-bus.js';
+import { terminatePyodideWorker } from '../pyodide/pyodide-client.js';
+import { OPFSManager } from '../storage/opfs_manager.js';
 
 const logger = getLogger('Database');
+
+// Matches sqlite errors that indicate the on-disk schema (from a previous app version)
+// no longer matches the shipped schema.sql, e.g. "no such column: x", "no such table: x",
+// "table x has no column named y".
+const SCHEMA_MISMATCH_RE = /no such (column|table)|has no column named/i;
 
 let worker = null;
 let messageId = 0;
@@ -63,9 +71,11 @@ export async function getDB() {
         schemaPath,
         dbPath,
       }).catch(function(err) {
-        // OpfsDb not a constructor = OPFS unavailable (crossOriginIsolated false at worker init time)
-        if (err && err.message && err.message.indexOf('OpfsDb') !== -1 && err.message.indexOf('constructor') !== -1) {
+        const msg = (err && err.message) || String(err);
+        if (msg.indexOf('OpfsDb') !== -1 && msg.indexOf('constructor') !== -1) {
           EventBus.$emit('opfsUnavailable');
+        } else if (SCHEMA_MISMATCH_RE.test(msg)) {
+          EventBus.$emit('schemaMismatch', msg);
         }
         throw err;
       });
@@ -143,6 +153,21 @@ export async function closeDB() {
   // }
 }
 
+export async function resetAllLocalData() {
+  /* Shared "hard refresh" mechanism: closes the sqlite worker and the pyodide worker
+     (so no open OPFS file handles block deletion), then recursively wipes OPFS and
+     browser storage. Mirrors DebugOPFS.vue's "Nuke All" sequence; reused by
+     SchemaRefreshDialog so there's a single place this logic lives. */
+  await closeDB();
+  terminatePyodideWorker();
+
+  const opfsManager = new OPFSManager();
+  await opfsManager.nukeAll();
+
+  localStorage.clear();
+  sessionStorage.clear();
+}
+
 export async function clearAllTables() {
   /* Dynamically queries sqlite_master for all user tables and DELETEs their rows (not DROP — preserves schema). */
   const db = await getDB();
@@ -167,6 +192,7 @@ export default {
   getDB,
   closeDB,
   clearAllTables,
+  resetAllLocalData,
   
   // DB switching
   setActiveDatabase(dbName) {

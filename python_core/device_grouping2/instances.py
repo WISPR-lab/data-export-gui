@@ -7,19 +7,11 @@
 # These represent a best-effort attempt to aggregate events associated with the same logical device instance,
 # though they may over-merge or under-merge records depending on the confidence of the computed edges.
 #
-# A Device Profile (calculated via calculate_profile_updates) is a static model/manufacturer classification
-# bucket that groups multiple Device Instances sharing the exact manufacturer and model name.
-#
 # Chronological order is maintained by sorting the DataFrame by 'timestamp' during initialization.
 # Lists extracted via unique() natively return values sorted chronologically by occurrence.
 #
 # Relationship Hierarchy:
 #
-#                       [ Device Profile ]
-#                     "Apple iPhone 13 Pro"
-#              (General Model/Manufacturer Category)
-#                       /                \
-#                      /                  \
 #          [ Device Instance A ]        [ Device Instance B ]
 #             (Client: Google)             (Client: Facebook)
 #              /          \                 /          \

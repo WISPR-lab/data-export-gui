@@ -468,14 +468,14 @@ limitations under the License.
           </template>
 
           <!-- Old device chip (replaced with origin chip pattern)
-          <template v-slot:item._source.device_profiles_data="{ item }">
-            <v-chip 
-              v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0"
+          <template v-slot:item._source.device_model="{ item }">
+            <v-chip
+              v-if="item._source.device_model"
               :style="getTimeBubbleColor()"
               class="pr-1 data-export-chip"
             >
               <div class="chip-content">
-                <span class="export-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
+                <span class="export-name-ellipsis">{{ item._source.device_model }}</span>
               </div>
             </v-chip>
             <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 data-export-chip">
@@ -486,10 +486,10 @@ limitations under the License.
           </template>
           -->
 
-          <template v-slot:item._source.device_profiles_data="{ item }">
-            <div v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0">
+          <template v-slot:item._source.device_model="{ item }">
+            <div v-if="item._source.device_model">
               <v-chip :style="getTimeBubbleColor()">
-                {{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}
+                {{ item._source.device_model }}
               </v-chip>
             </div>
           </template>
@@ -751,7 +751,7 @@ export default {
 
       // Add Device column first
       baseHeaders.push({
-        value: '_source.device_profiles_data',
+        value: '_source.device_model',
         text: 'Device',
         align: 'center',
         width: '200',
@@ -918,13 +918,6 @@ export default {
       return {
         'background-color': backgroundColor,
       }
-    },
-    getDeviceProfileLabel(profile) {
-      if (!profile) return ''
-      if (profile.user_label && profile.user_label.trim()) {
-        return `${profile.user_label} (${profile.model})`
-      }
-      return profile.model || ''
     },
     getAllUploadIds: function () {
       // Browser model: return IDs directly

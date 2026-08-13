@@ -7,7 +7,6 @@ from . import deterministic_ids
 from . import client_os_upgrades
 from .instances import DeviceInstanceGraph
 from .resolved_sessions_registrations import resolve
-from . import profiles
 
 from python_core.logger import get_logger
 
@@ -21,7 +20,6 @@ def group(upload_id: str, db_path: str = None, conn=None) -> None:
         "upload_ids",
         "file_ids",
         "devices_raw_ids",
-        # "atomic_devices_ids",
         "tags",
         "labels",
     ]
@@ -61,8 +59,6 @@ def group(upload_id: str, db_path: str = None, conn=None) -> None:
 
         ts = datetime.now(timezone.utc).timestamp()
         _write_device_instances(conn, instances, ts)
-
-        _write_device_profiles(conn, instances, ts)
 
         conn.execute("DELETE FROM resolved_sessions_registrations WHERE upload_id = ?", (upload_id,))
         raw_rows = conn.execute(
@@ -201,31 +197,3 @@ def _write_device_instances(conn, instances: list, ts: float) -> None:
                 "INSERT OR IGNORE INTO device_instance_raw_devices (device_instance_id, devices_raw_id) VALUES (?, ?)",
                 devices_mapping,
             )
-
-
-def _write_device_profiles(conn, instances: list, ts: float) -> None:
-    existing_instances = conn.execute(
-        "SELECT id, manufacturer, model, os_type FROM device_instances"
-    ).fetchall()
-    existing_mappings = conn.execute(
-        "SELECT device_profile_id, device_instance_id FROM device_profile_instances"
-    ).fetchall()
-
-    device_profiles_v2_rows, device_profile_instances_rows = (
-        profiles.calculate_profile_updates(
-            instances, existing_instances, existing_mappings, ts
-        )
-    )
-
-    if device_profiles_v2_rows:
-        conn.executemany(
-            """INSERT INTO device_profiles_v2 (id, manufacturer, model, os_type, created_at, updated_at) 
-               VALUES (:id, :manufacturer, :model, :os_type, :created_at, :updated_at)""",
-            device_profiles_v2_rows,
-        )
-    if device_profile_instances_rows:
-        conn.executemany(
-            """INSERT OR IGNORE INTO device_profile_instances (device_profile_id, device_instance_id) 
-               VALUES (:device_profile_id, :device_instance_id)""",
-            device_profile_instances_rows,
-        )

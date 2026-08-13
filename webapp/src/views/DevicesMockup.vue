@@ -20,7 +20,7 @@
 import EventBus from '@/event-bus.js';
 import PlatformCard from '@/components/Devices_v2/PlatformCard.vue';
 import { getResolvedSessionsRegistrations } from '@/database/queries/resolved_sessions_registrations.js';
-import { getUnlinkedClusters } from '@/database/queries/instances_v2.js';
+import { getUnlinkedClusters } from '@/database/queries/devices_v2.js';
 import { getDB } from '@/database/index.js';
 import { hexColor } from '@/utils/hex.js';
 import { getUASummary } from '@/database/queries/ua_summary.js';

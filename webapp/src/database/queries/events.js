@@ -27,7 +27,7 @@ export async function searchEvents(queryString = '', filter = {}) {
   /* Builds WHERE/ORDER/PAGINATION, batch-resolves file refs and raw_data line numbers, returns Elasticsearch-shaped {_id, _index, _source} hit objects. */
   const db = await getDB();
   
-  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'ei.device_profiles_data', 'die.device_instance_id', 'u.platform'];
+  const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'di.model', 'die.device_instance_id', 'u.platform'];
   
   const orderClause = buildOrderClause(filter);
   const { clause: paginationClause, params: paginationParams } = buildPaginationClause(filter);
@@ -49,14 +49,14 @@ export async function searchEvents(queryString = '', filter = {}) {
       e.file_ids,
       e.raw_data_ids,
       e.starred,
-      u.given_name AS data_export_name, 
+      u.given_name AS data_export_name,
       u.platform AS platform,
-      COALESCE(ei.device_profiles_data, '[]') AS device_profiles_data,
+      di.model AS device_model,
       die.device_instance_id
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
     LEFT JOIN device_instance_events die ON e.id = die.event_id
+    LEFT JOIN device_instances di ON die.device_instance_id = di.id
     ${whereClause}
     ${orderClause}
     ${paginationClause}
@@ -320,7 +320,7 @@ export async function getIPAddresses() {
 }
 
 async function _getEventsTotalCount(db, whereClause, whereParams) {
-  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id LEFT JOIN device_instance_events die ON e.id = die.event_id ${whereClause}`;
+  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN device_instance_events die ON e.id = die.event_id LEFT JOIN device_instances di ON die.device_instance_id = di.id ${whereClause}`;
   const result = await db.exec(sql, {
     bind: whereParams,
     returnValue: 'resultRows',
@@ -332,11 +332,11 @@ async function _getEventsTotalCount(db, whereClause, whereParams) {
 async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
   const sql = `
     SELECT e.upload_id, COUNT(*) as count 
-    FROM events e 
+    FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
     LEFT JOIN device_instance_events die ON e.id = die.event_id
-    ${whereClause} 
+    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    ${whereClause}
     GROUP BY e.upload_id
   `;
   const rows = await db.exec(sql, {
@@ -358,11 +358,11 @@ async function _getEventsCountPerEventType(db, whereClause, whereParams) {
   const combinedWhere = whereClause ? whereClause + ' AND e.event_type_msg IS NOT NULL AND e.event_type_msg != \'\'': baseWhere;
   const sql = `
     SELECT e.event_type_msg, COUNT(*) as count 
-    FROM events e 
+    FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
     LEFT JOIN device_instance_events die ON e.id = die.event_id
-    ${combinedWhere} 
+    LEFT JOIN device_instances di ON die.device_instance_id = di.id
+    ${combinedWhere}
     GROUP BY e.event_type_msg
   `;
   const rows = await db.exec(sql, { 
@@ -383,10 +383,10 @@ async function _getEventsCountPerIPAddress(db, whereClause, whereParams) {
   const combinedWhere = whereClause ? whereClause + ' AND e.attributes IS NOT NULL AND e.attributes != \'\'': baseWhere;
   const sql = `
     SELECT e.attributes 
-    FROM events e 
+    FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
     LEFT JOIN device_instance_events die ON e.id = die.event_id
+    LEFT JOIN device_instances di ON die.device_instance_id = di.id
     ${combinedWhere}
   `;
   const rows = await db.exec(sql, {
@@ -414,9 +414,8 @@ async function _getEventsCountPerTagOrLabel(db, filter, queryString) {
   const { clause: whereClause, params: whereParams } = buildWhereClause(modifiedFilter, queryString || '', stringColumns);
   const sql = `
     SELECT e.tags, e.labels 
-    FROM events e 
+    FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN v_events2profile_indexed ei ON e.id = ei.event_id
     LEFT JOIN device_instance_events die ON e.id = die.event_id
     ${whereClause}
   `;
@@ -454,8 +453,7 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
   let labels = [];
   let eventCategory = [];
   let eventType = [];
-  let deviceProfilesData = [];
-  
+
   try {
     attributes = row.attributes ? JSON.parse(row.attributes) : {};
   } catch (e) {
@@ -486,12 +484,6 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
     console.warn('Failed to parse event_type:', e);
   }
   
-  try {
-    deviceProfilesData = row.device_profiles_data ? JSON.parse(row.device_profiles_data) : [];
-  } catch (e) {
-    console.warn('Failed to parse device_profiles_data:', e);
-  }
-  
   const source = {
     ...attributes,
     primary_timestamp: row.timestamp,
@@ -511,7 +503,7 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
     filenames,
     line_numbers: lineNumbers,
     sources,
-    device_profiles_data: deviceProfilesData,
+    device_model: row.device_model || '',
   };
   
   return {
