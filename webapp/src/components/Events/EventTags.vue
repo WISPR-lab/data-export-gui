@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <span>
     <span v-for="tag in sortedTags" :key="tag">
@@ -19,11 +20,11 @@ limitations under the License.
         :color="tagColor(tag).color"
         :text-color="tagColor(tag).textColor"
       >
-        <v-icon v-if="tag in tagConfig" left small>{{ tagConfig[tag].label }}</v-icon>
+        <v-icon v-if="tagConfig && tag in tagConfig" left small>{{ tagConfig[tag].label }}</v-icon>
         {{ tag }}
       </v-chip>
     </span>
-    <span v-for="label in item._source.labels" :key="label">
+    <span v-for="label in (item && item._source && item._source.labels) || []" :key="label">
       <v-chip v-if="!label.startsWith('__ts')" small outlined class="mr-2">
         {{ label }}
       </v-chip>
@@ -33,15 +34,29 @@ limitations under the License.
 
 <script>
 export default {
-  props: ['item', 'tagConfig', 'showDetails'],
+  props: {
+    item: {
+      type: Object,
+      default: () => ({ _source: { tags: [], labels: [] } })
+    },
+    tagConfig: {
+      type: Object,
+      default: () => ({
+        bad: { color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
+        suspicious: { color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
+        good: { color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' }
+      })
+    },
+    showDetails: Boolean
+  },
   computed: {
     project() {
       return this.$store.state.project
     },
     sortedTags() {
-      if (!this.item._source.tags) return []
+      if (!this.item || !this.item._source || !this.item._source.tags) return []
       // place quickTags first in the array, sort the rest alphabetically
-      let tags = this.item._source.tags
+      let tags = [...this.item._source.tags]
       tags.sort((a, b) => {
         // TODO: refactor when quickTags become configurable.
         if (a === 'bad') {

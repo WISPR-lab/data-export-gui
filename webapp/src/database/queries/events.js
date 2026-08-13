@@ -504,6 +504,7 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
     line_numbers: lineNumbers,
     sources,
     device_model: row.device_model || '',
+    ...(row.device_group_id ? { device_group_id: row.device_group_id } : {})
   };
   
   return {
@@ -608,5 +609,55 @@ export async function clearAllTags() {
   const db = await getDB();
   logger.debug('[Database] Clearing all tags from events');
   await db.exec("UPDATE events SET tags = '[]'");
+}
+
+export async function addTagToEventsQuery(eventsQuery, tag, remove = false) {
+  if (!eventsQuery || !tag) return;
+  const db = await getDB();
+  let eventsToUpdate = [];
+
+  if (eventsQuery.indexOf('client_session_id:') !== -1) {
+    var sid = eventsQuery.replace('client_session_id:', '').replace(/"/g, '');
+    var pattern = String(sid).replace(/\*/g, '%');
+    eventsToUpdate = await db.exec(
+      `SELECT id, tags FROM events WHERE json_extract(attributes, '$.client_session_id') LIKE ?`,
+      { bind: [pattern], returnValue: 'resultRows', rowMode: 'object' }
+    );
+  } else if (eventsQuery.indexOf('device_serial_number:') !== -1) {
+    var serial = eventsQuery.replace('device_serial_number:', '').replace(/"/g, '');
+    var pattern2 = String(serial).replace(/\*/g, '%');
+    eventsToUpdate = await db.exec(
+      `SELECT id, tags FROM events WHERE json_extract(attributes, '$.device_serial_number') LIKE ?`,
+      { bind: [pattern2], returnValue: 'resultRows', rowMode: 'object' }
+    );
+  } else if (eventsQuery.indexOf('device_group_id:') !== -1) {
+    var groupId = eventsQuery.replace('device_group_id:', '').replace(/"/g, '');
+    eventsToUpdate = await db.exec(
+      `SELECT e.id, e.tags FROM events e JOIN device_group_events dge ON e.id = dge.event_id WHERE dge.device_group_id = ?`,
+      { bind: [groupId], returnValue: 'resultRows', rowMode: 'object' }
+    );
+  }
+
+  if (eventsToUpdate && eventsToUpdate.length > 0) {
+    for (const ev of eventsToUpdate) {
+      let currentTags = [];
+      try {
+        currentTags = typeof ev.tags === 'string' ? JSON.parse(ev.tags || '[]') : (ev.tags || []);
+      } catch (e) {
+        currentTags = [];
+      }
+      let newTags = [...currentTags];
+      if (remove) {
+        newTags = newTags.filter(t => t !== tag);
+      } else {
+        if (!newTags.includes(tag)) {
+          newTags.push(tag);
+        }
+      }
+      if (JSON.stringify(newTags) !== JSON.stringify(currentTags)) {
+        await db.exec('UPDATE events SET tags = ? WHERE id = ?', { bind: [JSON.stringify(newTags), ev.id] });
+      }
+    }
+  }
 }
 

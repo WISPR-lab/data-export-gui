@@ -9,11 +9,16 @@
         <!-- Outer layout splits Avatar (left) from all content (right) to prevent under-avatar alignment bugs -->
         <div class="d-flex align-center w-100" style="min-width: 0;">
           
-          <!-- Permanent Left Column: Avatar Logo (resists wrapping) -->
-          <div class="flex-shrink-0 mr-3">
-            <!-- <v-avatar size="36" color="grey lighten-4">
-              <v-icon color="grey darken-2" size="18">{{ icon }}</v-icon>
-            </v-avatar> -->
+          <!-- Leftmost: Tag button & menu using shared TsEventTagMenu -->
+          <div class="flex-shrink-0 mr-2" @click.stop>
+            <ts-event-tag-menu
+              :event="{ _source: { tags: localTags } }"
+              :show-propagate-option="true"
+              :event-count="eventCount"
+              :events-query="eventsQuery"
+              @tag-added="handleTagAdded"
+              @tag-removed="handleTagRemoved"
+            />
           </div>
 
           <!-- Permanent Right Column: All text & buttons (groups content to align together) -->
@@ -23,6 +28,9 @@
               <!-- Title & Badges block -->
               <v-col cols="12" md="6" class="pr-2 py-0.5">
                 <div class="text-body-2 font-weight-medium text--primary" style="line-height: 1.3; min-width: 0;">
+                  <!-- Tags rendered BEFORE title with right margin, matching EventList.vue -->
+                  <ts-event-tags v-if="localTags.length > 0" :item="{ _source: { tags: localTags } }" class="mr-1.5" />
+
                   {{ capitalize(title) }}
                   <span v-if="clientName" class="text-body-2 text--secondary font-weight-regular ml-1">via {{ clientName }}</span>
                   
@@ -91,16 +99,36 @@
         <attributes-table :attributes="displayAttributes" />
       </div>
     </v-expansion-panel-content>
+
+    <!-- Confirmation Modal for Tag Propagation to Events -->
+    <tag-propagate-modal
+      v-model="showPropagateModal"
+      :action="pendingTagAction.action"
+      :tag="pendingTagAction.tag"
+      :event-count="eventCount"
+      @respond="handleModalResponse"
+    />
   </v-expansion-panel>
 </template>
 
 <script>
+import DB from '@/database/index.js';
 import AttributesTable from '@/components/Devices_v2/AttributesTable.vue';
+import TsEventTagMenu from '@/components/Events/EventTagMenu.vue';
+import TsEventTags from '@/components/Events/EventTags.vue';
+import TagPropagateModal from '@/components/Devices_v2/TagPropagateModal.vue';
 import { capitalize } from '@/filters/Capitalize.js';
 
 export default {
   name: 'DeviceRow',
-  components: { AttributesTable },
+  components: { AttributesTable, TsEventTags, TsEventTagMenu, TagPropagateModal },
+  data() {
+    return {
+      localTags: [],
+      showPropagateModal: false,
+      pendingTagAction: { action: 'add', tag: '' }
+    };
+  },
   props: {
     type:        { type: String,  default: 'record' },
     title:       { type: String,  default: 'Unknown Device' },
@@ -165,6 +193,9 @@ export default {
           return [];
         }
       };
+      if (c.id) {
+        attrs.push({ label: 'Device Group ID', value: c.id });
+      }
       if (c.latest_client_ip) {
         attrs.push({ label: 'Latest Client IP', value: c.latest_client_ip });
       }
@@ -214,6 +245,45 @@ export default {
         title: 'Masked User Agent',
         description: 'To prevent browser fingerprinting, Apple devices (like iPhones running Mobile Safari) return simplified, generic user agent strings. This hides the specific device model details from websites and exports.'
       });
+    },
+    async handleTagAdded(tag) {
+      if (tag && !this.localTags.includes(tag)) {
+        this.localTags.push(tag);
+      }
+      await this.processTagAction('add', tag);
+    },
+    async handleTagRemoved(tag) {
+      if (tag) {
+        this.localTags = this.localTags.filter(t => t !== tag);
+      }
+      await this.processTagAction('remove', tag);
+    },
+    async processTagAction(action, tag) {
+      if (!tag || this.eventCount === 0 || !this.eventsQuery) return;
+      var storageKey = action === 'add' ? 'takeout_tag_propagate_add' : 'takeout_tag_propagate_remove';
+      var savedPref = localStorage.getItem(storageKey);
+
+      if (savedPref === 'always') {
+        await DB.addTagToEventsQuery(this.eventsQuery, tag, action === 'remove');
+      } else if (savedPref === 'never') {
+        // Device only, do nothing for events
+      } else {
+        this.pendingTagAction = { action: action, tag: tag };
+        this.showPropagateModal = true;
+      }
+    },
+    async handleModalResponse({ propagate, dontAskAgain }) {
+      var action = this.pendingTagAction.action;
+      var tag = this.pendingTagAction.tag;
+      var storageKey = action === 'add' ? 'takeout_tag_propagate_add' : 'takeout_tag_propagate_remove';
+
+      if (dontAskAgain) {
+        localStorage.setItem(storageKey, propagate ? 'always' : 'never');
+      }
+
+      if (propagate && this.eventsQuery) {
+        await DB.addTagToEventsQuery(this.eventsQuery, tag, action === 'remove');
+      }
     }
   }
 };

@@ -210,6 +210,7 @@ export default {
   removeLabelEvent: events.removeLabelEvent,
   updateEventTags: events.updateEventTags,
   clearAllTags: events.clearAllTags,
+  addTagToEventsQuery: events.addTagToEventsQuery,
   
   getUploads: uploads.getUploads,
   getUploadById: uploads.getUploadById,

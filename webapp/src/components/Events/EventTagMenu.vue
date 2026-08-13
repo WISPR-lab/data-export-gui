@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- modified for WISPR-lab/data-export-gui -->
 <template>
   <v-menu v-model="showMenu" offset-x :close-on-content-click="false">
     <template v-slot:activator="{ on, attrs }">
@@ -20,7 +21,15 @@ limitations under the License.
       <v-icon title="Modify tags" v-else v-bind="attrs" v-on="on" class="ml-1">mdi-tag-plus-outline</v-icon>
     </template>
 
-    <event-tag-dialog :events="[event]" @close="showMenu = false"></event-tag-dialog>
+    <event-tag-dialog
+      :events="[event]"
+      :show-propagate-option="showPropagateOption"
+      :event-count="eventCount"
+      :events-query="eventsQuery"
+      @close="showMenu = false"
+      @tag-added="$emit('tag-added', $event)"
+      @tag-removed="$emit('tag-removed', $event)"
+    ></event-tag-dialog>
 
   </v-menu>
 </template>
@@ -32,7 +41,24 @@ export default {
   components: {
     EventTagDialog
   },
-  props: ['event'],
+  props: {
+    event: {
+      type: Object,
+      default: () => ({ _source: { tags: [] } })
+    },
+    showPropagateOption: {
+      type: Boolean,
+      default: false
+    },
+    eventCount: {
+      type: Number,
+      default: 0
+    },
+    eventsQuery: {
+      type: String,
+      default: ''
+    }
+  },
   data() {
     return {
       showMenu: false,
@@ -56,7 +82,7 @@ export default {
   },
   computed: {
     assignedTags() {
-      if (!this.event._source.tags) return []
+      if (!this.event || !this.event._source || !this.event._source.tags) return []
       return this.event._source.tags
     },
   },
