@@ -217,7 +217,7 @@ limitations under the License.
 
                     <v-card-actions>
                       <v-spacer></v-spacer>
-                      <v-btn text @click="selectedFields = [{ field: 'event_type_msg', type: 'text' }]"> Reset </v-btn>
+                      <v-btn text @click="selectedFields = [{ field: 'event_type_msg', type: 'text' }, { field: 'norm__model_name', type: 'text' }]"> Reset </v-btn>
                       <v-btn text color="primary" @click="columnDialog = false"> Set columns </v-btn>
                     </v-card-actions>
                   </v-card>
@@ -424,7 +424,7 @@ limitations under the License.
           </template>
 
           <!-- Generic slot for any field type. Adds tags and emojis to the first column. -->
-          <template v-for="(field, index) in headers" :slot="getFieldName(field.text)" slot-scope="{ item }">
+          <template v-for="(field, index) in headers" v-slot:[getFieldName(field.field)]="{ item }">
             <div
               :key="field.text"
               class="ts-event-field-container"
@@ -448,7 +448,7 @@ limitations under the License.
                 </span>
                 
                 
-                <span>{{ field.text === 'Event Type' ? item._source.event_type_msg : item._source[field.text] }}</span>
+                <span>{{ field.text === 'Event Type' ? item._source.event_type_msg : capitalize(item._source[field.field]) }}</span>
               </span>
             </div>
           </template>
@@ -470,32 +470,7 @@ limitations under the License.
             </v-chip>
           </template>
 
-          <!-- Old device chip (replaced with origin chip pattern)
-          <template v-slot:item._source.device_model="{ item }">
-            <v-chip
-              v-if="item._source.device_model"
-              :style="getTimeBubbleColor()"
-              class="pr-1 data-export-chip"
-            >
-              <div class="chip-content">
-                <span class="export-name-ellipsis">{{ item._source.device_model }}</span>
-              </div>
-            </v-chip>
-            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 data-export-chip">
-              <div class="chip-content">
-                <span class="export-name-ellipsis"></span>
-              </div>
-            </v-chip>
-          </template>
-          -->
 
-          <template v-slot:item._source.device_model="{ item }">
-            <div v-if="item._source.device_model">
-              <v-chip :style="getTimeBubbleColor()">
-                {{ item._source.device_model }}
-              </v-chip>
-            </div>
-          </template>
 
           <!-- Comment field -->
           <!-- <template v-slot:item._source.comment="{ item }">
@@ -530,6 +505,7 @@ limitations under the License.
 import DB from '@/database/index.js'
 import EventBus from '@/event-bus.js'
 import { formatAttributeLabel } from '@/filters/FormatAttributeLabel.js'
+import { capitalize } from '@/filters/Capitalize.js'
 
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
@@ -623,7 +599,10 @@ export default {
       isSummaryLoading: false,
       currentItemsPerPage: this.itemsPerPage,
       expandedRows: [],
-      selectedFields: [{ field: 'event_type_msg', type: 'text' }],
+      selectedFields: [
+        { field: 'event_type_msg', type: 'text' },
+        { field: 'norm__model_name', type: 'text' },
+      ],
       searchColumns: '',
       columnDialog: false,
       saveSearchMenu: false,
@@ -739,28 +718,21 @@ export default {
           text: formatAttributeLabel(field.field),
           align: 'start',
           value: '_source.' + field.field,
+          field: field.field,
           sortable: false,
         }
         if (field.field === 'event_type_msg') {
           header.width = '100%'
-          // header.text = 'Event Type'
           extraHeaders.unshift(header)
         } else {
-          extraHeaders.push(header)
+          header.width = '180'
+          extraHeaders.push(header) // Positions next to platform chip
         }
       })
 
       // Extend the column headers from position 3 (after the actions column)
       baseHeaders.splice(3, 0, ...extraHeaders)
 
-      // Add Device column first
-      baseHeaders.push({
-        value: '_source.device_model',
-        text: 'Device',
-        align: 'center',
-        width: '200',
-        sortable: false,
-      })
       // Add export name based on configuration
       if (this.displayOptions.showDataExportName) {
         baseHeaders.push({
@@ -796,6 +768,7 @@ export default {
     },
   },
   methods: {
+    capitalize,
     formatAttributeLabel,
     isDisplayableTimestamp(timestamp) {
       const numericTimestamp = Number(timestamp)
@@ -823,7 +796,7 @@ export default {
       this.search(true, true, false)
     },
     getFieldName: function (field) {
-      if (field === 'Event Type') {
+      if (field === 'Event Type' || field === 'event_type_msg') {
         return 'item._source.event_type_msg'
       }
       return 'item._source.' + field

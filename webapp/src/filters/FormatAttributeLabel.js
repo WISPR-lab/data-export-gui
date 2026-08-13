@@ -4,7 +4,7 @@
 import { capitalize } from './Capitalize.js';
 
 const OVERRIDES = {
-  event_type_msg: 'Event Type (Full)',
+  event_type_msg: 'Event Type',
   entity_first_seen_timestamp: 'First Seen',
   entity_last_seen_timestamp: 'Last Seen',
   primary_timestamp: 'Timestamp',
