@@ -23,11 +23,13 @@
       <v-list-item router-link to="/demo/events">
         <v-list-item-title>Interactive Demo</v-list-item-title>
       </v-list-item>
-      <v-list-item href="#">
-        <v-list-item-title>Research</v-list-item-title>
+      <v-list-item disabled>
+        <v-list-item-title>Research <span class="grey--text text--darken-1">(Coming soon)</span></v-list-item-title>
       </v-list-item>
-      <v-list-item href="https://github.com/WISPR-lab/data-export-gui/" target="_blank">
-        <v-list-item-title>GitHub<v-icon medium class="ml-2 mb-1">mdi-github</v-icon>
+      <v-list-item disabled>
+        <v-list-item-title>
+          <v-icon medium class="mr-2 mb-1">mdi-github</v-icon>
+          <span class="grey--text text--darken-1">(Coming soon)</span>
         </v-list-item-title>
       </v-list-item>
     </v-list>

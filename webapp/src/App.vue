@@ -36,9 +36,6 @@ limitations under the License.
     <!-- Compare View Overlay -->
     <compare-events-dialog />
 
-    <!-- Safe Exit Button (global, on every page) -->
-    <safe-exit-button></safe-exit-button>
-
     <!-- Interactive Demo Overlay -->
     <demo-overlay />
   </v-app>

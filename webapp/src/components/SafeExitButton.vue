@@ -2,21 +2,17 @@
 <!-- Added for wispr-lab/data-export-gui -->
 <template>
   <div v-if="!demoMode" class="safe-exit-button">
-    <v-tooltip left>
+    <v-tooltip bottom>
       <template v-slot:activator="{ on, attrs }">
         <v-btn
-          fixed
-          bottom
-          right
-          rounded
-          color="#d32f2f"
           dark
+          color="#d32f2f"
           v-bind="attrs"
           v-on="on"
           :loading="exiting"
           :disabled="exiting"
           @click="safeExit"
-          class="mr-4 mb-4"
+          class="nav-link"
         >
           Safe Exit
         </v-btn>
@@ -83,9 +79,13 @@ export default {
 
 <style scoped>
 .safe-exit-button {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 1000;
+  display: flex;
+  align-items: center;
+}
+
+.safe-exit-button ::v-deep .v-btn {
+  margin: 0 4px;
+  box-shadow: none !important;
+  font-weight: 500;
 }
 </style>

@@ -61,15 +61,35 @@
           </v-list>
         </v-menu>
 
-        <v-btn text href="#" class="nav-link">Research</v-btn> <!-- todo --> 
-        <v-btn text href="https://github.com/WISPR-lab/data-export-gui/" target="_blank" class="nav-link">
-          GitHub
-          <v-icon small class="ml-1">mdi-github</v-icon>
-        </v-btn>
+        <!-- Research Dropdown (disabled - coming soon) -->
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn text :ripple="false" v-bind="attrs" v-on="on" class="nav-link nav-link--disabled" @click.prevent>
+              Research
+              <v-icon small right>mdi-chevron-down</v-icon>
+            </v-btn>
+          </template>
+          <span>Coming soon</span>
+        </v-tooltip>
+
+        <!-- GitHub (disabled - coming soon) -->
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn text :ripple="false" v-bind="attrs" v-on="on" class="nav-link nav-link--disabled nav-link--icon-only" @click.prevent>
+              <v-icon>mdi-github</v-icon>
+            </v-btn>
+          </template>
+          <span>Coming soon</span>
+        </v-tooltip>
+
+        <safe-exit-button class="ml-2" />
       </div>
 
-      <!-- Mobile Menu (shown only on sm and down) -->
-      <PageHeaderMobileMenu visibilityClass="d-md-none" />
+      <!-- Mobile Menu (sm and down) -->
+      <div class="header-right d-md-none">
+        <PageHeaderMobileMenu visibilityClass="d-md-none" />
+        <safe-exit-button class="ml-2" />
+      </div>
     </div>
   </v-app-bar>
 </template>
@@ -128,18 +148,33 @@ export default {
 .header-content {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   width: 100%;
 }
 
 .header-left {
   display: flex;
   align-items: center;
+  margin-right: auto;
 }
 
 .header-nav {
   display: flex;
   align-items: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.nav-link--disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.nav-link--icon-only {
+  min-width: 36px !important;
+  padding: 0 6px !important;
 }
 
 .tool-name {
