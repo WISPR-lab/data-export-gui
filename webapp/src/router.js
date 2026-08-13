@@ -19,12 +19,14 @@ limitations under the License.
 
 import Vue from 'vue'
 import VueRouter from 'vue-router'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('Router');
 
 import Home from './views/Home.vue'
 import Events from './views/Events.vue'
 import Project from './views/Project.vue'
 import HowToRequest from './views/HowToRequest.vue'
-import Devices from './views/Devices_v1_legacy.vue'
 import DevicesMockup from './views/DevicesMockup.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
@@ -63,7 +65,7 @@ const routes = [
       {
         path: 'devices',
         name: 'DemoDevices',
-        component: Devices,
+        component: DevicesMockup,
         props: { projectId: 1 },
         meta: { requiresOpfs: true },
       },
@@ -128,7 +130,7 @@ router.beforeEach(async (to, from, next) => {
   
   if (isDemoRoute) {
     if (!store.state.demoMode || DB.getActiveDatabase() !== 'demo') {
-      console.log('[Router] Entering demo mode via route:', to.path);
+      logger.debug('Entering demo mode via route:', to.path);
       
       const DemoController = require('@/demo/DemoController.js').default
       if (from && from.name) {
@@ -143,7 +145,7 @@ router.beforeEach(async (to, from, next) => {
         await demoDatabaseLoader.initializeDemoDb()
         await store.dispatch('updateProject', 1)
       } catch (e) {
-        console.error('[Router] Demo initialization failed:', e)
+        logger.error('Demo initialization failed:', e)
       }
     }
     
@@ -154,7 +156,7 @@ router.beforeEach(async (to, from, next) => {
     }
   } else {
     if (store.state.demoMode || DB.getActiveDatabase() !== 'userdata') {
-      console.log('[Router] Leaving demo mode via route:', to.path);
+      logger.debug('Leaving demo mode via route:', to.path);
       store.commit('SET_DEMO_MODE', false)
       store.commit('SET_CURRENT_DB', 'userdata')
       DB.setActiveDatabase('userdata')

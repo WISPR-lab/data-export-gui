@@ -4,6 +4,7 @@ import uuid
 import os
 import builtins
 from db_session import DatabaseSession
+from manifest import Manifest
 from semantic_map.worker import map as semantic_map
 from field_normalization.worker import normalize
 
@@ -17,11 +18,12 @@ class TestFieldNormalization:
         """Verify that normalize() parses user_agent fields when they exist."""
         upload_id, _ = sample_upload_with_raw_data
 
+        manifest = Manifest(platform="facebook")
         semantic_map(
             platform="facebook",
             upload_id=upload_id,
+            manifest=manifest,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         result = normalize(upload_id, db_path=test_db_path)
@@ -63,11 +65,12 @@ class TestFieldNormalization:
         """Verify that device_manufacturer is parsed when UA data exists."""
         upload_id, _ = sample_upload_with_raw_data
 
+        manifest = Manifest(platform="facebook")
         semantic_map(
             platform="facebook",
             upload_id=upload_id,
+            manifest=manifest,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         normalize(upload_id, db_path=test_db_path)
@@ -102,11 +105,12 @@ class TestFieldNormalization:
         """Verify that normalize() caches UA parsing across multiple rows."""
         upload_id, _ = sample_upload_with_raw_data
 
+        manifest = Manifest(platform="facebook")
         semantic_map(
             platform="facebook",
             upload_id=upload_id,
+            manifest=manifest,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         result = normalize(upload_id, db_path=test_db_path)
@@ -128,7 +132,7 @@ class TestFieldNormalization:
 
     def test_normalize_with_hardcoded_user_agent_original(self, test_db_path):
         """Test normalize with hardcoded data that has user_agent_original."""
-        upload_id = "test-hardcoded-ua-" + str(uuid.uuid4())
+        upload_id = "test-hardcoded-ua-" + uuid.uuid4().hex
 
         schema_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "..", "schema.sql"
@@ -147,7 +151,7 @@ class TestFieldNormalization:
             ]
 
             for i, ua in enumerate(ua_strings):
-                file_id = str(uuid.uuid4())
+                file_id = uuid.uuid4().hex
                 conn.execute(
                     "INSERT INTO uploaded_files (id, upload_id, opfs_filename) VALUES (?, ?, ?)",
                     (file_id, upload_id, f"device_{i}.json"),
@@ -156,7 +160,7 @@ class TestFieldNormalization:
                 attrs = {"user_agent_original": ua}
                 conn.execute(
                     "INSERT INTO devices_raw (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)",
-                    (str(uuid.uuid4()), upload_id, file_id, json.dumps(attrs)),
+                    (uuid.uuid4().hex, upload_id, file_id, json.dumps(attrs)),
                 )
 
             conn.commit()
@@ -201,7 +205,7 @@ class TestFieldNormalization:
 
     def test_normalize_with_hardcoded_user_agent_os_full(self, test_db_path):
         """Test normalize with hardcoded data that has user_agent_os_full."""
-        upload_id = "test-hardcoded-os-full-" + str(uuid.uuid4())
+        upload_id = "test-hardcoded-os-full-" + uuid.uuid4().hex
 
         schema_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "..", "schema.sql"
@@ -220,7 +224,7 @@ class TestFieldNormalization:
             ]
 
             for i, os_str in enumerate(os_strings):
-                file_id = str(uuid.uuid4())
+                file_id = uuid.uuid4().hex
                 conn.execute(
                     "INSERT INTO uploaded_files (id, upload_id, opfs_filename) VALUES (?, ?, ?)",
                     (file_id, upload_id, f"device_{i}.json"),
@@ -229,7 +233,7 @@ class TestFieldNormalization:
                 attrs = {"user_agent_os_full": os_str}
                 conn.execute(
                     "INSERT INTO devices_raw (id, upload_id, file_id, attributes) VALUES (?, ?, ?, ?)",
-                    (str(uuid.uuid4()), upload_id, file_id, json.dumps(attrs)),
+                    (uuid.uuid4().hex, upload_id, file_id, json.dumps(attrs)),
                 )
 
             conn.commit()

@@ -155,7 +155,7 @@ export default {
     },
     getUnfurlData: function (url) {
       // Unfurl feature not available in browser-only mode (requires server-side API)
-      console.log('[UnfurlDialog] Unfurl not available in browser mode')
+      console.debug('[UnfurlDialog] Unfurl not available in browser mode')
       this.$emit('cancel')
     },
     resizeCanvasWithDelay: function () {

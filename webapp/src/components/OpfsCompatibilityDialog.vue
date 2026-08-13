@@ -75,7 +75,7 @@
 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="error" text @click="clearAndReload">Clear app data &amp; reload</v-btn>
+        <v-btn color="error" text @click="wipe">Clear app data &amp; reload</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -83,6 +83,7 @@
 
 <script>
 import { diagnoseOpfsFailure } from '@/utils/opfsDiagnostics.js'
+import { resetAllLocalData } from '@/database/index.js'
 import EventBus from '@/event-bus.js'
 
 export default {
@@ -142,16 +143,8 @@ export default {
     close: function() {
       this.setDialogOpen(false)
     },
-    clearAndReload: function() {
-      // ponytail: Unregisters stale service workers, clears local/session storage and reloads page
-      var p = navigator.serviceWorker
-        ? navigator.serviceWorker.getRegistrations().then(function(regs) {
-            return Promise.all(regs.map(function(r) { return r.unregister(); }));
-          })
-        : Promise.resolve();
-      p.then(function() {
-        localStorage.clear();
-        sessionStorage.clear();
+    wipe: function() {
+      resetAllLocalData({ unregisterServiceWorkers: true }).then(function() {
         window.location.reload();
       });
     }

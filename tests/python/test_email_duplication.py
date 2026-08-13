@@ -1,6 +1,4 @@
-import pytest
-import json
-import builtins
+from manifest import Manifest
 from semantic_map.worker import map as semantic_map
 
 
@@ -10,11 +8,12 @@ def test_email_duplication(sample_upload_with_raw_data, test_db_path):
 
     print(f"\n[TEST] Starting with {raw_data_count} raw_data rows")
 
+    manifest = Manifest(platform="facebook")
     semantic_map(
         platform="facebook",
         upload_id=upload_id,
+        manifest=manifest,
         db_path=test_db_path,
-        manifest_dir=builtins.MANIFESTS_DIR,
     )
 
     from db_session import DatabaseSession

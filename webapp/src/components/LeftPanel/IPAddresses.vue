@@ -55,7 +55,6 @@ limitations under the License.
 <script>
 import IPAddressesList from './IPAddressesList.vue'
 import DB from '@/database/index.js'
-import EventBus from '@/event-bus.js'
 
 export default {
   props: {

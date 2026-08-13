@@ -62,15 +62,15 @@ limitations under the License.
         <v-list dense style="height: 500px" class="overflow-y-auto" :class="scrollbarTheme">
           <v-list-item
             v-for="action in matches.eventActions"
-            :key="dataType.data_type"
-            v-on:click="searchForDataType(dataType.data_type)"
+            :key="action.action"
+            v-on:click="searchForDataType(action.action)"
             style="font-size: 0.9em"
           >
             <v-list-item-content>
               <span
-                >{{ dataType.data_type }}
+                >{{ action.action }}
                 <span class="font-weight-bold" style="font-size: 0.8em"
-                  >({{ dataType.count | compactNumber }})</span
+                  >({{ action.count | compactNumber }})</span
                 ></span
               >
             </v-list-item-content>

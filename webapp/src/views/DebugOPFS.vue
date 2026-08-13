@@ -114,7 +114,7 @@
 </template>
 
 <script>
-import { getDB, closeDB } from '@/database/index.js';
+import { getDB, resetAllLocalData } from '@/database/index.js';
 import { OPFSManager } from '@/storage/opfs_manager.js';
 
 export default {
@@ -237,14 +237,9 @@ export default {
       if (!confirm('Delete everything in OPFS (including database)?')) return;
 
       try {
-        this.opfsStatus = 'closing db...';
-        await closeDB();
-        
         this.opfsStatus = 'nuking OPFS...';
-        const opfsManager = new OPFSManager();
-        await opfsManager.nukeAll();
-        localStorage.clear();
-        
+        await resetAllLocalData();
+
         this.opfsStatus = 'Nuked.';
         await this.refreshOPFS();
       } catch (e) {
@@ -311,9 +306,6 @@ export default {
         // Predefined topological order of tables to satisfy foreign key constraints
         var TABLE_ORDER = [
           'uploads',
-          'device_profiles_v2',
-          'atomic_devices',
-          'user_device_edits',
           'uploaded_files',
           'raw_data',
           'events',
@@ -322,11 +314,8 @@ export default {
           'resolved_sessions_registrations',
           'device_instance_edges',
           'event_comments',
-          'device_profile_notes',
-          'event_assoc',
           'device_instance_events',
           'device_instance_raw_devices',
-          'device_profile_instances'
         ];
 
         var tables = this.DB_TABLES.slice().sort(function(a, b) {

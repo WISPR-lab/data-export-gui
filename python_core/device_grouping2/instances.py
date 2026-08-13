@@ -7,19 +7,11 @@
 # These represent a best-effort attempt to aggregate events associated with the same logical device instance,
 # though they may over-merge or under-merge records depending on the confidence of the computed edges.
 #
-# A Device Profile (calculated via calculate_profile_updates) is a static model/manufacturer classification
-# bucket that groups multiple Device Instances sharing the exact manufacturer and model name.
-#
 # Chronological order is maintained by sorting the DataFrame by 'timestamp' during initialization.
 # Lists extracted via unique() natively return values sorted chronologically by occurrence.
 #
 # Relationship Hierarchy:
 #
-#                       [ Device Profile ]
-#                     "Apple iPhone 13 Pro"
-#              (General Model/Manufacturer Category)
-#                       /                \
-#                      /                  \
 #          [ Device Instance A ]        [ Device Instance B ]
 #             (Client: Google)             (Client: Facebook)
 #              /          \                 /          \
@@ -220,8 +212,7 @@ class DeviceInstanceGraph:
         }
         if not self.edges_df.empty and "type" in self.edges_df.columns:
             edges_to_process = self.edges_df[self.edges_df["type"].isin(linkage_types)]
-            for _, edge in edges_to_process.iterrows():
-                id_a, id_b = edge["id_a"], edge["id_b"]
+            for id_a, id_b in edges_to_process[["id_a", "id_b"]].itertuples(index=False, name=None):
                 if id_a in self._parent and id_b in self._parent:
                     self._union(id_a, id_b)
 

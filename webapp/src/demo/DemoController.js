@@ -1,7 +1,9 @@
 import router from '@/router.js'
 import EventBus from '@/event-bus.js'
 import { getStepDefinitions } from './DemoStepDefns.js'
+import { getLogger } from '@/utils/logger'
 
+const logger = getLogger('DemoController')
 const DEMO_DEBUGGING = false
 
 class DemoController {
@@ -61,7 +63,7 @@ class DemoController {
         return
     }
 
-    if (DEMO_DEBUGGING) console.log('[DemoController] Initializing start sequence...');
+    if (DEMO_DEBUGGING) logger.debug('Initializing start sequence...');
     this.store = store
     this.store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT')
 
@@ -72,7 +74,7 @@ class DemoController {
     // auto-cleanup if demoMode is turned off in store (e.g. via router navigation)
     this._storeUnsubscribe = this.store.subscribe((mutation) => {
       if (mutation.type === 'SET_DEMO_MODE' && mutation.payload === false) {
-        if (DEMO_DEBUGGING) console.log('[DemoController] demoMode disabled in store, completing demo');
+        if (DEMO_DEBUGGING) logger.debug('demoMode disabled in store, completing demo');
         this.complete()
       }
     })
@@ -97,7 +99,7 @@ class DemoController {
       const currentStepDef = allSteps.find(s => s.id === this.currentStepId)
       if (!currentStepDef) return
 
-      if (DEMO_DEBUGGING) console.log(`[DemoController] Action received: ${actionType} (current step: ${this.currentStepId})`);
+      if (DEMO_DEBUGGING) logger.debug(`[DemoController] Action received: ${actionType} (current step: ${this.currentStepId})`);
 
       if (actionType === 'next-click' || actionType === 'prev-click') {
           if (actionType === 'next-click') this.moveNext()
@@ -148,7 +150,7 @@ class DemoController {
 
         const currentDef = allSteps.find(s => s.id === this.currentStepId)
         if (currentDef && currentDef.onLeave && this.store) {
-            if (DEMO_DEBUGGING) console.log(`[DemoController] Executing onLeave for ${this.currentStepId} (isForward: ${isForward})`);
+            if (DEMO_DEBUGGING) logger.debug(`[DemoController] Executing onLeave for ${this.currentStepId} (isForward: ${isForward})`);
             await currentDef.onLeave(this, this.store, isForward)
         }
     }
@@ -165,7 +167,7 @@ class DemoController {
       this.store.commit('SET_DEMO_IN_PROGRESS', true)
       
       if (stepDef.onEnter) {
-          if (DEMO_DEBUGGING) console.log(`[DemoController] Executing onEnter for ${stepId} (isForward: ${isForward})`);
+          if (DEMO_DEBUGGING) logger.debug(`[DemoController] Executing onEnter for ${stepId} (isForward: ${isForward})`);
           await stepDef.onEnter(this, this.store, isForward)
       }
     }
@@ -187,7 +189,7 @@ class DemoController {
     }
 
     EventBus.$emit('demo:update-ui', this._lastUiUpdate)
-    if (DEMO_DEBUGGING) console.log('[DemoController] First step broadcasted.');
+    if (DEMO_DEBUGGING) logger.debug('First step broadcasted.');
   }
 
   getCurrentUiState() {
@@ -197,7 +199,7 @@ class DemoController {
   complete() {
     this.stopForceOpenTutorials()
     const isFinal = this.currentStepId === 'FINISH'
-    if (DEMO_DEBUGGING) console.log('[DemoController] Demo complete/exited');
+    if (DEMO_DEBUGGING) logger.debug('Demo complete/exited');
     this._lastUiUpdate = null
     EventBus.$emit('demo:update-ui', null) // close overlay
     
@@ -272,7 +274,7 @@ class DemoController {
   }
 
   _clearSearch() {
-      if (DEMO_DEBUGGING) console.log('[DemoController] Magically clearing search filters');
+      if (DEMO_DEBUGGING) logger.debug('Magically clearing search filters');
       EventBus.$emit('setQueryAndFilter', { 
           queryFilter: { 
               chips: [], 
@@ -285,7 +287,7 @@ class DemoController {
   }
 
   async _clearAllTags(store) {
-      if (DEMO_DEBUGGING) console.log('[DemoController] Wiping all tags for fresh demo');
+      if (DEMO_DEBUGGING) logger.debug('Wiping all tags for fresh demo');
       const DB = require('@/database/index.js').default
       await DB.clearAllTags()
       if (store) {
@@ -301,14 +303,14 @@ class DemoController {
                                document.querySelector('.menuable__content__active .v-list')
           
           if (!tagMenuContent) {
-              if (DEMO_DEBUGGING) console.log('[DemoController] Forcing tag menu open');
+              if (DEMO_DEBUGGING) logger.debug('Forcing tag menu open');
               this._secureClick('#tsEventTable tbody tr:first-child .v-icon[title*="Modify tags"]')
           }
       }, 100)
   }
 
     async _addSampleTag(store) {
-        if (DEMO_DEBUGGING) console.log('[DemoController] Programmatically adding sample tag');
+        if (DEMO_DEBUGGING) logger.debug('Programmatically adding sample tag');
         const DB = require('@/database/index.js').default
         const result = await DB.searchEvents('', { size: 1, order: 'asc' })
         if (result.objects && result.objects.length > 0) {
@@ -359,7 +361,7 @@ class DemoController {
     }
 
    _forceApplySampleFilter() {
-       if (DEMO_DEBUGGING) console.log('[DemoController] Forcing sample filter for result step');
+       if (DEMO_DEBUGGING) logger.debug('Forcing sample filter for result step');
        EventBus.$emit('setQueryAndFilter', { 
            doSearch: true,
            chip: {

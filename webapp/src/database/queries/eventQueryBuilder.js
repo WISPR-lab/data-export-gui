@@ -1,6 +1,9 @@
 // added for WISPR-lab/data-export-gui
 
 import { parse as parseLiqe } from 'liqe';
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('eventQueryBuilder');
 
 export function buildWhereClause(filter = {}, queryString = '', stringColumns = []) {
   /* Composes search bar text, upload filters, datetime range, and attribute chips into a single WHERE clause. */
@@ -33,8 +36,8 @@ export function buildWhereClause(filter = {}, queryString = '', stringColumns = 
     clause: allConditions.length > 0 ? 'WHERE ' + allConditions.join(' AND ') : '',
     params: allParams
   };
-  console.log('[buildWhereClause] Final WHERE:', result.clause);
-  console.log('[buildWhereClause] Params:', result.params);
+  logger.debug('Final WHERE:', result.clause);
+  logger.debug('Params:', result.params);
   return result;
 }
 

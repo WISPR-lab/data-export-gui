@@ -23,7 +23,7 @@
  */
 
 
-import { titleCase } from '@/filters/TitleCase.js';
+import { capitalize } from '@/filters/Capitalize.js';
 
 function isBrowserName(name) {
   if (!name) return false;
@@ -32,7 +32,7 @@ function isBrowserName(name) {
 }
 
 function getCleanBrowserName(primary) {
-  const clean = titleCase(primary);
+  const clean = capitalize(primary);
   return clean.includes('WebView') ? 'WebView' : clean.replace(/Mobile\s*/gi, '').trim();
 }
 
@@ -66,8 +66,8 @@ export function getUASummary(deviceInstances) {
     const osType = (instance.os_type || '').toLowerCase();
     const isMobile = ['ios', 'android'].includes(osType);
 
-    const cleanPrimary = titleCase(primary);
-    const cleanSecondary = titleCase(secondary);
+    const cleanPrimary = capitalize(primary);
+    const cleanSecondary = capitalize(secondary);
     const primaryIsBrowser = isBrowserName(cleanPrimary);
     
     const cleanBrowser = getCleanBrowserName(cleanPrimary);
@@ -82,7 +82,7 @@ export function getUASummary(deviceInstances) {
         // 1 -- native mobile app
         // "gmail" + ios --> "Gmail App"
         // "google maps" + android --> "Google Maps App"
-        const service = platform === 'google' ? (cleanSecondary || cleanPrimary) : titleCase(platform);
+        const service = platform === 'google' ? (cleanSecondary || cleanPrimary) : capitalize(platform);
         label1 = formatAppService(service);
         label2 = '';
       } else if (primaryIsBrowser && secondary) {
@@ -90,14 +90,14 @@ export function getUASummary(deviceInstances) {
         // "mobile safari :: gmail" + ios --> "Gmail App" (Safari WebView)
         // TODO example with facebook? look at existing UAs
         // i guess we don't know how this works with browsing in chrome. other signature?
-        const service = platform === 'google' ? cleanSecondary : titleCase(platform);
+        const service = platform === 'google' ? cleanSecondary : capitalize(platform);
         label1 = formatAppService(service);
         label2 = webViewRepr;
 
       } else {
         // 3 -- mobile web browsing
         // "mobile safari" + ios + google --> "Google (Safari)"
-        // label1 = platform === 'google' ? 'Google' : titleCase(platform);
+        // label1 = platform === 'google' ? 'Google' : capitalize(platform);
         // label2 = cleanBrowser;
         // update:  "mobile safari" + ios + google --> "Safari"
         label1 = cleanBrowser;
@@ -112,12 +112,12 @@ export function getUASummary(deviceInstances) {
         // 5 -- desktop in-app webview
         // "chrome :: gmail" + macos --> "Gmail (Chrome)"
         // "chrome :: slack" + macos --> "Slack (Chrome)"
-        label1 = platform === 'google' ? cleanSecondary : titleCase(platform);
+        label1 = platform === 'google' ? cleanSecondary : capitalize(platform);
         label2 = cleanBrowser;
       } else {
         // 6 -- desktop web browsing
         // "chrome" + macos + google --> "Google (Chrome)"
-        // label1 = platform === 'google' ? 'Google' : titleCase(platform);
+        // label1 = platform === 'google' ? 'Google' : capitalize(platform);
         // label2 = cleanBrowser;
         // update:  "chrome" + macos + google --> "Chrome"
         label1 = cleanBrowser
@@ -127,7 +127,7 @@ export function getUASummary(deviceInstances) {
     const isUnknown = !platform || platform.toLowerCase() === 'unknown';
 
     const color = instance.upload_color;
-    const displayPlatform = titleCase(platform);
+    const displayPlatform = capitalize(platform);
     const key = `${displayPlatform}-${color}`;
     if (!uniqueSummaryItems[key]) {
       uniqueSummaryItems[key] = {

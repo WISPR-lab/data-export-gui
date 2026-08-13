@@ -20,10 +20,11 @@
 import EventBus from '@/event-bus.js';
 import PlatformCard from '@/components/Devices_v2/PlatformCard.vue';
 import { getResolvedSessionsRegistrations } from '@/database/queries/resolved_sessions_registrations.js';
-import { getUnlinkedClusters } from '@/database/queries/instances_v2.js';
+import { getUnlinkedClusters } from '@/database/queries/devices_v2.js';
 import { getDB } from '@/database/index.js';
 import { hexColor } from '@/utils/hex.js';
 import { getUASummary } from '@/database/queries/ua_summary.js';
+import { formatAttributeLabel } from '@/filters/FormatAttributeLabel.js';
 
 // display-only defaults when a platform key is unrecognized.
 var PLATFORM_META = {
@@ -96,7 +97,7 @@ function buildEntry(s) {
     .map(function(pair) {
       var k = pair[0]; var v = pair[1];
       return {
-        label: k.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); }),
+        label: formatAttributeLabel(k),
         value: typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v),
         isTimestamp: TIMESTAMP_KEYS.indexOf(k) !== -1
       };

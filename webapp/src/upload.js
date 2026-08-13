@@ -4,13 +4,9 @@ import DB from '@/database/index.js';
 import { executeUpload } from '@/pyodide/pyodide-client.js';
 import EventBus from '@/event-bus.js';
 
-const DEBUG_LOGGING = true;
+import { getLogger } from '@/utils/logger.js';
 
-function log(...args) {
-  if (DEBUG_LOGGING) { console.log('[UploadService]', ...args); }
-}
-
-function logError(...args) { console.error('[UploadService]', ...args); }
+const logger = getLogger('UploadService');
 
 
 export async function processUpload(file, platform, givenName, projectId, store) {
@@ -29,7 +25,7 @@ export async function processUpload(file, platform, givenName, projectId, store)
 
   try {
     if (store) store.commit('START_UPLOAD', file.name);
-    log(`Starting upload process for ${platform} with file: ${file.name}`);
+    logger.debug(`Starting upload process for ${platform} with file: ${file.name}`);
     
     // CRITICAL: Ensure uploads always target userdata.db, never demo.db
     DB.setActiveDatabase('userdata');
@@ -37,19 +33,19 @@ export async function processUpload(file, platform, givenName, projectId, store)
       store.commit('SET_DEMO_MODE', false);
       store.commit('SET_CURRENT_DB', 'userdata');
     }
-    log('Database context set to userdata.db');
+    logger.debug('Database context set to userdata.db');
     
     const opfsManager = new OPFSManager();
     
     const result = await executeUpload(file, platform, givenName, opfsManager, {
       onProgress: (evt) => {
-        log(`${evt.stage} (${evt.progress}%)`);
+        logger.debug(`${evt.stage} (${evt.progress}%)`);
         if (store) {
           store.commit('UPDATE_UPLOAD_PROGRESS', { status: evt.stage, progress: evt.progress });
         }
       },
       onError: (evt) => {
-        logError(`${evt.stage}: ${evt.error}`);
+        logger.error(`${evt.stage}: ${evt.error}`);
       }
     });
 
@@ -65,7 +61,7 @@ export async function processUpload(file, platform, givenName, projectId, store)
     }
 
     // Update UI store
-    log('Refreshing UI...');
+    logger.debug('Refreshing UI...');
     if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'complete', progress: 95 });
     
     try {
@@ -90,7 +86,7 @@ export async function processUpload(file, platform, givenName, projectId, store)
       EventBus.$emit('data-export-updated', newIds);
       summary.success = true;
       store.commit('COMPLETE_UPLOAD', summary);
-      log('Upload complete');
+      logger.debug('Upload complete');
     } catch (error) {
       const msg = `Failed to refresh UI: ${error.message}`;
       summary.errors.push(msg);
@@ -99,21 +95,21 @@ export async function processUpload(file, platform, givenName, projectId, store)
     }
     
   } catch (error) {
-    console.error('[UploadService] Upload failed:', error);
+    logger.error('Upload failed:', error);
     summary.errors.push(error.message);
     summary.errorType = error.errorType || ERROR_TYPES.PARSER_ERROR;
     if (error.uploadId) {
-      log(`Cleaning up failed upload data for ID: ${error.uploadId}`);
+      logger.debug(`Cleaning up failed upload data for ID: ${error.uploadId}`);
       try {
         await DB.deleteUpload(error.uploadId);
       } catch (deleteError) {
-        logError(`Failed to clean up upload data: ${deleteError.message}`);
+        logger.error(`Failed to clean up upload data: ${deleteError.message}`);
       }
     }
     if (store) store.commit('FAIL_UPLOAD', summary);
   } finally {
     summary.processingTimeMs = Date.now() - startTime;
-    log(`Upload completed in ${summary.processingTimeMs}ms`);
+    logger.debug(`Upload completed in ${summary.processingTimeMs}ms`);
   }
   
   return summary;

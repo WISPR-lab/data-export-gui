@@ -3,56 +3,58 @@
     <v-simple-table dense class="elevation-0 transparent">
       <template v-slot:default>
         <tbody>
-          <tr v-for="attr in attributes" :key="attr.label" v-if="hasValidValue(attr)">
-            <td class="text-body-2 font-weight-medium text--primary text-left" style="width: 200px; border-bottom: none !important;">
-              {{ attr.label }}
-            </td>
-            <td class="text-body-2 text--primary text-left" style="word-break: break-word; border-bottom: none !important; padding-top: 4px; padding-bottom: 4px;">
-              <span v-for="(item, idx) in getDisplayValue(attr)" :key="idx" class="d-inline-block">
-                <template v-if="isIPAttribute(attr.label)">
-                  <v-tooltip bottom open-delay="400">
-                    <template v-slot:activator="{ on, attrs }">
-                      <router-link 
-                        v-bind="attrs" 
-                        v-on="on" 
-                        class="ip-link" 
-                        :to="getIPRoute(item)"
-                        @click.native.stop
-                      >
-                        {{ item }}
-                      </router-link>
-                    </template>
-                    <span>See events with this IP address</span>
-                  </v-tooltip>
+          <template v-for="attr in attributes">
+            <tr :key="attr.label" v-if="hasValidValue(attr)">
+              <td class="text-body-2 font-weight-medium text--primary text-left" style="width: 200px; border-bottom: none !important;">
+                {{ attr.label }}
+              </td>
+              <td class="text-body-2 text--primary text-left" style="word-break: break-word; border-bottom: none !important; padding-top: 4px; padding-bottom: 4px;">
+                <span v-for="(item, idx) in getDisplayValue(attr)" :key="idx" class="d-inline-block">
+                  <template v-if="isIPAttribute(attr.label)">
+                    <v-tooltip bottom open-delay="400">
+                      <template v-slot:activator="{ on, attrs }">
+                        <router-link 
+                          v-bind="attrs" 
+                          v-on="on" 
+                          class="ip-link" 
+                          :to="getIPRoute(item)"
+                          @click.native.stop
+                        >
+                          {{ item }}
+                        </router-link>
+                      </template>
+                      <span>See events with this IP address</span>
+                    </v-tooltip>
+                  </template>
+                  <template v-else-if="isSessionIdAttribute(attr.label)">
+                    <v-tooltip bottom open-delay="400">
+                      <template v-slot:activator="{ on, attrs }">
+                        <router-link
+                          v-bind="attrs"
+                          v-on="on"
+                          class="ip-link"
+                          :to="getSessionRoute(item)"
+                          @click.native.stop
+                        >
+                          {{ item }}
+                        </router-link>
+                      </template>
+                      <span>See events with this session ID</span>
+                    </v-tooltip>
+                  </template>
+                  <span v-else-if="attr.isTimestamp">{{ item | longDateTimeLocal }}</span>
+                  <span v-else>{{ item | capitalize }}</span>
+                  <span v-if="idx < getDisplayValue(attr).length - 1" style="margin-right: 6px;">,</span>
+                </span>
+                <template v-if="hasSeeMore(attr)">
+                  <span class="mr-1">...</span>
+                  <a @click.stop="showAllItems(attr)" class="text-caption text-decoration-underline mb-1">
+                    See all ({{ attr.value.length }})
+                  </a>
                 </template>
-                <template v-else-if="isSessionIdAttribute(attr.label)">
-                  <v-tooltip bottom open-delay="400">
-                    <template v-slot:activator="{ on, attrs }">
-                      <router-link
-                        v-bind="attrs"
-                        v-on="on"
-                        class="ip-link"
-                        :to="getSessionRoute(item)"
-                        @click.native.stop
-                      >
-                        {{ item }}
-                      </router-link>
-                    </template>
-                    <span>See events with this session ID</span>
-                  </v-tooltip>
-                </template>
-                <span v-else-if="attr.isTimestamp">{{ item | longDateTimeLocal }}</span>
-                <span v-else>{{ item | formatDeviceDetails }}</span>
-                <span v-if="idx < getDisplayValue(attr).length - 1" style="margin-right: 6px;">,</span>
-              </span>
-              <template v-if="hasSeeMore(attr)">
-                <span class="mr-1">...</span>
-                <a @click.stop="showAllItems(attr)" class="text-caption text-decoration-underline mb-1">
-                  See all ({{ attr.value.length }})
-                </a>
-              </template>
-            </td>
-          </tr>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </template>
     </v-simple-table>

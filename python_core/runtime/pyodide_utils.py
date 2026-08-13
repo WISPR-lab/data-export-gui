@@ -1,13 +1,15 @@
 def init_pyodide() -> None:
+    from python_core.logger import get_logger
+    logger = get_logger("Pyodide")
     try:
         from extractors import worker as extractor_worker
     except Exception as e:
-        print(f"[Pyodide] Error importing extractors.worker: {e}")
+        logger.error(f"Error importing extractors.worker: {e}")
 
     try:
         from semantic_map import worker as semantic_map_worker
     except Exception as e:
-        print(f"[Pyodide] Error importing semantic_map.worker: {e}")
+        logger.error(f"Error importing semantic_map.worker: {e}")
 
 
 def load_manifests() -> list:

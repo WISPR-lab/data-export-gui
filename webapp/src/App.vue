@@ -27,15 +27,14 @@ limitations under the License.
 
     <!-- OPFS / cross-origin isolation incompatibility warning -->
     <opfs-compatibility-dialog v-model="opfsDialog" />
+    <!-- shown when a SQL query fails with "no such table/column") -->
+    <schema-refresh-dialog v-model="schemaDialog" />
 
     <!-- Main router view -->
     <router-view></router-view>
 
     <!-- Compare View Overlay -->
     <compare-events-dialog />
-
-    <!-- Safe Exit Button (global, on every page) -->
-    <safe-exit-button></safe-exit-button>
 
     <!-- Interactive Demo Overlay -->
     <demo-overlay />
@@ -44,10 +43,11 @@ limitations under the License.
 
 <script>
 import EventBus from './event-bus.js'
-import { initShutdownDetection } from '@/utils/shutdownDetection.js'
+import { initShutdownDetection, initInactivityDetection } from '@/utils/shutdownDetection.js'
 import DemoOverlay from '@/components/Demo/DemoOverlay.vue'
 import CompareEventsDialog from '@/components/Events/CompareEventsDialog.vue'
 import OpfsCompatibilityDialog from '@/components/OpfsCompatibilityDialog.vue'
+import SchemaRefreshDialog from '@/components/SchemaRefreshDialog.vue'
 
 export default {
   name: 'app',
@@ -55,10 +55,12 @@ export default {
     DemoOverlay,
     CompareEventsDialog,
     OpfsCompatibilityDialog,
+    SchemaRefreshDialog,
   },
   data: function() {
     return {
       opfsDialog: false,
+      schemaDialog: false,
     }
   },
   computed: {
@@ -95,12 +97,18 @@ export default {
     _initShutdownDetection() {
       initShutdownDetection(this.$store)
     },
+    _initInactivityDetection() {
+      // Demo mode has no real local data to protect - skip.
+      if (this.$store.state.demoMode) return
+      initInactivityDetection(this.$store)
+    },
   },
   mounted() {
     // Listen on errors from REST API calls
     EventBus.$on('errorSnackBar', this.setErrorSnackBar)
     // Show modal if DB layer or router guard emits opfsUnavailable
     EventBus.$on('opfsUnavailable', function() { this.opfsDialog = true; }.bind(this))
+    EventBus.$on('schemaMismatch', function() { this.schemaDialog = true; }.bind(this))
 
     if (window.opfsUnavailable || this.checkOpfsIncompatibility()) {
       this.opfsDialog = true;
@@ -118,10 +126,12 @@ export default {
     element.dataset.theme = this.$vuetify.theme.dark ? 'dark' : 'light'
 
     this._initShutdownDetection()
+    this._initInactivityDetection()
   },
   beforeDestroy() {
     EventBus.$off('errorSnackBar')
     EventBus.$off('opfsUnavailable')
+    EventBus.$off('schemaMismatch')
   },
 }
 </script>

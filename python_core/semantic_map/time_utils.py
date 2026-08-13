@@ -8,7 +8,9 @@ from datetime import datetime
 import pandas as pd
 import re
 import pytz
-import logging
+from python_core.logger import get_logger
+
+logger = get_logger(__name__)
 
 JAN_1_2000_UNIX = 946702800
 JAN_1_2050_UNIX = 2524608000
@@ -90,18 +92,14 @@ def parse_date(
                 return datetime.fromtimestamp(ts, tz=pytz.UTC)
             raise ValueError("Not a valid Unix timestamp")
         else:
-            default_datetime = datetime.now().replace(
-                day=1,
-                month=1,
-                year=2000,
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0,
-                tzinfo=pytz.timezone(default_origin_tz),
-            )
-            date = parser.parse(date_str, fuzzy=fuzzy, default=default_datetime)
-            # logging.debug(f"date: {date}")
+            try:
+                # ISO 8601 is unambiguous, same idea as the digit/Unix check above.
+                date = parser.isoparse(date_str)
+            except ValueError:
+                default_datetime = datetime(
+                    2000, 1, 1, tzinfo=pytz.timezone(default_origin_tz)
+                )
+                date = parser.parse(date_str, fuzzy=fuzzy, default=default_datetime)
             if date.tzinfo is None:
                 date = date.replace(tzinfo=pytz.timezone(default_origin_tz))
         return date.astimezone(pytz.timezone(user_tz))
@@ -109,7 +107,7 @@ def parse_date(
         if fail_action == "raise":
             raise ValueError("Invalid date format")
         elif fail_action == "ignore":
-            logging.debug(f"Ignore -- Failed to parse date: {date_str} -- {e}")
+            logger.debug(f"Ignore -- Failed to parse date: {date_str} -- {e}")
             # logging.debug(f"Error: {e}")
             # traceback.print_exc()
             return None

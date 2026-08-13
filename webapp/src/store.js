@@ -20,7 +20,10 @@ limitations under the License.
 
 import Vue from 'vue'
 import Vuex from 'vuex'
-import  DB from '@/database/index.js'
+import DB from '@/database/index.js'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('Store');
 
 
 Vue.use(Vuex)
@@ -273,15 +276,15 @@ export default new Vuex.Store({
       }
       
       try {
-        console.log('[Store.updateProject] Fetching uploads from database...');
+        logger.debug('Fetching uploads from database...');
         const uploads = await DB.getUploads()
-        console.log('[Store.updateProject] Received uploads:', uploads.uploads);
+        logger.debug('Received uploads:', uploads.uploads);
         const project = { ...virtualProject, dataExports: uploads.uploads || [] }
         const meta = await DB.getEventMeta()
-        console.log('[Store.updateProject] Committing SET_PROJECT with dataExports:', project.dataExports.map(t => ({ id: t.id, name: t.name, color: t.color })));
+        logger.debug('Committing SET_PROJECT with dataExports:', project.dataExports.map(t => ({ id: t.id, name: t.name, color: t.color })));
         context.commit('SET_PROJECT', { objects: [project], meta })
       } catch (e) {
-        console.error('[Store] updateProject error:', e)
+        logger.error('updateProject error:', e)
       }
     },
     resetState(context) {

@@ -243,7 +243,7 @@ def get_edges(
         return pd.DataFrame(columns=["id_a", "id_b", "type", "provenance"])
 
     if run_pass2 is None:
-        from python_core.utils.pyodide_utils import get_config_value
+        from python_core.runtime.pyodide_utils import get_config_value
 
         run_pass2 = get_config_value("ENABLE_DEVICE_GROUPING_PASS2", False)
 

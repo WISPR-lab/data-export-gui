@@ -1,3 +1,6 @@
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('PyodideClient');
 let pyodideWorker = null;
 let workerMessageId = 0;
 
@@ -5,10 +8,10 @@ let workerMessageId = 0;
 export function getPyodideWorker() {
   if (!pyodideWorker) {
     pyodideWorker = new Worker('./pyodide-worker.js');
-    console.log('[PyodideClient] Created Pyodide worker (singleton)');
+    logger.debug('Created Pyodide worker (singleton)');
     pyodideWorker.addEventListener('message', (event) => {
       if (event.data.type === 'packageInstallFailure') {
-        console.error('[PyodideClient] Packages failed to install in Pyodide:', event.data.packages);
+        logger.error('Packages failed to install in Pyodide:', event.data.packages);
       }
     });
   }
@@ -63,7 +66,7 @@ export function terminatePyodideWorker() {
   if (pyodideWorker) {
     pyodideWorker.terminate();
     pyodideWorker = null;
-    console.log('[PyodideClient] Worker terminated');
+    logger.debug('Worker terminated');
   }
 }
 
