@@ -47,7 +47,7 @@
           <v-tab class="text-body-2 font-weight-medium text-capitalize">
             {{ tab2Label }}
             <v-chip x-small class="ml-2" color="grey lighten-3" style="height: 18px;">
-              {{ platform.clusters.length }}
+              {{ platform.groups.length }}
             </v-chip>
           </v-tab>
         </v-tabs>
@@ -142,43 +142,43 @@
             </div>
 
             <div
-              v-if="!platform.clusters.length"
+              v-if="!platform.groups.length"
               class="text-body-2 text--secondary italic pa-6 text-center grey lighten-5 rounded-lg"
             >
               No event groups detected for this account.
             </div>
 
             <div v-else>
-              <!-- Cluster Rows using DeviceRow wrapped in expansion panels to match structure/styling -->
+              <!-- Group Rows using DeviceRow wrapped in expansion panels to match structure/styling -->
               <v-expansion-panels multiple flat class="device-panels">
                 <device-row
-                  v-for="(cluster, cIdx) in currentClusterPage"
-                  :key="'cluster-' + cIdx"
+                  v-for="(group, groupIdx) in currentGroupPage"
+                  :key="'group-' + groupIdx"
                   type="activity"
-                  :title="cluster.title"
-                  :client-name="cluster.norm_client"
-                  :icon="clusterIcon(cluster)"
-                  :first-seen="cluster.first_seen"
-                  :last-seen="cluster.last_seen"
-                  :fallback-date-str="cluster.dateString"
-                  :events-query="cluster.query"
-                  :event-count="cluster.event_count"
-                  :is-reduced-ua="cluster.apple_masking == 1"
-                  :cluster-raw="cluster"
+                  :title="group.title"
+                  :client-name="group.norm_client"
+                  :icon="groupIcon(group)"
+                  :first-seen="group.first_seen"
+                  :last-seen="group.last_seen"
+                  :fallback-date-str="group.dateString"
+                  :events-query="group.query"
+                  :event-count="group.event_count"
+                  :is-reduced-ua="group.apple_masking == 1"
+                  :group-raw="group"
                   @show-info="openInfoModal($event.title, $event.description)"
                 />
               </v-expansion-panels>
 
-              <!-- Cluster pagination -->
-              <div v-if="platform.clusters.length > pageSize" class="d-flex align-center justify-center mt-2" style="gap: 6px;">
-                <v-btn icon x-small :disabled="platform.clusterPage <= 1" @click="$emit('update:clusterPage', platform.clusterPage - 1)">
+              <!-- Group pagination -->
+              <div v-if="platform.groups.length > pageSize" class="d-flex align-center justify-center mt-2" style="gap: 6px;">
+                <v-btn icon x-small :disabled="platform.groupPage <= 1" @click="$emit('update:groupPage', platform.groupPage - 1)">
                   <v-icon size="16">mdi-chevron-left</v-icon>
                 </v-btn>
                 <span class="text-body-2 text--secondary">
-                  {{ platform.clusterPage }} / {{ Math.ceil(platform.clusters.length / pageSize) }}
-                  <span class="grey--text text--darken-1 ml-1">({{ platform.clusters.length }} total)</span>
+                  {{ platform.groupPage }} / {{ Math.ceil(platform.groups.length / pageSize) }}
+                  <span class="grey--text text--darken-1 ml-1">({{ platform.groups.length }} total)</span>
                 </span>
-                <v-btn icon x-small :disabled="platform.clusterPage >= Math.ceil(platform.clusters.length / pageSize)" @click="$emit('update:clusterPage', platform.clusterPage + 1)">
+                <v-btn icon x-small :disabled="platform.groupPage >= Math.ceil(platform.groups.length / pageSize)" @click="$emit('update:groupPage', platform.groupPage + 1)">
                   <v-icon size="16">mdi-chevron-right</v-icon>
                 </v-btn>
               </div>
@@ -236,9 +236,9 @@ export default {
     activeSections() {
       return this.platform.sections.filter(function(s) { return s.entries.length > 0; });
     },
-    currentClusterPage() {
-      var start = (this.platform.clusterPage - 1) * this.pageSize;
-      return this.platform.clusters.slice(start, start + this.pageSize);
+    currentGroupPage() {
+      var start = (this.platform.groupPage - 1) * this.pageSize;
+      return this.platform.groups.slice(start, start + this.pageSize);
     }
   },
   methods: {
@@ -246,8 +246,8 @@ export default {
       var start = (section.page - 1) * this.pageSize;
       return section.entries.slice(start, start + this.pageSize);
     },
-    clusterIcon(cluster) {
-      var os = (cluster.os_type || '').toLowerCase();
+    groupIcon(group) {
+      var os = (group.os_type || '').toLowerCase();
       if (os.indexOf('ios') !== -1 || os.indexOf('iphone') !== -1) return 'mdi-apple-ios';
       if (os.indexOf('mac') !== -1)     return 'mdi-laptop-mac';
       if (os.indexOf('android') !== -1) return 'mdi-android';

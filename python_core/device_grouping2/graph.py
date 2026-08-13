@@ -31,7 +31,7 @@ class DeviceGroup:
     # It is our best-effort reconstruction of a single physical device's timeline based on the computed database linkages.
     #
     # Concretely, it  wraps a Pandas  DataFrame  containing the subset of events and raw device rows
-    # associated with that cluster and calculates aggregations over it that the DB can reference.
+    # associated with that group/cluster and calculates aggregations over it that the DB can reference.
     def __init__(self, root_id: str, df: pd.DataFrame):
         self.root_id = root_id
         self.df = df.sort_values(by="timestamp")
@@ -103,7 +103,7 @@ class DeviceGroup:
         # Apple's Safari browser intentionally masks device hardware details within the User Agent string
         # to prevent browser fingerprint tracking (e.g. reporting a generic 'Macintosh' with no specific macOS
         # version or 'iPhone' with no specific model version). This function flags groups where this privacy
-        # masking is occurring to inform downstream clustering.
+        # masking is occurring to inform downstream grouping/clustering.
         os_val = (
             (self._find_best_attribute("attr__norm__os_name") or "").strip().lower()
         )

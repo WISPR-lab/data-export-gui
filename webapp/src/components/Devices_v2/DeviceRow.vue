@@ -143,7 +143,7 @@ export default {
     detailLabel:         { type: String,  default: 'Details' },
     formattedAttributes: { type: Array,    default: function() { return []; } },
     eventCount: { type: Number, default: 0 },
-    clusterRaw: { type: Object, default: function() { return {}; } }
+    groupRaw: { type: Object, default: function() { return {}; } }
   },
   computed: {
     isRecord() {
@@ -183,7 +183,7 @@ export default {
     displayAttributes() {
       if (this.isRecord) return this.formattedAttributes;
       var attrs = [];
-      var c = this.clusterRaw;
+      var c = this.groupRaw;
       if (!c) return attrs;
       var parseList = function(val) {
         if (!val) return [];

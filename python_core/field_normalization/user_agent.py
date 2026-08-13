@@ -107,7 +107,7 @@ class UserAgentParser:
         [FBAN/FBIOS;FBDV/iPhone11,8;...]
         DeviceDetector resolves FBDV into display name ("iPhone XR") but discards
         the raw identifier. We preserve it in user_agent_device_model_identifier
-        for use as a hard clustering key in device grouping.
+        for use as a static ID key in device grouping.
         """
         if "[FBAN/" not in ua_string:
             return attrs

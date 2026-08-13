@@ -11,7 +11,7 @@
       :key="'platform-' + idx"
       :platform="platform"
       :page-size="PAGE_SIZE"
-      @update:clusterPage="platform.clusterPage = $event"
+      @update:groupPage="platform.groupPage = $event"
     />
   </v-container>
 </template>
@@ -20,7 +20,7 @@
 import EventBus from '@/event-bus.js';
 import PlatformCard from '@/components/Devices_v2/PlatformCard.vue';
 import { getResolvedSessionsRegistrations } from '@/database/queries/resolved_sessions_registrations.js';
-import { getUnlinkedClusters } from '@/database/queries/devices_v2.js';
+import { getUnlinkedGroups } from '@/database/queries/devices_v2.js';
 import { getDB } from '@/database/index.js';
 import { hexColor } from '@/utils/hex.js';
 import { getUASummary } from '@/database/queries/ua_summary.js';
@@ -182,7 +182,7 @@ export default {
         var db = await getDB();
         var uploads = await db.exec('SELECT * FROM uploads', { returnValue: 'resultRows', rowMode: 'object' });
         var states = await getResolvedSessionsRegistrations();
-        var allClusters = await getUnlinkedClusters();
+        var allGroups = await getUnlinkedGroups();
 
         this.platforms = uploads.map(function(upload) {
           var key = (upload.platform || '').toLowerCase();
@@ -195,7 +195,7 @@ export default {
 
           var sections = SECTION_DEFS.map(function(def) { return buildSection(def, uploadEntries); });
           var totalGroundTruth = sections.reduce(function(sum, s) { return sum + s.entries.length; }, 0);
-          var clusters = allClusters.filter(function(c) { return c.upload_id === upload.id; });
+          var groups = allGroups.filter(function(c) { return c.upload_id === upload.id; });
 
           return {
             displayName: meta.displayName,
@@ -204,8 +204,8 @@ export default {
             color: dbColor || meta.color,
             sections: sections,
             totalGroundTruth: totalGroundTruth,
-            clusters: clusters,
-            clusterPage: 1
+            groups: groups,
+            groupPage: 1
           };
         });
 

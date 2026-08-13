@@ -3,7 +3,7 @@ import { getDB } from '../index.js';
 import { hexColor } from '@/utils/hex.js';
 import { getUASummary } from './ua_summary.js';
 
-export async function getUnlinkedClusters() {
+export async function getUnlinkedGroups() {
   const db = await getDB();
   
   const sql = `
