@@ -45,11 +45,11 @@ export default {
       return this.action === 'add';
     },
     message() {
-      var countStr = this.eventCount === 1 ? '1 matching event' : this.eventCount + ' matching events';
+      var countStr = this.eventCount === 1 ? '1 event' : this.eventCount + ' events';
       if (this.isAdd) {
-        return 'Add tag "' + this.tag + '" to all ' + countStr + ' from this device?';
+        return 'Also add tag "' + this.tag + '" to all ' + countStr + ' in this group (that likely originate from this device/session)?';
       }
-      return 'Remove tag "' + this.tag + '" from all ' + countStr + ' from this device?';
+      return 'Remove tag "' + this.tag + '" from all ' + countStr + ' in this group (that likely originate from this device/session)?';
     },
     deviceOnlyButtonText() {
       return 'Device Only';
