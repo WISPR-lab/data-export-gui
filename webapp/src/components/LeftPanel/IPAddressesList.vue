@@ -9,12 +9,41 @@
         <div
           v-for="item in props.items"
           :key="item.client_ip"
+          class="ip-row"
+          :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
+          style="position: relative; font-size: 0.9em; cursor: pointer;"
           @click="applyFilterChip(item.client_ip)"
-          style="cursor: pointer; font-size: 0.9em"
         >
-          <v-row no-gutters class="pa-2 pl-5" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
+          <v-row no-gutters class="pa-2 pl-5">
             <span>{{ item.client_ip }} (<small><strong>{{ item.count | compactNumber }}</strong></small>)</span>
           </v-row>
+          <!-- row action menu (geolocate/add tag) disabled pending IP table work - see openTagDialog/noopPersist/onTagChanged below
+          <v-menu offset-y>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                icon small
+                :ripple="false"
+                class="ip-row-action"
+                :class="{ 'ip-row-action--visible': attrs['aria-expanded'] === 'true' }"
+                v-bind="attrs" v-on="on"
+                @click.stop
+              >
+                <v-icon>mdi-dots-vertical</v-icon>
+              </v-btn>
+            </template>
+            <v-list dense>
+              <v-list-item disabled>
+                <v-list-item-icon class="mr-2"><v-icon small>mdi-map-marker-outline</v-icon></v-list-item-icon>
+                <v-list-item-content>Geolocate</v-list-item-content>
+                <v-chip x-small class="ml-2">Coming soon</v-chip>
+              </v-list-item>
+              <v-list-item @click="openTagDialog(item)">
+                <v-list-item-icon class="mr-2"><v-icon>mdi-tag-plus-outline</v-icon></v-list-item-icon>
+                <v-list-item-content>Add tag</v-list-item-content>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+          -->
         </div>
       </template>
     </v-data-iterator>
@@ -34,14 +63,30 @@
         </v-row>
       </div>
     </template>
+
+    <!--
+    <v-dialog v-model="tagDialog.open" max-width="500px">
+      <event-tag-dialog
+        v-if="tagDialog.open"
+        :events="[{ _source: { tags: [] } }]"
+        :persist="noopPersist"
+        silent
+        @close="tagDialog.open = false"
+        @tag-added="onTagChanged($event, false)"
+        @tag-removed="onTagChanged($event, true)"
+      />
+    </v-dialog>
+    -->
   </div>
 </template>
 
 <script>
 import EventBus from '../../event-bus.js'
 import DB from '@/database/index.js'
+// import EventTagDialog from '../Events/EventTagDialog.vue' // row action menu disabled pending IP table work
 
 export default {
+  // components: { EventTagDialog },
   props: [],
   data: function () {
     return {
@@ -49,6 +94,7 @@ export default {
       ips: [],
       seenKeys: {},
       isFiltered: false,
+      tagDialog: { open: false, ip: null },
     }
   },
   async mounted() {
@@ -138,11 +184,48 @@ export default {
         this.$router.push(target)
       }
     },
+    openTagDialog(item) {
+      this.tagDialog = { open: true, ip: item.client_ip }
+    },
+    noopPersist() {
+      return Promise.resolve()
+    },
+    async onTagChanged(tag, remove) {
+      if (!this.tagDialog.ip) return
+      const changedCount = await DB.addTagToEventsQuery(`client_ip:"${this.tagDialog.ip}"`, tag, remove)
+      if (changedCount) {
+        this.$store.dispatch('updateEventLabels', { label: tag, num: remove ? -changedCount : changedCount })
+      }
+    },
   },
 }
 </script>
 
 <style scoped lang="scss">
+.ip-row-action {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: none !important;
+}
+.ip-row-action::before {
+  background: transparent !important;
+}
+.ip-row-action ::v-deep .v-icon {
+  color: rgba(0, 0, 0, 0.4);
+  transition: color 0.15s ease;
+}
+.ip-row-action:hover ::v-deep .v-icon {
+  color: rgba(0, 0, 0, 0.7);
+}
+.ip-row:hover .ip-row-action,
+.ip-row-action--visible {
+  opacity: 1;
+}
+
 .v-text-field ::v-deep input {
   font-size: 0.9em;
 }

@@ -15,11 +15,13 @@ limitations under the License.
 -->
 <template>
   <v-card min-width="500px" class="mx-auto" max-width="500px" min-height="260px">
-    <v-btn class="float-right mr-1 mt-1" icon @click="$emit('close')">
-      <v-icon title="Close dialog">mdi-close</v-icon>
-    </v-btn>
     <v-card-text>
-      <strong>Quick tags</strong>
+      <div class="d-flex justify-space-between align-center">
+        <strong>Quick tags</strong>
+        <v-btn icon small @click="$emit('close')">
+          <v-icon title="Close dialog">mdi-close</v-icon>
+        </v-btn>
+      </div>
       <v-chip-group>
         <v-chip
           v-for="tag in quickTags"

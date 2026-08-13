@@ -636,6 +636,12 @@ export async function addTagToEventsQuery(eventsQuery, tag, remove = false) {
       `SELECT e.id, e.tags FROM events e JOIN device_group_events dge ON e.id = dge.event_id WHERE dge.device_group_id = ?`,
       { bind: [groupId], returnValue: 'resultRows', rowMode: 'object' }
     );
+  } else if (eventsQuery.indexOf('client_ip:') !== -1) {
+    var ip = eventsQuery.replace('client_ip:', '').replace(/"/g, '');
+    eventsToUpdate = await db.exec(
+      `SELECT id, tags FROM events WHERE json_extract(attributes, '$.client_ip') = ?`,
+      { bind: [ip], returnValue: 'resultRows', rowMode: 'object' }
+    );
   }
 
   let changedCount = 0;
