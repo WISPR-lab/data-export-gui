@@ -254,24 +254,6 @@ export default {
       if (os.indexOf('windows') !== -1) return 'mdi-microsoft-windows';
       return 'mdi-monitor-cellphone';
     },
-    formatActiveRange(firstSeen, lastSeen, fallbackStr) {
-      if (!firstSeen && !lastSeen) return fallbackStr || '';
-      var fmt = this.$options.filters && this.$options.filters.dateRange;
-      if (fmt) {
-        var normalize = function(val) {
-          if (val === null || val === undefined || val === '') return null;
-          var num = Number(val);
-          if (!isNaN(num)) {
-            if (num < 10000000000) return num * 1000;
-            return num;
-          }
-          return val;
-        };
-        var range = fmt([normalize(firstSeen), normalize(lastSeen)]);
-        return range ? 'Active ' + range : (fallbackStr || '');
-      }
-      return fallbackStr || '';
-    },
     openInfoModal(title, description) {
       this.infoModal.title = title;
       this.infoModal.description = description;

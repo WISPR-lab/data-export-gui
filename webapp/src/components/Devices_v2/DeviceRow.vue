@@ -138,17 +138,16 @@ export default {
     activeDateLabel() {
       var fmt = this.$options.filters && this.$options.filters.dateRange;
       if (fmt) {
-        var normalize = function(val) {
-          if (val === null || val === undefined || val === '') return null;
-          var num = Number(val);
-          if (!isNaN(num)) {
-            if (num < 10000000000) return num * 1000;
-            return num;
-          }
-          return val;
-        };
-        var range = fmt([normalize(this.firstSeen), normalize(this.lastSeen)]);
-        return range ? 'Active ' + range : this.fallbackDateStr;
+        if (this.firstSeen && this.lastSeen) {
+          var range = fmt([this.firstSeen, this.lastSeen]);
+          return range ? 'Active ' + range : this.fallbackDateStr;
+        } else if (this.firstSeen) {
+          var fDate = fmt([this.firstSeen, null]);
+          return fDate ? 'First seen ' + fDate : this.fallbackDateStr;
+        } else if (this.lastSeen) {
+          var lDate = fmt([null, this.lastSeen]);
+          return lDate ? 'Last seen ' + lDate : this.fallbackDateStr;
+        }
       }
       return this.fallbackDateStr;
     },
@@ -214,20 +213,6 @@ export default {
         title: 'Masked User Agent',
         description: 'To prevent browser fingerprinting, Apple devices (like iPhones running Mobile Safari) return simplified, generic user agent strings. This hides the specific device model details from websites and exports.'
       });
-    },
-    goToEvents() {
-      var routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      var chipsVal = '';
-      if (this.eventsQuery.indexOf('client_session_id:') === 0) {
-        var sid = this.eventsQuery.replace('client_session_id:', '').replace(/"/g, '');
-        chipsVal = 'client_session_id:' + sid;
-      } else if (this.eventsQuery.indexOf('device_serial_number:') === 0) {
-        var serial = this.eventsQuery.replace('device_serial_number:', '').replace(/"/g, '');
-        chipsVal = 'device_serial_number:' + serial;
-      } else {
-        chipsVal = this.eventsQuery;
-      }
-      this.$router.push({ name: routeName, query: { chips: chipsVal } }).catch(function() {});
     }
   }
 };

@@ -125,22 +125,23 @@ function sortByGroup(entries) {
   var instMax = {};
   entries.forEach(function(e) {
     if (!e.group_id) return;
-    if (!instMax[e.group_id] || e.lastSeen > instMax[e.group_id]) {
-      instMax[e.group_id] = e.lastSeen || '';
+    var maxVal = e.lastSeen || e.firstSeen || '';
+    if (!instMax[e.group_id] || maxVal > instMax[e.group_id]) {
+      instMax[e.group_id] = maxVal;
     }
   });
   return entries.slice().sort(function(a, b) {
-    var aKey = a.group_id ? (instMax[a.group_id] || '') : (a.lastSeen || '');
-    var bKey = b.group_id ? (instMax[b.group_id] || '') : (b.lastSeen || '');
+    var aKey = a.group_id ? (instMax[a.group_id] || '') : (a.lastSeen || a.firstSeen || '');
+    var bKey = b.group_id ? (instMax[b.group_id] || '') : (b.lastSeen || b.firstSeen || '');
     if (aKey !== bKey) return aKey < bKey ? 1 : -1;
-    var aL = a.lastSeen || ''; var bL = b.lastSeen || '';
+    var aL = a.lastSeen || a.firstSeen || ''; var bL = b.lastSeen || b.firstSeen || '';
     return aL < bL ? 1 : aL > bL ? -1 : 0;
   });
 }
 
 function sortByLastSeen(entries) {
   return entries.slice().sort(function(a, b) {
-    var aL = a.lastSeen || ''; var bL = b.lastSeen || '';
+    var aL = a.lastSeen || a.firstSeen || ''; var bL = b.lastSeen || b.firstSeen || '';
     if (!aL && !bL) return 0;
     if (!aL) return 1;
     if (!bL) return -1;

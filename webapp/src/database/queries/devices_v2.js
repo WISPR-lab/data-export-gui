@@ -18,20 +18,7 @@ export async function getUnlinkedClusters() {
     rowMode: 'object'
   });
 
-  const formatDate = (ts) => {
-    if (!ts) return '';
-    const date = new Date(ts * 1000);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
   return rows.map(row => {
-    let start = formatDate(row.first_seen);
-    let end = formatDate(row.last_seen);
-    let dateStr = start;
-    if (start && end && start !== end) {
-      dateStr = `${start} – ${end}`;
-    }
-
     var summary = getUASummary([row])[0] || {};
     var clientLabel = summary.primary ? (summary.primary + (summary.secondary ? ' (' + summary.secondary + ')' : '')) : row.client_name;
 
@@ -45,7 +32,6 @@ export async function getUnlinkedClusters() {
       os_type: row.os_type || null,
       first_seen: row.first_seen || null,
       last_seen: row.last_seen || null,
-      dateString: dateStr || '',
       event_count: row.event_count || 0,
       query: 'device_group_id:' + row.id,
       upload_color: hexColor(row.upload_color)
