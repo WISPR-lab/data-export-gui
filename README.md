@@ -5,9 +5,11 @@ Instead of uploading user data files to a server, this project processes everyth
 
 The Vue frontend is forked and heavily modified from Google's [Timesketch](https://timesketch.org/), specifically the `timesketch/frontend-ng` ([link](https://github.com/google/timesketch/tree/master/timesketch/frontend-ng)) directory. See the *License* section below.
 
-This repository _also_ includes a set of evaluation scripts from the paper (`evaluation/entity_resolution/`) for measuring how well our **Device Entity Resolution** pipeline (see `python_core/device_grouping2/`) determines if two authentication or session records originate from the same identity.  The datasets are very large and it's unnecessary to run these scripts if you are just interested in exploring the web application. See [_Device Entity Resolution_ Evaluation](#device-entity-resolution-evaluation)
+This repository _also_ includes evaluation scripts (`evaluation/entity_resolution/` and `evaluation/efficiency/`) for measuring:
+- **Device Entity Resolution**: how well the **Device Entity Resolution** pipeline (see `python_core/device_grouping2/`) determines if two authentication or session records originate from the same identity.
+- **Efficiency & Scalability**: how the pipeline's timing and memory usage scale as data volume increases (via augmented datasets at 1x, 10x, 100x, 1000x).
 
-TODO: add explanation for efficiency scripts
+The datasets are large and these scripts are unnecessary if you only want to explore the web application. See [_Performance Logging & Efficiency Evaluation_](#performance-logging--efficiency-evaluation) and [_Device Entity Resolution_ Evaluation](#device-entity-resolution-evaluation) below.
 
 ## Quickstart (Web App)
 
@@ -43,6 +45,69 @@ The web application will be live at `http://localhost:5001`.
    ```
    Under the hood, this runs `sync_assets.sh` which automatically builds the `UA-Extract-purepy` wheel using `uv`.
    The frontend runs at `http://localhost:5001`.
+
+## Performance Logging & Efficiency Evaluation
+
+The pipeline includes built-in performance instrumentation to track timing and memory usage across stages. 
+
+### Timing (Always On)
+
+Every run automatically logs:
+- **Duration** per stage (milliseconds)
+- **Rows processed** per stage  
+- **Database calls** per stage
+- **Database file size** before/after pipeline
+
+At the end of the pipeline, a JSON summary is printed to the console:
+```json
+{
+  "pipeline_summary": {
+    "total_duration_ms": 11550,
+    "stages": [
+      {"stage": "extract", "duration_ms": 2450, "rows_processed": 5000, "database_calls": 1240},
+      {"stage": "semantic_map", "duration_ms": 3100, "rows_processed": 5000, "database_calls": 890},
+      ...
+    ],
+    "database_size_before_bytes": 50000000,
+    "database_size_after_bytes": 75000000
+  }
+}
+```
+
+A CSV file (`<filename>_mem_perf.csv`) is automatically downloaded containing all timing data.
+
+### Memory Profiling (Optional)
+
+To enable continuous JavaScript heap sampling during pipeline execution, set an environment variable:
+
+```bash
+# Regular run (timing only)
+npm run serve
+
+# Memory profiling run (timing + continuous heap sampling every 100ms)
+PERFORMANCE_MEMORY_SAMPLING=1 npm run serve
+```
+
+When memory profiling is enabled:
+- A banner appears in the UI: "📊 PERFORMANCE MEMORY TRACKING: ON"
+- Pipeline runs ~5-10% slower due to sampling overhead
+- CSV download includes additional columns: `javascript_heap_bytes`, `python_perf_counter_seconds`, `js_performance_now_ms`
+- Each stage is logged with multiple samples showing heap usage over time
+
+### Using Data for Efficiency Evaluation
+
+1. **Generate augmented datasets** (if testing scalability):
+   ```bash
+   uv run python -m evaluation.efficiency.augment --platform facebook --multiplier 100
+   uv run python -m evaluation.efficiency.augment --platform google --multiplier 1000
+   ```
+
+2. **Run pipeline with timing/memory profiling enabled** and upload augmented ZIP files through the web UI.
+
+3. **Analyze the downloaded CSV** to measure:
+   - How time/memory scale with data size (1x vs 10x vs 100x vs 1000x)
+   - Which stages are performance bottlenecks
+   - Peak memory usage per stage
 
 ## Supported Platforms
 

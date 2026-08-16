@@ -45,6 +45,20 @@ function createWorkerLogger(name) {
 
 const logger = createWorkerLogger('Pyodide Worker');
 
+// Same line shape as the Python-side PERFORMANCE_MEMORY lines (python_core/performance.py).
+// self.performance.memory is Chrome-only.
+function logPerformanceMemory(stage, durationMs, extra) {
+  const parts = ['stage=' + stage];
+  if (durationMs !== undefined) parts.push('dur_ms=' + durationMs.toFixed(1));
+  if (extra) {
+    for (const key in extra) parts.push(key + '=' + extra[key]);
+  }
+  if (self.performance && self.performance.memory) {
+    parts.push('heap_mb=' + Math.round(self.performance.memory.usedJSHeapSize / 1048576));
+  }
+  logger.info('PERFORMANCE_MEMORY ' + parts.join(' '));
+}
+
 
 let pyodide;
 let pyodideReadyPromise;
@@ -238,7 +252,9 @@ async function initPyodide() {
     baseUrl = getBaseUrl();
     logger.debug(`Computed base URL: ${baseUrl}`);
     
+    const pyodideInitStart = self.performance.now();
     pyodide = await loadPyodide({indexURL: buildResourceUrl('pyodide/')});
+    logPerformanceMemory('pyodide_init', self.performance.now() - pyodideInitStart);
     
     const pyCorePath = config.paths.python_core;
     await extractPythonCoreZip(pyodide, pyCorePath);
@@ -269,6 +285,8 @@ builtins.PYTHON_CORE = "${config.paths.python_core}"
 builtins.LOG_LEVEL = "${config.LOG_LEVEL || (typeof process !== 'undefined' && process.env && process.env.VUE_APP_LOG_LEVEL) || 'INFO'}"
 builtins.IS_FIREFOX = ${isFirefox ? 'True' : 'False'}
 builtins.IS_SAFARI = ${isSafari ? 'True' : 'False'}
+builtins.PERFORMANCE_MEMORY_SAMPLING = ${config.performance?.memory_sampling_enabled ? 'True' : 'False'}
+builtins.PERFORMANCE_MEMORY_SAMPLING_INTERVAL_MS = ${config.performance?.memory_sampling_interval_ms || 100}
     `);
 
     pyodide.FS.mkdir(config.paths.manifests);
@@ -427,6 +445,9 @@ self.onmessage = async (event) => {
         const { platform, givenName } = args;
         logger.info(`run_pipeline called: platform=${platform}, givenName=${givenName}`);
 
+        // TODO: collect PERFORMANCE_MEMORY log lines during the run, parse the JSON summary
+        // Python logs at the end of run(), and download both as `${givenName}_mem_perf.csv`.
+
         await loadManifestOnDemand(platform);
 
         if (opfsMountPoint) {
@@ -438,17 +459,39 @@ self.onmessage = async (event) => {
           }
         }
 
+        // performance.mark/measure pairs show up in DevTools' Performance tab timeline.
+        let lastStageMark = null;
         self.reportProgress = (stage, progress) => {
+          const markName = 'pipeline:' + stage;
+          self.performance.mark(markName);
+          if (lastStageMark) {
+            try {
+              self.performance.measure('pipeline:' + lastStageMark.stage + '->' + stage, lastStageMark.name, markName);
+            } catch (e) { /* ignore if a mark went missing */ }
+          }
+          lastStageMark = { stage, name: markName };
+          // Fires when this stage is about to start, not when it finishes — the matching
+          // `stage=<name> dur_ms=...` line from python_core/performance.py has the actual duration.
+          logPerformanceMemory(stage + '_start', undefined, { progress });
           self.postMessage({ id, type: 'progress', stage, progress });
         };
 
         pyodide.globals.set('platform', platform);
         pyodide.globals.set('given_name', givenName);
 
+        const pipelineStart = self.performance.now();
         result = await pyodide.runPythonAsync(`
 import run
 run.run(platform, given_name)
 `);
+
+        self.performance.mark('pipeline:complete');
+        if (lastStageMark) {
+          try {
+            self.performance.measure('pipeline:' + lastStageMark.stage + '->complete', lastStageMark.name, 'pipeline:complete');
+          } catch (e) { /* ignore if a mark went missing */ }
+        }
+        logPerformanceMemory('pipeline_total', self.performance.now() - pipelineStart);
 
         delete self.reportProgress;
 

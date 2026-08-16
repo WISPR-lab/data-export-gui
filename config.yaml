@@ -1,6 +1,11 @@
 # Central configuration for both JavaScript and Python
 # This file is synced to webapp/public/ during build
 
+# TODO: set memory_sampling_enabled from the PERFORMANCE_MEMORY_SAMPLING env var at build time
+performance:
+  memory_sampling_enabled: false
+  memory_sampling_interval_ms: 100
+
 database:
   db_path: "/mnt/data/userdata.db"
 

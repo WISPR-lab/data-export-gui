@@ -59,6 +59,28 @@ class DatabaseSession:
         # copy cost separately. See run.py.
         self.existing_conn = existing_conn
 
+    def _wrap_execute_counting(self) -> None:
+        # Counts execute/executemany calls on conn (see python_core/performance.py).
+        # Idempotent so stages sharing a connection (existing_conn) share one running count.
+        if getattr(self.conn, "_execute_counting_wrapped", False):
+            return
+
+        self.conn._execute_call_count = 0
+        orig_execute = self.conn.execute
+        orig_executemany = self.conn.executemany
+
+        def execute(sql, params=None):
+            self.conn._execute_call_count += 1
+            return orig_execute(sql, params) if params is not None else orig_execute(sql)
+
+        def executemany(sql, params_list):
+            self.conn._execute_call_count += 1
+            return orig_executemany(sql, params_list)
+
+        self.conn.execute = execute
+        self.conn.executemany = executemany
+        self.conn._execute_counting_wrapped = True
+
     def _wrap_json_serialization(self) -> None:
         orig_execute = self.conn.execute
         orig_executemany = self.conn.executemany
@@ -116,6 +138,7 @@ class DatabaseSession:
         if self.existing_conn is not None:
             self.conn = self.existing_conn
             configure_row_factory(self.conn, self.use_dict_factory, self.json_columns)
+            self._wrap_execute_counting()
             return self.conn
 
         try:
@@ -132,6 +155,7 @@ class DatabaseSession:
             )
 
             configure_row_factory(self.conn, self.use_dict_factory, self.json_columns)
+            self._wrap_execute_counting()
 
             self.conn.execute("PRAGMA journal_mode = DELETE; ")
             self.conn.execute("PRAGMA foreign_keys = ON;")

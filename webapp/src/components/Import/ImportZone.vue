@@ -31,11 +31,13 @@ It replaces the generic UploadForm for the new workflow.
           </p>
 
           <v-alert dense text type="info" class="mb-4 text-body-2">
-            This tool is limited to the data provided by {{ platformName }}. 
+            This tool is limited to the data provided by {{ platformName }}.
             For example, platforms may record incorrect time or location of events.
             Verify all results.
           </v-alert>
-          
+
+          <!-- TODO: warning-colored banner "PERFORMANCE MEMORY TRACKING: ON" when memory_sampling_enabled -->
+
           <!-- <v-card-text class="pb-0 pt-1">
           <v-alert dense text type="info" class="mb-4 text-body-2">
             Don't have your export yet?
