@@ -141,32 +141,39 @@ def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest =
         manifest = manifest or Manifest(platform=platform)
 
         with DatabaseSession(db_path, existing_conn=conn) as conn:
-            cursor = conn.execute(
+            # fetch just distinct (file_id, manifest_file_id) pairs .
+            file_rows = conn.execute(
                 """
-                SELECT 
-                    r.id, 
-                    r.file_id, 
-                    r.data, 
-                    f.manifest_file_id
+                SELECT DISTINCT r.file_id, f.manifest_file_id
                 FROM raw_data r
                 JOIN uploaded_files f ON r.file_id = f.id
                 WHERE r.upload_id = ?
-                ORDER BY f.manifest_file_id ASC, r.id ASC
+                ORDER BY f.manifest_file_id ASC
                 """,
                 (upload_id,),
-            )
+            ).fetchall()
 
-            if cursor is None:
-                raise RuntimeError("Database cursor is None after execute()")
-
-            rows = cursor.fetchall()
-            if not rows:
+            if not file_rows:
                 logger.warning("No raw_data found for upload_id: %s", upload_id)
                 return
 
-            event_rows, auth_device_rows = _generate_table_rows(
-                rows, manifest, upload_id
-            )
+            event_rows = []
+            auth_device_rows = []
+
+            for file_id, manifest_file_id in file_rows:
+                rows = conn.execute(
+                    """
+                    SELECT r.id, r.file_id, r.data, f.manifest_file_id
+                    FROM raw_data r
+                    JOIN uploaded_files f ON r.file_id = f.id
+                    WHERE r.upload_id = ? AND r.file_id = ?
+                    ORDER BY r.id ASC
+                    """,
+                    (upload_id, file_id),
+                ).fetchall()
+                ev, auth = _generate_table_rows(rows, manifest, upload_id)
+                event_rows.extend(ev)
+                auth_device_rows.extend(auth)
 
             event_rows = deduplicate_events(event_rows)
             event_rows = _stringify(event_rows)

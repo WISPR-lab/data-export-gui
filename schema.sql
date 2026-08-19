@@ -217,6 +217,10 @@ SELECT DISTINCT event_action
 FROM events
 WHERE event_action IS NOT NULL AND event_action != '';
 
+-- Speeds up ORDER BY e.timestamp (used on every search) + LIMIT pagination.
+CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
+
+
 
 
 

@@ -55,7 +55,7 @@ def group(upload_id: str, db_path: str = None, conn=None) -> None:
             )
         conn.commit()
 
-        groups = _build_device_groups(conn, df)
+        groups = _build_device_groups(conn, upload_id, df)
 
         ts = datetime.now(timezone.utc).timestamp()
         _write_device_groups(conn, groups, ts)
@@ -138,14 +138,10 @@ def _deduplicate_and_fetch_inputs(
     return pd.DataFrame(events_rows), pd.DataFrame(devices_rows)
 
 
-def _build_device_groups(conn, df: pd.DataFrame) -> list:
-    vertex_ids = df["id"].tolist()
-    placeholders = ",".join("?" for _ in vertex_ids)
-
+def _build_device_groups(conn, upload_id: str, df: pd.DataFrame) -> list:
     edges_rows = conn.execute(
-        f"""SELECT id_a, id_b, type FROM device_group_edges 
-            WHERE id_a IN ({placeholders}) OR id_b IN ({placeholders})""",
-        vertex_ids + vertex_ids,
+        "SELECT id_a, id_b, type FROM device_group_edges WHERE upload_id = ?",
+        (upload_id,),
     ).fetchall()
 
     graph = DeviceGroupGraph(df, pd.DataFrame(edges_rows))
@@ -157,18 +153,32 @@ def _write_device_groups(conn, groups: list, ts: float) -> None:
     if not group_ids:
         return
 
-    inst_placeholders = ",".join("?" for _ in group_ids)
+    placeholders = ",".join("?" for _ in group_ids)
     conn.execute(
-        f"DELETE FROM device_groups WHERE id IN ({inst_placeholders})", group_ids
+        f"DELETE FROM device_groups WHERE id IN ({placeholders})", group_ids
     )
+
+    device_groups_rows = []
+    all_events_mapping = []
+    all_devices_mapping = []
 
     for group in groups:
         export_data = group.export_as_dict()
         export_data["created_at"] = ts
         for list_col in ["os_versions", "client_versions", "client_ips", "locations"]:
             export_data[list_col] = json.dumps(export_data[list_col])
+        device_groups_rows.append(export_data)
 
-        conn.execute(
+        all_events_mapping.extend(
+            (group.root_id, vid) for vid in group.df[group.df["table"] == "events"]["id"]
+        )
+
+        all_devices_mapping.extend(
+            (group.root_id, vid) for vid in group.df[group.df["table"] == "devices_raw"]["id"]
+        )
+
+    if device_groups_rows:
+        conn.executemany(
             """INSERT INTO device_groups 
                (id, upload_id, platform, manufacturer, model, client_name, os_name, os_type, apple_masking, 
                 first_seen, last_seen, last_seen_dt, event_count, latest_os_version, latest_client_version, 
@@ -176,24 +186,17 @@ def _write_device_groups(conn, groups: list, ts: float) -> None:
                VALUES (:id, :upload_id, :platform, :manufacturer, :model, :client_name, :os_name, :os_type, :apple_masking, 
                        :first_seen, :last_seen, :last_seen_dt, :event_count, :latest_os_version, :latest_client_version, 
                        :latest_client_ip, :os_versions, :client_versions, :client_ips, :locations, :created_at)""",
-            export_data,
+            device_groups_rows,
         )
 
-        events_mapping = [
-            (group.root_id, vid) for vid in group.df[group.df["table"] == "events"]["id"]
-        ]
-        if events_mapping:
-            conn.executemany(
-                "INSERT OR IGNORE INTO device_group_events (device_group_id, event_id) VALUES (?, ?)",
-                events_mapping,
-            )
+    if all_events_mapping:
+        conn.executemany(
+            "INSERT OR IGNORE INTO device_group_events (device_group_id, event_id) VALUES (?, ?)",
+            all_events_mapping,
+        )
 
-        devices_mapping = [
-            (group.root_id, vid)
-            for vid in group.df[group.df["table"] == "devices_raw"]["id"]
-        ]
-        if devices_mapping:
-            conn.executemany(
-                "INSERT OR IGNORE INTO device_group_raw_devices (device_group_id, devices_raw_id) VALUES (?, ?)",
-                devices_mapping,
-            )
+    if all_devices_mapping:
+        conn.executemany(
+            "INSERT OR IGNORE INTO device_group_raw_devices (device_group_id, devices_raw_id) VALUES (?, ?)",
+            all_devices_mapping,
+        )
