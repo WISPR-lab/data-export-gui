@@ -24,6 +24,7 @@ dependencies = [
     "duckdb>=1.5.4",
     "sqlglot>=30.11.0",
     "ipykernel>=7.3.0",
+    "nltk>=3.10.3",
 ]
 
 [dependency-groups]
