@@ -52,7 +52,8 @@ export async function searchEvents(queryString = '', filter = {}) {
       u.given_name AS data_export_name,
       u.platform AS platform,
       dg.model AS device_model,
-      dge.device_group_id
+      dge.device_group_id,
+      COUNT(*) OVER () AS total_count
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
     LEFT JOIN device_group_events dge ON e.id = dge.event_id
@@ -72,8 +73,9 @@ export async function searchEvents(queryString = '', filter = {}) {
     });
     logger.debug(`Executed SQL: ${sql}`);
     logger.debug(`With params: ${JSON.stringify(allParams)}`);
-    
-    const totalCount = await _getEventsTotalCount(db, whereClause, whereParams);
+
+    // total_count comes from the window function — same scan as the page query, no extra round-trip
+    const totalCount = (rows.length > 0 && rows[0].total_count) ? rows[0].total_count : 0;
     const countPerDataExport = await _getEventsCountPerTimeline(db, whereClause, whereParams);
     const countPerEventType = await _getEventsCountPerEventType(db, whereClause, whereParams);
     const countPerIPAddress = await _getEventsCountPerIPAddress(db, whereClause, whereParams);
@@ -247,86 +249,37 @@ export async function getEventTypes() {
 
 
 export async function getEventTags() {
-  /* Client-side aggregation: parses JSON tags from all events and counts occurrences. */
+  /* SQL-side aggregation via json_each — avoids loading all tag blobs into the WASM heap. */
   const db = await getDB();
   const sql = `
-    SELECT tags 
-    FROM events 
-    WHERE tags IS NOT NULL AND tags != '' AND tags != '[]'
+    SELECT j.value AS tag, COUNT(*) AS count
+    FROM events
+    JOIN json_each(events.tags) j
+    WHERE events.tags IS NOT NULL AND events.tags != '' AND events.tags != '[]'
+    GROUP BY j.value
+    ORDER BY count DESC
   `;
-  
   const rows = await db.exec(sql, {
     returnValue: 'resultRows',
     rowMode: 'object'
   });
-  
-  const tagCounts = {};
-  rows.forEach(row => {
-    try {
-      const tags = JSON.parse(row.tags);
-      if (Array.isArray(tags)) {
-        tags.forEach(tag => {
-          if (tag) {
-            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-          }
-        });
-      }
-    } catch (e) {
-      console.warn('Failed to parse tags:', row.tags, e);
-    }
-  });
-  
-  // Convert to array format with tag/count
-  return Object.entries(tagCounts)
-    .map(([tag, count]) => ({
-      tag,
-      count
-    }))
-    .sort((a, b) => b.count - a.count);
+  return rows.map(function(row) { return { tag: row.tag, count: row.count }; });
 }
 
 export async function getIPAddresses() {
-  /* Client-side aggregation: parses JSON attributes from all events and counts client_ip occurrences. */
   const db = await getDB();
   const sql = `
-    SELECT attributes 
-    FROM events 
-    WHERE attributes IS NOT NULL AND attributes != ''
+    SELECT json_extract(attributes, '$.client_ip') AS client_ip, COUNT(*) AS count
+    FROM events
+    WHERE json_extract(attributes, '$.client_ip') IS NOT NULL
+    GROUP BY client_ip
+    ORDER BY count DESC
   `;
-  
   const rows = await db.exec(sql, {
     returnValue: 'resultRows',
     rowMode: 'object'
   });
-  
-  const ipCounts = {};
-  rows.forEach(row => {
-    try {
-      const attrs = JSON.parse(row.attributes);
-      if (attrs.client_ip) {
-        ipCounts[attrs.client_ip] = (ipCounts[attrs.client_ip] || 0) + 1;
-      }
-    } catch (e) {
-      console.warn('Failed to parse attributes for IP extraction:', e);
-    }
-  });
-  
-  return Object.entries(ipCounts)
-    .map(([ip, count]) => ({
-      client_ip: ip,
-      count
-    }))
-    .sort((a, b) => b.count - a.count);
-}
-
-async function _getEventsTotalCount(db, whereClause, whereParams) {
-  const sql = `SELECT COUNT(*) as count FROM events e LEFT JOIN uploads u ON e.upload_id = u.id LEFT JOIN device_group_events dge ON e.id = dge.event_id LEFT JOIN device_groups dg ON dge.device_group_id = dg.id ${whereClause}`;
-  const result = await db.exec(sql, {
-    bind: whereParams,
-    returnValue: 'resultRows',
-    rowMode: 'object'
-  });
-  return (result[0] && result[0].count) || 0;
+  return rows.map(function(row) { return { client_ip: row.client_ip, count: row.count }; });
 }
 
 async function _getEventsCountPerTimeline(db, whereClause, whereParams) {
@@ -378,16 +331,18 @@ async function _getEventsCountPerEventType(db, whereClause, whereParams) {
 }
 
 async function _getEventsCountPerIPAddress(db, whereClause, whereParams) {
-  // Compute counts with the current filter
-  const baseWhere = 'WHERE e.attributes IS NOT NULL AND e.attributes != \'\''
-  const combinedWhere = whereClause ? whereClause + ' AND e.attributes IS NOT NULL AND e.attributes != \'\'': baseWhere;
+  const ipCondition = "json_extract(e.attributes, '$.client_ip') IS NOT NULL";
+  const combinedWhere = whereClause
+    ? whereClause + ' AND ' + ipCondition
+    : 'WHERE ' + ipCondition;
   const sql = `
-    SELECT e.attributes 
+    SELECT json_extract(e.attributes, '$.client_ip') AS client_ip, COUNT(*) AS count
     FROM events e
     LEFT JOIN uploads u ON e.upload_id = u.id
     LEFT JOIN device_group_events dge ON e.id = dge.event_id
     LEFT JOIN device_groups dg ON dge.device_group_id = dg.id
     ${combinedWhere}
+    GROUP BY client_ip
   `;
   const rows = await db.exec(sql, {
     bind: whereParams,
@@ -395,54 +350,37 @@ async function _getEventsCountPerIPAddress(db, whereClause, whereParams) {
     rowMode: 'object'
   });
   const ipCounts = {};
-  rows.forEach(row => {
-    try {
-      const attrs = JSON.parse(row.attributes);
-      if (attrs.client_ip) {
-        ipCounts[attrs.client_ip] = (ipCounts[attrs.client_ip] || 0) + 1;
-      }
-    } catch (e) {}
+  rows.forEach(function(row) {
+    if (row.client_ip) ipCounts[row.client_ip] = row.count;
   });
   return ipCounts;
 }
 
 async function _getEventsCountPerTagOrLabel(db, filter, queryString) {
-  // Compute counts with the current filter, but ignoring the tags and labels filters themselves
+  // Strip tag/label chips so their own filter doesn't exclude them from the count
   const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'u.platform'];
   const filteredChips = (filter.chips || []).filter(function(c) { return c.type !== 'tag' && c.type !== 'label'; });
   const modifiedFilter = Object.assign({}, filter, { chips: filteredChips });
   const { clause: whereClause, params: whereParams } = buildWhereClause(modifiedFilter, queryString || '', stringColumns);
-  const sql = `
-    SELECT e.tags, e.labels 
-    FROM events e
-    LEFT JOIN uploads u ON e.upload_id = u.id
-    LEFT JOIN device_group_events dge ON e.id = dge.event_id
-    ${whereClause}
-  `;
-  const rows = await db.exec(sql, {
-    bind: whereParams,
-    returnValue: 'resultRows',
-    rowMode: 'object'
-  });
+
+  // Push aggregation to SQL via json_each — one query per column, merge in JS
+  function makeQuery(col) {
+    return `
+      SELECT j.value AS item, COUNT(*) AS count
+      FROM events e
+      LEFT JOIN uploads u ON e.upload_id = u.id
+      LEFT JOIN device_group_events dge ON e.id = dge.event_id
+      JOIN json_each(e.${col}) j
+      ${whereClause}
+      GROUP BY j.value
+    `;
+  }
+
   const counts = {};
-  rows.forEach(row => {
-    try {
-      const tags = row.tags ? JSON.parse(row.tags) : [];
-      if (Array.isArray(tags)) {
-        tags.forEach(t => {
-          if (t) counts[t] = (counts[t] || 0) + 1;
-        });
-      }
-    } catch (e) {}
-    try {
-      const labels = row.labels ? JSON.parse(row.labels) : [];
-      if (Array.isArray(labels)) {
-        labels.forEach(l => {
-          if (l) counts[l] = (counts[l] || 0) + 1;
-        });
-      }
-    } catch (e) {}
-  });
+  var tagRows = await db.exec(makeQuery('tags'), { bind: whereParams, returnValue: 'resultRows', rowMode: 'object' });
+  tagRows.forEach(function(row) { if (row.item) counts[row.item] = (counts[row.item] || 0) + row.count; });
+  var labelRows = await db.exec(makeQuery('labels'), { bind: whereParams, returnValue: 'resultRows', rowMode: 'object' });
+  labelRows.forEach(function(row) { if (row.item) counts[row.item] = (counts[row.item] || 0) + row.count; });
   return counts;
 }
 

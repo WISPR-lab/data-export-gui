@@ -135,6 +135,8 @@ class DatabaseSession:
 
             self.conn.execute("PRAGMA journal_mode = DELETE; ")
             self.conn.execute("PRAGMA foreign_keys = ON;")
+            self.conn.execute("PRAGMA cache_size = -32000;")   # 32 MB page cache
+            self.conn.execute("PRAGMA synchronous = OFF;")
 
             if self.schema_path:
                 if not safefileutils.exists(self.schema_path):
