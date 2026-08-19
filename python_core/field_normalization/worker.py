@@ -8,6 +8,7 @@ from field_normalization.auth_related_events import treat_event_as_auth_device
 from python_core.logger import get_logger
 
 logger = get_logger("normalize")
+_CHUNK = 500
 
 
 def _normalize(rows, platform, ua_parser, file_map, table=""):
@@ -41,7 +42,6 @@ def normalize(upload_id: str, db_path: str = None, conn=None) -> dict:
         json_columns=["attributes", "events_category"],
         existing_conn=conn,
     ) as conn:
-        # Get platform from uploads table
         upload = conn.execute(
             "SELECT platform FROM uploads WHERE id = ?", (upload_id,)
         ).fetchone()
@@ -54,51 +54,38 @@ def normalize(upload_id: str, db_path: str = None, conn=None) -> dict:
         file_map = {uf["id"]: uf for uf in uploaded_files}
 
         ua_parser = UserAgentParser()
-
-        # ----- devices raw normalization -------
         records_normalized = 0
 
-        rows = conn.execute(
-            """
-            SELECT id, attributes
-            FROM devices_raw
-            WHERE upload_id = ?
-            """,
+        # ----- devices raw normalization -------
+        cursor = conn.execute(
+            "SELECT id, attributes FROM devices_raw WHERE upload_id = ?",
             (upload_id,),
-        ).fetchall()
-        logger.debug("Fetched %d devices_raw rows for normalization", len(rows))
-
-        if rows:
+        )
+        while True:
+            rows = cursor.fetchmany(_CHUNK)
+            if not rows:
+                break
             updates = _normalize(rows, platform, ua_parser, file_map, table="devices_raw")
             conn.executemany(
-                """
-                UPDATE devices_raw
-                SET attributes = :attributes, origin = :origin
-                WHERE id = :id
-                """,
+                "UPDATE devices_raw SET attributes = :attributes, origin = :origin WHERE id = :id",
                 updates,
             )
             records_normalized += len(updates)
 
-        # ----- events normalization -------
-        rows = conn.execute(
-            """
-            SELECT id, attributes, event_action, event_type, event_kind, origin
-            FROM events
-            WHERE upload_id = ?
-            """,
-            (upload_id,),
-        ).fetchall()
-        logger.debug("Fetched %d events rows for normalization", len(rows))
+        logger.debug("Finished devices_raw normalization for upload_id=%s", upload_id)
 
-        if rows:
+        # ----- events normalization (chunked) -------
+        cursor = conn.execute(
+            "SELECT id, attributes, event_action, event_type, event_kind, origin FROM events WHERE upload_id = ?",
+            (upload_id,),
+        )
+        while True:
+            rows = cursor.fetchmany(_CHUNK)
+            if not rows:
+                break
             updates = _normalize(rows, platform, ua_parser, file_map, table="events")
             conn.executemany(
-                """
-                UPDATE events 
-                SET attributes = :attributes, origin = :origin, treat_as_auth_device = :treat_as_auth_device
-                WHERE id = :id
-                """,
+                "UPDATE events SET attributes = :attributes, origin = :origin, treat_as_auth_device = :treat_as_auth_device WHERE id = :id",
                 updates,
             )
             records_normalized += len(updates)
@@ -108,7 +95,7 @@ def normalize(upload_id: str, db_path: str = None, conn=None) -> dict:
 
         return {
             "status": "success",
-            "message": f"Normalized {records_normalized} records",
+            "message": "Normalized {} records".format(records_normalized),
             "records_normalized": records_normalized,
             "unique_uas_parsed": len(ua_parser._cache),
         }
