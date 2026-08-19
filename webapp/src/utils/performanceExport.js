@@ -1,15 +1,18 @@
 // Builds/downloads `${givenName}_mem_perf.csv` from performance_summary (python_core/run.py).
-// One row per stage, or per heap sample per stage when sampling is on.
+// One row per stage, or per sample tick per stage when sampling is on — js/wasm heap
+// readings share a row since they're sampled together each tick (see _MemorySampler).
 
 const CSV_HEADER = [
   'stage',
   'duration_ms',
   'rows_processed',
   'database_calls',
-  'sampling_mode', // disabled | unavailable | single_sample | continuous — see performance.py
+  'js_sampling_mode', // disabled | unavailable | single_sample | continuous — see performance.py
+  'wasm_sampling_mode',
   'sample_index',
   'elapsed_ms',
-  'heap_bytes',
+  'js_heap_bytes', // Chrome-only
+  'wasm_heap_bytes', // any browser
   'database_size_before_bytes',
   'database_size_after_bytes',
   'total_duration_ms',
@@ -38,14 +41,22 @@ export function buildPerformanceCsv(summary) {
       stage.duration_ms,
       stage.rows_processed,
       stage.database_calls,
-      stage.sampling_mode,
+      stage.js_sampling_mode,
+      stage.wasm_sampling_mode,
     ];
-    if (stage.heap_samples && stage.heap_samples.length) {
-      stage.heap_samples.forEach((sample, i) => {
-        rows.push([...base, i, sample.elapsed_ms, sample.heap_bytes, ...footer]);
-      });
-    } else {
-      rows.push([...base, '', '', '', ...footer]);
+    const jsSamples = stage.js_heap_samples || [];
+    const wasmSamples = stage.wasm_heap_samples || [];
+    const sampleCount = Math.max(jsSamples.length, wasmSamples.length);
+
+    if (sampleCount === 0) {
+      rows.push([...base, '', '', '', '', ...footer]);
+      continue;
+    }
+    for (let i = 0; i < sampleCount; i++) {
+      const js = jsSamples[i];
+      const wasm = wasmSamples[i];
+      const elapsedMs = (js || wasm).elapsed_ms;
+      rows.push([...base, i, elapsedMs, js ? js.heap_bytes : '', wasm ? wasm.heap_bytes : '', ...footer]);
     }
   }
 

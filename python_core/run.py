@@ -39,13 +39,16 @@ def _stage_summary(stage_name: str, result) -> dict:
         "duration_ms": round(result.duration_ms, 1) if result.duration_ms is not None else None,
         "rows_processed": result.rows,
         "database_calls": result.db_calls,
-        "sampling_mode": result.sampling_mode,
+        "js_sampling_mode": result.js_sampling_mode,
+        "wasm_sampling_mode": result.wasm_sampling_mode,
     }
-    if result.heap_samples:
-        entry["heap_samples"] = [
-            {"elapsed_ms": round(elapsed_ms, 1), "heap_bytes": heap_bytes}
-            for elapsed_ms, heap_bytes in result.heap_samples
-        ]
+    for name in ("js", "wasm"):
+        samples = getattr(result, f"{name}_heap_samples")
+        if samples:
+            entry[f"{name}_heap_samples"] = [
+                {"elapsed_ms": round(elapsed_ms, 1), "heap_bytes": heap_bytes}
+                for elapsed_ms, heap_bytes in samples
+            ]
     return entry
 
 

@@ -9,9 +9,11 @@ Logs one line per stage:
 
 When PERFORMANCE_MEMORY_SAMPLING is on (see builtins, injected by
 pyodide-worker.js from config.yaml's performance.memory_sampling_enabled),
-each stage also gets continuous JS-heap sampling on a background thread —
-see _HeapSampler below. If continuous sampling does not work for some reason, downgrates
-to single sample or is totally disabeld (see sampling_mode)"""
+each stage also gets memory samples on a background thread from:
+  js:   js.performance.memory.usedJSHeapSize — Chrome-only
+  wasm: js.getWasmMemoryBytes() (pyodide-worker.js)
+Each source downgrades independently to single sample or unavailable
+(see sampling_mode)."""
 import threading
 import time
 from contextlib import contextmanager
@@ -24,75 +26,74 @@ logger = get_logger("performance")
 _sampling_unavailable_logged = False
 
 
+def _read_js_heap():
+    import js
+    heap = getattr(getattr(js, "performance", None), "memory", None)
+    return int(heap.usedJSHeapSize) if heap is not None else None
+
+
+def _read_wasm_heap():
+    import js
+    return int(js.getWasmMemoryBytes())
+
+
+
+_MEMORY_SOURCES = {
+    "js": _read_js_heap,
+    "wasm": _read_wasm_heap,
+}
+
+
 class _StageResult:
     rows = None
     duration_ms = None
     db_calls = None
-    heap_samples = None  # list of (elapsed_ms, heap_bytes), only set when sampling is on
-    # What kind of heap sampling this stage actually got — always set, so a run never
-    # silently claims more than it delivered. One of:
-    #   "disabled"      — PERFORMANCE_MEMORY_SAMPLING was off, sampling wasn't attempted
-    #   "unavailable"    — sampling was on but nothing could be read at all (no `js`,
-    #                       no performance.memory, e.g. Firefox/Safari or pytest)
-    #   "single_sample"  — sampling was on but we only ever got the one synchronous
-    #                       reading at stage start — i.e. the background thread never
-    #                       actually produced a second point (no real concurrency in
-    #                       this Pyodide build, or the stage finished before the first
-    #                       interval elapsed). Not a time series — treat as a snapshot.
-    #   "continuous"     — the background thread genuinely ran alongside the stage and
-    #                       produced more than one sample; a real time series.
-    sampling_mode = "disabled"
+    js_heap_samples = None
+    wasm_heap_samples = None
+    js_sampling_mode = "disabled"
+    wasm_sampling_mode = "disabled"
 
 
-class _HeapSampler:
-    """Samples js.performance.memory.usedJSHeapSize on a background thread. """
+class _MemorySampler:
+    """Samples all _MEMORY_SOURCES together, once per tick, on one background thread."""
 
     def __init__(self, interval_ms: float):
         self.interval_s = max(interval_ms, 1) / 1000.0
-        self.samples = []  # (elapsed_ms, heap_bytes)
+        self.samples = {name: [] for name in _MEMORY_SOURCES}  # name -> [(elapsed_ms, bytes)]
+        self._dead = set()  # sources that raised errors, stop retrying
         self._start = None
         self._stop_event = None
         self._thread = None
-        self._available = True
-        self.mode = "unavailable"  # set by stop()
 
-    def _sample_once(self):
-        import js
-
-        heap = getattr(getattr(js, "performance", None), "memory", None)
-        if heap is None:
-            return None
-        return int(heap.usedJSHeapSize)
-
-    def _run(self):
-        # wait() before sampling, a full interval must actually elapse before count        
-        while not self._stop_event.wait(self.interval_s):
+    def _sample_all(self):
+        for name, reader in _MEMORY_SOURCES.items():
+            if name in self._dead:
+                continue
             try:
-                value = self._sample_once()
+                value = reader()
             except Exception:
-                # Chrome-only API,  stop silently if not working
-                self._available = False
-                return
+                self._dead.add(name)
+                continue
             if value is not None:
                 elapsed_ms = (time.perf_counter() - self._start) * 1000
-                self.samples.append((elapsed_ms, value))
+                self.samples[name].append((elapsed_ms, value))
+
+    def _run(self):
+        # wait() before sampling — a full interval must actually elapse before it counts.
+        while not self._stop_event.wait(self.interval_s):
+            self._sample_all()
 
     def start(self):
         global _sampling_unavailable_logged
         self._start = time.perf_counter()
+        self._sample_all()  # sync sample now, so we have a point even if the thread never runs
         try:
-            # sync sample now so we have a data point even if the thread never runs
-            value = self._sample_once()
-            if value is not None:
-                self.samples.append((0.0, value))
-
             self._stop_event = threading.Event()
             self._thread = threading.Thread(target=self._run, daemon=True)
             self._thread.start()
         except Exception as e:
-            self._available = False
             if not _sampling_unavailable_logged:
-                logger.debug(f"Heap sampling unavailable ({type(e).__name__}: {e}); timing-only.")
+                logger.debug(f"Background memory sampling unavailable ({type(e).__name__}: {e}); single-sample only.")
                 _sampling_unavailable_logged = True
 
     def stop(self):
@@ -101,12 +102,13 @@ class _HeapSampler:
         if self._thread is not None:
             self._thread.join(timeout=0.5)
 
-        if len(self.samples) > 1:
-            self.mode = "continuous"
-        elif len(self.samples) == 1:
-            self.mode = "single_sample"
-        else:
-            self.mode = "unavailable"
+    def mode(self, name):
+        n = len(self.samples[name])
+        if n > 1:
+            return "continuous"
+        if n == 1:
+            return "single_sample"
+        return "unavailable"
 
 
 @contextmanager
@@ -118,7 +120,7 @@ def measure_stage(stage_name: str, conn=None):
             do_work()
             result.rows = count_rows()  # optional
 
-    Populates result.duration_ms/db_calls/sampling_mode (+heap_samples if sampled).
+    Populates result.duration_ms/db_calls + per-source js_*/wasm_* sampling fields.
     """
     start = time.perf_counter()
     calls_before = getattr(conn, "_execute_call_count", None) if conn is not None else None
@@ -131,19 +133,19 @@ def measure_stage(stage_name: str, conn=None):
             interval_ms = float(interval_ms)
         except (TypeError, ValueError):
             interval_ms = 100
-        sampler = _HeapSampler(interval_ms)
+        sampler = _MemorySampler(interval_ms)
         sampler.start()
 
     result = _StageResult()
-    result.sampling_mode = "disabled" if not sampling_enabled else "unavailable"
     try:
         yield result
     finally:
         if sampler is not None:
             sampler.stop()
-            result.sampling_mode = sampler.mode
-            if sampler.samples:
-                result.heap_samples = sampler.samples
+            for name in _MEMORY_SOURCES:
+                setattr(result, f"{name}_sampling_mode", sampler.mode(name))
+                if sampler.samples[name]:
+                    setattr(result, f"{name}_heap_samples", sampler.samples[name])
 
         duration_ms = (time.perf_counter() - start) * 1000
         result.duration_ms = duration_ms
@@ -155,8 +157,11 @@ def measure_stage(stage_name: str, conn=None):
             calls_after = getattr(conn, "_execute_call_count", calls_before)
             result.db_calls = calls_after - calls_before
             parts.append(f"db_calls={result.db_calls}")
-        parts.append(f"sampling_mode={result.sampling_mode}")  # always logged, disabled included
-        if result.heap_samples:
-            parts.append(f"heap_samples={len(result.heap_samples)}")
-            parts.append(f"heap_last_bytes={result.heap_samples[-1][1]}")
+        for name in _MEMORY_SOURCES:  # always logged, disabled included
+            mode = getattr(result, f"{name}_sampling_mode")
+            parts.append(f"{name}_sampling_mode={mode}")
+            samples = getattr(result, f"{name}_heap_samples")
+            if samples:
+                parts.append(f"{name}_heap_samples={len(samples)}")
+                parts.append(f"{name}_heap_last_bytes={samples[-1][1]}")
         logger.info("PERFORMANCE_MEMORY " + " ".join(parts))
