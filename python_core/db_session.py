@@ -8,6 +8,11 @@ from python_core.logger import get_logger
 logger = get_logger("DBSession")
 
 
+class _CountingConnection(sqlite3.Connection):
+    """ sqlite3.Connection subclass to deal with the fact that the regular connection 
+    object has no __dict__ and thus _execute_call_count can't be set"""
+
+
 def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -> dict:
     d = {}
     for idx, col in enumerate(cursor.description):
@@ -151,7 +156,10 @@ class DatabaseSession:
                 self.db_path_target = self.db_path_orig
 
             self.conn = sqlite3.connect(
-                self.db_path_target, timeout=10.0, check_same_thread=False
+                self.db_path_target,
+                timeout=10.0,
+                check_same_thread=False,
+                factory=_CountingConnection,
             )
 
             configure_row_factory(self.conn, self.use_dict_factory, self.json_columns)
