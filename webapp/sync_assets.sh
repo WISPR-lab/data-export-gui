@@ -202,6 +202,13 @@ cp -f "$WEBAPP_DIR/src/database/sqlite-worker.js" "$PUBLIC/sqlite-worker.js"
 cp -f "$REPO_ROOT/config.yaml" "$PUBLIC/config.yaml"
 cp -f "$REPO_ROOT/schema.sql"  "$PUBLIC/schema.sql"
 
+# PERFORMANCE_MEMORY_SAMPLING=1 (or "true") flips memory_sampling_enabled on in the *public* config.yaml copy only.
+if [ "${PERFORMANCE_MEMORY_SAMPLING:-}" = "1" ] || [ "${PERFORMANCE_MEMORY_SAMPLING:-}" = "true" ]; then
+  echo "[sync-assets] PERFORMANCE_MEMORY_SAMPLING set — enabling memory_sampling_enabled in public/config.yaml"
+  sed -i.bak 's/memory_sampling_enabled: false/memory_sampling_enabled: true/' "$PUBLIC/config.yaml"
+  rm -f "$PUBLIC/config.yaml.bak"
+fi
+
 
 
 echo "[sync-assets] Zipping and copying python_core..."

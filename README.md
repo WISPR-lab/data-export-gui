@@ -74,25 +74,32 @@ At the end of the pipeline, a JSON summary is printed to the console:
 }
 ```
 
-A CSV file (`<filename>_mem_perf.csv`) is automatically downloaded containing all timing data.
+A CSV file (`<filename>_mem_perf.csv`) is automatically downloaded containing all timing data, one row
+per stage: `stage, duration_ms, rows_processed, database_calls, sample_index, elapsed_ms, heap_bytes,
+database_size_before_bytes, database_size_after_bytes, total_duration_ms`.
 
 ### Memory Profiling (Optional)
 
-To enable continuous JavaScript heap sampling during pipeline execution, set an environment variable:
+To enable continuous JavaScript heap sampling during pipeline execution, set an environment variable
+**before running `sync_assets.sh`** (i.e. before `yarn serve`/`yarn build`, since that's what bakes it
+into `public/config.yaml`):
 
 ```bash
 # Regular run (timing only)
-npm run serve
+yarn serve
 
 # Memory profiling run (timing + continuous heap sampling every 100ms)
-PERFORMANCE_MEMORY_SAMPLING=1 npm run serve
+PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
 ```
 
 When memory profiling is enabled:
-- A banner appears in the UI: "📊 PERFORMANCE MEMORY TRACKING: ON"
-- Pipeline runs ~5-10% slower due to sampling overhead
-- CSV download includes additional columns: `javascript_heap_bytes`, `python_perf_counter_seconds`, `js_performance_now_ms`
-- Each stage is logged with multiple samples showing heap usage over time
+- A banner appears in the UI: "PERFORMANCE MEMORY TRACKING: ON"
+- Pipeline runs slower due to sampling overhead
+- CSV download gets one row *per heap sample per stage* instead of one row per stage, with
+  `sample_index`, `elapsed_ms` (since stage start), and `heap_bytes` populated
+- Heap sampling is Chrome-only (`performance.memory` isn't exposed in Firefox/Safari) and best-effort:
+  if this Pyodide build/browser can't actually run a background sampling thread, it falls back to a
+  single heap reading at stage start rather than failing the run.
 
 ### Using Data for Efficiency Evaluation
 

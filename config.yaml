@@ -1,7 +1,9 @@
 # Central configuration for both JavaScript and Python
 # This file is synced to webapp/public/ during build
 
-# TODO: set memory_sampling_enabled from the PERFORMANCE_MEMORY_SAMPLING env var at build time
+# memory_sampling_enabled below is the default (source-controlled) value. sync_assets.sh
+# overwrites it in the webapp/public/config.yaml copy based on the PERFORMANCE_MEMORY_SAMPLING
+# env var at build time — this file itself is left untouched.
 performance:
   memory_sampling_enabled: false
   memory_sampling_interval_ms: 100

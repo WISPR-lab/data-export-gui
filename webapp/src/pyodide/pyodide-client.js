@@ -1,4 +1,5 @@
 import { getLogger } from '@/utils/logger';
+import { downloadPerformanceCsv } from '@/utils/performanceExport';
 
 const logger = getLogger('PyodideClient');
 let pyodideWorker = null;
@@ -87,6 +88,14 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
     // Consolidated Step: Run entire pipeline in Pyodide (extract, semantic map, normalize, group)
     const result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress);
     uploadId = result.upload_id;
+
+    if (result.performance_summary) {
+      try {
+        downloadPerformanceCsv(givenName || file.name, result.performance_summary);
+      } catch (e) {
+        logger.warn('Failed to download performance CSV:', e);
+      }
+    }
 
     // Step 6: Cleanup OPFS
     if (onProgress) onProgress({ stage: 'cleanup', progress: 90 });

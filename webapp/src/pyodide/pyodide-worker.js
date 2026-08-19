@@ -445,8 +445,10 @@ self.onmessage = async (event) => {
         const { platform, givenName } = args;
         logger.info(`run_pipeline called: platform=${platform}, givenName=${givenName}`);
 
-        // TODO: collect PERFORMANCE_MEMORY log lines during the run, parse the JSON summary
-        // Python logs at the end of run(), and download both as `${givenName}_mem_perf.csv`.
+        // The JSON pipeline summary (python_core/run.py) comes back as `result.performance_summary`
+        // below rather than being scraped from console output — CSV building/download from it
+        // happens in pyodide-client.js's executeUpload(), which runs on the main thread and has
+        // DOM access (this worker doesn't).
 
         await loadManifestOnDemand(platform);
 

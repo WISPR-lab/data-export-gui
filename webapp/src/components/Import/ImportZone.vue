@@ -36,7 +36,10 @@ It replaces the generic UploadForm for the new workflow.
             Verify all results.
           </v-alert>
 
-          <!-- TODO: warning-colored banner "PERFORMANCE MEMORY TRACKING: ON" when memory_sampling_enabled -->
+          <v-alert v-if="memorySamplingEnabled" dense text type="warning" class="mb-4 text-body-2">
+            PERFORMANCE MEMORY TRACKING: ON — this run will be ~5-10% slower and a
+            <code>_mem_perf.csv</code> will download automatically when it finishes.
+          </v-alert>
 
           <!-- <v-card-text class="pb-0 pt-1">
           <v-alert dense text type="info" class="mb-4 text-body-2">
@@ -155,6 +158,7 @@ import {
   formatFileSize,
   stripZipExtension,
 } from '../../utils/uploadFormUtils.js';
+import { loadConfig } from '../../utils/config.js';
 
 export default {
   name: 'ImportZone',
@@ -181,6 +185,7 @@ export default {
       localErrors: [],
       fileValid: false,
       isDragging: false,
+      memorySamplingEnabled: false,
     };
   },
   computed: {
@@ -228,8 +233,15 @@ export default {
       }
     },
   },
-  mounted() {
+  async mounted() {
     this.suggestDEName();
+    try {
+      const config = await loadConfig();
+      this.memorySamplingEnabled = !!(config.performance && config.performance.memory_sampling_enabled);
+    } catch (e) {
+      // Config load failures shouldn't block the upload dialog — just skip the banner.
+      this.memorySamplingEnabled = false;
+    }
   },
   methods: {
     onDrop(event) {
