@@ -150,6 +150,8 @@ def extract(
 
                     logger.debug("Extracted %d records from %s", len(records), manifest_file_id)
 
+                    file_hash = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
+
                     # read into db
                     file_id = uuid.uuid4().hex
                     file_info = (
@@ -158,7 +160,7 @@ def extract(
                         upload_id,
                         opfs_filename,
                         manifest_filename,
-                        _file_hash(opfs_filepath, use_memfs=use_memfs),
+                        file_hash,
                         ts,
                         _file_size_bytes(opfs_filepath, use_memfs=use_memfs),
                         "success" if success else "failure",
@@ -185,11 +187,6 @@ def extract(
                         raw_data_rows,
                     )
                     conn.commit()
-
-                    row = conn.execute(
-                        "SELECT COUNT(*) as count FROM raw_data"
-                    ).fetchone()
-                    # print(f"  -> Total raw_data rows in DB: {row[0] if row else 'unknown'}")
 
                 except FileLevelError as e:
                     logger.error("File-level parse error for %s: %s", opfs_filename, e)
