@@ -91,10 +91,10 @@ export default {
   },
   methods: {
     tagColor: function (tag) {
-      if (this.tagConfig[tag]) {
+      if (this.tagConfig && this.tagConfig[tag]) {
         return this.tagConfig[tag]
       }
-      return 'lightgrey'
+      return { color: 'grey lighten-2', textColor: 'black' }
     },
   },
 }

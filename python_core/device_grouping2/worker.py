@@ -153,9 +153,9 @@ def _write_device_groups(conn, groups: list, ts: float) -> None:
     if not group_ids:
         return
 
-    inst_placeholders = ",".join("?" for _ in group_ids)
+    placeholders = ",".join("?" for _ in group_ids)
     conn.execute(
-        f"DELETE FROM device_groups WHERE id IN ({inst_placeholders})", group_ids
+        f"DELETE FROM device_groups WHERE id IN ({placeholders})", group_ids
     )
 
     device_groups_rows = []

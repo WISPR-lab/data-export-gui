@@ -90,7 +90,7 @@
               <v-expansion-panels multiple flat class="device-panels">
                 <device-row
                   v-for="(entry, eIdx) in pageSlice(section)"
-                  :key="section.key + '-' + eIdx"
+                  :key="section.key + '-' + (entry.id || eIdx)"
                   type="record"
                   :id="entry.id"
                   :tags="entry.tags"
@@ -155,7 +155,7 @@
               <v-expansion-panels multiple flat class="device-panels">
                 <device-row
                   v-for="(group, groupIdx) in currentGroupPage"
-                  :key="'group-' + groupIdx"
+                  :key="'group-' + (group.id || groupIdx)"
                   type="activity"
                   :id="group.id"
                   :tags="group.tags"

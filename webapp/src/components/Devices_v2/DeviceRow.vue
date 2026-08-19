@@ -160,7 +160,7 @@ export default {
       return this.type === 'record';
     },
     deviceId() {
-      return this.isRecord ? this.id : (this.groupRaw && this.groupRaw.id) || null;
+      return this.id || (this.groupRaw && this.groupRaw.id) || null;
     },
     buttonText() {
       var count = this.eventCount;
@@ -266,11 +266,20 @@ export default {
       if (tag && !this.localTags.includes(tag)) {
         this.localTags.push(tag);
       }
+      if (tag && Array.isArray(this.tags) && !this.tags.includes(tag)) {
+        this.tags.push(tag);
+      }
       await this.processTagAction('add', tag);
     },
     async handleTagRemoved(tag) {
       if (tag) {
         this.localTags = this.localTags.filter(t => t !== tag);
+      }
+      if (tag && Array.isArray(this.tags)) {
+        var idx = this.tags.indexOf(tag);
+        if (idx !== -1) {
+          this.tags.splice(idx, 1);
+        }
       }
       await this.processTagAction('remove', tag);
     },
