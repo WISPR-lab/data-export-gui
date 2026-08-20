@@ -39,14 +39,16 @@ def get_edges(df: pd.DataFrame) -> pd.DataFrame:
         if not melted_hw.empty:
             melted_hw = melted_hw[melted_hw["value"].astype(str).str.strip() != ""]
         if not melted_hw.empty:
-            merged = melted_hw.merge(melted_hw, on=["value"], suffixes=("_a", "_b"))
+            merged = melted_hw.merge(
+                melted_hw, on=["variable", "value"], suffixes=("_a", "_b")
+            )
             matched_pairs = merged[merged["id_a"] < merged["id_b"]].copy()
             if not matched_pairs.empty:
                 hardware_edges = matched_pairs[["id_a", "id_b"]].copy()
                 hardware_edges["type"] = "Hardware"
                 hardware_edges["provenance"] = matched_pairs.apply(
                     lambda r: json.dumps(
-                        {"column": r["variable_a"], "value": r["value"]}
+                        {"column": r["variable"], "value": r["value"]}
                     ),
                     axis=1,
                 )
@@ -66,14 +68,16 @@ def get_edges(df: pd.DataFrame) -> pd.DataFrame:
         if not melted_fp.empty:
             melted_fp = melted_fp[melted_fp["value"].astype(str).str.strip() != ""]
         if not melted_fp.empty:
-            merged_fp = melted_fp.merge(melted_fp, on=["value"], suffixes=("_a", "_b"))
+            merged_fp = melted_fp.merge(
+                melted_fp, on=["variable", "value"], suffixes=("_a", "_b")
+            )
             matched_fp_pairs = merged_fp[merged_fp["id_a"] < merged_fp["id_b"]].copy()
             if not matched_fp_pairs.empty:
                 platform_fp_edges = matched_fp_pairs[["id_a", "id_b"]].copy()
                 platform_fp_edges["type"] = "PlatformFingerprint"
                 platform_fp_edges["provenance"] = matched_fp_pairs.apply(
                     lambda r: json.dumps(
-                        {"column": r["variable_a"], "value": r["value"]}
+                        {"column": r["variable"], "value": r["value"]}
                     ),
                     axis=1,
                 )

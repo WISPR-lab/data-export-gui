@@ -233,6 +233,36 @@ def _pass2_os(
     return edges[["id_a", "id_b", "type", "provenance"]], pairs
 
 
+# Stable identifiers that act as a hard veto: if two records both have a value here and it
+# differs, no unstable-attribute (client/OS upgrade) edge may connect them, even if their
+# specs and version history otherwise look like a valid upgrade. Session ID is deliberately
+# excluded -- it can be shared across devices / rotates independently of hardware identity, so
+# a mismatch there shouldn't block an otherwise-valid upgrade edge.
+def _stable_conflict_columns(df: pd.DataFrame) -> list[str]:
+    hardware_cols = [
+        c
+        for c in df.columns
+        if c in ("attr__device_id", "attr__device_serial_number", "attr__device_imei")
+    ]
+    platform_fp_cols = [c for c in df.columns if c.startswith("attr__device_id")]
+    return sorted(set(hardware_cols) | set(platform_fp_cols))
+
+
+def _drop_stable_id_conflicts(edges: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+    if edges.empty:
+        return edges
+    conflict_cols = _stable_conflict_columns(df)
+    if not conflict_cols:
+        return edges
+
+    lookup = df.drop_duplicates(subset="id").set_index("id")[conflict_cols]
+    a_vals = lookup.reindex(edges["id_a"]).reset_index(drop=True)
+    b_vals = lookup.reindex(edges["id_b"]).reset_index(drop=True)
+    both_present = a_vals.notna() & b_vals.notna()
+    conflicts = (a_vals.ne(b_vals) & both_present).any(axis=1)
+    return edges[~conflicts.values].reset_index(drop=True)
+
+
 def get_edges(
     df: pd.DataFrame,
     run_pass2: bool = None,
@@ -253,4 +283,5 @@ def get_edges(
         combined = pd.concat([pass1_edges, pass2_edges], ignore_index=True)
     else:
         combined = pass1_edges
+    combined = _drop_stable_id_conflicts(combined, df)
     return combined.drop_duplicates()
