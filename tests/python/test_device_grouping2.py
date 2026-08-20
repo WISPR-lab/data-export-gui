@@ -1,8 +1,10 @@
 import os
 import json
 import uuid
+import pandas as pd
 from db_session import DatabaseSession
 from device_grouping2.worker import group
+from device_grouping2 import client_os_upgrades
 
 
 class TestDeviceGrouping2:
@@ -141,3 +143,59 @@ class TestDeviceGrouping2:
     # behavior no longer exists now that device profile computation
     # (device_profiles_v2 / device_profile_groups) was deprecated and
     # removed along with the underlying tables.
+
+
+class TestClientOsUpgrades:
+    """Unit tests for the ClientUpgrade pass-1 edge logic in client_os_upgrades.py."""
+
+    BASE_ATTRS = {
+        "attr__norm__manufacturer": "Apple",
+        "attr__norm__model_name": "iPhone 13",
+        "attr__norm__os_name": "iOS",
+        "attr__norm__os_version": "16.0",
+        "attr__norm__client_name": "Safari",
+    }
+
+    def _row(self, id_, ts, client_version):
+        return {
+            "id": id_,
+            "timestamp": pd.Timestamp(ts, unit="s", tz="UTC"),
+            "attr__norm__client_version": client_version,
+            **self.BASE_ATTRS,
+        }
+
+    def test_null_client_version_does_not_form_edge(self):
+        """Two records with identical hardware/OS specs but no client_version on
+        either side must NOT be linked -- there's no version evidence to verify
+        an upgrade against, so this should be treated like any other missing
+        required field rather than silently passing through."""
+        df = pd.DataFrame(
+            [
+                self._row("a", 1_700_000_000, None),
+                self._row("b", 1_700_010_000, None),
+            ]
+        )
+        edges, _ = client_os_upgrades._valid_client_upgrade(df)
+        assert edges.empty
+
+    def test_one_sided_null_client_version_does_not_form_edge(self):
+        df = pd.DataFrame(
+            [
+                self._row("a", 1_700_000_000, "16.0"),
+                self._row("b", 1_700_010_000, None),
+            ]
+        )
+        edges, _ = client_os_upgrades._valid_client_upgrade(df)
+        assert edges.empty
+
+    def test_valid_client_version_upgrade_still_forms_edge(self):
+        """Sanity check the fix doesn't regress the normal upgrade case."""
+        df = pd.DataFrame(
+            [
+                self._row("a", 1_700_000_000, "16.0"),
+                self._row("b", 1_700_010_000, "16.1"),
+            ]
+        )
+        edges, _ = client_os_upgrades._valid_client_upgrade(df)
+        assert len(edges) == 1
+        assert set(edges.iloc[0][["id_a", "id_b"]]) == {"a", "b"}

@@ -93,7 +93,7 @@ def compare_versions(v1: str, v2: str) -> str:
         return "EQ"
 
 
-def _pass1_client(
+def _valid_client_upgrade(
     events_df: pd.DataFrame, max_days=MAX_DAYS_CLIENT_DIFF
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     if not _has_required_columns(events_df, subgraph_metadata=False):
@@ -107,7 +107,7 @@ def _pass1_client(
     # Exclude manufacturer from required keys because desktop platforms (Windows/Linux)
     # do not have manufacturer information in their User Agents and would otherwise be dropped.
     required_keys = [c for c in BASE_ATTRIBUTES if c != "attr__norm__manufacturer"] + OS_VERSION
-    df = df.dropna(subset=required_keys + ["timestamp"])
+    df = df.dropna(subset=required_keys + CLIENT_VERSION + ["timestamp"])
     df = df.sort_values(by=keys + ["timestamp"])
 
     if df.empty:
@@ -160,7 +160,9 @@ def _pass1_client(
     return edges, df
 
 
-def _pass2_os(
+# Experimental function to also merge entries with an OS upgrade, disabled by default and not included in paper + eval
+# because of high FP rate. Just experimenting! 
+def _os_upgrade_beta(
     subgraph_df: pd.DataFrame, max_days=MAX_DAYS_OS_DIFF
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     if not _has_required_columns(subgraph_df, subgraph_metadata=True):
@@ -233,24 +235,51 @@ def _pass2_os(
     return edges[["id_a", "id_b", "type", "provenance"]], pairs
 
 
+def _stable_conflict_columns(df: pd.DataFrame) -> list[str]:
+    hardware_cols = [
+        c
+        for c in df.columns
+        if c in ("attr__device_id", "attr__device_serial_number", "attr__device_imei")
+        # session ID deliberatly excluded here since it multiple can belong to a single device
+    ]
+    platform_fp_cols = [c for c in df.columns if c.startswith("attr__device_id")]
+    return sorted(set(hardware_cols) | set(platform_fp_cols))
+
+
+def _drop_stable_id_conflicts(edges: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+    if edges.empty:
+        return edges
+    conflict_cols = _stable_conflict_columns(df)
+    if not conflict_cols:
+        return edges
+
+    lookup = df.drop_duplicates(subset="id").set_index("id")[conflict_cols]
+    a_vals = lookup.reindex(edges["id_a"]).reset_index(drop=True)
+    b_vals = lookup.reindex(edges["id_b"]).reset_index(drop=True)
+    both_present = a_vals.notna() & b_vals.notna()
+    conflicts = (a_vals.ne(b_vals) & both_present).any(axis=1)
+    return edges[~conflicts.values].reset_index(drop=True)
+
+
 def get_edges(
     df: pd.DataFrame,
-    run_pass2: bool = None,
+    run_os_upgrade_beta: bool = None, # experimental function, disabled in production + eval
     max_days_client: int = MAX_DAYS_CLIENT_DIFF,
     max_days_os: int = MAX_DAYS_OS_DIFF,
 ) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame(columns=["id_a", "id_b", "type", "provenance"])
 
-    if run_pass2 is None:
+    if run_os_upgrade_beta is None:
         from python_core.runtime.pyodide_utils import get_config_value
 
-        run_pass2 = get_config_value("ENABLE_DEVICE_GROUPING_PASS2", False)
+        run_os_upgrade_beta = get_config_value("ENABLE_OS_UPGRADE_BETA", False)
 
-    pass1_edges, subgraph_df = _pass1_client(df, max_days=max_days_client)
-    if run_pass2:
-        pass2_edges, _ = _pass2_os(subgraph_df, max_days=max_days_os)
-        combined = pd.concat([pass1_edges, pass2_edges], ignore_index=True)
+    client_upgrade_edges, subgraph_df = _valid_client_upgrade(df, max_days=max_days_client)
+    if run_os_upgrade_beta:
+        os_upgrade_beta_edges, _ = _os_upgrade_beta(subgraph_df, max_days=max_days_os)
+        combined = pd.concat([client_upgrade_edges, os_upgrade_beta_edges], ignore_index=True)
     else:
-        combined = pass1_edges
+        combined = client_upgrade_edges
+    combined = _drop_stable_id_conflicts(combined, df)
     return combined.drop_duplicates()
