@@ -1,33 +1,37 @@
 """
 
-LINK EVENTS THAT WITH CLIENT/OS UPGRADES OVER TIME
+LINK EVENTS WITH CLIENT/OS UPGRADES OVER TIME
 
 Modification of the rule-based algo from FP-Stalker (Vastel et al., 2018).
 Link: https://inria.hal.science/hal-01652021/document
 Login events with user agents are subject to browser/OS versions changing over time.
-This attempts to add an edge between them.
-Finally, if the platform has a separate file of logged-in devices or active sessions,
-we link those.
+This attempts to add an edge between them. (Linking of logged-in-device/active-session
+files -- e.g. matching serial numbers or session IDs -- happens separately in
+deterministic_ids.py and resolved_sessions_registrations.py, not in this file.)
 
 
-Pass 1 -- Client (browser/app) Upgrades
-Add edge between two EVENT records, A and B, if:
-(a) A is temporally before B based on timestamp
-    AND they don't differ by more than MAX_DAYS_CLIENT_DIFF (60 by default)
-(b) they share ALL of the following:
-    - device manufacturer (e.g., Samsung, Apple)
-    - device model
-    - OS name (e.g., iOS, Android)
-    - OS version (e.g., iOS 15.7, Android 12)
-    - browser name (e.g., Chrome, Safari)
-(c) AND the client/app/browser version shows a valid upgrade
-    - The client version of B is >= A
+Client (browser/app) Upgrades -- _valid_client_upgrade(), always on
+
+Key = (manufacturer if present else <unknown>, model, OS name, OS version, browser/app name)
+Records are grouped by key, then sorted by timestamp within each group, then walked in order.
+
+An edge is added between consecutive records A, B in that walk iff:
+(a) 0 <= B.timestamp - A.timestamp <= MAX_DAYS_CLIENT_DIFF (30 by default)
+(b) B.client_version >= A.client_version
+Records missing client_version or any of the key fields (other than
+manufacturer, because desktop UAs don't report it), are dropped before 
+grouping and can't be linked at all -- there's no
+version evidence to check them against. 
+
+Candidate edges are are dropped if the two records have a hardware ID or platform-fingerprint column (imei/serial/device_id and
+friends) that is present on both sides and differs
 
 
-Pass 2 -- OS upgrades
-Add edge between two subgraphs, F and G, generated from Pass 1 if:
-(a) the maximum timestamp in F is less than before the minimum timestamp in G
-    AND they don't differ by more than MAX_DAYS_OS_DIFF (60 by default)
+OS upgrades -- _os_upgrade_beta(), EXPERIMENTAL, OFF BY DEFAULT
+(config flag ENABLE_OS_UPGRADE_BETA, not exposed in config.yaml/UI; not used in the paper or eval pipeline.)
+Add an edge between two subgraphs, F and G, produced by the Client Upgrade pass above if:
+(a) the maximum timestamp in F is less than the minimum timestamp in G
+    AND they don't differ by more than MAX_DAYS_OS_DIFF (30 by default)
 (b) they share ALL of the following:
     - device manufacturer (e.g., Samsung, Apple)
     - device model
