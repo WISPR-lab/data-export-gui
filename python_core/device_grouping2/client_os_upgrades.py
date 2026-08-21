@@ -27,7 +27,7 @@ Candidate edges are are dropped if the two records have a hardware ID or platfor
 friends) that is present on both sides and differs
 
 
-OS upgrades -- _os_upgrade_beta(), EXPERIMENTAL, OFF BY DEFAULT
+OS upgrades -- _os_upgrade_beta(), NOT WORKING, NOT USED. 
 (config flag ENABLE_OS_UPGRADE_BETA, not exposed in config.yaml/UI; not used in the paper or eval pipeline.)
 Add an edge between two subgraphs, F and G, produced by the Client Upgrade pass above if:
 (a) the maximum timestamp in F is less than the minimum timestamp in G
@@ -118,9 +118,8 @@ def _valid_client_upgrade(
         return pd.DataFrame(columns=["id_a", "id_b", "type", "provenance"]), df
 
     exceeds_max_time = (df["timestamp"].diff().dt.days > max_days).tolist()
-    no_id_match = (
-        df[keys].fillna("").ne(df[keys].fillna("").shift()).any(axis=1).tolist()
-    )
+    group_id = df.groupby(keys, dropna=False, sort=False).ngroup()
+    no_id_match = group_id.ne(group_id.shift()).tolist()
 
     client_versions = df["attr__norm__client_version"].tolist()
     client_version_downgraded = [False] * len(client_versions)
@@ -280,7 +279,7 @@ def get_edges(
         run_os_upgrade_beta = get_config_value("ENABLE_OS_UPGRADE_BETA", False)
 
     client_upgrade_edges, subgraph_df = _valid_client_upgrade(df, max_days=max_days_client)
-    if run_os_upgrade_beta:
+    if False: #run_os_upgrade_beta:
         os_upgrade_beta_edges, _ = _os_upgrade_beta(subgraph_df, max_days=max_days_os)
         combined = pd.concat([client_upgrade_edges, os_upgrade_beta_edges], ignore_index=True)
     else:
