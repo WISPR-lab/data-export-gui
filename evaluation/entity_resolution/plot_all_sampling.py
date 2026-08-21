@@ -12,8 +12,17 @@ Modes:
      uv run python -m evaluation.entity_resolution.plot_all_sampling --recompute
 """
 import argparse
+import datetime
 import json
+import sys
 from pathlib import Path
+
+_root = Path(__file__).resolve().parent.parent.parent
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+_python_core = _root / "python_core"
+if str(_python_core) not in sys.path:
+    sys.path.insert(0, str(_python_core))
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -28,6 +37,7 @@ from evaluation.entity_resolution.config import (
     MAX_DAYS_CLIENT_OPTIONS,
     RUNS_DIR,
 )
+from evaluation.entity_resolution.run import run_eval
 
 _METRICS = {
     "mean_bcubed_precision": ("B\u00b3 Precision", "precision_all_sampling.pdf", 0.8),
@@ -45,76 +55,45 @@ REGIMES = [
 
 def load_or_run_regime(
     regime: dict,
-    input_path: Path,
-    recompute: bool = False,
+    input_path: Path = None,
+    default_run_dir: Path = None,
     n_trials: int = DEFAULT_N_TRIALS,
     seed: int = DEFAULT_SEED,
 ) -> pd.DataFrame:
-    if input_path.is_dir():
+    if input_path is not None and input_path.is_dir():
         raise ValueError(f"Direct folders not supported for '{regime['key']}'. Pass a specific .csv or .json file.")
 
-    if input_path.suffix == ".json":
-        results_path = input_path.parent / "results.csv"
-        regime_dir = input_path.parent
-    elif input_path.suffix == ".csv":
-        results_path = input_path
-        regime_dir = input_path.parent
+    if input_path is not None and input_path.exists():
+        return pd.read_csv(input_path)
     else:
-        results_path = input_path
-        regime_dir = input_path.parent
-
-    if recompute or not results_path.exists():
-        import duckdb
-        from evaluation.entity_resolution.sweep import run_sweep
-
-        regime_dir.mkdir(parents=True, exist_ok=True)
-        print(f"[RECOMPUTE] Running sweep for '{regime['title']}'...")
-        con = duckdb.connect(str(FP_STALKER_DB), read_only=True)
-        df = con.execute(f"SELECT tracking_id, timestamp FROM {DB_TABLE}").df()
-        con.close()
-
-        results = run_sweep(
-            df=df,
-            k_options=K_OPTIONS,
-            max_days_options=MAX_DAYS_CLIENT_OPTIONS,
-            n_trials=n_trials,
-            seed=seed,
+        regime_dir = default_run_dir / regime["key"]
+        print(f"[RUN EVAL] Executing evaluation run for '{regime['title']}'...")
+        _, res_df = run_eval(
             window_days=regime["window_days"],
+            trials=n_trials,
+            seed=seed,
+            run_dir=regime_dir,
+            no_plot=True,
         )
-        res_df = pd.DataFrame(results)
-        res_df.to_csv(results_path, index=False)
-
-        summary = {
-            "run": {
-                "n_trials": n_trials,
-                "seed": seed,
-                "window_days": [regime["window_days"]],
-                "k_options": K_OPTIONS,
-                "max_days_options": MAX_DAYS_CLIENT_OPTIONS,
-            }
-        }
-        with open(regime_dir / "summary.json", "w") as f:
-            json.dump(summary, f, indent=2)
-
-    return pd.read_csv(results_path)
+        return res_df
 
 
 def plot_all_sampling(
     regime_dirs: dict,
     metric: str = "bcubed_f1",
     vmin: float = None,
-    recompute: bool = False,
     out: Path = None,
     title_override: str = None,
     cmap: str = "YlGnBu",
+    default_run_dir: Path = None,
 ) -> Path:
     label, default_fname, default_vmin = _METRICS.get(metric, (metric, f"{metric}_all_sampling.pdf", 0.4))
 
     # 1. Load data for all 3 regimes
     pivots = []
     for regime in REGIMES:
-        r_dir = regime_dirs[regime["key"]]
-        df = load_or_run_regime(regime, r_dir, recompute=recompute)
+        r_path = regime_dirs.get(regime["key"])
+        df = load_or_run_regime(regime, r_path, default_run_dir=default_run_dir)
 
         # Filter strictly by config options
         df = df[df["k"].isin(K_OPTIONS) & df["max_days_client"].isin(MAX_DAYS_CLIENT_OPTIONS)]
@@ -167,7 +146,8 @@ def plot_all_sampling(
     fig.tight_layout()
     fig.subplots_adjust(wspace=0.22)
 
-    out = out or (regime_dirs["full"].parent / default_fname)
+    out = out or (default_run_dir / default_fname)
+    out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=300, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -179,16 +159,14 @@ def floor_min(val: float, default_vmin: float) -> float:
 
 def main():
     parser = argparse.ArgumentParser(description="Plot 3-panel ER metric heatmaps across sampling regimes.")
-    parser.add_argument("--full", type=Path, default=RUNS_DIR / "sampling_sweep" / "full" / "results.csv",
+    parser.add_argument("--full", type=Path, default=None,
                         help="Path to results.csv or summary.json for Full Dataset.")
-    parser.add_argument("--n30", type=Path, default=RUNS_DIR / "sampling_sweep" / "n30" / "results.csv",
+    parser.add_argument("--n30", type=Path, default=None,
                         help="Path to results.csv or summary.json for Window N=30d.")
-    parser.add_argument("--n60", type=Path, default=RUNS_DIR / "sampling_sweep" / "n60" / "results.csv",
+    parser.add_argument("--n60", type=Path, default=None,
                         help="Path to results.csv or summary.json for Window N=60d.")
     parser.add_argument("--metric", required=True, choices=list(_METRICS.keys()),
                         help="Metric to plot (e.g. bcubed_f1, mean_bcubed_precision, mean_bcubed_recall, bcubed_f05).")
-    parser.add_argument("--recompute", action="store_true",
-                        help="Rerun evaluation algorithm from raw DB instead of reading cached results.")
     parser.add_argument("--title", type=str, default=None,
                         help="Override main figure title.")
     parser.add_argument("--cmap", type=str, default="YlGnBu",
@@ -196,6 +174,9 @@ def main():
     parser.add_argument("--out", type=Path, default=None,
                         help="Output file path (.pdf or .png).")
     args = parser.parse_args()
+
+    ts = datetime.datetime.now().isoformat().replace(":", "-").replace(".", "-")
+    default_run_dir = RUNS_DIR / f"fp_stalker_{ts}"
 
     regime_dirs = {
         "full": args.full,
@@ -206,14 +187,13 @@ def main():
     out = plot_all_sampling(
         regime_dirs=regime_dirs,
         metric=args.metric,
-        recompute=args.recompute,
         out=args.out,
         title_override=args.title,
         cmap=args.cmap,
+        default_run_dir=default_run_dir,
     )
     print(f"Saved figure: {out}")
 
 
 if __name__ == "__main__":
     main()
-

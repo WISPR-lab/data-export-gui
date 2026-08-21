@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 import python_core.device_grouping2.client_os_upgrades as client_os_upgrades
-from python_core.device_grouping2.instances import DeviceInstanceGraph
+from python_core.device_grouping2.graph import DeviceGroupGraph
 
 
 def _bcubed(df: pd.DataFrame, pred_col: str) -> tuple[float, float]:
@@ -26,11 +26,11 @@ def _run_trial(trial_df: pd.DataFrame, max_days_client: int) -> tuple[float, flo
     """
     trial_df = trial_df.copy()
     edges = client_os_upgrades.get_edges(trial_df, max_days_client=max_days_client)
-    graph = DeviceInstanceGraph(trial_df, pd.DataFrame(edges))
+    graph = DeviceGroupGraph(trial_df, pd.DataFrame(edges))
 
     pred = pd.Series(index=trial_df.index, dtype=object)
-    for i, inst in enumerate(graph.get_instances()):
-        pred.loc[inst.df.index] = f"inst_{i}"
+    for i, group in enumerate(graph.get_groups()):
+        pred.loc[group.df.index] = f"group_{i}"
     trial_df["_pred"] = pred
     return _bcubed(trial_df, "_pred")
 

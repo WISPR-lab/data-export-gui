@@ -53,6 +53,80 @@ def _load() -> pd.DataFrame:
     return df
 
 
+def run_eval(
+    window_days: int = None,
+    trials: int = cf.DEFAULT_N_TRIALS,
+    seed: int = cf.DEFAULT_SEED,
+    k_options: list = cf.K_OPTIONS,
+    days_options: list = cf.MAX_DAYS_CLIENT_OPTIONS,
+    run_dir: Path = None,
+    no_download: bool = False,
+    no_plot: bool = False,
+    vmin: float = None,
+) -> tuple[Path, pd.DataFrame]:
+    if no_download:
+        if not cf.FP_STALKER_DB.exists():
+            print(f"ERROR: --no-download set but {cf.FP_STALKER_DB} does not exist. Run without --no-download first.")
+            sys.exit(1)
+    else:
+        fetch_data.fetch()
+
+    df = _load()
+    print(f"  {len(df)} rows, {df['tracking_id'].nunique()} unique tracking IDs")
+
+    start = datetime.datetime.now()
+    results = sweep.run_sweep(
+        df,
+        k_options=k_options,
+        max_days_options=days_options,
+        n_trials=trials,
+        seed=seed,
+        window_days=window_days,
+    )
+    elapsed = datetime.datetime.now() - start
+
+    if run_dir is None:
+        ts = start.isoformat().replace(":", "-").replace(".", "-")
+        run_dir = cf.RUNS_DIR / f"fp_stalker_{ts}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    summary = {
+        "run": {
+            "description": f"FP Stalker BCubed eval (window_days={window_days})",
+            "start_time": start.isoformat(),
+            "duration": str(elapsed),
+            "window_days": (
+                window_days,
+                "Filter dataset to a random N-day timestamp window, then draw K tracking_ids active in that window."
+                if window_days
+                else "Draw K tracking_ids at random from all tracking_ids in dataset.",
+            ),
+            "n_trials": trials,
+            "seed": seed,
+            "k_options": k_options,
+            "max_days_client_options": days_options,
+        },
+        "dataset": {
+            "num_records": len(df),
+            "num_tracking_ids": int(df["tracking_id"].nunique()),
+        },
+        "results": results,
+    }
+
+    with open(run_dir / "summary.json", "w") as f:
+        json.dump(summary, f, indent=4)
+
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(run_dir / "results.csv", index=False)
+    print(f"Results CSV written to {run_dir / 'results.csv'}")
+
+    if not no_plot:
+        for out in plot_all(run_dir, vmin=vmin):
+            print(f"Plot: {out}")
+
+    return run_dir, results_df
+
+
 def main():
     parser = argparse.ArgumentParser(description="FP Stalker BCubed eval (independent sampling)")
     parser.add_argument("--trials", "-n", type=int, default=cf.DEFAULT_N_TRIALS,
@@ -77,68 +151,16 @@ def main():
     print(f"Window days: {args.window_days} | Trials per cell: {args.trials} | Seed: {args.seed}")
     print(f"K: {args.k} | max_days: {args.days}")
 
-    if args.no_download:
-        if not cf.FP_STALKER_DB.exists():
-            print(f"ERROR: --no-download set but {cf.FP_STALKER_DB} does not exist. Run without --no-download first.")
-            sys.exit(1)
-    else:
-        fetch_data.fetch()
-
-    df = _load()
-    print(f"  {len(df)} rows, {df['tracking_id'].nunique()} unique tracking IDs")
-
-    start = datetime.datetime.now()
-    results = sweep.run_sweep(
-        df,
-        k_options=args.k,
-        max_days_options=args.days,
-        n_trials=args.trials,
-        seed=args.seed,
+    run_eval(
         window_days=args.window_days,
+        trials=args.trials,
+        seed=args.seed,
+        k_options=args.k,
+        days_options=args.days,
+        no_download=args.no_download,
+        no_plot=args.no_plot,
+        vmin=args.vmin,
     )
-    elapsed = datetime.datetime.now() - start
-
-    ts = start.isoformat().replace(":", "-").replace(".", "-")
-    run_dir = cf.RUNS_DIR / f"fp_stalker_{ts}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = {
-        "run": {
-            "description": f"FP Stalker BCubed eval (window_days={args.window_days})",
-            "start_time": start.isoformat(),
-            "duration": str(elapsed),
-            "window_days": (
-                args.window_days,
-                "Filter dataset to a random N-day timestamp window, then draw K tracking_ids active in that window."
-                if args.window_days
-                else "Draw K tracking_ids at random from all tracking_ids in dataset.",
-            ),
-            "n_trials": args.trials,
-            "seed": args.seed,
-            "k_options": args.k,
-            "max_days_client_options": args.days,
-        },
-        "dataset": {
-            "num_records": len(df),
-            "num_tracking_ids": int(df["tracking_id"].nunique()),
-        },
-        "results": results,
-    }
-
-    with open(run_dir / "summary.json", "w") as f:
-        json.dump(summary, f, indent=4)
-    print(f"\nSummary written to {run_dir / 'summary.json'}")
-
-    results_df = pd.DataFrame(results)
-    results_df.to_csv(run_dir / "results.csv", index=False)
-    print(f"Results CSV written to {run_dir / 'results.csv'}")
-
-    print("\n" + results_df.sort_values(["k", "max_days_client"]).to_string(index=False))
-    print(f"\nDone in {elapsed}. Output: {run_dir}")
-
-    if not args.no_plot:
-        for out in plot_all(run_dir, vmin=args.vmin):
-            print(f"Plot: {out}")
 
 
 if __name__ == "__main__":
