@@ -144,21 +144,18 @@ def _valid_client_upgrade(
     return edges, df
 
 
-def _stable_conflict_columns(df: pd.DataFrame) -> list[str]:
-    hardware_cols = [
+def _hardware_conflict_columns(df: pd.DataFrame) -> list[str]:
+    return sorted(
         c
         for c in df.columns
         if c in ("attr__device_id", "attr__device_serial_number", "attr__device_imei")
-        # session ID deliberatly excluded here since it multiple can belong to a single device
-    ]
-    platform_fp_cols = [c for c in df.columns if c.startswith("attr__device_id")]
-    return sorted(set(hardware_cols) | set(platform_fp_cols))
+    )
 
 
-def _drop_stable_id_conflicts(edges: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+def _drop_hardware_conflicts(edges: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
     if edges.empty:
         return edges
-    conflict_cols = _stable_conflict_columns(df)
+    conflict_cols = _hardware_conflict_columns(df)
     if not conflict_cols:
         return edges
 
@@ -178,5 +175,5 @@ def get_edges(
         return pd.DataFrame(columns=["id_a", "id_b", "type", "provenance"])
 
     client_upgrade_edges, _ = _valid_client_upgrade(df, max_days=max_days_client)
-    combined = _drop_stable_id_conflicts(client_upgrade_edges, df)
+    combined = _drop_hardware_conflicts(client_upgrade_edges, df)
     return combined.drop_duplicates()

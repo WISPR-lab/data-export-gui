@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS device_groups (
     os_type TEXT,
     --
     apple_masking TEXT,
+    has_conflicting_hardware_ids INTEGER DEFAULT 0,  -- see device_grouping2/graph.py:DeviceGroup._evaluate_hardware_conflict
     first_seen REAL,
     last_seen REAL,
     last_seen_dt TEXT,

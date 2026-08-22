@@ -179,13 +179,13 @@ def _write_device_groups(conn, groups: list, ts: float) -> None:
 
     if device_groups_rows:
         conn.executemany(
-            """INSERT INTO device_groups 
-               (id, upload_id, platform, manufacturer, model, client_name, os_name, os_type, apple_masking, 
-                first_seen, last_seen, last_seen_dt, event_count, latest_os_version, latest_client_version, 
-                latest_client_ip, os_versions, client_versions, client_ips, locations, created_at)
-               VALUES (:id, :upload_id, :platform, :manufacturer, :model, :client_name, :os_name, :os_type, :apple_masking, 
-                       :first_seen, :last_seen, :last_seen_dt, :event_count, :latest_os_version, :latest_client_version, 
-                       :latest_client_ip, :os_versions, :client_versions, :client_ips, :locations, :created_at)""",
+            """INSERT INTO device_groups
+               (id, upload_id, platform, manufacturer, model, client_name, os_name, os_type, apple_masking,
+                has_conflicting_hardware_ids, first_seen, last_seen, last_seen_dt, event_count, latest_os_version,
+                latest_client_version, latest_client_ip, os_versions, client_versions, client_ips, locations, created_at)
+               VALUES (:id, :upload_id, :platform, :manufacturer, :model, :client_name, :os_name, :os_type, :apple_masking,
+                       :has_conflicting_hardware_ids, :first_seen, :last_seen, :last_seen_dt, :event_count, :latest_os_version,
+                       :latest_client_version, :latest_client_ip, :os_versions, :client_versions, :client_ips, :locations, :created_at)""",
             device_groups_rows,
         )
 

@@ -25,6 +25,8 @@ import pandas as pd
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from . import client_os_upgrades
+
 
 class DeviceGroup:
     # Abstractly, this represents a represents a single logical device sequence over time.
@@ -47,6 +49,7 @@ class DeviceGroup:
         self.os_type = self._find_best_attribute("attr__norm__os_type")
 
         self.apple_masking = self._evaluate_apple_masking()
+        self.has_conflicting_hardware_ids = self._evaluate_hardware_conflict()
 
         valid_ts = self.df["timestamp"].dropna()
         if not valid_ts.empty:
@@ -142,6 +145,10 @@ class DeviceGroup:
 
         return 1
 
+    def _evaluate_hardware_conflict(self) -> bool:
+        conflict_cols = client_os_upgrades._hardware_conflict_columns(self.df)
+        return any(self.df[col].dropna().nunique() > 1 for col in conflict_cols)
+
     def export_as_dict(self) -> dict:
         # Serializes the group data into a flat database-compatible dictionary, retrieving the latest versions/IPs
         # by selecting the last elements of the chronologically-sorted telemetry arrays.
@@ -155,6 +162,7 @@ class DeviceGroup:
             "os_name": self.os_name,
             "os_type": self.os_type,
             "apple_masking": self.apple_masking,
+            "has_conflicting_hardware_ids": int(self.has_conflicting_hardware_ids),
             "first_seen": self.first_seen,
             "last_seen": self.last_seen,
             "last_seen_dt": datetime.fromtimestamp(
