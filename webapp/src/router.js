@@ -96,7 +96,7 @@ const routes = [
       },
       {
         path: 'devices',
-        name: 'DevicesMockup',
+        name: 'Devices',
         component: DevicesMockup,
         props: { projectId: 1 },
         meta: { requiresOpfs: true },

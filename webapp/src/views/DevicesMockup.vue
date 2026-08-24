@@ -2,8 +2,7 @@
 <template>
   <v-container class="pa-6 white min-h-100" style="max-width: 1400px;">
     <div class="mb-6">
-      <h1 class="text-h4 font-weight-bold text--primary mb-1">Devices (Mockup)</h1>
-      <div class="text-body-2 text--secondary">Track account access records and detected device activity.</div>
+      <h5 class="text-h5 font-weight-bold text--primary">Devices that may be logged into your account(s)</h5>
     </div>
 
     <platform-card

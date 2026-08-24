@@ -125,7 +125,7 @@ export default {
       return this.$store.state.demoMode
     },
     isProjectInfoVisible() {
-      const allowedRoutes = ['Events', 'Devices', 'DemoEvents', 'DemoDevices']
+      const allowedRoutes = ['Events', 'Devices', 'DevicesMockup', 'DemoEvents', 'DemoDevices']
       return allowedRoutes.includes(this.$route.name)
     },
   },
