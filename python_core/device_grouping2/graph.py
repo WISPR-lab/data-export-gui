@@ -191,17 +191,24 @@ class DeviceGroupGraph:
         self.vertices_df = self.vertices_df = vertices_df.copy()
         self.edges_df = edges_df.copy()
         self._parent = {vid: vid for vid in self.vertices_df["id"]}
+        self._size = {vid: 1 for vid in self.vertices_df["id"]}
 
     def _find(self, x: str) -> str:
-        if self._parent[x] != x:
-            self._parent[x] = self._find(self._parent[x])
-        return self._parent[x]
+        root = x
+        while self._parent[root] != root:
+            root = self._parent[root]
+        while self._parent[x] != root:
+            self._parent[x], x = root, self._parent[x]
+        return root
 
     def _union(self, x: str, y: str):
-        root_x = self._find(x)
-        root_y = self._find(y)
-        if root_x != root_y:
-            self._parent[root_x] = root_y
+        root_x, root_y = self._find(x), self._find(y)
+        if root_x == root_y:
+            return
+        if self._size[root_x] < self._size[root_y]:
+            root_x, root_y = root_y, root_x
+        self._parent[root_y] = root_x
+        self._size[root_x] += self._size[root_y]
 
     def get_groups(self) -> List[DeviceGroup]:
         # Runs a connected components algorithm to merge event and device records into subgraphs based on the
@@ -209,6 +216,7 @@ class DeviceGroupGraph:
         # The result is a list of DeviceGroup containers, each holding its respective rows.
         for vid in self._parent:
             self._parent[vid] = vid
+            self._size[vid] = 1
 
         linkage_types = {
             "Hardware",

@@ -5,6 +5,7 @@ import pandas as pd
 from db_session import DatabaseSession
 from device_grouping2.worker import group
 from device_grouping2 import client_os_upgrades
+from device_grouping2.graph import DeviceGroupGraph
 
 
 class TestDeviceGrouping2:
@@ -143,6 +144,45 @@ class TestDeviceGrouping2:
     # behavior no longer exists now that device profile computation
     # (device_profiles_v2 / device_profile_groups) was deprecated and
     # removed along with the underlying tables.
+
+
+class TestDeviceGroupGraphUnionFind:
+    """Unit tests for DeviceGroupGraph's union-find (graph.py)."""
+
+    def _vertices(self, ids):
+        n = len(ids)
+        return pd.DataFrame({
+            "id": ids,
+            "timestamp": range(n),
+            "table": ["events"] * n,
+            "upload_id": ["u"] * n,
+            "platform": ["facebook"] * n,
+        })
+
+    def test_star_topology_does_not_crash(self):
+        # One anchor edged to thousands of others in sequence used to build an O(n)-deep parent
+        # chain and blow Python's recursion limit in a recursive, rank-less _find/_union.
+        n = 5000
+        ids = [f"r{i}" for i in range(n)]
+        edges = pd.DataFrame({
+            "id_a": ["r0"] * (n - 1),
+            "id_b": ids[1:],
+            "type": ["Session"] * (n - 1),
+        })
+        groups = DeviceGroupGraph(self._vertices(ids), edges).get_groups()
+        assert len(groups) == 1
+        assert len(groups[0].df) == n
+
+    def test_disjoint_groups_stay_separate(self):
+        ids = [f"r{i}" for i in range(6)]
+        edges = pd.DataFrame({
+            "id_a": ["r0", "r1", "r3"],
+            "id_b": ["r1", "r2", "r4"],
+            "type": ["Session"] * 3,
+        })
+        groups = DeviceGroupGraph(self._vertices(ids), edges).get_groups()
+        sizes = sorted(len(g.df) for g in groups)
+        assert sizes == [1, 2, 3]  # {r0,r1,r2}, {r3,r4}, {r5}
 
 
 class TestClientOsUpgrades:
