@@ -119,5 +119,7 @@ evaluation/efficiency/data/*
 !evaluation/efficiency/newdata/*.zip
 !evaluation/efficiency/OLDdata/*.zip
 !evaluation/efficiency/data/*_original.zip
+!evaluation/efficiency/trial_time_mem_results.zip
 evaluation/user_study/agreementv2.csv
 
+# evaluation/efficiency/trials/*.csv

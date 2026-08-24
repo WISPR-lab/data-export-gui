@@ -1,0 +1,6 @@
+stage,duration_ms,rows_processed,database_calls,js_sampling_mode,js_heap_before_bytes,js_heap_after_bytes,js_heap_delta_bytes,js_heap_peak_bytes,wasm_sampling_mode,wasm_heap_before_bytes,wasm_heap_after_bytes,wasm_heap_delta_bytes,wasm_heap_peak_bytes,database_size_before_bytes,database_size_after_bytes,total_duration_ms
+after_pyodide_load,,,,,,27009262,,,,,90832896,,,196608,2334720,5359.8
+extract,509.5,0,13,start_end_only,27009262,27009262,0,27009262,start_end_only,90832896,109051904,18219008,109051904,196608,2334720,5359.8
+semantic_map,225.6,681,8,start_end_only,27009262,27009262,0,27009262,start_end_only,109051904,109051904,0,109051904,196608,2334720,5359.8
+normalize,3546.3,701,7,start_end_only,27009262,27009262,0,27009262,start_end_only,109051904,130875392,21823488,130875392,196608,2334720,5359.8
+group,1050.6,310,13,start_end_only,27009262,27009262,0,27009262,start_end_only,130875392,130875392,0,130875392,196608,2334720,5359.8
