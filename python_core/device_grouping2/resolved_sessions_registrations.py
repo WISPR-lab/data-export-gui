@@ -44,7 +44,7 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
                     if k in ev["attributes"]:
                         attrs[k] = ev["attributes"][k]
                         break
-            session_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, f"synthetic_session_{sid}").hex
+            session_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, f"synthetic_session_{first_ev['upload_id']}_{sid}").hex
 
             devices.append({
                 "id": session_uuid,

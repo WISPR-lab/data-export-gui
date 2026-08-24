@@ -111,7 +111,8 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
     const jsHeapRelayTimer = await startJsHeapRelay();
     let result;
     try {
-      result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress);
+      // no timeout atm... todo
+      result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress, 0);
     } finally {
       if (jsHeapRelayTimer) clearInterval(jsHeapRelayTimer);
     }

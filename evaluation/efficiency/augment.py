@@ -106,7 +106,7 @@ def _augment_json(content, json_root, multiplier, datetime_fields):
         data = cloned
     return json.dumps(data, ensure_ascii=False, indent=2)
 
-# ponytail: json_label_values with json_root="[]" is identical to _augment_json with empty key;
+# json_label_values with json_root="[]" is identical to _augment_json with empty key;
 # no separate function needed.
 
 
@@ -114,19 +114,31 @@ _MYACTIVITY_DATE_RE = re.compile(
     r"([A-Z][a-z]+ \d{1,2}, \d{4},? \d{1,2}:\d{2}:\d{2}(?:\s*[AP]M)?(?:\s+[A-Z]{2,5})?)"
 )
 
+# Google's My Activity export uses abbreviated month names ("Feb", not "February" - %b not %B),
+# separates the time from AM/PM with U+202F (narrow no-break space, not a plain space), and adds
+# a trailing timezone abbreviation (e.g. "CST") none of the formats accounted for. Any one of
+# these was enough to make every strptime attempt raise ValueError - shift() then silently
+# returned the date unchanged, so every "randomized" copy kept the exact original timestamp.
+_WHITESPACE_RE = re.compile(r"\s+")
+
 def _jitter_myactivity_date(html_str):
     from datetime import datetime, timedelta
 
     def shift(m):
-        raw = m.group(1)
-        for fmt in ["%B %d, %Y, %I:%M:%S %p", "%B %d, %Y %I:%M:%S %p", "%B %d, %Y, %H:%M:%S"]:
+        raw = _WHITESPACE_RE.sub(" ", m.group(1).strip())
+        tz_suffix = ""
+        head, sep, tail = raw.rpartition(" ")
+        if sep and tail.isalpha() and tail.isupper() and 2 <= len(tail) <= 5:
+            raw, tz_suffix = head, " " + tail
+
+        for fmt in ["%b %d, %Y, %I:%M:%S %p", "%b %d, %Y %I:%M:%S %p", "%b %d, %Y, %H:%M:%S"]:
             try:
-                dt = datetime.strptime(raw.strip(), fmt)
+                dt = datetime.strptime(raw, fmt)
                 dt += timedelta(seconds=_jitter())
-                return dt.strftime(fmt)
+                return dt.strftime(fmt) + tz_suffix
             except ValueError:
                 continue
-        return raw
+        return m.group(1)
 
     return _MYACTIVITY_DATE_RE.sub(shift, html_str, count=1)
 
@@ -159,8 +171,27 @@ def _augment_html_myactivity(content, multiplier):
     return str(soup)
 
 
-def _augment_html_table(content, multiplier):
-    """Google table HTML (ChangeHistory, SubscriberInfo): clone each data row N times, keep the header."""
+_TABLE_TS_RE = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})( Z)?")
+
+def _jitter_table_timestamp(s):
+    """ChangeHistory/SubscriberInfo timestamp cell format: 'YYYY-MM-DD HH:MM:SS Z'."""
+    from datetime import datetime, timedelta
+    m = _TABLE_TS_RE.search(s)
+    if not m:
+        return s
+    try:
+        dt = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")
+        dt += timedelta(seconds=_jitter())
+        return s[:m.start()] + dt.strftime("%Y-%m-%d %H:%M:%S") + (m.group(2) or "") + s[m.end():]
+    except ValueError:
+        return s
+
+
+def _augment_html_table(content, multiplier, datetime_fields):
+    """Google table HTML (ChangeHistory, SubscriberInfo): clone each data row N times, keep the
+    header. Jitters cells under a header name in datetime_fields - without this, cloned rows were
+    byte-identical to the original (same bug class as _jitter_myactivity_date: silently no-op'd
+    jitter collapses everything under downstream dedup, which keys on timestamp proximity)."""
     from bs4 import BeautifulSoup
 
     soup  = BeautifulSoup(content, "html.parser")
@@ -172,12 +203,28 @@ def _augment_html_table(content, multiplier):
     if len(rows) < 2:
         return content
 
+    header_cells = [th.get_text(strip=True) for th in rows[0].find_all("th")]
+    date_col_indexes = [i for i, name in enumerate(header_cells) if name in datetime_fields]
+
     data_rows = rows[1:]
     originals = [str(r) for r in data_rows]
     for r in data_rows:
         r.decompose()
 
-    frag = BeautifulSoup("".join(originals * multiplier), "html.parser")
+    cloned_html = []
+    for _ in range(multiplier):
+        for orig in originals:
+            if not date_col_indexes:
+                cloned_html.append(orig)
+                continue
+            row_soup = BeautifulSoup(orig, "html.parser")
+            tds = row_soup.find_all("td")
+            for i in date_col_indexes:
+                if i < len(tds) and tds[i].string:
+                    tds[i].string = _jitter_table_timestamp(tds[i].get_text())
+            cloned_html.append(str(row_soup))
+
+    frag = BeautifulSoup("".join(cloned_html), "html.parser")
     for tag in frag.find_all("tr"):
         table.append(copy.copy(tag))
 
@@ -195,7 +242,7 @@ def _augment_file(content, fmt, json_root, multiplier, datetime_fields):
     if fmt == "html_ggl_myactivity":
         return _augment_html_myactivity(content, multiplier)
     if fmt in ("html_table", "html_ggl_subscriber_info"):
-        return _augment_html_table(content, multiplier)
+        return _augment_html_table(content, multiplier, datetime_fields)
     if fmt == "csv":
         return _augment_csv(content, multiplier)
     return content
