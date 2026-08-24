@@ -182,6 +182,11 @@ export default {
       try {
         var db = await getDB();
         var uploads = await db.exec('SELECT * FROM uploads', { returnValue: 'resultRows', rowMode: 'object' });
+        if (!uploads || uploads.length === 0) {
+          this.$router.push('/');
+          return;
+        }
+
         var states = await getResolvedSessionsRegistrations();
         var allGroups = await getUnlinkedGroups();
 
