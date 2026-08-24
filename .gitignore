@@ -114,8 +114,10 @@ evaluation/old/demo/*.duckdb
 evaluation/entity_resolution/runs/*
 evaluation/efficiency/newdata/*
 evaluation/efficiency/OLDdata/*
+evaluation/efficiency/data/*
 
 !evaluation/efficiency/newdata/*.zip
 !evaluation/efficiency/OLDdata/*.zip
 !evaluation/efficiency/data/*_original.zip
 evaluation/user_study/agreementv2.csv
+
