@@ -118,7 +118,7 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
     }
     uploadId = result.upload_id;
 
-    if (result.performance_summary) {
+    if (result.performance_summary && typeof process !== 'undefined' && process.env && process.env.VUE_APP_EXPORT_PERF_CSV === 'true') {
       try {
         downloadPerformanceCsv(givenName || file.name, result.performance_summary);
       } catch (e) {
