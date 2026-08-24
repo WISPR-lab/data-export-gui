@@ -168,6 +168,7 @@
                   :events-query="group.query"
                   :event-count="group.event_count"
                   :is-reduced-ua="group.apple_masking == 1"
+                  :has-conflicting-hardware-ids="group.has_conflicting_hardware_ids == 1"
                   :group-raw="group"
                   @show-info="openInfoModal($event.title, $event.description)"
                 />

@@ -35,7 +35,21 @@
 
                   {{ capitalize(title) }}
                   <span v-if="clientName" class="text-body-2 text--secondary font-weight-regular ml-1">via {{ clientName }}</span>
-                  
+
+                  <!-- Inline Conflicting Hardware IDs pill (event groups only) -->
+                  <v-chip
+                    v-if="!isRecord && hasConflictingHardwareIds"
+                    color="amber darken-3"
+                    outlined
+                    x-small
+                    class="ml-2 px-1.5"
+                    style="height: 18px; cursor: pointer;"
+                    @click.stop="triggerConflictModal"
+                  >
+                    <v-icon left size="12">mdi-alert</v-icon>
+                    Conflicts
+                  </v-chip>
+
                   <!-- Inline Masked link -->
                   <span
                     v-if="isReducedUa"
@@ -143,6 +157,7 @@ export default {
     fallbackDateStr: { type: String, default: '' },
     eventsQuery: { type: String,  default: '' },
     isReducedUa:         { type: Boolean, default: false },
+    hasConflictingHardwareIds: { type: Boolean, default: false },
     hasPasskey:          { type: Boolean, default: false },
     detailLabel:         { type: String,  default: 'Details' },
     formattedAttributes: { type: Array,    default: function() { return []; } },
@@ -257,6 +272,12 @@ export default {
       this.$emit('show-info', {
         title: 'Masked User Agent',
         description: 'To prevent browser fingerprinting, Apple devices (like iPhones running Mobile Safari) return simplified, generic user agent strings. This hides the specific device model details from websites and exports.'
+      });
+    },
+    triggerConflictModal() {
+      this.$emit('show-info', {
+        title: 'Conflicts',
+        description: 'This event group contains records with conflicting hardware IDs (e.g., serial numbers or IMEI). This means that this event group contains records belonging to two or more devices, although their attributes are similar enough that we cannot tell them apart. Please analyze all of the events independently and review which devices that the platform reports are associated with your account.'
       });
     },
     async persistDeviceTags(id, tags) {

@@ -121,7 +121,7 @@ router.beforeEach(async (to, from, next) => {
     if (!window.crossOriginIsolated) {
       window.opfsUnavailable = true;
       EventBus.$emit('opfsUnavailable');
-      next(false);
+      next('/');
       return;
     }
   }
@@ -161,6 +161,14 @@ router.beforeEach(async (to, from, next) => {
       store.commit('SET_CURRENT_DB', 'userdata')
       DB.setActiveDatabase('userdata')
       await store.dispatch('updateProject', 1)
+    }
+  }
+
+  if (to.path === '/devices') {
+    const exports = (store.state.project && store.state.project.dataExports) || [];
+    if (exports.length === 0) {
+      next('/');
+      return;
     }
   }
   next()
