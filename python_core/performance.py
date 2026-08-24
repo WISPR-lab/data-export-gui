@@ -89,9 +89,11 @@ class _MemorySampler:
         self._sample_all()  # sync sample now, so we have a point even if the thread never runs
         try:
             self._stop_event = threading.Event()
-            self._thread = threading.Thread(target=self._run, daemon=True)
-            self._thread.start()
+            thread = threading.Thread(target=self._run, daemon=True)
+            thread.start()
+            self._thread = thread  # only publish once start() actually succeeds
         except Exception as e:
+            self._thread = None  # never started - stop() must not try to join it
             if not _sampling_unavailable_logged:
                 logger.debug(f"Background memory sampling unavailable ({type(e).__name__}: {e}); single-sample only.")
                 _sampling_unavailable_logged = True

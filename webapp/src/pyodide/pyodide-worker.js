@@ -256,10 +256,7 @@ async function initPyodide() {
     pyodide = await loadPyodide({indexURL: buildResourceUrl('pyodide/')});
     logPerformanceMemory('pyodide_init', self.performance.now() - pyodideInitStart);
 
-    // Cross-browser memory reading for performance.py's _MemorySampler — unlike
-    // performance.memory (Chrome-only), WASM linear memory size is just an
-    // ArrayBuffer.byteLength read, no fingerprint-guarded API involved.
-    self.getWasmMemoryBytes = () => pyodide.HEAP8.buffer.byteLength;
+    self.getWasmMemoryBytes = () => pyodide._module.HEAP8.buffer.byteLength;
     
     const pyCorePath = config.paths.python_core;
     await extractPythonCoreZip(pyodide, pyCorePath);
