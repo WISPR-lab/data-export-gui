@@ -9,11 +9,20 @@ Logs one line per stage:
 
 When PERFORMANCE_MEMORY_SAMPLING is on (see builtins, injected by
 pyodide-worker.js from config.yaml's performance.memory_sampling_enabled),
-each stage also gets memory samples on a background thread from:
-  js:   js.performance.memory.usedJSHeapSize — Chrome-only
-  wasm: js.getWasmMemoryBytes() (pyodide-worker.js)
-Each source downgrades independently to single sample or unavailable
-(see sampling_mode)."""
+each stage also gets a before/after memory reading from two sources:
+  js:   relayed from the main thread's performance.memory.usedJSHeapSize —
+        Chrome-only, and only reachable via relay because performance.memory
+        does not exist inside a dedicated Worker (this pipeline's execution
+        context), only on window. See getJsHeapBytes in pyodide-worker.js
+        and the postMessage sender in pyodide-client.js.
+  wasm: js.getWasmMemoryBytes() (pyodide._module.HEAP8.buffer.byteLength,
+        pyodide-worker.js) — works in any browser, no relay needed.
+
+A source always gets a reading at stage-start and stage-end even when no
+real background thread is available (see _MemorySampler.stop) — that's the
+"start_end_only" sampling_mode. If a background thread *is* available it adds
+real in-between readings too ("continuous"). Each source downgrades
+independently; see sampling_mode."""
 import threading
 import time
 from contextlib import contextmanager
@@ -28,14 +37,16 @@ _sampling_unavailable_logged = False
 
 def _read_js_heap():
     import js
-    heap = getattr(getattr(js, "performance", None), "memory", None)
-    return int(heap.usedJSHeapSize) if heap is not None else None
+    getter = getattr(js, "getJsHeapBytes", None)
+    if getter is None:
+        return None
+    value = getter()
+    return int(value) if value is not None else None
 
 
 def _read_wasm_heap():
     import js
     return int(js.getWasmMemoryBytes())
-
 
 
 _MEMORY_SOURCES = {
@@ -48,14 +59,43 @@ class _StageResult:
     rows = None
     duration_ms = None
     db_calls = None
-    js_heap_samples = None
-    wasm_heap_samples = None
+
     js_sampling_mode = "disabled"
+    js_heap_before_bytes = None
+    js_heap_after_bytes = None
+    js_heap_delta_bytes = None
+    js_heap_peak_bytes = None
+    js_heap_samples = None  # raw [(elapsed_ms, bytes), ...] - only len()>2 when a background thread ran
+
     wasm_sampling_mode = "disabled"
+    wasm_heap_before_bytes = None
+    wasm_heap_after_bytes = None
+    wasm_heap_delta_bytes = None
+    wasm_heap_peak_bytes = None
+    wasm_heap_samples = None
+
+
+def read_after_pyodide_load() -> dict:
+    """One-off reading of each source, taken once after Pyodide finishes loading and before
+    the pipeline's first stage runs - the reference point stage deltas should be read against."""
+    reading = {}
+    for name, reader in _MEMORY_SOURCES.items():
+        try:
+            value = reader()
+        except Exception:
+            value = None
+        reading[f"{name}_heap_bytes"] = value
+    logged = " ".join(f"{k}={v}" for k, v in reading.items() if v is not None)
+    if logged:
+        logger.info("PERFORMANCE_MEMORY_AFTER_PYODIDE_LOAD " + logged)
+    return reading
 
 
 class _MemorySampler:
-    """Samples all _MEMORY_SOURCES together, once per tick, on one background thread."""
+    """Samples all _MEMORY_SOURCES together, once per tick, on one background thread.
+    Always guarantees a reading at start() and stop() regardless of whether the thread
+    actually ran, so every stage gets a real before/after pair even in Pyodide builds
+    without real thread support."""
 
     def __init__(self, interval_ms: float):
         self.interval_s = max(interval_ms, 1) / 1000.0
@@ -79,14 +119,14 @@ class _MemorySampler:
                 self.samples[name].append((elapsed_ms, value))
 
     def _run(self):
-        # wait() before sampling — a full interval must actually elapse before it counts.
+        # wait() before sampling - a full interval must actually elapse before it counts.
         while not self._stop_event.wait(self.interval_s):
             self._sample_all()
 
     def start(self):
         global _sampling_unavailable_logged
         self._start = time.perf_counter()
-        self._sample_all()  # sync sample now, so we have a point even if the thread never runs
+        self._sample_all()  # "before" reading - guaranteed even if the thread never runs
         try:
             self._stop_event = threading.Event()
             thread = threading.Thread(target=self._run, daemon=True)
@@ -95,21 +135,24 @@ class _MemorySampler:
         except Exception as e:
             self._thread = None  # never started - stop() must not try to join it
             if not _sampling_unavailable_logged:
-                logger.debug(f"Background memory sampling unavailable ({type(e).__name__}: {e}); single-sample only.")
+                logger.debug(f"Background memory sampling unavailable ({type(e).__name__}: {e}); start_end_only only.")
                 _sampling_unavailable_logged = True
 
     def stop(self):
         if self._stop_event is not None:
             self._stop_event.set()
+        self._sample_all()  # "after" reading - guaranteed even if no thread ran or added no samples
         if self._thread is not None:
             self._thread.join(timeout=0.5)
 
     def mode(self, name):
         n = len(self.samples[name])
-        if n > 1:
-            return "continuous"
+        if n >= 3:
+            return "continuous"  # background thread added real in-between readings
+        if n == 2:
+            return "start_end_only"  # only the guaranteed start+end readings
         if n == 1:
-            return "single_sample"
+            return "start_only"  # source died between the start and end readings
         return "unavailable"
 
 
@@ -122,7 +165,8 @@ def measure_stage(stage_name: str, conn=None):
             do_work()
             result.rows = count_rows()  # optional
 
-    Populates result.duration_ms/db_calls + per-source js_*/wasm_* sampling fields.
+    Populates result.duration_ms/db_calls + per-source js_*/wasm_* fields
+    (sampling_mode, before/after/delta/peak bytes, raw samples).
     """
     start = time.perf_counter()
     calls_before = getattr(conn, "_execute_call_count", None) if conn is not None else None
@@ -145,9 +189,15 @@ def measure_stage(stage_name: str, conn=None):
         if sampler is not None:
             sampler.stop()
             for name in _MEMORY_SOURCES:
+                samples = sampler.samples[name]
                 setattr(result, f"{name}_sampling_mode", sampler.mode(name))
-                if sampler.samples[name]:
-                    setattr(result, f"{name}_heap_samples", sampler.samples[name])
+                if samples:
+                    values = [v for _, v in samples]
+                    setattr(result, f"{name}_heap_samples", samples)
+                    setattr(result, f"{name}_heap_before_bytes", values[0])
+                    setattr(result, f"{name}_heap_after_bytes", values[-1])
+                    setattr(result, f"{name}_heap_delta_bytes", values[-1] - values[0])
+                    setattr(result, f"{name}_heap_peak_bytes", max(values))
 
         duration_ms = (time.perf_counter() - start) * 1000
         result.duration_ms = duration_ms
@@ -162,8 +212,10 @@ def measure_stage(stage_name: str, conn=None):
         for name in _MEMORY_SOURCES:  # always logged, disabled included
             mode = getattr(result, f"{name}_sampling_mode")
             parts.append(f"{name}_sampling_mode={mode}")
-            samples = getattr(result, f"{name}_heap_samples")
-            if samples:
-                parts.append(f"{name}_heap_samples={len(samples)}")
-                parts.append(f"{name}_heap_last_bytes={samples[-1][1]}")
+            before = getattr(result, f"{name}_heap_before_bytes")
+            after = getattr(result, f"{name}_heap_after_bytes")
+            if before is not None:
+                parts.append(f"{name}_heap_before_bytes={before}")
+                parts.append(f"{name}_heap_after_bytes={after}")
+                parts.append(f"{name}_heap_delta_bytes={after - before}")
         logger.info("PERFORMANCE_MEMORY " + " ".join(parts))

@@ -48,58 +48,16 @@ The web application will be live at `http://localhost:5001`.
 
 ## Performance Logging & Efficiency Evaluation
 
-The pipeline includes built-in performance instrumentation to track timing and memory usage across stages. 
+The pipeline logs timing (duration, rows, DB calls per stage) on every run, printed as JSON to
+the console and downloaded as `<filename>_mem_perf.csv`. Column/field meanings are documented
+inline in `python_core/performance.py` and `webapp/src/utils/performanceExport.js` — read those,
+not this file, for the current schema.
 
-### Timing (Always On)
-
-Every run automatically logs:
-- **Duration** per stage (milliseconds)
-- **Rows processed** per stage  
-- **Database calls** per stage
-- **Database file size** before/after pipeline
-
-At the end of the pipeline, a JSON summary is printed to the console:
-```json
-{
-  "pipeline_summary": {
-    "total_duration_ms": 11550,
-    "stages": [
-      {"stage": "extract", "duration_ms": 2450, "rows_processed": 5000, "database_calls": 1240},
-      {"stage": "semantic_map", "duration_ms": 3100, "rows_processed": 5000, "database_calls": 890},
-      ...
-    ],
-    "database_size_before_bytes": 50000000,
-    "database_size_after_bytes": 75000000
-  }
-}
-```
-
-A CSV file (`<filename>_mem_perf.csv`) is automatically downloaded containing all timing data, one row
-per stage: `stage, duration_ms, rows_processed, database_calls, sample_index, elapsed_ms, heap_bytes,
-database_size_before_bytes, database_size_after_bytes, total_duration_ms`.
-
-### Memory Profiling (Optional)
-
-To enable continuous JavaScript heap sampling during pipeline execution, set an environment variable
-**before running `sync_assets.sh`** (i.e. before `yarn serve`/`yarn build`, since that's what bakes it
-into `public/config.yaml`):
-
+Memory sampling (JS heap + WASM heap, per stage) is optional — set `PERFORMANCE_MEMORY_SAMPLING=1`
+**before** `sync_assets.sh` runs (i.e. before `yarn serve`/`yarn build`):
 ```bash
-# Regular run (timing only)
-yarn serve
-
-# Memory profiling run (timing + continuous heap sampling every 100ms)
 PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
 ```
-
-When memory profiling is enabled:
-- A banner appears in the UI: "PERFORMANCE MEMORY TRACKING: ON"
-- Pipeline runs slower due to sampling overhead
-- CSV download gets one row *per heap sample per stage* instead of one row per stage, with
-  `sample_index`, `elapsed_ms` (since stage start), and `heap_bytes` populated
-- Heap sampling is Chrome-only (`performance.memory` isn't exposed in Firefox/Safari) and best-effort:
-  if this Pyodide build/browser can't actually run a background sampling thread, it falls back to a
-  single heap reading at stage start rather than failing the run.
 
 ### Using Data for Efficiency Evaluation
 

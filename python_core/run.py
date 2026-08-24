@@ -9,7 +9,7 @@ import semantic_map.worker as semantic_map_worker
 from field_normalization import worker as norm_worker
 import device_grouping2.worker as device_grouping2_worker
 from semantic_map.worker import get_counts
-from performance import measure_stage
+from performance import measure_stage, read_after_pyodide_load
 from python_core.runtime.pyodide_utils import get_config_value
 from python_core.logger import get_logger
 
@@ -39,12 +39,17 @@ def _stage_summary(stage_name: str, result) -> dict:
         "duration_ms": round(result.duration_ms, 1) if result.duration_ms is not None else None,
         "rows_processed": result.rows,
         "database_calls": result.db_calls,
-        "js_sampling_mode": result.js_sampling_mode,
-        "wasm_sampling_mode": result.wasm_sampling_mode,
     }
     for name in ("js", "wasm"):
+        entry[f"{name}_sampling_mode"] = getattr(result, f"{name}_sampling_mode")
+        before = getattr(result, f"{name}_heap_before_bytes")
+        if before is not None:
+            entry[f"{name}_heap_before_bytes"] = before
+            entry[f"{name}_heap_after_bytes"] = getattr(result, f"{name}_heap_after_bytes")
+            entry[f"{name}_heap_delta_bytes"] = getattr(result, f"{name}_heap_delta_bytes")
+            entry[f"{name}_heap_peak_bytes"] = getattr(result, f"{name}_heap_peak_bytes")
         samples = getattr(result, f"{name}_heap_samples")
-        if samples:
+        if samples and len(samples) > 2:  # only worth the payload when a background thread added real points
             entry[f"{name}_heap_samples"] = [
                 {"elapsed_ms": round(elapsed_ms, 1), "heap_bytes": heap_bytes}
                 for elapsed_ms, heap_bytes in samples
@@ -55,6 +60,8 @@ def _stage_summary(stage_name: str, result) -> dict:
 def run(platform: str, given_name: str) -> dict:
     manifest = Manifest(platform=platform)
     database_size_before = _database_size_bytes()
+    sampling_enabled = bool(get_config_value("PERFORMANCE_MEMORY_SAMPLING", default=False))
+    after_pyodide_load = read_after_pyodide_load() if sampling_enabled else {}
     pipeline_start = time.perf_counter()
     stage_summaries = []
 
@@ -93,10 +100,12 @@ def run(platform: str, given_name: str) -> dict:
 
     pipeline_summary = {
         "total_duration_ms": total_duration_ms,
+        "after_pyodide_load_js_heap_bytes": after_pyodide_load.get("js_heap_bytes"),
+        "after_pyodide_load_wasm_heap_bytes": after_pyodide_load.get("wasm_heap_bytes"),
         "stages": stage_summaries,
         "database_size_before_bytes": database_size_before,
         "database_size_after_bytes": database_size_after,
-        "memory_sampling_enabled": bool(get_config_value("PERFORMANCE_MEMORY_SAMPLING", default=False)),
+        "memory_sampling_enabled": sampling_enabled,
     }
     # Machine-parseable summary line — matches the `pipeline_summary` shape documented
     # in the README. Also returned below as `performance_summary` so the JS worker can

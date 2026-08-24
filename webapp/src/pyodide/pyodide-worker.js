@@ -63,6 +63,12 @@ function logPerformanceMemory(stage, durationMs, extra) {
 let pyodide;
 let pyodideReadyPromise;
 let config = null;
+
+// JS heap relay: performance.memory doesn't exist inside a dedicated Worker (Chrome only
+// exposes it on window), so pyodide-client.js (main thread) posts readings here on an
+// interval while memory sampling is on. getJsHeapBytes() is what performance.py calls.
+let lastJsHeapBytes = null;
+self.getJsHeapBytes = () => lastJsHeapBytes;
 let baseUrl = null; // e.g. "https://.../data-export-gui/"
 let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
 const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
@@ -407,8 +413,15 @@ json.dumps(list(micropip.list().keys()))
 
 
 self.onmessage = async (event) => {
+  // One-way push from pyodide-client.js, not a request/response — handle and return before
+  // touching the id/command dispatch below.
+  if (event.data && event.data.type === 'jsHeapSample') {
+    lastJsHeapBytes = event.data.bytes;
+    return;
+  }
+
   const { id, command, args } = event.data;
-  
+
   try {
     // Wait for Pyodide to be ready
     try {

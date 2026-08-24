@@ -1,5 +1,6 @@
 import { getLogger } from '@/utils/logger';
 import { downloadPerformanceCsv } from '@/utils/performanceExport';
+import { loadConfig } from '@/utils/config';
 
 const logger = getLogger('PyodideClient');
 let pyodideWorker = null;
@@ -63,6 +64,27 @@ export function callPyodideWorker(command, args, onProgress, timeoutMs) {
 }
 
 
+async function startJsHeapRelay() {
+  /* performance.memory only exists on window, not inside pyodide-worker.js's dedicated Worker -
+     so relay it in from here on an interval while a run is in flight. Returns the interval
+     handle (or null if sampling is off / this browser doesn't expose performance.memory at all,
+     e.g. Firefox/Safari) so the caller can clearInterval() it when the run finishes. */
+  let config;
+  try {
+    config = await loadConfig();
+  } catch (e) {
+    return null;
+  }
+  const perf = window.performance;
+  if (!config.performance || !config.performance.memory_sampling_enabled || !perf || !perf.memory) {
+    return null;
+  }
+  const worker = getPyodideWorker();
+  const send = () => worker.postMessage({ type: 'jsHeapSample', bytes: perf.memory.usedJSHeapSize });
+  send(); // seed immediately - don't make the pipeline's first stage wait a full interval for a reading
+  return setInterval(send, config.performance.memory_sampling_interval_ms || 100);
+}
+
 export function terminatePyodideWorker() {
   if (pyodideWorker) {
     pyodideWorker.terminate();
@@ -86,7 +108,13 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
     await opfsManager.processZipUpload(file, platform);
 
     // Consolidated Step: Run entire pipeline in Pyodide (extract, semantic map, normalize, group)
-    const result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress);
+    const jsHeapRelayTimer = await startJsHeapRelay();
+    let result;
+    try {
+      result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress);
+    } finally {
+      if (jsHeapRelayTimer) clearInterval(jsHeapRelayTimer);
+    }
     uploadId = result.upload_id;
 
     if (result.performance_summary) {
