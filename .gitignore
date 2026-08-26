@@ -123,3 +123,4 @@ evaluation/efficiency/data/*
 evaluation/user_study/agreementv2.csv
 
 # evaluation/efficiency/trials/*.csv
+evaluation/efficiency/*.csv

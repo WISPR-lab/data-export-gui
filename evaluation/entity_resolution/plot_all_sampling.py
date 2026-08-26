@@ -82,6 +82,9 @@ def plot_all_sampling(
     regime_dirs: dict,
     metric: str = "bcubed_f1",
     vmin: float = None,
+    vmax: float = None,
+    vcenter: float = None,
+    gamma: float = 1.0,
     out: Path = None,
     title_override: str = None,
     cmap: str = "YlGnBu",
@@ -104,7 +107,16 @@ def plot_all_sampling(
     # 2. Compute global vmin and vmax dynamically from data for maximum color contrast
     if vmin is None:
         vmin = min(p.min().min() for p in pivots)
-    global_max = max(p.max().max() for p in pivots)
+    if vmax is None:
+        vmax = max(p.max().max() for p in pivots)
+
+    norm = None
+    if vcenter is not None:
+        from matplotlib.colors import TwoSlopeNorm
+        norm = TwoSlopeNorm(vcenter=vcenter, vmin=vmin, vmax=vmax)
+    elif gamma != 1.0:
+        from matplotlib.colors import PowerNorm
+        norm = PowerNorm(gamma=gamma, vmin=vmin, vmax=vmax)
 
     # 3. Create 3-panel figure (7.0 in wide, shallow 2.3 in high)
     fig, axes = plt.subplots(1, 3, figsize=(7.0, 2), sharey=False)
@@ -119,8 +131,9 @@ def plot_all_sampling(
             linewidths=0.5,
             linecolor="white",
             square=False,
-            vmin=vmin,
-            vmax=global_max,
+            vmin=vmin if norm is None else None,
+            vmax=vmax if norm is None else None,
+            norm=norm,
             cbar=False,
             annot_kws={"size": 7.0},
         )
@@ -157,6 +170,40 @@ def floor_min(val: float, default_vmin: float) -> float:
     return min(val, default_vmin)
 
 
+def export_summary_csv(regime_dirs: dict, out_path: Path):
+    all_rows = []
+    for key, label in [("full", "Full Dataset"), ("n30", "Window N=30d"), ("n60", "Window N=60d")]:
+        csv_path = regime_dirs.get(key)
+        if not csv_path or not csv_path.exists():
+            continue
+        df = pd.read_csv(csv_path)
+        for tmax, group in df.groupby("max_days_client"):
+            k2 = group.loc[group["k"] == 2].iloc[0]
+            k12 = group.loc[group["k"] == 12].iloc[0]
+            all_rows.append({
+                "regime": key,
+                "tmax": tmax,
+                "precision_mean": round(group["mean_bcubed_precision"].mean(), 4),
+                "precision_min": round(group["mean_bcubed_precision"].min(), 4),
+                "precision_max": round(group["mean_bcubed_precision"].max(), 4),
+                "precision_sd_min": round(group["std_bcubed_precision"].min(), 4),
+                "precision_sd_max": round(group["std_bcubed_precision"].max(), 4),
+                "recall_mean": round(group["mean_bcubed_recall"].mean(), 4),
+                "recall_min": round(group["mean_bcubed_recall"].min(), 4),
+                "recall_max": round(group["mean_bcubed_recall"].max(), 4),
+                "recall_sd_min": round(group["std_bcubed_recall"].min(), 4),
+                "recall_sd_max": round(group["std_bcubed_recall"].max(), 4),
+                "f1_mean": round(group["bcubed_f1"].mean(), 4),
+                "f05_mean": round(group["bcubed_f05"].mean(), 4),
+                "f05_k2": round(k2["bcubed_f05"], 4),
+                "f05_k12": round(k12["bcubed_f05"], 4),
+            })
+    if all_rows:
+        out_df = pd.DataFrame(all_rows)
+        out_df.to_csv(out_path, index=False)
+        print(f"Saved summary CSV: {out_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot 3-panel ER metric heatmaps across sampling regimes.")
     parser.add_argument("--full", type=Path, default=None,
@@ -167,10 +214,20 @@ def main():
                         help="Path to results.csv or summary.json for Window N=60d.")
     parser.add_argument("--metric", required=True, choices=list(_METRICS.keys()),
                         help="Metric to plot (e.g. bcubed_f1, mean_bcubed_precision, mean_bcubed_recall, bcubed_f05).")
+    parser.add_argument("--vmin", type=float, default=None,
+                        help="Override vmin for color scale.")
+    parser.add_argument("--vmax", type=float, default=None,
+                        help="Override vmax for color scale.")
+    parser.add_argument("--vcenter", type=float, default=None,
+                        help="Center point for TwoSlopeNorm (e.g. 0.85 to expand high range 0.85-1.00).")
+    parser.add_argument("--gamma", type=float, default=1.0,
+                        help="Gamma exponent for PowerNorm (e.g. 2.0 or 2.5 to expand high contrast).")
     parser.add_argument("--title", type=str, default=None,
                         help="Override main figure title.")
     parser.add_argument("--cmap", type=str, default="YlGnBu",
                         help="Colormap palette (default: YlGnBu. Try: viridis, YlGn, crest, magma).")
+    parser.add_argument("--table", action="store_true",
+                        help="Export summary table to CSV.")
     parser.add_argument("--out", type=Path, default=None,
                         help="Output file path (.pdf or .png).")
     args = parser.parse_args()
@@ -187,12 +244,20 @@ def main():
     out = plot_all_sampling(
         regime_dirs=regime_dirs,
         metric=args.metric,
+        vmin=args.vmin,
+        vmax=args.vmax,
+        vcenter=args.vcenter,
+        gamma=args.gamma,
         out=args.out,
         title_override=args.title,
         cmap=args.cmap,
         default_run_dir=default_run_dir,
     )
     print(f"Saved figure: {out}")
+
+    if args.table:
+        target_dir = out.parent if out else default_run_dir
+        export_summary_csv(regime_dirs, target_dir / "summary_table.csv")
 
 
 if __name__ == "__main__":
