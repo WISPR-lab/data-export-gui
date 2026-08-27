@@ -46,33 +46,11 @@ The web application will be live at `http://localhost:5001`.
    Under the hood, this runs `sync_assets.sh` which automatically builds the `UA-Extract-purepy` wheel using `uv`.
    The frontend runs at `http://localhost:5001`.
 
-## Performance Logging & Efficiency Evaluation
+## Evaluation
 
-The pipeline logs timing (duration, rows, DB calls per stage) on every run, printed as JSON to
-the console and downloaded as `<filename>_mem_perf.csv`. Column/field meanings are documented
-inline in `python_core/performance.py` and `webapp/src/utils/performanceExport.js` — read those,
-not this file, for the current schema.
+Evaluation scripts and instructions live in [`evaluation/README.md`](evaluation/README.md).
 
-Memory sampling (JS heap + WASM heap, per stage) is optional — set `PERFORMANCE_MEMORY_SAMPLING=1`
-**before** `sync_assets.sh` runs (i.e. before `yarn serve`/`yarn build`):
-```bash
-PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
-```
 
-### Using Data for Efficiency Evaluation
-
-1. **Generate augmented datasets** (if testing scalability):
-   ```bash
-   uv run python -m evaluation.efficiency.augment --platform facebook --multiplier 100
-   uv run python -m evaluation.efficiency.augment --platform google --multiplier 1000
-   ```
-
-2. **Run pipeline with timing/memory profiling enabled** and upload augmented ZIP files through the web UI.
-
-3. **Analyze the downloaded CSV** to measure:
-   - How time/memory scale with data size (1x vs 10x vs 100x vs 1000x)
-   - Which stages are performance bottlenecks
-   - Peak memory usage per stage
 
 ## Supported Platforms
 
@@ -97,71 +75,6 @@ When you import your data export file, it is never transmitted over the network;
 Note that the [site](https://wispr-lab.github.io/data-export-gui/) is hosted via GitHub Pages, which may collect connection logs or track cookies. Furthermore, the Vue app currently loads some CSS assets and Pyodide package wheels from public CDNs, which implies an outbound network request. We are working on bundling these assets from the source and self-hosting our own version of the project soon with better privacy guarantees.
 
 
----
-
-
-## _Device Entity Resolution_ Evaluation
-
-This is optional and requires substantial disk and memory resources; skip it if you only want to run the web app. (todo better explanation)
-
-### Datasets
-
-| Name | Short citation | URL | # records | Compressed size at download | Uncompressed dataset size |
-|---|---:|---|---:|---:|---:|
-| FP Stalker | [Vastel et al., 2018](https://inria.hal.science/hal-01652021/document) | https://github.com/Spirals-Team/FPStalker <br/> (extension1.txt.tar.gz and extension2.txt.tar.gz)| 15K| 137 MB | ~260 MB| 
-| RBA Logins | [Wiefling et al., 2022](https://dl.acm.org/doi/10.1145/3546069) | https://zenodo.org/records/6782156 | ~33M | 1.1 GB | 9.1 GB |
-
-### Docker Configuration
-
-Running outside of Docker is not recommended. You must change your Docker/VM settings to ensure you have sufficient disk space and memory available. 
-
-#### Resource Settings
-* **Absolute Minimum**: 4 GB RAM, 15 GB free disk space.
-   * This might crash and will be significantly less efficient.
-* **Recommended**: 8 GB RAM, 25 GB free disk space.
-
-
-#### Mac/Windows users
-* If you are running **Docker Desktop** (most users), follow [these instructions](https://docs.docker.com/desktop/settings-and-maintenance/settings/#resources) to change your `Memory limit` and `Disk usage limit` to the settings specified above.
-* If you are using a different VM, use the instructions below:
-   * [Colima](https://github.com/abiosoft/colima#customizing-the-vm)
-   * [OrbStack](https://docs.orbstack.dev/settings#cpu-memory)
-   * [WSL](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configuration-setting-for-wslconfig)
-
-
-#### Linux users
-* If you are _not_ using a VM to run Docker, proceed (but add the `--memory="8g"` flag").
-* If you are using a VM, ensure disk/memory limits meet the requirments. But you probably already know how to do that...
-
-  
-
-### Run Instructions
-
-1. **Start the container**:
-
-   ```bash
-      # from data-export-gui dir
-      mkdir -p evaluation/entity_resolution/data_raw
-      
-      # mac/windows OR linux with VM
-      docker compose run --rm eval
-
-      # if linux w/o VM
-      docker compose run --rm eval --memory="8g" # or "4g", etc.
-   ```
-   This will put you in an interactive bash session inside the container (at `/workspace`). The raw datasets will be downloaded to Docker named volume (`data_raw`) mounted at `evaluation/entity_resolution/data_raw` to speed up the SQLite writes.
-
-
-2. Inside the container shell, **download data and run evaluation**:
-   ```bash
-   uv run python -m evaluation.entity_resolution.run
-
-   # Draw K tracking_ids active within a random 30-day timestamp window:
-   uv run python -m evaluation.entity_resolution.run --window-days 30
-   ```
-
-
---- 
 
 ## Contributing
 
