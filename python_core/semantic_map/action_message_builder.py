@@ -1,16 +1,12 @@
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(__file__))
 from semantic_map.views import clean_target
 
 
-def message(event_action, **kwargs):
+def _fallback_base_action(event_action):
     cleaned_action = clean_target(event_action)
-    outcome = kwargs.get("event_outcome") or kwargs.get("outcome")
-    # translate ecs field with dot notation to underscore notation for mapping (dots annoying in sql)
-    # also get rid of @ in timeline
-
     translations = {
         "auth": "authentication",
         "user": "",
@@ -18,23 +14,21 @@ def message(event_action, **kwargs):
         "pass": "passed",
         "fail": "failed",
     }
-
     words = cleaned_action.split("_")
     translated_words = [translations.get(w, w) for w in words]
-    base_action = " ".join([w for w in translated_words if w])
-
-    if base_action == "user login" or base_action == "login":
+    base_action = " ".join(w for w in translated_words if w)
+    if base_action in ("user login", "login"):
         base_action = "login"
+    return base_action.capitalize()
 
-    base_action = base_action.capitalize()
+
+def message(event_action, action_labels=None, **kwargs):
+    outcome = kwargs.get("event_outcome") or kwargs.get("outcome")
+
+    base_action = (action_labels or {}).get(event_action) or _fallback_base_action(event_action)
 
     if outcome == "success":
-        result_message = f"{base_action} - Success"
-    elif outcome in ("failure", "fail"):
-        result_message = f"{base_action} - Failure"
-    elif outcome == "initiated":
-        result_message = f"{base_action} - Initiated"
-    else:
-        result_message = base_action
-
-    return result_message
+        return f"{base_action} - Success"
+    if outcome in ("failure", "fail"):
+        return f"{base_action} - Failure"
+    return base_action

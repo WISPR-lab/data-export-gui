@@ -64,7 +64,7 @@ views:
     static:
       event.action: "user_login"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["start"]
       event.outcome: "success"
     fields: &fb_account_activity
@@ -72,9 +72,9 @@ views:
       - {target: "client.ip", source: "ip_address", type: "string"}
       - {target: "user_agent.original", source: "user_agent", type: "string"}
       - {target: "client.session.id", source: "datr_cookie", type: "string"}
-      - {target: "client.geo.city_name", source: "city", type: "string"}
-      - {target: "client.geo.country_iso_code", source: "country", type: "string"}
-      - {target: "client.geo.region_iso_code", source: "region", type: "string"}
+      - {target: "geo.city_name", source: "city", type: "string"}
+      - {target: "geo.country_iso_code", source: "country", type: "string"}
+      - {target: "geo.region_iso_code", source: "region", type: "string"}
       - {target: "server.domain", source: "site_name", type: "string"}
 
 
@@ -85,7 +85,7 @@ views:
     static:
       event.action: "user_login"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["start"]
       event.outcome: "success"
     fields: &fb_logins_logouts
@@ -103,24 +103,23 @@ views:
         - {source: "event", op: "startswith", value: "Checkpoint:*"}
         - {source: "event", op: "==", value: "Two-factor authentication"}
     static:
-      event.action: "auth_challenge"
+      event.action: "auth_challenge_init"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["info"]
-      event.outcome: "initiated"
     fields: &fb_record_details
       - {target: "@timestamp", source: "session.created_timestamp", type: "datetime"}
       - {target: "client.ip", source: "session.ip_address", type: "string"}
       - {target: "user_agent.original", source: "session.user_agent", type: "string"}
       - {target: "client.session.id", source: "session.datr_cookie", type: "string"}
-      
+      - {target: "geo.city_name", source: "session.city", type: "string"}
 
   - file:
       id: "fb_record_details"
       where:
         {source: "event", op: "==", value: "Checkpoint Passed"}
     static:
-      event.action: "auth_challenge"
+      event.action: "auth_challenge_complete"
       event.kind: "event"
       event.category: ["authentication"]
       event.type: ["info"]
@@ -136,7 +135,7 @@ views:
     static:
       event.action: "user_logout"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["end"]
     fields: *fb_account_activity
 
@@ -147,26 +146,36 @@ views:
     static:
       event.action: "user_logout"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["end"]
     fields: *fb_logins_logouts
 
 
 # -------------------------- SESSION REFRESHES -----------------
 
-  - file: 
+  - file:
       id: "fb_account_activity"
       where:
         logic: "any"
         conditions:
         - {source: "action", op: "==", value: "Web Session Terminated"}
         - {source: "action", op: "==", value: "Mobile Session Terminated"}
+        - {source: "action", op: "==", value: "Api Session Terminated"}
     static:
       event.action: "session_terminated"
       event.kind: "event"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-    fields: *fb_account_activity
+    fields:
+      - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "client.ip", source: "ip_address", type: "string"}
+      - {target: "user_agent.original", source: "user_agent", type: "string"}
+      - {target: "client.session.id", source: "datr_cookie", type: "string"}
+      - {target: "geo.city_name", source: "city", type: "string"}
+      - {target: "geo.country_iso_code", source: "country", type: "string"}
+      - {target: "geo.region_iso_code", source: "region", type: "string"}
+      - {target: "server.domain", source: "site_name", type: "string"}
+      - {target: "client.session.type", source: "action", type: "string"}
 
   - file: 
       id: "fb_account_activity"
@@ -187,7 +196,7 @@ views:
     static:
       event.action: "user_password_change"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["change"]
     fields: *fb_account_activity
 
@@ -198,7 +207,7 @@ views:
     static:
       event.action: "user_password_change"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["change"]
     fields: *fb_record_details
 
@@ -209,7 +218,7 @@ views:
     static:
       event.action: "password_reset_request"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["change"]
     fields: *fb_account_activity
 
@@ -221,9 +230,9 @@ views:
       where:
         {source: "action", op: "==", value: "Email Added"}
     static:
-      event.action: "email_addition"
+      event.action: "email_address_change"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["change"]
     fields: *fb_account_activity
 
@@ -232,9 +241,9 @@ views:
       where:
         {source: "event", op: "==", value: "Email Added"}
     static:
-      event.action: "email_addition"
+      event.action: "email_address_change"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["change"]
     fields:
       - {target: "@timestamp", source: "session.created_timestamp", type: "datetime"}
@@ -253,8 +262,8 @@ views:
     static:
       event.action: "data_export_request"
       event.kind: "event"
-      event.category: ["web"]
-      event.type: ["access"]
+      event.category: ["iam"]
+      event.type: ["creation"]
     fields:
       - {target: "@timestamp", source: "timestamp", type: "datetime"}
 
@@ -263,7 +272,7 @@ views:
   # - file:
   #     id: "fb_mobile_devices"
   #   static:
-  #     event.kind: "asset"
+  #     event.kind: "state"
   #     event.category: ["authentication", "session"]
   #     event.type: ["info"]
   #     entity.type: "app_registration"
@@ -277,10 +286,11 @@ views:
   - file:
       id: "fb_profile_devices"
     static:
-      event.kind: "asset"
+      event.kind: "state"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "app_registration"
+      entity.type: "application"
+      entity.sub_type: "app_registration"
     fields:
       - {target: "device.id.facebook", source: "'Device ID'", type: "string"}
       - {target: "entity.first_seen_timestamp", source: "'Device ID details'.first_seen_time", type: "datetime"}
@@ -301,10 +311,11 @@ views:
   - file:
       id: "fb_recognized_devices"
     static:
-      event.kind: "asset"
+      event.kind: "state"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "trusted_cookie"
+      entity.type: "session"
+      entity.sub_type: "trusted_cookie"
     fields:
       - {target: "entity.first_seen_timestamp", source: "created_timestamp", type: "datetime"}
       - {target: "entity.last_seen_timestamp", source: "updated_timestamp", type: "datetime"}
@@ -317,7 +328,7 @@ views:
   - file:
       id: "fb_active_sessions"
     static:
-      event.kind: "asset"
+      event.kind: "state"
       event.category: ["authentication", "session"]
       event.type: ["info"]
       entity.type: "session"
@@ -328,6 +339,6 @@ views:
       - {target: "user_agent.original", source: "user_agent", type: "string"}
       - {target: "client.session.id", source: "datr_cookie", type: "string"}
       - {target: "device.model.name", source: "device", type: "string"}
-      - {target: "client.geo.name", source: "location", type: "string"}
+      - {target: "geo.name", source: "location", type: "string"}
       - {target: "user_agent.client_name", source: "app", type: "string"}
       - {target: "client.session.type", source: "session_type", type: "string"}

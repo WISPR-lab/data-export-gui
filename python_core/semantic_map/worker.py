@@ -68,7 +68,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                             "event_kind": event_kind,
                             "event_category": event_category,
                             "event_type": event_type,
-                            "event_type_msg": sm_amb.message(event_action, **fields),
+                            "event_type_msg": sm_amb.message(event_action, manifest.action_labels, **fields),
                             "attributes": fields,
                             "deduplicated": False,  # taken care of in deduplication step
                             "extra_timestamps": [],  # ^^
@@ -76,20 +76,13 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                     )
 
                 # AUTH/DEVICE ENTITIES
-                elif event_kind == "asset" or event_kind == "entity":
+                elif event_kind == "state" or event_kind == "entity":
                     entity_type = fields.pop("entity_type", None)
+                    entity_sub_type = fields.pop("entity_sub_type", None)
                     # Pop event_category and event_type from fields before storing as attributes
                     fields.pop("event_category", [])
                     fields.pop("event_type", [])
-                    if entity_type in (
-                        "authenticated_device",
-                        "trusted_cookie",
-                        "session",
-                        "app_registration",
-                        "hardware_registration",
-                        "passkey_registration",
-                        "platform_inferred_device",
-                    ):
+                    if entity_type in ("host", "application", "session"):
                         auth_device_rows.append(
                             {
                                 "id": uuid.uuid4().hex,
@@ -97,6 +90,7 @@ def _generate_table_rows(cursor_rows: list, manifest: Manifest, upload_id):
                                 "file_id": file_id,
                                 "raw_data_id": raw_data_id,
                                 "entity_type": entity_type,
+                                "entity_sub_type": entity_sub_type,
                                 "event_kind": event_kind,
                                 "attributes": fields,
                             }
@@ -191,8 +185,8 @@ def map(platform: str, upload_id: str, db_path: str = None, manifest: Manifest =
             if auth_device_rows:
                 conn.executemany(
                     """
-                    INSERT INTO devices_raw (id, upload_id, file_id, raw_data_id, entity_type, event_kind, attributes)
-                    VALUES (:id, :upload_id, :file_id, :raw_data_id, :entity_type, :event_kind, :attributes)
+                    INSERT INTO devices_raw (id, upload_id, file_id, raw_data_id, entity_type, entity_sub_type, event_kind, attributes)
+                    VALUES (:id, :upload_id, :file_id, :raw_data_id, :entity_type, :entity_sub_type, :event_kind, :attributes)
                     """,
                     auth_device_rows,
                 )

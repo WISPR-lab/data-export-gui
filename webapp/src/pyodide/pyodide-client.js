@@ -7,13 +7,18 @@ let pyodideWorker = null;
 let workerMessageId = 0;
 
 
+let isPyodideReady = false;
+
 export function getPyodideWorker() {
   if (!pyodideWorker) {
     pyodideWorker = new Worker('./pyodide-worker.js');
     logger.debug('Created Pyodide worker (singleton)');
     pyodideWorker.addEventListener('message', (event) => {
-      if (event.data.type === 'packageInstallFailure') {
+      if (event.data && event.data.type === 'packageInstallFailure') {
         logger.error('Packages failed to install in Pyodide:', event.data.packages);
+      } else if (event.data && event.data.type === 'pyodide_ready') {
+        isPyodideReady = true;
+        logger.debug('Pyodide worker initialized and ready');
       }
     });
   }
@@ -102,6 +107,11 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
   let uploadId;
 
   try {
+    // Step 0: Notify Pyodide startup if worker is still booting
+    if (!isPyodideReady && onProgress) {
+      onProgress({ stage: 'init_pyodide', progress: 5 });
+    }
+
     // Step 1: ZIP extraction (JS side)
     if (onProgress) onProgress({ stage: 'extract_zip', progress: 15 });
     await opfsManager.init(platform);

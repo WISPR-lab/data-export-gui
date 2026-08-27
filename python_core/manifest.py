@@ -24,6 +24,21 @@ class Manifest:
         if validate and not self.validate():
             raise ValueError(f"[Manifest] '{platform}' failed validation.")
 
+        self.action_labels = {}
+        taxonomy_path = os.path.join(manifest_dir, "__taxonomy.yaml")
+        if os.path.exists(taxonomy_path):
+            try:
+                with open(taxonomy_path, "r", encoding="utf-8") as f:
+                    taxonomy = yaml.safe_load(f) or {}
+                allowed = ((taxonomy.get("fields") or {}).get("event.action") or {}).get("allowed_values") or {}
+                self.action_labels = {
+                    action: entry["short_name"]
+                    for action, entry in allowed.items()
+                    if isinstance(entry, dict) and entry.get("short_name")
+                }
+            except yaml.YAMLError as e:
+                logger.warning("__taxonomy.yaml failed to parse, action labels unavailable: %s", e)
+
         for i, v in enumerate(self.config.get("views", [])):
             file_id = v.get("file", {}).get("id")
             if file_id:

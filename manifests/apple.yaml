@@ -107,12 +107,12 @@ views:
   static:
       event.action: "user_password_change"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["iam"]
       event.type: ["change"]
   fields:
   - {target: "@timestamp", source: "Last Password Change Date", type: "datetime"}
   - {target: "client.ip", source: "Advanced Data Protection - Device IP Address", type: "string"}
-  - {target: "device.given_name", source: "Advanced Data Protection - Device Name", type: "string"}
+  - {target: "entity.display_name", source: "Advanced Data Protection - Device Name", type: "string"}
   - {target: "device.serial_number", source: "Advanced Data Protection - Device Serial Number", type: "string"}
 
 
@@ -121,7 +121,7 @@ views:
   static:
       event.action: "recovery_contact_addition"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["creation", "user"]
   fields:
   - {target: "@timestamp", source: "Recovery Create Date", type: "datetime"}
@@ -133,7 +133,7 @@ views:
   static:
       event.action: "legacy_contact_addition"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["creation", "user"]
   fields:
   - {target: "@timestamp", source: "Beneficiary Create Date", type: "datetime"}
@@ -143,12 +143,15 @@ views:
 - file:
     id: "apple_passkey"
   static:
-    event.kind: "asset"
-    entity.type: "passkey_registration"
+    event.kind: "state"
+    event.category: ["authentication", "session"]
+    event.type: ["info"]
+    entity.type: "host"
+    entity.sub_type: "passkey_registration"
   fields:
     - {target: "device.serial_number", source: "Device Serial Number", type: "string"}
     - {target: "device.model.name", source: "Hardware Model", type: "string"}
-    - {target: "credential_id", source: "Credential ID", type: "string"}
+    - {target: "entity.id", source: "Credential ID", type: "string"}
     - {target: "public_key", source: "Public Key", type: "string"}
 
 
@@ -158,8 +161,8 @@ views:
   static:
       event.action: "data_export_request"
       event.kind: "event"
-      event.category: ["file"]
-      event.type: ["access"]
+      event.category: ["iam"]
+      event.type: ["creation"]
   fields:
   - {target: "@timestamp", source: "Request Time", type: "datetime"}
   - {target: "event.end", source: "Request Completion Time", type: "datetime"}
@@ -187,14 +190,15 @@ views:
 - file: 
     id:   "apple_device_info"
   static:
-      event.kind: "asset"
+      event.kind: "state"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "hardware_registration"
+      entity.type: "host"
+      entity.sub_type: "hardware_registration"
   fields:
   - {target: "entity.last_seen_timestamp", source: "Device Last Heartbeat Timestamp", type: "datetime"}
   - {target: "entity.first_seen_timestamp", source: "Device Added Date", type: "datetime"}
-  - {target: "device.given_name", source: "Device Name", type: "string"}
+  - {target: "entity.display_name", source: "Device Name", type: "string"}
   - {target: "device.serial_number", source: "Device Serial Number", type: "string"}
   - {target: "device.model.name", source: "Device Model Name", type: "string"}
   - {target: "device.imei", source: "Device IMEI", type: "string"}
@@ -204,13 +208,14 @@ views:
 - file: 
     id: "apple_messaging_devices"
   static:
-      event.kind: "asset"
+      event.kind: "state"
       event.category: ["authentication", "session"]
       event.type: ["info"]
-      entity.type: "app_registration"
+      entity.type: "application"
+      entity.sub_type: "app_registration"
   fields:
   - {target: "device.model.identifier", source: "hardware-version", type: "string"}
-  - {target: "device.given_name", source: "device-name", type: "string"}
+  - {target: "entity.display_name", source: "device-name", type: "string"}
   - {target: "user_agent.original", source: "os-version", type: "string"}
   # TODO: potential 2FA field
 
@@ -218,7 +223,7 @@ views:
     id: "apple_push_notifications"
   static:
     event.kind: "event"
-    event.action: "push_notification_activity"
+    event.action: "push_notification"
     event.category: ["web"]
     event.type: ["access"]
   fields:
@@ -229,17 +234,18 @@ views:
   - {target: "service.name", source: "App Name", type: "string"}
   - {target: "geo.city_name", source: "IP City", type: "string"}
   - {target: "geo.country_iso_code", source: "IP Country Code", type: "string"}
-  - {target: "geo.region_name", source: "IP Region Code", type: "string"}
+  - {target: "geo.region_iso_code", source: "IP Region Code", type: "string"}
 
 - file:
     id: "apple_messaging_json"
   static:
-    event.kind: "asset"
+    event.kind: "state"
     event.category: ["authentication", "session"]
     event.type: ["info"]
-    entity.type: "app_registration"
+    entity.type: "application"
+    entity.sub_type: "app_registration"
   fields:
   - {target: "device.model.identifier", source: "hardware-version", type: "string"}
-  - {target: "device.given_name", source: "device-name", type: "string"}
+  - {target: "entity.display_name", source: "device-name", type: "string"}
   - {target: "user_agent.original", source: "os-version", type: "string"}
   - {target: "auth.method", source: "device-trust-level", type: "string"}

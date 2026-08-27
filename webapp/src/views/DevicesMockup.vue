@@ -49,7 +49,7 @@ function osIcon(s) {
     platform_inferred_device: 'mdi-check-decagram-outline',
     session:                  'mdi-devices'
   };
-  return entityFallback[s.entity_type] || 'mdi-devices';
+  return entityFallback[s.entity_sub_type] || entityFallback[s.entity_type] || 'mdi-devices';
 }
 
 var SECTION_DEFS = [
@@ -104,6 +104,7 @@ function buildEntry(s) {
   return {
     id: s.id,
     entity_type: s.entity_type,
+    entity_sub_type: s.entity_sub_type,
     group_id: s.group_id || null,
     title: s.model_name,
     client_name: clientLabel,
@@ -150,7 +151,7 @@ function sortByLastSeen(entries) {
 }
 
 function buildSection(def, uploadEntries) {
-  var entries = uploadEntries.filter(function(e) { return e.entity_type === def.key; });
+  var entries = uploadEntries.filter(function(e) { return (e.entity_sub_type || e.entity_type) === def.key; });
   entries = def.sortByGroup ? sortByGroup(entries) : sortByLastSeen(entries);
   return { key: def.key, label: def.label, description: def.description, detailLabel: def.detailLabel, entries: entries, page: 1 };
 }

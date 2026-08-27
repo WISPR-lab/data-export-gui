@@ -47,7 +47,7 @@ views:
     static:
       event.action: "user_login"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["start"]
       event.outcome: "success"
     fields:
@@ -61,7 +61,7 @@ views:
     static:
       event.action: "user_logout"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["end"]
     fields:
       - {target: "@timestamp", source: ["string_map_data.Time.timestamp", "string_map_data.'Change Date'.timestamp"], type: "datetime"}
@@ -74,7 +74,7 @@ views:
     static:
       event.action: "user_password_change"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["change"]
     fields:
       - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
@@ -86,7 +86,7 @@ views:
     static:
       event.action: "email_address_change"
       event.kind: "event"
-      event.category: ["configuration"]
+      event.category: ["iam"]
       event.type: ["change"]
     fields:
       - {target: "@timestamp", source: ["string_map_data.'Change Date'.timestamp", "string_map_data.Time.timestamp"], type: "datetime"}
@@ -98,16 +98,16 @@ views:
     static:
       event.action: "data_export_request"
       event.kind: "event"
-      event.category: ["file"]
-      event.type: ["access"]
+      event.category: ["iam"]
+      event.type: ["creation"]
     fields:
       - {target: "@timestamp", source: "timestamp", type: "datetime"}
 
   - file:
       id: "insta_devices"
     static:
-      event.kind: "asset"
-      event.category: ["authentication", "host"]
+      event.kind: "state"
+      event.category: ["authentication", "session"]
       event.type: ["info"]
       entity.type: "session"
     fields:

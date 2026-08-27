@@ -19,7 +19,7 @@ views:
     static:
       event.action: "user_login"
       event.kind: "event"
-      event.category: ["authentication"]
+      event.category: ["authentication", "session"]
       event.type: ["start"]
       event.outcome: "success"
     fields:

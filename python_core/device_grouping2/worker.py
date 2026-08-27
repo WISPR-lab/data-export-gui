@@ -62,7 +62,7 @@ def group(upload_id: str, db_path: str = None, conn=None) -> None:
 
         conn.execute("DELETE FROM resolved_sessions_registrations WHERE upload_id = ?", (upload_id,))
         raw_rows = conn.execute(
-            "SELECT id, upload_id, entity_type, origin, attributes FROM devices_raw WHERE upload_id = ?",
+            "SELECT id, upload_id, entity_type, entity_sub_type, origin, attributes FROM devices_raw WHERE upload_id = ?",
             (upload_id,),
         ).fetchall()
         
@@ -81,12 +81,12 @@ def group(upload_id: str, db_path: str = None, conn=None) -> None:
             conn.executemany(
                 """
                 INSERT INTO resolved_sessions_registrations (
-                    id, upload_id, entity_type, origin, model_name, client_name, 
-                    os_name, os_version, os_type, attributes, is_reduced_ua, 
+                    id, upload_id, entity_type, entity_sub_type, origin, model_name, client_name,
+                    os_name, os_version, os_type, attributes, is_reduced_ua,
                     has_trusted_cookie, trusted_cookie_id, has_passkey, registration_device
                 ) VALUES (
-                    :id, :upload_id, :entity_type, :origin, :model_name, :client_name, 
-                    :os_name, :os_version, :os_type, :attributes, :is_reduced_ua, 
+                    :id, :upload_id, :entity_type, :entity_sub_type, :origin, :model_name, :client_name,
+                    :os_name, :os_version, :os_type, :attributes, :is_reduced_ua,
                     :has_trusted_cookie, :trusted_cookie_id, :has_passkey, :registration_device
                 )
                 """,

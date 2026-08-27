@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS devices_raw ( -- filled during semantic map
     raw_data_id TEXT,
     --
     entity_type TEXT,
+    entity_sub_type TEXT,
     event_kind TEXT,
     event_category JSONTEXT DEFAULT '[]',
     --
@@ -152,6 +153,7 @@ CREATE TABLE IF NOT EXISTS resolved_sessions_registrations (
     id TEXT PRIMARY KEY,
     upload_id TEXT,
     entity_type TEXT,
+    entity_sub_type TEXT,
     origin TEXT,
     model_name TEXT,
     client_name TEXT,
@@ -201,6 +203,7 @@ CREATE VIEW IF NOT EXISTS v_device_field_mappings AS
 -- static columns
 SELECT 'id' AS field, 'text' AS type
 UNION SELECT 'entity_type', 'category'
+UNION SELECT 'entity_sub_type', 'category'
 UNION SELECT 'event_kind', 'category'
 UNION SELECT 'event_category', 'category'
 UNION SELECT 'platform', 'text'

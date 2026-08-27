@@ -1,0 +1,241 @@
+# checked by scripts/validate_manifests.py
+# add new entries as needed
+
+fields:
+  '@timestamp':
+    description: when the event occurred, per the source data
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-base.html
+  auth.method:
+    description: not ECS — currently sourced from apple's "device-trust-level" field, which may not actually be an auth method (worth double-checking the mapping)
+  client.ip:
+    description: the client's IP address
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-client.html
+  client.session.id:
+    description: session/cookie identifier for the client — ours, not part of ECS's client fieldset
+  client.session.type:
+    description: descriptive label for the client/session (e.g. web, mobile app, iphone) — ours, not part of ECS's client fieldset
+  device.id.android_gsf:
+    description: Android Google Services Framework ID, a unique identifier for Android devices
+    url: https://developer.android.com/reference/android/provider/Settings.Secure#ANDROID_ID
+  device.id.android_secure: 
+    description: Android Settings.Secure ID, a unique identifier for Android devices
+    url: https://developer.android.com/reference/android/provider/Settings.Secure#ANDROID_ID
+  device.id.apple: 
+    description: an odd Apple-specific device fingerprint, NOT the serial number
+  device.id.facebook: 
+    description: Facebook device ID, a unique identifier a single device that has installed multiple Facebook/Meta apps
+  device.id.google_ad: 
+    description: Google Advertising ID, sometimes used by other platforms (e.g., Meta)
+  device.imei: 
+    description: International Mobile Equipment Identity, a unique identifier for mobile phones
+  device.locale: null
+  device.manufacturer:
+    description: device manufacturer (e.g. Apple, Samsung)
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
+  device.meid:
+    description: Mobile Equipment Identifier, CDMA's analog to IMEI
+  device.model.identifier:
+    description: internal model identifier (e.g. iPhone14,2)
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
+  device.model.name:
+    description: marketed device model name (e.g. iPhone 13 Pro)
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
+  device.product.id:
+    description: device product identifier, as defined by the vendor
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
+  device.screen_resolution: null
+  device.serial_number:
+    description: Hardware serial number
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
+  device.timezone: null
+  entity.display_name: 
+    description: human-readable name of the entity (e.g., calling your phone "Name's iPhone")
+    url: https://www.elastic.co/docs/reference/ecs/ecs-entity#field-entity-display-name
+  entity.first_seen_timestamp:
+    description: timestamp of the first time a device/session was seen or used
+  entity.id:
+    description: miscellaneous catchall for unique ID fields (used for passkey/credential IDs)
+    url: https://www.elastic.co/docs/reference/ecs/ecs-entity#field-entity-id
+  entity.last_seen_timestamp:
+    description: timestamp of the last time a device/session was seen or used
+    url: https://www.elastic.co/docs/reference/ecs/ecs-entity#field-entity-last-seen-timestamp
+  entity.sub_type:
+    description: provider-specific detail under entity.type, e.g. what kind of host/application this is
+    url: https://www.elastic.co/docs/reference/ecs/ecs-entity
+    allowed_values:
+      app_registration: null
+      hardware_registration: null
+      passkey_registration: null
+      platform_inferred_device: null
+      trusted_cookie: null
+  entity.type:
+    description: what kind of entity this row represents, per ECS's vocab
+    url: https://www.elastic.co/docs/reference/ecs/ecs-entity
+    allowed_values:
+      application: null
+      host: null
+      session: null
+
+  # event actions
+  event.action:
+    description: our own action taxonomy — ECS defines event.action as free text with no vocabulary of its own, this is that vocabulary. each value's short_name is the canonical display label (used in place of deriving one mechanically from the action string).
+    url: null
+    allowed_values:
+      auth_challenge_init:
+        short_name: "MFA or Checkpoint Initiated"
+        description: MFA/checkpoint challenge was presented to the user; outcome not yet known
+      auth_challenge_complete:
+        short_name: "MFA or Checkpoint Resolved"
+        description: MFA/checkpoint challenge was resolved — see event.outcome for success/failure
+      data_export_request:
+        short_name: "Data Export Requested"
+        description: user requested a copy/export of their account data
+      email_address_change:
+        short_name: "Email Address Change"
+        description: the account's email address was changed (captures both old and new value)
+      legacy_contact_addition:
+        short_name: "Legacy Contact Added"
+        description: a new legacy/inheritance contact was added to the account
+      password_reset_request:
+        short_name: "Password Reset Requested"
+        description: user requested a password reset
+      push_notification:
+        short_name: "Push Notification"
+        description: a push notification was sent to the user's device
+      recovery_contact_addition:
+        short_name: "Recovery Contact Added"
+        description: a new account-recovery contact was added
+      safari_search:
+        short_name: "Safari Search"
+        description: a search performed in Safari, from Apple's browsing history export
+      session_refresh:
+        short_name: "Session Refresh"
+        description: an existing session's token/expiry was refreshed
+      session_terminated:
+        short_name: "Session Terminated"
+        description: an existing session ended, either from the user logging out or the session expiring (use this when platform is vague about which one)
+      user_login:
+        short_name: "User Login"
+        description: user authenticated into their account
+      user_logout:
+        short_name: "User Logout"
+        description: user ended their session via explicit logout
+      user_password_change:
+        short_name: "Password Change"
+        description: user changed their account password
+  
+  event.category:
+    description: ECS's high-level event category
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-allowed-values-event-category.html
+    allowed_values:
+      authentication: null
+      configuration: null
+      file: null
+      host: null
+      iam: null
+      session: null
+      web: null
+  event.end:
+    description: date the event ended or the activity was last observed
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-event.html
+  event.kind:
+    description: "'event' for point-in-time actions, 'state' for inventory/asset snapshots"
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-allowed-values-event-kind.html
+    allowed_values:
+      event: null
+      state: null
+  event.outcome:
+    description: whether the event succeeded or failed
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-allowed-values-event-outcome.html
+    allowed_values:
+      failure: null
+      success: null
+  event.type:
+    description: finer-grained sub-category of the event, paired with event.category
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-allowed-values-event-type.html
+    allowed_values:
+      access: null
+      change: null
+      creation: null
+      end: null
+      info: null
+      start: null
+      user: null
+  geo.city_name:
+    description: city name, from IP geolocation
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+  geo.country_iso_code:
+    description: country ISO code, from IP geolocation
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+  geo.name:
+    description: location as a plain string (e.g. "City, State, United States"). Note that ECS's real geo.name is meant for custom location labels like data center names, this is a looser fit.
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+  geo.region_iso_code:
+    description: region/state ISO code, from IP geolocation
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+  os.version:
+    description: OS version reported directly by the platform vendor (e.g. apple's own account/device export) rather than parsed from a user-agent string — more trustworthy than user_agent.os.version, kept separate deliberately
+    url: null
+  public_key:
+    description: WebAuthn/passkey public key material - TODO migrate
+  server.domain:
+    description: domain of the server the client connected to
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-server.html
+  service.name:
+    description: name of the service/application involved (e.g. the app name for a push notification)
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-service.html
+  url.full:
+    description: the full/complete URL
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-url.html
+  url.title:
+    description: title of the page associated with the event (e.g. a search result)
+  user.email.new:
+    description: email the account was changed to, extension of ECS's user.email, which has no old/new distinction
+  user.email.old:
+    description: email the account was changed from, extension of ECS's user.email, which has no old/new distinction
+  user_agent.client_name:
+    description: name of the client app (e.g. "Instagram") — should probably be user_agent.name, the real ECS field for this, not client_name
+  user_agent.original:
+    description: the raw, unparsed user-agent string
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-user_agent.html
+  user_agent.os.name:
+    description: name of the OS, parsed from the user agent
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-os.html
+  user_agent.os.type:
+    description: broad OS category parsed from the user agent (e.g. ios, android, windows)
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-os.html
+  user_agent.os.version:
+    description: OS version parsed from the user agent, see os.version if reported directly by the oS
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-os.html
+
+
+
+
+# relationships describe how fields must relate to each other
+# for example, event.action=user_login must have event.kind=event, event.category=authentication, event.type=start
+relationships:
+  event.action:
+    user_login: { kind: event, category: [authentication, session], type: [start] }
+    user_logout: { kind: event, category: [authentication, session], type: [end] }
+    auth_challenge_init: { kind: event, category: [authentication], type: [info] }
+    auth_challenge_complete: { kind: event, category: [authentication], type: [info], outcomes: [success, failure] }
+    session_refresh: { kind: event, category: [authentication, session], type: [info] }
+    session_terminated: { kind: event, category: [authentication, session], type: [info] }
+    safari_search: { kind: event, category: [web], type: [access] }
+    push_notification: { kind: event, category: [web], type: [access] }
+    user_password_change: { kind: event, category: [iam], type: [change] }
+    password_reset_request: { kind: event, category: [iam], type: [change] }
+    email_address_change: { kind: event, category: [iam], type: [change] }
+    recovery_contact_addition: { kind: event, category: [iam], type: [creation, user] }
+    legacy_contact_addition: { kind: event, category: [iam], type: [creation, user] }
+    data_export_request: { kind: event, category: [iam], type: [creation] }
+  entity.type:
+    application: { kind: state, category: [authentication, session] }
+    host: { kind: state, category: [authentication, session] }
+    session: { kind: state, category: [authentication, session] }
+  entity.sub_type:
+    app_registration: { kind: state, category: [authentication, session] }
+    hardware_registration: { kind: state, category: [authentication, session] }
+    platform_inferred_device: { kind: state, category: [authentication, session] }
+    trusted_cookie: { kind: state, category: [authentication, session] }
+    passkey_registration: { kind: state, category: [authentication, session] }

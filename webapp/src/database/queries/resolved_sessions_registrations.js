@@ -112,6 +112,7 @@ export async function getResolvedSessionsRegistrations() {
       id: row.id,
       upload_id: row.upload_id,
       entity_type: row.entity_type,
+      entity_sub_type: row.entity_sub_type,
       origin: row.origin,
       model_name: row.model_name || 'Unknown Device',
       client_name: row.client_name,

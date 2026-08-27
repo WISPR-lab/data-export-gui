@@ -315,6 +315,7 @@ init_pyodide()
     `);
     
     logger.info('Initialization complete');
+    self.postMessage({ type: 'pyodide_ready' });
     return pyodide;
   } catch (error) {
     logger.error('FATAL initialization error:', error.message);
