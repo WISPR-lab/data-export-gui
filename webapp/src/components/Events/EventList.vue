@@ -457,7 +457,7 @@ limitations under the License.
           <template v-slot:item.data_export_name="{ item }">
             <!-- <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em"> -->
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getDataExportColor(item)">
-              <span class="export-name-ellipsis" style="width: 130px; text-align: center">{{
+              <span class="export-name-ellipsis" style="width: 100px; text-align: center">{{
                 getDataExport(item).name
               }}</span></v-chip>
           </template>
@@ -720,8 +720,11 @@ export default {
         if (field.field === 'event_type_msg') {
           header.width = '100%'
           extraHeaders.unshift(header)
+        } else if (field.field === 'norm__model_name') {
+          header.width = '120'
+          extraHeaders.push(header)
         } else {
-          header.width = '180'
+          header.width = '130'
           extraHeaders.push(header) // Positions next to platform chip
         }
       })

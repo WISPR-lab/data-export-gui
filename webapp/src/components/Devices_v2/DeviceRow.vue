@@ -28,7 +28,7 @@
             <v-row no-gutters align="center">
               
               <!-- Title & Badges block -->
-              <v-col cols="12" md="6" class="pr-2 py-0.5">
+              <v-col cols="12" sm="6" class="pr-2 py-0.5">
                 <div class="text-body-2 font-weight-medium text--primary" style="line-height: 1.3; min-width: 0;">
                   <!-- Tags rendered BEFORE title with right margin, matching EventList.vue -->
                   <ts-event-tags v-if="localTags.length > 0" :item="{ _source: { tags: localTags } }" class="mr-1.5" />
@@ -74,13 +74,13 @@
                 </div>
               </v-col>
 
-              <!-- Active Date Label (grows to md="6" if there is no events action button) -->
-              <v-col cols="12" :md="eventsQuery ? 4 : 6" class="text-body-2 text--secondary pr-2 py-0.5 mt-1 mt-md-0">
+              <!-- Active Date Label (grows to sm="6" if there is no events action button) -->
+              <v-col cols="12" :sm="eventsQuery ? 4 : 6" class="text-body-2 text--secondary pr-2 py-0.5 mt-1 mt-sm-0">
                 {{ activeDateLabel }}
               </v-col>
 
               <!-- Events Action Button (hidden entirely when eventsQuery is empty) -->
-              <v-col v-if="eventsQuery" cols="12" md="2" class="py-0.5 mt-1 mt-md-0">
+              <v-col v-if="eventsQuery" cols="12" sm="2" class="py-0.5 mt-1 mt-sm-0">
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn
