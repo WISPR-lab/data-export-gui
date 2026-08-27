@@ -120,7 +120,8 @@ evaluation/efficiency/data/*
 !evaluation/efficiency/OLDdata/*.zip
 !evaluation/efficiency/data/*_original.zip
 !evaluation/efficiency/trial_time_mem_results.zip
-evaluation/user_study/agreementv2.csv
+evaluation/user_study/*.csv
+evaluation/user_study/*.pdf
 
 # evaluation/efficiency/trials/*.csv
 evaluation/efficiency/*.csv
