@@ -2,7 +2,7 @@
   <v-dialog :value="dialogOpen" @input="setDialogOpen($event)" max-width="500px" persistent :z-index="25000">
     <v-card>
       <v-card-title class="headline">
-        (Possible) Browser Incompatibility
+        Browser Incompatibility
         <v-spacer></v-spacer>
         <v-btn icon small @click="close"><v-icon>mdi-close</v-icon></v-btn>
       </v-card-title>
@@ -156,11 +156,17 @@ export default {
       this.navigateToCleanHome()
     },
     wipe: function() {
-      var self = this
-      resetAllLocalData({ unregisterServiceWorkers: true }).then(function() {
+      var reload = function() {
         window.location.href = window.location.origin + window.location.pathname + '#/'
-        window.location.reload();
-      })
+        window.location.reload()
+      }
+      try {
+        resetAllLocalData({ unregisterServiceWorkers: true })
+          .then(reload)
+          .catch(reload)
+      } catch (e) {
+        reload()
+      }
     }
   }
 }

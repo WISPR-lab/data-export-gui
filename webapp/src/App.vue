@@ -30,6 +30,11 @@ limitations under the License.
     <!-- shown when a SQL query fails with "no such table/column") -->
     <schema-refresh-dialog v-model="schemaDialog" />
 
+    <!-- Shown while router.js holds navigation open for the coi reload -->
+    <div v-if="coiBootWaiting" class="coi-boot-overlay">
+      <v-progress-circular indeterminate color="primary" />
+    </div>
+
     <!-- Main router view -->
     <router-view></router-view>
 
@@ -61,6 +66,7 @@ export default {
     return {
       opfsDialog: false,
       schemaDialog: false,
+      coiBootWaiting: false,
     }
   },
   computed: {
@@ -109,6 +115,8 @@ export default {
     // Show modal if DB layer or router guard emits opfsUnavailable
     EventBus.$on('opfsUnavailable', function() { this.opfsDialog = true; }.bind(this))
     EventBus.$on('schemaMismatch', function() { this.schemaDialog = true; }.bind(this))
+    EventBus.$on('coiBootWaitingStart', function() { this.coiBootWaiting = true; }.bind(this))
+    EventBus.$on('coiBootWaitingEnd', function() { this.coiBootWaiting = false; }.bind(this))
 
     if (window.opfsUnavailable || this.checkOpfsIncompatibility()) {
       this.opfsDialog = true;
@@ -132,8 +140,19 @@ export default {
     EventBus.$off('errorSnackBar')
     EventBus.$off('opfsUnavailable')
     EventBus.$off('schemaMismatch')
+    EventBus.$off('coiBootWaitingStart')
+    EventBus.$off('coiBootWaitingEnd')
   },
 }
 </script>
 
-<style lang="scss"></style>
+<style lang="scss">
+.coi-boot-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+</style>

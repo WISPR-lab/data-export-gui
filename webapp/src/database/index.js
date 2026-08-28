@@ -151,23 +151,47 @@ export async function closeDB() {
   }
 }
 
-export async function resetAllLocalData({ unregisterServiceWorkers = false } = {}) {
+export async function resetAllLocalData(options) {
   /* Shared "hard refresh" mechanism: closes the sqlite worker and the pyodide worker
      (so no open OPFS file handles block deletion), then recursively wipes OPFS and
      browser storage. Single place this logic lives - reused by SafeExitButton,
      DebugOPFS's "Nuke All", OpfsCompatibilityDialog, and SchemaRefreshDialog. */
-  await closeDB();
-  terminatePyodideWorker();
+  const opts = options || {};
+  const unregisterServiceWorkers = opts.unregisterServiceWorkers || false;
 
-  const opfsManager = new OPFSManager();
-  await opfsManager.nukeAll();
+  try {
+    await closeDB();
+  } catch (e) {
+    logger.warn('Failed to close DB during reset:', e);
+  }
 
-  localStorage.clear();
-  sessionStorage.clear();
+  try {
+    terminatePyodideWorker();
+  } catch (e) {
+    logger.warn('Failed to terminate pyodide worker during reset:', e);
+  }
+
+  try {
+    const opfsManager = new OPFSManager();
+    await opfsManager.nukeAll();
+  } catch (e) {
+    logger.warn('Failed to nuke OPFS during reset:', e);
+  }
+
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch (e) {
+    logger.warn('Failed to clear local/session storage during reset:', e);
+  }
 
   if (unregisterServiceWorkers && navigator.serviceWorker) {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(regs.map((r) => r.unregister()));
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister().catch(function() {})));
+    } catch (e) {
+      logger.warn('Failed to unregister service workers during reset:', e);
+    }
   }
 }
 

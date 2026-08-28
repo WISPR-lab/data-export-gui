@@ -107,6 +107,23 @@ const routes = [
 // Memoize warmup promise so it only happens once
 let warmupPromise = null;
 
+// Polls until crossOriginIsolated is true or timeoutMs elapses.
+function waitForCrossOriginIsolation(timeoutMs) {
+  if (window.crossOriginIsolated) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (window.crossOriginIsolated) {
+        clearInterval(interval);
+        resolve(true);
+      } else if (Date.now() - start >= timeoutMs) {
+        clearInterval(interval);
+        resolve(false);
+      }
+    }, 100);
+  });
+}
+
 const router = new VueRouter({
   mode: 'hash',
   routes,
@@ -114,14 +131,26 @@ const router = new VueRouter({
 
 router.beforeEach(async (to, from, next) => {
   // Block navigation to OPFS-dependent routes if cross-origin isolation is unavailable.
-  // Only trigger when coi_reload_attempted is set (reload already tried) OR COI is definitively false.
-  // This fires after the coi-serviceworker reload cycle, so false positives are avoided.
   if (to.matched.some(function(r) { return r.meta && r.meta.requiresOpfs; })) {
     if (!window.crossOriginIsolated) {
-      window.opfsUnavailable = true;
-      EventBus.$emit('opfsUnavailable');
-      next({ path: '/', query: {} });
-      return;
+      const reloadAlreadyAttempted = !!sessionStorage.getItem('coi_reload_attempted');
+      if (!reloadAlreadyAttempted) {
+        // Hold instead of redirecting in case a coi-serviceworker reload is soon
+        EventBus.$emit('coiBootWaitingStart');
+        const becameIsolated = await waitForCrossOriginIsolation(5000);
+        EventBus.$emit('coiBootWaitingEnd');
+        if (!becameIsolated) {
+          window.opfsUnavailable = true;
+          EventBus.$emit('opfsUnavailable');
+          next({ path: '/', query: {} });
+          return;
+        }
+      } else {
+        window.opfsUnavailable = true;
+        EventBus.$emit('opfsUnavailable');
+        next({ path: '/', query: {} });
+        return;
+      }
     }
   }
 
