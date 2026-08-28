@@ -51,11 +51,11 @@ files:
       drop_duplicates: { subset: ["Messaging Device ID"], keep: "last"}
 
 
-  - id: "apple_saved_safari_history" 
-    path: "anon-apple/Other Data Part 4 of 5/Apple Features Using iCloud/SafariBrowsingHistory/SafariBrowsingHistory.csv"
-    parser:
-      format: "csv"
-      drop_duplicates: { subset: ["URL", "Time"], keep: "first"}
+  # - id: "apple_saved_safari_history" 
+  #   path: "anon-apple/Other Data Part 4 of 5/Apple Features Using iCloud/SafariBrowsingHistory/SafariBrowsingHistory.csv"
+  #   parser:
+  #     format: "csv"
+  #     drop_duplicates: { subset: ["URL", "Time"], keep: "first"}
 
   - id: "apple_passkey"
     path: "Apple ID account and device information/Passkeys Information.csv"
@@ -64,10 +64,10 @@ files:
       drop_duplicates: { subset: ["Created Date"], keep: "first"}
 
 
-  - id: "apple_app_download_history" # TODO LINK
-    path: "Apple Media Services Information/Update and Redownload History/iTunes and App-Book Re-download and Update History.csv"
-    parser:
-      format: "csv"
+  # - id: "apple_app_download_history" 
+  #   path: "Apple Media Services Information/Update and Redownload History/iTunes and App-Book Re-download and Update History.csv"
+  #   parser:
+  #     format: "csv"
 
   - id: "apple_push_notifications"
     path: "App install and push notification activity/Push Notifications.csv"
@@ -168,17 +168,17 @@ views:
   - {target: "event.end", source: "Request Completed Time", type: "datetime"}
 
 
-- file: 
-    id: "apple_saved_safari_history"
-  static:
-    event.kind: "event"
-    event.action: "safari_search"
-    event.category: ["web"]
-    event.type: ["access"]
-  fields:
-  - {target: "@timestamp", source: "Time", type: "datetime"}
-  - {target: "url.full", source: "URL", type: "string"}
-  - {target: "url.title", source: "Title", type: "string"}
+# - file: 
+#     id: "apple_saved_safari_history"
+#   static:
+#     event.kind: "event"
+#     event.action: "safari_search"
+#     event.category: ["web"]
+#     event.type: ["access"]
+#   fields:
+#   - {target: "@timestamp", source: "Time", type: "datetime"}
+#   - {target: "url.full", source: "URL", type: "string"}
+#   - {target: "url.title", source: "Title", type: "string"}
 
 
 

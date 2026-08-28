@@ -29,12 +29,9 @@ export const instructionApple = {
         text: 'Apple **does not** export iMessage or text message content through this tool, as most are end-to-end encrypted. It only provides device registration metadata.'
       },
       description: `1. Scroll through the list. You do not need to "Select All." LEStrADE only parses security data, and smaller requests usually take less time.
-2. Select the main security audit categories:
+2. Select the **2 security categories**:
    - **\`Apple ID account and device information\`** (Login logs, password changes, passkeys, recovery contacts, device serial numbers & IMEIs)
-   - **\`Apple Media Services information\`** (App download & redownload history)
    - **\`App install and push notification activity\`** (Push notification IP network logs & locations)`
-// 3. **Optional**:
-  //  - **\`Apple Features Using iCloud\`** (Synced Safari browsing history logs)`
     },
     {
       title: 'Choose file size',
