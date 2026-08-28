@@ -13,10 +13,6 @@ export const instructionApple = {
       link: {
         url: 'https://privacy.apple.com',
         text: 'Apple Data & Privacy'
-      },
-      alert: {
-        type: 'warning',
-        text: 'This action may notify other devices on your iCloud account. You may need your Apple ID password and a **Two-Factor Authentication (2FA)** code from a trusted device or phone number.'
       }
     },
     {
@@ -26,24 +22,19 @@ export const instructionApple = {
 2. This will open a list of available data categories.`
     },
     {
-      title: 'Select data categories',
+      title: 'Select security data categories',
       // image: appleSelection,  // TODO: Image file missing
       alert: {
         type: 'info',
-        text: 'Apple **does not** export iMessage or SMS content through this tool. It only provides metadata (who you contacted), not what was said.'
+        text: 'Apple **does not** export iMessage or text message content through this tool, as most are end-to-end encrypted. It only provides device registration metadata.'
       },
-      description: `1. Scroll through the list. You do not need to "Select All".
-2. **Mandatory**: Select the core audit data:
-   - **\`Apple ID account and device information\`** (Login logs/Devices)
-   - **\`Apple Media Services information\`** (App usage/Activity)
-   - **\`Sign-in with Apple\`** (Third-party apps using your ID)
-3. **Optional**: Select these if relevant:
-   - **\`iCloud Bookmarks and Reading List\`** (Web history)
-   - **\`iCloud Calendars and Reminders\`**
-   - **\`Maps\`** (Saved locations/Guides)
-   - **\`Wallet Activity\`**
-4. **Optional**: You may add **\`iCloud Mail\`**, **\`iCloud Photos\`**, or **\`iCloud Drive\`**, but these will create massive files.
-   - Only select these if you have the storage space and bandwidth to download them.`
+      description: `1. Scroll through the list. You do not need to "Select All." LEStrADE only parses security data, and smaller requests usually take less time.
+2. Select the main security audit categories:
+   - **\`Apple ID account and device information\`** (Login logs, password changes, passkeys, recovery contacts, device serial numbers & IMEIs)
+   - **\`Apple Media Services information\`** (App download & redownload history)
+   - **\`App install and push notification activity\`** (Push notification IP network logs & locations)`
+// 3. **Optional**:
+  //  - **\`Apple Features Using iCloud\`** (Synced Safari browsing history logs)`
     },
     {
       title: 'Choose file size',
@@ -56,10 +47,6 @@ export const instructionApple = {
     {
       title: 'Wait and download',
       // image: appleEmail,  // TODO: Image file missing
-      alert: {
-        type: 'warning',
-        text: 'This export contains your sensitive information. Treat it as securely as you would a password or financial records.'
-      },
       description: `- **Timeline**: Apple takes longer than Google. It typically takes **up to 7 days** to verify your identity and prepare the data.
 - **Notification**: You will receive an email when the data is ready.
 - **Retention**: The download link is valid for **14 days**.
