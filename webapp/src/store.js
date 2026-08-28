@@ -255,6 +255,9 @@ export default new Vuex.Store({
     INCREMENT_DEMO_FINISH_COUNT(state) {
       Vue.set(state, 'demoFinishCount', state.demoFinishCount + 1)
     },
+    INCREMENT_DEMO_FINISHED_COUNT(state) {
+      Vue.set(state, 'demoFinishCount', state.demoFinishCount + 1)
+    },
   },
   actions: {
     async updateProject(context, { projectId, dbName } = {}) {
