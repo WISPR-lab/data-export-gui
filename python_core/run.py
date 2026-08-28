@@ -12,6 +12,7 @@ from semantic_map.worker import get_counts
 from performance import measure_stage, read_after_pyodide_load
 from python_core.runtime.pyodide_utils import get_config_value
 from python_core.logger import get_logger
+import python_core.runtime.safe_file_utils as safefileutils
 
 logger = get_logger("performance")
 
@@ -27,7 +28,10 @@ def _rows_in_table(conn, table: str, upload_id: str) -> int:
 
 
 def _database_size_bytes() -> int:
+    use_memfs = get_config_value("IS_FIREFOX") or get_config_value("IS_SAFARI")
     try:
+        if use_memfs:
+            return safefileutils.getsize(get_config_value("DB_PATH"))
         return os.path.getsize(get_config_value("DB_PATH"))
     except OSError:
         return None
