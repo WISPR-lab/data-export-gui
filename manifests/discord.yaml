@@ -82,12 +82,42 @@ views:
 
   - file:
       id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "data_request_completed"}
+    static:
+      event.action: "data_export_request"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["end"]
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_tns"
       where: {source: "event_type", op: "==", value: "user_account_email_change_save_new_email"}
     static:
       event.action: "email_address_change"
       event.kind: "event"
       event.category: ["iam"]
       event.type: ["change"]
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "enable_totp"}
+    static:
+      event.action: "mfa_enable"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["creation"]
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "disable_totp"}
+    static:
+      event.action: "mfa_disable"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["deletion"]
     fields: *discord_tns_common
 
   - file:

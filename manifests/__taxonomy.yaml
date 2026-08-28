@@ -91,16 +91,25 @@ fields:
         description: MFA/checkpoint challenge was resolved — see event.outcome for success/failure
       data_export_request:
         short_name: "Data Export Requested"
-        description: user requested a copy/export of their account data
+        description: user requested a copy/export of their account data — type is creation, or end if completion is logged as its own row
       email_address_change:
         short_name: "Email Address Change"
         description: the account's email address was changed (captures both old and new value)
       legacy_contact_addition:
         short_name: "Legacy Contact Added"
         description: a new legacy/inheritance contact was added to the account
+      mfa_disable:
+        short_name: "MFA Disabled"
+        description: two-factor/multi-factor authentication was turned off for the account
+      mfa_enable:
+        short_name: "MFA Enabled"
+        description: two-factor/multi-factor authentication was turned on for the account
       password_reset_request:
         short_name: "Password Reset Requested"
         description: user requested a password reset
+      profile_visibility_change:
+        short_name: "Profile Visibility Change"
+        description: account switched between public and private; see user.profile_visibility
       push_notification:
         short_name: "Push Notification"
         description: a push notification was sent to the user's device
@@ -159,6 +168,7 @@ fields:
       access: null
       change: null
       creation: null
+      deletion: null
       end: null
       info: null
       start: null
@@ -195,6 +205,11 @@ fields:
     description: email the account was changed to, extension of ECS's user.email, which has no old/new distinction
   user.email.old:
     description: email the account was changed from, extension of ECS's user.email, which has no old/new distinction
+  user.profile_visibility:
+    description: whether the account was set to public or private
+    allowed_values:
+      Public: null
+      Private: null
   user_agent.client_name:
     description: name of the client app (e.g. "Instagram") — should probably be user_agent.name, the real ECS field for this, not client_name
   user_agent.original:
@@ -230,7 +245,10 @@ relationships:
     email_address_change: { kind: event, category: [iam], type: [change] }
     recovery_contact_addition: { kind: event, category: [iam], type: [creation, user] }
     legacy_contact_addition: { kind: event, category: [iam], type: [creation, user] }
-    data_export_request: { kind: event, category: [iam], type: [creation] }
+    data_export_request: { kind: event, category: [iam] }
+    mfa_enable: { kind: event, category: [iam], type: [creation] }
+    mfa_disable: { kind: event, category: [iam], type: [deletion] }
+    profile_visibility_change: { kind: event, category: [configuration], type: [change] }
   entity.type:
     application: { kind: state, category: [authentication, session] }
     host: { kind: state, category: [authentication, session] }

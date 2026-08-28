@@ -266,6 +266,7 @@ views:
       event.type: ["creation"]
     fields:
       - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "event.end", source: "Request completion time", type: "datetime"}
 
 
   # -------------------------- AUTHENTICATED DEVICES ------------------------

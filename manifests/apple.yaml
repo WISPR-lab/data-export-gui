@@ -165,7 +165,7 @@ views:
       event.type: ["creation"]
   fields:
   - {target: "@timestamp", source: "Request Time", type: "datetime"}
-  - {target: "event.end", source: "Request Completion Time", type: "datetime"}
+  - {target: "event.end", source: "Request Completed Time", type: "datetime"}
 
 
 - file: 

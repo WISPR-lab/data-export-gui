@@ -34,7 +34,13 @@ files:
     parser:
       format: "json_label_values"
       json_root: "[]"
-  
+
+  - id: "insta_profile_privacy"
+    path: "security_and_login_information/login_and_profile_creation/profile_privacy_changes.json"
+    parser:
+      format: "json"
+      json_root: "account_history_account_privacy_history[]"
+
   - id: "insta_devices"
     path: "personal_information/device_information/devices.json"
     parser:
@@ -102,6 +108,18 @@ views:
       event.type: ["creation"]
     fields:
       - {target: "@timestamp", source: "timestamp", type: "datetime"}
+      - {target: "event.end", source: "Request completion time", type: "datetime"}
+
+  - file:
+      id: "insta_profile_privacy"
+    static:
+      event.action: "profile_visibility_change"
+      event.kind: "event"
+      event.category: ["configuration"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+      - {target: "user.profile_visibility", source: "title", regex: "Switched to (Public|Private)", type: "string"}
 
   - file:
       id: "insta_devices"
