@@ -73,7 +73,7 @@ class Manifest:
                 paths.append(path)
         return paths
 
-    def get_file_cfg(self, raw_filename: str) -> dict:
+    def get_file_cfgs(self, raw_filename: str) -> list:
         """Since OPFS filenames are flattened as 'platform___path___filename', this needs to match to with the manifest format of 'path/filename'"""
         clean_name = raw_filename.replace("\\", "/").replace(
             "___", "/"
@@ -83,11 +83,11 @@ class Manifest:
         if len(parts) > 1:
             clean_name = parts[1]  # Everything after the platform prefix
 
-        for fs in self.config.get("files", []):
-            path = fs.get("path")
-            if path and fnmatch.fnmatch(clean_name.lower(), path.lower()):
-                return fs
-        return {}
+        return [
+            fs
+            for fs in self.config.get("files", [])
+            if fs.get("path") and fnmatch.fnmatch(clean_name.lower(), fs["path"].lower())
+        ]
 
     def views(self, manifest_file_id: str) -> list:
         if manifest_file_id not in self.view_index_map:

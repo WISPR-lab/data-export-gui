@@ -113,94 +113,97 @@ def extract(
 
             partial_errors = []
             for opfs_filename in files:
-                success = True
                 opfs_filepath = os.path.join(tmp_storage_dir, opfs_filename)
+                file_cfgs = manifest.get_file_cfgs(opfs_filename)
+                content = None  # lazily read once, reused across configs sharing this physical file
 
-                file_cfg = manifest.get_file_cfg(opfs_filename)
+                for file_cfg in file_cfgs:
+                    success = True
 
-                manifest_filename = file_cfg.get("path")
-                manifest_file_id = file_cfg.get("id")
-                parser_cfg = file_cfg.get(
-                    "parser", {}
-                )  # manifest YAML uses 'parser' not 'parser_config'
-                if (
-                    not manifest_file_id
-                    or not parser_cfg
-                    or not parser_cfg.get("format")
-                ):
-                    success = False
-                    continue
-
-                fmt = parser_cfg.get("format")
-
-                try:
-                    parser = get_parser(fmt)
-                    if not parser:
-                        logger.warning("No parser found for format '%s' (file '%s')", fmt, opfs_filename)
+                    manifest_filename = file_cfg.get("path")
+                    manifest_file_id = file_cfg.get("id")
+                    parser_cfg = file_cfg.get(
+                        "parser", {}
+                    )  # manifest YAML uses 'parser' not 'parser_config'
+                    if (
+                        not manifest_file_id
+                        or not parser_cfg
+                        or not parser_cfg.get("format")
+                    ):
                         success = False
                         continue
 
-                    content = _file_read(opfs_filepath, use_memfs)
+                    fmt = parser_cfg.get("format")
 
-                    records = parser.extract(content, parser_cfg, opfs_filename)
-                    if not records:
-                        logger.warning("No records extracted from file '%s' (manifest_file_id='%s')", opfs_filename, manifest_file_id)
-                        success = False
-                        continue
+                    try:
+                        parser = get_parser(fmt)
+                        if not parser:
+                            logger.warning("No parser found for format '%s' (file '%s')", fmt, opfs_filename)
+                            success = False
+                            continue
 
-                    logger.debug("Extracted %d records from %s", len(records), manifest_file_id)
+                        if content is None:
+                            content = _file_read(opfs_filepath, use_memfs)
 
-                    file_hash = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
+                        records = parser.extract(content, parser_cfg, opfs_filename)
+                        if not records:
+                            logger.warning("No records extracted from file '%s' (manifest_file_id='%s')", opfs_filename, manifest_file_id)
+                            success = False
+                            continue
 
-                    # read into db
-                    file_id = uuid.uuid4().hex
-                    file_info = (
-                        file_id,
-                        manifest_file_id,
-                        upload_id,
-                        opfs_filename,
-                        manifest_filename,
-                        file_hash,
-                        ts,
-                        _file_size_bytes(opfs_filepath, use_memfs=use_memfs),
-                        "success" if success else "failure",
-                    )
-                    conn.execute(
-                        "INSERT INTO uploaded_files (id, manifest_file_id, upload_id, opfs_filename, manifest_filename, file_hash, upload_timestamp, file_size_bytes, parse_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        file_info,
-                    )
+                        logger.debug("Extracted %d records from %s", len(records), manifest_file_id)
 
-                    raw_data_rows = []
-                    for r in records:
-                        line_numbers = r.pop("__line_numbers", [1])
-                        raw_data_rows.append(
-                            (
-                                uuid.uuid4().hex,
-                                upload_id,
-                                file_id,
-                                json.dumps(r),
-                                json.dumps(line_numbers),
-                            )
+                        file_hash = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()
+
+                        # read into db
+                        file_id = uuid.uuid4().hex
+                        file_info = (
+                            file_id,
+                            manifest_file_id,
+                            upload_id,
+                            opfs_filename,
+                            manifest_filename,
+                            file_hash,
+                            ts,
+                            _file_size_bytes(opfs_filepath, use_memfs=use_memfs),
+                            "success" if success else "failure",
                         )
-                    conn.executemany(
-                        "INSERT INTO raw_data (id, upload_id, file_id, data, line_numbers) VALUES (?, ?, ?, ?, ?)",
-                        raw_data_rows,
-                    )
-                    conn.commit()
+                        conn.execute(
+                            "INSERT INTO uploaded_files (id, manifest_file_id, upload_id, opfs_filename, manifest_filename, file_hash, upload_timestamp, file_size_bytes, parse_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            file_info,
+                        )
 
-                except FileLevelError as e:
-                    logger.error("File-level parse error for %s: %s", opfs_filename, e)
-                    partial_errors.append(
-                        {"file": opfs_filename, "level": "error", "msg": str(e)}
-                    )
-                    success = False
-                except Exception as e:
-                    logger.error("Error processing %s: %s", opfs_filename, e)
-                    traceback.print_exc()
-                    partial_errors.append(
-                        {"file": opfs_filename, "level": "error", "msg": str(e)}
-                    )
-                    success = False
+                        raw_data_rows = []
+                        for r in records:
+                            line_numbers = r.pop("__line_numbers", [1])
+                            raw_data_rows.append(
+                                (
+                                    uuid.uuid4().hex,
+                                    upload_id,
+                                    file_id,
+                                    json.dumps(r),
+                                    json.dumps(line_numbers),
+                                )
+                            )
+                        conn.executemany(
+                            "INSERT INTO raw_data (id, upload_id, file_id, data, line_numbers) VALUES (?, ?, ?, ?, ?)",
+                            raw_data_rows,
+                        )
+                        conn.commit()
+
+                    except FileLevelError as e:
+                        logger.error("File-level parse error for %s: %s", opfs_filename, e)
+                        partial_errors.append(
+                            {"file": opfs_filename, "level": "error", "msg": str(e)}
+                        )
+                        success = False
+                    except Exception as e:
+                        logger.error("Error processing %s: %s", opfs_filename, e)
+                        traceback.print_exc()
+                        partial_errors.append(
+                            {"file": opfs_filename, "level": "error", "msg": str(e)}
+                        )
+                        success = False
 
             logger.info("Extraction completed for upload_id: %s (%d files processed)", upload_id, len(files))
             return {

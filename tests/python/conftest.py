@@ -92,9 +92,8 @@ class TestFileLoader:
                 continue
 
             manifest = self.manifests.get(platform)
-            parser_cfg = (
-                manifest.get_file_cfg(inner_path).get("parser", {}) if manifest else {}
-            )
+            file_cfgs = manifest.get_file_cfgs(inner_path) if manifest else []
+            parser_cfg = file_cfgs[0].get("parser", {}) if file_cfgs else {}
 
             yield TestFile(
                 platform=platform,
@@ -257,12 +256,12 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
                         filepath = os.path.join(root, filename)
                         rel_path = os.path.relpath(filepath, tmpdir)
 
-                        # Keep platform prefix so get_file_cfg can correctly strip it
+                        # Keep platform prefix so get_file_cfgs can correctly strip it
                         manifest_path = rel_path
 
-                        # Use get_file_cfg which handles path matching (including Pyodide underscore flattening)
-                        file_cfg = manifest.get_file_cfg(manifest_path)
-                        manifest_file_id = file_cfg.get("id")
+                        # Use get_file_cfgs which handles path matching (including Pyodide underscore flattening)
+                        file_cfgs = manifest.get_file_cfgs(manifest_path)
+                        manifest_file_id = file_cfgs[0].get("id") if file_cfgs else None
 
                         # Only insert files with valid manifest_file_id (files with views)
                         if manifest_file_id:
@@ -279,7 +278,7 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
                                 JSONLabelValuesParser,
                             )
 
-                            parser_cfg = file_cfg.get("parser", {})
+                            parser_cfg = file_cfgs[0].get("parser", {})
                             fmt = parser_cfg.get("format")
 
                             parser = None

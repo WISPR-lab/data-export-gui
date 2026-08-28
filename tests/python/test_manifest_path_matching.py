@@ -17,8 +17,10 @@ class TestManifestPathMatching:
         # OPFS filename (flattened with ___)
         opfs_filename = "google___Google Account___alice.testuser99.SubscriberInfo.html"
 
-        cfg = manifest.get_file_cfg(opfs_filename)
+        cfgs = manifest.get_file_cfgs(opfs_filename)
 
+        assert len(cfgs) == 1, f"Expected exactly one match, got {len(cfgs)}"
+        cfg = cfgs[0]
         assert cfg.get("id") == "ggl_subscriber_info", (
             f"Expected ggl_subscriber_info, got {cfg.get('id')}"
         )
@@ -29,7 +31,7 @@ class TestManifestPathMatching:
         manifest = Manifest("google", manifest_dir="manifests", validate=False)
 
         opfs_filename = "google___Google Account___alice.testuser99.ChangeHistory.html"
-        cfg = manifest.get_file_cfg(opfs_filename)
+        cfg = manifest.get_file_cfgs(opfs_filename)[0]
 
         assert cfg.get("id") == "ggl_change_history", (
             f"Expected ggl_change_history, got {cfg.get('id')}"
@@ -42,7 +44,7 @@ class TestManifestPathMatching:
 
         # Test with wildcard pattern - manifest uses "Devices - A list of devices*"
         opfs_filename = "google___Access Log Activity___Devices - A list of devices (i.e. Nest, Pixel, iPh.csv"
-        cfg = manifest.get_file_cfg(opfs_filename)
+        cfg = manifest.get_file_cfgs(opfs_filename)[0]
 
         assert cfg.get("id") == "ggl_access_log_devices", (
             f"Expected ggl_access_log_devices, got {cfg.get('id')}"
@@ -53,20 +55,20 @@ class TestManifestPathMatching:
         manifest = Manifest("google", manifest_dir="manifests", validate=False)
 
         opfs_filename = "google___My Activity___Takeout___MyActivity.html"
-        cfg = manifest.get_file_cfg(opfs_filename)
+        cfg = manifest.get_file_cfgs(opfs_filename)[0]
 
         assert cfg.get("id") == "ggl_takeout_activity", (
             f"Expected ggl_takeout_activity, got {cfg.get('id')}"
         )
 
-    def test_no_match_returns_empty_dict(self):
-        """Test that non-matching filename returns empty dict."""
+    def test_no_match_returns_empty_list(self):
+        """Test that non-matching filename returns an empty list."""
         manifest = Manifest("google", manifest_dir="manifests", validate=False)
 
         opfs_filename = "google___Some Other Folder___RandomFile.txt"
-        cfg = manifest.get_file_cfg(opfs_filename)
+        cfgs = manifest.get_file_cfgs(opfs_filename)
 
-        assert cfg == {}, f"Expected empty dict for non-matching file, got {cfg}"
+        assert cfgs == [], f"Expected empty list for non-matching file, got {cfgs}"
 
     def test_case_insensitive_matching(self):
         """Test that matching is case-insensitive."""
@@ -74,7 +76,7 @@ class TestManifestPathMatching:
 
         # Mixed case
         opfs_filename = "GOOGLE___Google Account___BOB.RESEARCHER24.SubscriberInfo.HTML"
-        cfg = manifest.get_file_cfg(opfs_filename)
+        cfg = manifest.get_file_cfgs(opfs_filename)[0]
 
         assert cfg.get("id") == "ggl_subscriber_info", (
             f"Expected case-insensitive match, got {cfg.get('id')}"
@@ -99,7 +101,23 @@ class TestManifestPathMatching:
         ]
 
         for opfs_filename in test_filenames:
-            cfg = manifest.get_file_cfg(opfs_filename)
+            cfg = manifest.get_file_cfgs(opfs_filename)[0]
             assert cfg.get("id") == "ggl_access_log_devices", (
                 f"Expected ggl_access_log_devices for {opfs_filename}, got {cfg.get('id')}"
             )
+
+    def test_multiple_files_entries_sharing_one_path_all_match(self):
+        """Two files: entries pointing at the same physical path should both come back,
+        not just the first — this is what lets one export file feed two logical
+        record types (e.g. two differently-shaped lists in one JSON export)."""
+        manifest = Manifest("google", manifest_dir="manifests", validate=False)
+
+        manifest.config["files"] = [
+            {"id": "shared_a", "path": "Some Folder/shared.json"},
+            {"id": "shared_b", "path": "Some Folder/shared.json"},
+        ]
+
+        opfs_filename = "google___Some Folder___shared.json"
+        cfgs = manifest.get_file_cfgs(opfs_filename)
+
+        assert [c.get("id") for c in cfgs] == ["shared_a", "shared_b"]
