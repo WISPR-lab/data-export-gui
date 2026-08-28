@@ -2,19 +2,23 @@ manifest_version: 2
 id: discord
 ecs_version: "9.4.0-dev"
 target: "Discord"
-last_updated: "2025-02-03"
+last_updated: "2026-08-28"
 
 files:
-  - id: "discord_analytics_login"
-    path: "activity/analytics/events-2025-00000-of-00001.json"
+  - id: "discord_tns"
+    path: "activity/tns/events-2025-00000-of-00001.json"
     parser:
       format: "jsonl"
 
-
+  - id: "discord_user_sessions"
+    path: "account/user.json"
+    parser:
+      format: "json"
+      json_root: "user_sessions[]"
 
 views:
   - file:
-      id: "discord_analytics_login"
+      id: "discord_tns"
       where: {source: "event_type", op: "==", value: "session_start_success"}
     static:
       event.action: "user_login"
@@ -22,10 +26,80 @@ views:
       event.category: ["authentication", "session"]
       event.type: ["start"]
       event.outcome: "success"
-    fields:
+    fields: &discord_tns_common
       - {target: "@timestamp", source: "timestamp", type: "datetime"}
       - {target: "client.ip", source: "ip", type: "string"}
       - {target: "user_agent.original", source: "browser", type: "string"}
       - {target: "device.model.name", source: "device", type: "string"}
+      - {target: "device.id.discord", source: "device_vendor_id", type: "string"}
       - {target: "user_agent.os.name", source: "os", type: "string"}
       - {target: "user_agent.os.version", source: "os_version", type: "string"}
+      - {target: "client.session.id", source: "session", type: "string"}
+      - {target: "geo.city_name", source: "city", type: "string"}
+      - {target: "geo.country_iso_code", source: "country_code", type: "string"}
+      - {target: "geo.region_iso_code", source: "region_code", type: "string"}
+
+  - file:
+      id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "session_end"}
+    static:
+      event.action: "user_logout"
+      event.kind: "event"
+      event.category: ["authentication", "session"]
+      event.type: ["end"]
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "new_login_location"}
+    static:
+      event.action: "auth_challenge_init"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["info"]
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "authorize_login_location"}
+    static:
+      event.action: "auth_challenge_complete"
+      event.kind: "event"
+      event.category: ["authentication"]
+      event.type: ["info"]
+      event.outcome: "success"
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "data_request_initiated"}
+    static:
+      event.action: "data_export_request"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["creation"]
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_tns"
+      where: {source: "event_type", op: "==", value: "user_account_email_change_save_new_email"}
+    static:
+      event.action: "email_address_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields: *discord_tns_common
+
+  - file:
+      id: "discord_user_sessions"
+    static:
+      event.kind: "state"
+      event.category: ["authentication", "session"]
+      entity.type: "session"
+    fields:
+      - {target: "entity.id", source: "id_hash", type: "string"}
+      - {target: "entity.first_seen_timestamp", source: "user_data.creation_time", type: "datetime"}
+      - {target: "entity.last_seen_timestamp", source: "user_data.approx_last_used_time", type: "datetime"}
+      - {target: "client.ip", source: "user_data.client_info.ip", type: "string"}
+      - {target: "user_agent.os.name", source: "user_data.client_info.os", type: "string"}
+      - {target: "user_agent.original", source: "user_data.client_info.platform", type: "string"}

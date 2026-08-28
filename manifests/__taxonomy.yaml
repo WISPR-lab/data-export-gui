@@ -20,9 +20,11 @@ fields:
   device.id.android_secure: 
     description: Android Settings.Secure ID, a unique identifier for Android devices
     url: https://developer.android.com/reference/android/provider/Settings.Secure#ANDROID_ID
-  device.id.apple: 
+  device.id.apple:
     description: an odd Apple-specific device fingerprint, NOT the serial number
-  device.id.facebook: 
+  device.id.discord:
+    description: Discord's device_vendor_id, a stable per-device identifier
+  device.id.facebook:
     description: Facebook device ID, a unique identifier a single device that has installed multiple Facebook/Meta apps
   device.id.google_ad: 
     description: Google Advertising ID, sometimes used by other platforms (e.g., Meta)

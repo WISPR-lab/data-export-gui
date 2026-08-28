@@ -1,0 +1,93 @@
+manifest_version: 2
+id: snapchat
+ecs_version: "9.4.0-dev"
+target: "Snapchat"
+last_updated: "2026-08-28"
+
+files:
+  - id: "snap_login_history"
+    path: "json/account.json"
+    parser:
+      format: "json"
+      json_root: "Login History[]"
+
+  - id: "snap_password_changes"
+    path: "json/account_history.json"
+    parser:
+      format: "json"
+      json_root: "Password Change[]"
+
+  - id: "snap_email_changes"
+    path: "json/account_history.json"
+    parser:
+      format: "json"
+      json_root: "Email Change[]"
+
+  - id: "snap_data_exports"
+    path: "json/account_history.json"
+    parser:
+      format: "json"
+      json_root: "Download My Data Reports[]"
+
+  - id: "snap_device_history"
+    path: "json/account.json"
+    parser:
+      format: "json"
+      json_root: "Device History[]"
+
+views:
+  - file:
+      id: "snap_login_history"
+    static:
+      event.action: "user_login"
+      event.kind: "event"
+      event.category: ["authentication", "session"]
+      event.type: ["start"]
+    fields:
+      - {target: "@timestamp", source: "Created", type: "datetime"}
+      - {target: "client.ip", source: "IP", type: "string"}
+      - {target: "geo.country_iso_code", source: "Country", type: "string"}
+      - {target: "user_agent.original", source: "Device", type: "string"}
+      - {target: "event.outcome", source: "Status", type: "string"}
+
+  - file:
+      id: "snap_password_changes"
+    static:
+      event.action: "user_password_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "Date", type: "datetime"}
+
+  - file:
+      id: "snap_email_changes"
+    static:
+      event.action: "email_address_change"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["change"]
+    fields:
+      - {target: "@timestamp", source: "Date", type: "datetime"}
+      - {target: "user.email.new", source: "Email Address", type: "string"}
+
+  - file:
+      id: "snap_data_exports"
+    static:
+      event.action: "data_export_request"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["creation"]
+    fields:
+      - {target: "@timestamp", source: "Date", type: "datetime"}
+
+  - file:
+      id: "snap_device_history"
+    static:
+      event.kind: "state"
+      event.category: ["authentication", "session"]
+      entity.type: "host"
+    fields:
+      - {target: "device.manufacturer", source: "Make", type: "string"}
+      - {target: "device.model.identifier", source: "Model", type: "string"}
+      - {target: "entity.first_seen_timestamp", source: "Start Time", type: "datetime"}
