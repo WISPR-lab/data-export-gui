@@ -11,14 +11,20 @@ const logger = getLogger('DemoDatabaseLoader');
 class DemoDatabaseLoader {
   constructor() {
     this.demoDbLoaded = false
+    this._initPromise = null
   }
 
-  /**
-   * Initializes the demo database by executing sample SQL statements.
-   */
   async initializeDemoDb() {
     if (this.demoDbLoaded) return
+    if (this._initPromise) return this._initPromise
 
+    this._initPromise = this._doInit().finally(() => {
+      this._initPromise = null
+    })
+    return this._initPromise
+  }
+
+  async _doInit() {
     try {
       logger.debug('Initializing demo database...')
 
@@ -39,17 +45,14 @@ class DemoDatabaseLoader {
     }
   }
 
-  /**
-   * Resets the loaded state, allowing re-initialization if needed.
-   */
   reset() {
     this.demoDbLoaded = false
   }
 
-  /**
-   * Clears the demo database entirely.
-   */
   async clearDemoDb() {
+    if (this._initPromise) {
+      await this._initPromise.catch(() => {}) // already logged by _doInit
+    }
     try {
       await DB.clearAllTables('demo')
       this.demoDbLoaded = false

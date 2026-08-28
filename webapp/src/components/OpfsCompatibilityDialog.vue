@@ -2,17 +2,21 @@
   <v-dialog :value="dialogOpen" @input="setDialogOpen($event)" max-width="500px" persistent :z-index="25000">
     <v-card>
       <v-card-title class="headline">
-        Browser Incompatibility
+        (Possible) Browser Incompatibility
         <v-spacer></v-spacer>
         <v-btn icon small @click="close"><v-icon>mdi-close</v-icon></v-btn>
       </v-card-title>
 
       <v-card-text>
         <p class="mb-3">
-          This browser window doesn't support local data storage through OPFS (common in private browsing or restricted browser settings). You can browse documentation, but data import and event analysis are disabled.
+          Right now, this browser window hasn't been properly initialized to store your data safely.
+        </p>
+        <p class="mb-3">
+          This might be just a temporary issue that can be fixed by <strong>reloading the page</strong>, or because your browser does not support the required features (common in private browsing or Safari).
         </p>
         <p class="mb-3">
           Please try clicking <strong>Clear app data &amp; reload</strong> below. If the issue persists, try opening the app in a <strong>different browser</strong> or a non-private window.
+          If you click X, you can still browse documentation, but data import and event analysis are disabled.
         </p>
 
         <div v-if="opfsDiag" class="mb-4">
@@ -117,11 +121,13 @@ export default {
     this._handler = function() {
       self.internalOpen = true
       self.runDiagnostics()
+      self.navigateToCleanHome()
     }
     EventBus.$on('opfsUnavailable', this._handler)
 
     if (this.dialogOpen) {
       this.runDiagnostics()
+      this.navigateToCleanHome()
     }
   },
   beforeDestroy: function() {
@@ -130,6 +136,11 @@ export default {
     }
   },
   methods: {
+    navigateToCleanHome: function() {
+      if (this.$route && (this.$route.path !== '/' || (this.$route.query && Object.keys(this.$route.query).length > 0))) {
+        this.$router.replace({ path: '/' }).catch(function() {})
+      }
+    },
     setDialogOpen: function(val) {
       this.internalOpen = val
       this.$emit('input', val)
@@ -142,11 +153,14 @@ export default {
     },
     close: function() {
       this.setDialogOpen(false)
+      this.navigateToCleanHome()
     },
     wipe: function() {
+      var self = this
       resetAllLocalData({ unregisterServiceWorkers: true }).then(function() {
+        window.location.href = window.location.origin + window.location.pathname + '#/'
         window.location.reload();
-      });
+      })
     }
   }
 }

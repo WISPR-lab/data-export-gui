@@ -120,7 +120,7 @@ router.beforeEach(async (to, from, next) => {
     if (!window.crossOriginIsolated) {
       window.opfsUnavailable = true;
       EventBus.$emit('opfsUnavailable');
-      next('/');
+      next({ path: '/', query: {} });
       return;
     }
   }
@@ -162,7 +162,7 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  if (to.path === '/devices') {
+  if (to.name === 'Devices' || to.name === 'DemoDevices') {
     const exports = (store.state.project && store.state.project.dataExports) || [];
     if (exports.length === 0) {
       next('/');

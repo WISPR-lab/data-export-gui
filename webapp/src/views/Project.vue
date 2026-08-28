@@ -409,9 +409,6 @@ export default {
       let element = document.body
       element.dataset.theme = this.$vuetify.theme.dark ? 'dark' : 'light'
     },
-    switchUI: function () {
-      window.location.href = window.location.href.replace('/sketch/', '/legacy/sketch/')
-    },
     toggleDrawer: function () {
       this.showLeftPanel = !this.showLeftPanel
       if (this.navigationDrawer.width > 56) {
