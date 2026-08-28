@@ -1,0 +1,120 @@
+Category,Sub-category,Code Name,Definition
+Feature Use,Left Panel,Event View,Code only when user clicks the button to enter the events view. Do not code subsequent rows while the user remains here.
+,,Devices View,Code only when user clicks the button to enter the devices view. Do not code subsequent rows while the user remains here.
+,,IP Address Filter,Adds a filter from the left panel IP Address filter bar
+,,Event Type Filter,Adds a filter from the left panel Event Type filter bar
+,,Tags & Star Filter,Adds a filter from the left panel Tags/Stars filter bar
+,,Add Data Export (Left Panel),
+,,Compare Events,"Uses ""pin for comparison"""
+,,Delete Data Export,
+,Events View,Edit Columns,
+,,Chronological Sort,
+,,Time Filter,
+,,Search Bar,
+,,Add/Remove Tag,
+,,Add/Remove Star,
+,,Click Event Row,Clicks an expandable event row within the table
+,,Add Data Export (Events View),
+,,Enable/Disable/Delete Filter Chip,Toggles the visibility of a filter chip or removes it
+,,Temp Enable/Disable Data Export,
+,,Event Row Filter,Adds a filter using the Filter icon on each attribute row within the expanded event row
+,Devices View,Rename/Annotate Device,Adds a nickname or tag to a device row
+,,Click Device Details,Expanding an accordion with device info (instance or profile)
+,,See Events (Devices View),"Uses ""See events"" button attached to a given events group"
+,,IP Query,Uses the IP address hyperlink in the Devices dropdown to see events with a given IP address
+,,Session ID Query,Uses the session cookie hyperlink in the Devices dropdown to see events with that cookie
+,Home & Misc,Explore my data,Button on the home screen
+,,Home page button,
+,,Data ingestion flow,Code only when user clicks the button to start the data ingestion flow and select a platform. Do not code subsequent rows while the user remains here.
+,,Interactive Demo,Code only when user clicks the button to enter the demo. Do not code subsequent rows while the user remains here.
+,,Skip Demo,
+,,How to Request,Code only when user clicks the button to enter the page. Do not code subsequent rows while the user remains here.
+,,Github/Research Button,
+,,Safe Exit,
+,,Help Modal,"Generic tag for any inline help icon or popup window, includes masked UA."
+"Initiation of Feature Use 
+(Apply this code to the same line as feature use, not the interviewer's prompt.)",,Prompted - Unsolicited,Interviewer prompted participant to use a feature (the participant was not necessarily looking for it)
+,,During demo,Feature was used in the demo (considered unprompted if used later since this is an affordance)
+,,Prompted to aid task,The participant was looking for a feature and the interviewer pointed them to it or suggested it might solve their task
+,,Unprompted,Participant used feature naturally without being prompted or told
+Participant Experience/Reaction with Feature,General Feedback,Positive Feedback,Expresses approval or satisfaction.
+,,Negative Feedback,Expresses general dislike or frustration with existing functionality.
+,,Mixed Feedback,"Expresses partial approval of a specific feature, or is not sure if they like it. Do not confuse this with people being polite about negative feedback."
+,"Gradations of ""confusion""",Confusion -- UI,Expresses confusion about what a UI feature does or clearly hesitates.
+,,Confusion -- Data,Expresses confusion about the underlying data.
+,,Mistake ,"User makes a (non-bug) mistake while navigating or uses a button accidentally. ""Oops"""
+,,Bug,Reports broken functionality or errors.
+,,Expectation mismatch,What the user expects from the feature does not align with what it does
+,,Clarifying Question,Asks about how a feature works or what a term means.
+,Suggestions,Text Suggestion,Proposes rewording an existing label or term.
+,,UI Suggestion,Proposes changing an existing visual element or layout.
+,,New Feature,"Proposes adding a non-existent tool, view, or capability."
+STRUCTURAL CODES,Structural subcodes,Inductive subcodes,Definition/Notes
+Investigation Practices,Task start (only for bookkeeping purposes),Task 1,
+,,Task 2,
+,,Task 3,
+,,Task 4,
+,,Task 5,
+,Hypothesis/Questions,Dates device was logged in,Speculating about the dates a specific device was or was not logged-in
+,,Method of authentication,"Speculating about how the adversary obtained access in the ground truth scenario (recovery flow, login, shared device)"
+,,Activity attribution,"Speculating about who or which device was the source of some event or set of events (i.e., a session, an IP address, etc)"
+,,Identity of unknown device,"A hypothesis about whether ""iphone"" is alice's or bob's device, or a third altogether."
+,Actions,Looking at temporally proximate events,"Reasons about hypothesis by looking at the events within a certain time window (i.e., rapid succession of logins = compromise)"
+,,Correlating IP addresses to activity,Reasons about hypothesis by which events or devices share an IP address. 
+,,Comparing/looking at device or session details,"Reasons about hypothesis using session cookie, device IDs (model, OS, user agent)."
+,,Correlating activity across 2+ platforms,Reasons about hypothesis about platform A by using an existing hypotheses or fact about platform B (often co-occurring with IP addr).
+,,Searches Internet,Searches internet to aid hypothesis
+,,Takes notes,Takes notes on an external 
+,,Reference ASI,References the ASI either as physical phone OR the screenshots in the reference materials 
+,Conclusion,Task answer,Give full or partial answer to task or hypothesis. Can dually-coded with hypothesis (a hypothesis may be a a sufficient task answer)
+,,Self-corrects hypothesis,"Walks back initial hypothesis or adds a significant caveat (""actually, wait, no...,"")"
+,,Interviewer corrects/confirms hypothesis,"Interviewer jumps in with a full or partial task explanation, usually to move the study along"
+Uncertainty about Data,"Data limitations
+uncertainty about how the platform has captured and recorded user actions",Missing/incorrect/unstable device identifiers,The underlying data export is missing or has incorrect device IDs
+,,Recorded events,"Uncertainty or confusion about how the platform records different authentication events (recovery flows, logins)."
+,,"Incorrect measurement (time, location)",Uncertainty about whether the platform's recorded timestamps and locations (and other metrics) are correct
+,,Length or time-limit of log,Uncertainty about how far back in time different files in the data export go.
+,"Client's context
+uncertainty about how the adversary might have accessed network, devices, accounts, etc. (that may not necessarily be represented in the data itself) ",Shared home/devices,Caveats or questions about whether the hypothetical client and adversary shared a home or whether they physically shared devices
+,,Spoofing or VPN use,"Caveats about technologically spoofing device IDs, like user agents; or use of VPNs that modify origin IP address"
+,,Recovery Methods,"Caveats or uncertainty about what recovery methods (email, pwd code, etc) the adversary could have accessed in the hypothetical scenario"
+,"LEStrADE's interpretation
+uncertainty about how the the tool has represented or transformed data",Event taxonomy,"User is uncertain about how tool is translating or representing types of events (""logins vs authentication challenges"")"
+,,Event-device relationships,User is uncertain about how different devices relate to different events specifically because of the interface or how querying/hierarchy works in the tool
+,,Device attributes,"User is uncertain about how lestrade is parsing and joining device IDs (user agents, IPs, session cookies, etc)"
+,,Timestamps,User is uncertain about how lestrade is communicating the significance of different time stamps
+Friction & Suggestions,Common points of friction,Filters,Annoyances or UI friction related to addition/deletion/disablement of filter chips in the events view
+,,Event noise,High volume of events or irrelevant events obscuring the events the user wants to look at
+,,Mentally organizing strings/dates,"User has trouble remembering or mentally organizing strings (IPs, user agent strings) or dates "
+,,Difficulty in mapping investigation task to specific feature,User struggles to figure out which UI features would help them complete the task
+,,Too much guidance,User notes that tool is providing too much nudging/handholding/guidance or automated interpretation
+,,Difficulties comparing events/devices,"Difficulty with comparing 2+ devices or events. This might be use of several tabs, noting how annoying it is to scroll, etc"
+,Suggestions/New Features,Comparison view / multi-tab,User wants to be able to diff the values in the table containing event or device details
+,,Activity timeline by device,"User wants to be able to see an event timeline where multiple devices are represented in different rows/columns --> ""interleaving"""
+,,Glossary,"User suggests annotating/defining jargon  (i.e., user agent)"
+,,Add manual/external events,"User suggests the ability to add manual events in the timeline (e.g., when Bob moved out)"
+,,Most recent events,"(Keeping this for now, might subsume into another code eventually)"
+,,Progressive disclosure in event/device details,User suggests using hierarchy or progressive disclosure to make device or event details (expanded) easier to read
+,,Graph view,"A view (graphical, tabular, etc) that relates different devices or sessions to the origin IP address"
+,,IP augmentation,"Geolocation a certain IP address, determining if IP addresses are from VPNs, letting users annotate IP addresses, "
+,,Nudges/help/tour,User wants more tutorials/nudges/help modals. Includes wanting infra to build hypotheses and have them be corrected if obviously inconsistent with data
+,,Interviewer suggests new feature,Interviewer brings up an idea in development or was suggested previously to get feedback (separate natural suggestions from promed
+,,Additional Annotation,User wants more expansive or robust annotation features in the UI
+,,Additional Filtering,User wants more options for filters or ways to stack filters
+,,Reset/Export,User wants an option to reset or export all annotations.
+,,Re-order visual elements,"User wants to re-order visual elements on a page, generally."
+Deployment Considerations,In Tech Clinic,Limited time during consultations,Points out logistical difficulty of using LEStrADE during the short time window of a typical consultation
+,,Requesting data exports,Considerations about requesting data exports in the clinic setting; which categories; how to request; time between request and receipt
+,,Overwhelm / high cognitive load,User mentions that the amount of information might overwhelm the client or consultant
+,,Client communication,"Difficulties or strategies they would use when communicating info to client, including disclaimers about certainty, corroboration client context, asking before taking a decision, Distracts from attending to client, teaching the client about the data exports"
+,,Re-traumatizing to client,Points out that data contents or volume could be stressful or overwhelming to client
+,,Benefits,"Remarks about how or why the tool might be beneficial specifically in the clinic setting, how the tool might address a difficulty users frequency encounter"
+,,Real user data,Considerations related to the size/scale of real user data; privacy considerations about collaboratively working with real user data
+,Learnability,Jargon & Terminology,Anticipated issues about how non-techncial users might struggle with jargon or technical concepts
+,,Wants/can't find existing feature,Participant expresses a desire for or suggests a feature that already exists (since they have not yet found it)
+,,Easier with future use,Participant mentions that the tool may become easier to use in the future after they use it more
+,,(Non) Interest in Tour,Remarks about learning the tool through the tour OR stated noninterest in the tour feature
+,Trust & Reliability,"Testing, bugs, and compatibility","How bugs impact trust, need for testing, browser compatibility, etc"
+,,Developer reputability,Remarks about trustworthiness and privacy motivations of the developer.
+,,Communicating tool's purpose/scope,"Remarks about how to communicate what the tool does (parse) and does not/cannot do (classify). What limitations arise from the tool vs the data at a high level (i.e., in tutorials, landing page)"
+,,Distinguishing between parsed data & augmentation/inference,Somewhat similar to the above; remarks about how the tool communicates the *difference* between individual data records. Which fields were augmented or normalized vs which come from the original dataset? How can the analyst verify?
