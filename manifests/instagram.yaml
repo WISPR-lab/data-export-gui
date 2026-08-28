@@ -41,6 +41,18 @@ files:
       format: "json"
       json_root: "account_history_account_privacy_history[]"
 
+  - id: "insta_signup_details"
+    path: "security_and_login_information/login_and_profile_creation/signup_details.json"
+    parser:
+      format: "json"
+      json_root: "account_history_registration_info[]"
+
+  - id: "insta_profile_status"
+    path: "security_and_login_information/login_and_profile_creation/profile_status_changes.json"
+    parser:
+      format: "json"
+      json_root: "account_history_account_active_status_changes[]"
+
   - id: "insta_devices"
     path: "personal_information/device_information/devices.json"
     parser:
@@ -87,8 +99,7 @@ views:
 
   - file:
       id: "insta_profile_changes"
-      where:
-        - {source: "string_map_data.Changed.value", value: "Email"}
+      where: {source: "string_map_data.Changed.value", op: "==", value: "Email"}
     static:
       event.action: "email_address_change"
       event.kind: "event"
@@ -120,6 +131,39 @@ views:
     fields:
       - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
       - {target: "user.profile_visibility", source: "title", regex: "Switched to (Public|Private)", type: "string"}
+
+  - file:
+      id: "insta_signup_details"
+    static:
+      event.action: "account_creation"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["creation"]
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+      - {target: "client.ip", source: "string_map_data.'IP Address'.value", type: "string"}
+
+  - file:
+      id: "insta_profile_status"
+      where: {source: "string_map_data.'Activation Type'.value", op: "==", value: "reactivate"}
+    static:
+      event.action: "account_activated"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["creation"]
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
+
+  - file:
+      id: "insta_profile_status"
+      where: {source: "string_map_data.'Activation Type'.value", op: "==", value: "inactivate"}
+    static:
+      event.action: "account_deactivated"
+      event.kind: "event"
+      event.category: ["iam"]
+      event.type: ["deletion"]
+    fields:
+      - {target: "@timestamp", source: "string_map_data.Time.timestamp", type: "datetime"}
 
   - file:
       id: "insta_devices"

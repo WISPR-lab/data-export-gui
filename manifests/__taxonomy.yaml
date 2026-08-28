@@ -83,6 +83,15 @@ fields:
     description: our own action taxonomy — ECS defines event.action as free text with no vocabulary of its own, this is that vocabulary. each value's short_name is the canonical display label (used in place of deriving one mechanically from the action string).
     url: null
     allowed_values:
+      account_activated:
+        short_name: "Account Reactivated"
+        description: account was reactivated after being deactivated
+      account_creation:
+        short_name: "Account Created"
+        description: account was registered/signed up
+      account_deactivated:
+        short_name: "Account Deactivated"
+        description: account was deactivated
       auth_challenge_init:
         short_name: "MFA or Checkpoint Initiated"
         description: MFA/checkpoint challenge was presented to the user; outcome not yet known
@@ -215,6 +224,9 @@ fields:
   user_agent.original:
     description: the raw, unparsed user-agent string
     url: https://www.elastic.co/guide/en/ecs/current/ecs-user_agent.html
+  user_agent.os.full:
+    description: OS name including version, parsed from the user agent (e.g. "iPhone OS 17.7.1")
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-os.html
   user_agent.os.name:
     description: name of the OS, parsed from the user agent
     url: https://www.elastic.co/guide/en/ecs/current/ecs-os.html
@@ -234,6 +246,9 @@ relationships:
   event.action:
     user_login: { kind: event, category: [authentication, session], type: [start] }
     user_logout: { kind: event, category: [authentication, session], type: [end] }
+    account_creation: { kind: event, category: [iam], type: [creation] }
+    account_activated: { kind: event, category: [iam], type: [creation] }
+    account_deactivated: { kind: event, category: [iam], type: [deletion] }
     auth_challenge_init: { kind: event, category: [authentication], type: [info] }
     auth_challenge_complete: { kind: event, category: [authentication], type: [info], outcomes: [success, failure] }
     session_refresh: { kind: event, category: [authentication, session], type: [info] }

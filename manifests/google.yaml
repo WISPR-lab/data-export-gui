@@ -36,10 +36,10 @@ files:
   #   parser:
   #     format: "html"
 
-  - id: "ggl_takeout_activity"
-    path: "My Activity/Takeout/MyActivity.html"
-    parser:
-      format: "html_ggl_myactivity"
+  # - id: "ggl_takeout_activity"
+  #   path: "My Activity/Takeout/MyActivity.html"
+  #   parser:
+  #     format: "html_ggl_myactivity"
 
 
   # - id: "ggl_access_log_activity"
@@ -196,27 +196,27 @@ views:
       - {target: "user.email.new", source: "New Value", type: "string"}
 
   # ------------------------ DATA EXPORT ------------------------
-  - file:
-      id: "ggl_takeout_activity"
-      where: {source: "Activity", op: "==", value: "Initiated a Takeout"}
-    static:
-      event.action: "data_export_request"
-      event.kind: "event"
-      event.category: ["iam"]
-      event.type: ["creation"]
-    fields: &ggl_takeout_common
-      - {target: "@timestamp", source: "Timestamp", type: "datetime"}
-      - {target: "client.ip", source: "Details", regex: "From IP (.+)", type: "string"}
+  # - file:
+  #     id: "ggl_takeout_activity"
+  #     where: {source: "Activity", op: "==", value: "Initiated a Takeout"}
+  #   static:
+  #     event.action: "data_export_request"
+  #     event.kind: "event"
+  #     event.category: ["iam"]
+  #     event.type: ["creation"]
+  #   fields: &ggl_takeout_common
+  #     - {target: "@timestamp", source: "Timestamp", type: "datetime"}
+  #     - {target: "client.ip", source: "Details", regex: "From IP (.+)", type: "string"}
 
-  - file:
-      id: "ggl_takeout_activity"
-      where: {source: "Activity", op: "==", value: "Downloaded a Takeout archive"}
-    static:
-      event.action: "data_export_request"
-      event.kind: "event"
-      event.category: ["iam"]
-      event.type: ["end"]
-    fields: *ggl_takeout_common
+  # - file:
+  #     id: "ggl_takeout_activity"
+  #     where: {source: "Activity", op: "==", value: "Downloaded a Takeout archive"}
+  #   static:
+  #     event.action: "data_export_request"
+  #     event.kind: "event"
+  #     event.category: ["iam"]
+  #     event.type: ["end"]
+  #   fields: *ggl_takeout_common
 
 
   # ------------------------ ACCESS ACTIVITY ------------------------
