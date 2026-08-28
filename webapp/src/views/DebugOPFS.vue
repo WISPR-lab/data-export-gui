@@ -176,7 +176,7 @@ export default {
   methods: {
     discoverTablesAndViews: async function() {
       try {
-        var db = await getDB();
+        var db = await getDB(this.$route.meta.dbName || 'userdata');
         var tablesResult = await db.exec(
           "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
           { returnValue: 'resultRows', rowMode: 'object' }
@@ -266,7 +266,7 @@ export default {
       this.tableRows = [];
       this.tableCols = [];
       try {
-        var db = await getDB();
+        var db = await getDB(this.$route.meta.dbName || 'userdata');
         var rows = await db.exec(
           'SELECT * FROM ' + table + ' LIMIT 500',
           { returnValue: 'resultRows', rowMode: 'object' }
@@ -300,7 +300,7 @@ export default {
       this.exportLoading = true;
       this.opfsStatus = '';
       try {
-        var db = await getDB();
+        var db = await getDB(this.$route.meta.dbName || 'userdata');
         var sqlLines = [];
         
         // Predefined topological order of tables to satisfy foreign key constraints

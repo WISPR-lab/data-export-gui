@@ -99,7 +99,7 @@ export default {
   },
   async mounted() {
     try {
-      this.ips = await DB.getIPAddresses()
+      this.ips = await DB.getIPAddresses(this.$route.meta.dbName || 'userdata')
       var self = this
       this.ips.forEach(function(ip) { if (ip.count > 0) self.seenKeys[ip.client_ip] = true })
       this.$emit('filtered-count', null)
@@ -137,7 +137,7 @@ export default {
     'project.dataExports': {
       async handler() {
         try {
-          this.ips = await DB.getIPAddresses()
+          this.ips = await DB.getIPAddresses(this.$route.meta.dbName || 'userdata')
           var self = this
           this.ips.forEach(function(ip) { if (ip.count > 0) self.seenKeys[ip.client_ip] = true })
           this.isFiltered = false
@@ -192,7 +192,7 @@ export default {
     },
     async onTagChanged(tag, remove) {
       if (!this.tagDialog.ip) return
-      const changedCount = await DB.addTagToEventsQuery(`client_ip:"${this.tagDialog.ip}"`, tag, remove)
+      const changedCount = await DB.addTagToEventsQuery(this.$route.meta.dbName || 'userdata', `client_ip:"${this.tagDialog.ip}"`, tag, remove)
       if (changedCount) {
         this.$store.dispatch('updateEventLabels', { label: tag, num: remove ? -changedCount : changedCount })
       }

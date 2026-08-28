@@ -182,7 +182,7 @@ export default {
   methods: {
     getQuickTag,
     persistTags(id, tags) {
-      return this.persist ? this.persist(id, tags) : DB.updateEventTags(id, tags)
+      return this.persist ? this.persist(id, tags) : DB.updateEventTags(this.$route.meta.dbName || 'userdata', id, tags)
     },
     async removeTags(tag) {
       if (this.events && this.events.length > 0) {

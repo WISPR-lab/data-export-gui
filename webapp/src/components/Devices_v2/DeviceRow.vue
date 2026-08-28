@@ -281,7 +281,7 @@ export default {
       });
     },
     async persistDeviceTags(id, tags) {
-      await DB.updateDeviceTags(this.type, id || this.deviceId, tags);
+      await DB.updateDeviceTags(this.$route.meta.dbName || 'userdata', this.type, id || this.deviceId, tags);
     },
     async handleTagAdded(tag) {
       if (tag && !this.localTags.includes(tag)) {
@@ -333,7 +333,7 @@ export default {
       }
     },
     async propagateToEvents(tag, remove) {
-      var changedCount = await DB.addTagToEventsQuery(this.eventsQuery, tag, remove);
+      var changedCount = await DB.addTagToEventsQuery(this.$route.meta.dbName || 'userdata', this.eventsQuery, tag, remove);
       if (changedCount) {
         this.$store.dispatch('updateEventLabels', { label: tag, num: remove ? -changedCount : changedCount });
       }

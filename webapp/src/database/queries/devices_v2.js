@@ -17,8 +17,8 @@ function parseTags(raw) {
   }
 }
 
-export async function getUnlinkedGroups() {
-  const db = await getDB();
+export async function getUnlinkedGroups(dbName) {
+  const db = await getDB(dbName);
 
   const sql = `
     SELECT dg.*, u.color as upload_color, u.platform as upload_platform
@@ -54,10 +54,10 @@ export async function getUnlinkedGroups() {
   });
 }
 
-export async function updateDeviceTags(entityType, id, tags) {
+export async function updateDeviceTags(dbName, entityType, id, tags) {
   var table = TAG_TABLES[entityType] || TAG_TABLES.record;
   if (!id) return;
-  const db = await getDB();
+  const db = await getDB(dbName);
   await db.exec(
     `UPDATE ${table} SET tags = ? WHERE id = ?`,
     { bind: [JSON.stringify(tags || []), id] }

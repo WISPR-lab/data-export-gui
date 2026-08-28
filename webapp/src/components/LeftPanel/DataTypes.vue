@@ -91,7 +91,7 @@ export default {
   methods: {
     async loadEventTypes() {
       try {
-        this.eventTypes = await DB.getEventTypes();
+        this.eventTypes = await DB.getEventTypes(this.$route.meta.dbName || 'userdata');
       } catch (e) {
         console.error('Error loading event types:', e)
         this.eventTypes = []

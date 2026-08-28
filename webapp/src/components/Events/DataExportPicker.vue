@@ -89,8 +89,9 @@ export default {
     async remove(dataExport) {
       this.isLoading = true
       try {
-        await DB.deleteUpload(dataExport.id)
-        await this.$store.dispatch('updateProject', this.project.id)
+        var dbName = this.$route.meta.dbName || 'userdata'
+        await DB.deleteUpload(dbName, dataExport.id)
+        await this.$store.dispatch('updateProject', { projectId: this.project.id, dbName })
         this.syncSelectedDataExports()
       } catch (e) {
         console.error('[DataExportPicker] Failed to delete upload:', e)
@@ -105,11 +106,12 @@ export default {
       }
       
       try {
-        await DB.updateUpload(dataExport.id, {
+        var dbName = this.$route.meta.dbName || 'userdata'
+        await DB.updateUpload(dbName, dataExport.id, {
           given_name: dataExportName || dataExport.name,
           color: dataExport.color,
         })
-        await this.$store.dispatch('updateProject', this.project.id)
+        await this.$store.dispatch('updateProject', { projectId: this.project.id, dbName })
         this.syncSelectedDataExports()
       } catch (e) {
         console.error('[DataExportPicker] Failed to update upload:', e)

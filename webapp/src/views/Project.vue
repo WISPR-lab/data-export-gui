@@ -271,7 +271,7 @@ export default {
   mounted() {
     this.loadingProject = true
 
-    this.$store.dispatch('updateProject', this.projectId)
+    this.$store.dispatch('updateProject', { projectId: this.projectId, dbName: this.$route.meta.dbName || 'userdata' })
       .then(() => {
         this.loadingProject = false
         this.checkShowDemoModal()

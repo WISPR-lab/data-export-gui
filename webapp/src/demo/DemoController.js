@@ -289,11 +289,11 @@ class DemoController {
   async _clearAllTags(store) {
       if (DEMO_DEBUGGING) logger.debug('Wiping all tags for fresh demo');
       const DB = require('@/database/index.js').default
-      await DB.clearAllTags()
+      await DB.clearAllTags('demo')
       if (store) {
           store.commit('SET_TIMELINE_TAGS', [])
           store.commit('SET_EVENT_LABELS', [])
-          await store.dispatch('updateProject', 1)
+          await store.dispatch('updateProject', { projectId: 1, dbName: 'demo' })
       }
   }
 
@@ -312,14 +312,14 @@ class DemoController {
     async _addSampleTag(store) {
         if (DEMO_DEBUGGING) logger.debug('Programmatically adding sample tag');
         const DB = require('@/database/index.js').default
-        const result = await DB.searchEvents('', { size: 1, order: 'asc' })
+        const result = await DB.searchEvents('demo', '', { size: 1, order: 'asc' })
         if (result.objects && result.objects.length > 0) {
             const targetEvent = result.objects[0]
-            await DB.updateEventTags(targetEvent._id, ['bad'])
-            
+            await DB.updateEventTags('demo', targetEvent._id, ['bad'])
+
             if (store) {
                 store.dispatch('updateEventLabels', { label: 'bad', num: 1 })
-                await store.dispatch('updateProject', 1)
+                await store.dispatch('updateProject', { projectId: 1, dbName: 'demo' })
             }
             
             setTimeout(() => {

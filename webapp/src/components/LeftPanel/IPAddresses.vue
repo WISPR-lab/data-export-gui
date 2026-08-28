@@ -86,7 +86,7 @@ export default {
   methods: {
     async loadIPAddresses() {
       try {
-        this.ipAddresses = await DB.getIPAddresses();
+        this.ipAddresses = await DB.getIPAddresses(this.$route.meta.dbName || 'userdata');
       } catch (e) {
         console.error('Error loading IP addresses:', e)
         this.ipAddresses = []

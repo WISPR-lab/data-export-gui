@@ -257,30 +257,34 @@ export default new Vuex.Store({
     },
   },
   actions: {
-    async updateProject(context, projectId) {
+    async updateProject(context, { projectId, dbName } = {}) {
+      if (!dbName) {
+        throw new Error("[Store.updateProject] Missing required dbName ('userdata' or 'demo') — caller must say which db it means.");
+      }
       if (!window.crossOriginIsolated) {
         console.warn('[Store.updateProject] security headers missing, attempting DB access anyway...');
       }
 
+      const isDemo = dbName === 'demo'
       let projectName = localStorage.getItem('projectName') || 'My Data'
-      if (context.state.demoMode) {
+      if (isDemo) {
         projectName = 'Instagram Demo Data'
       }
-      
+
       const virtualProject = {
-        id: context.state.demoMode ? 2 : 1,
+        id: isDemo ? 2 : 1,
         name: projectName,
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
         dataExports: []
       }
-      
+
       try {
         logger.debug('Fetching uploads from database...');
-        const uploads = await DB.getUploads()
+        const uploads = await DB.getUploads(dbName)
         logger.debug('Received uploads:', uploads.uploads);
         const project = { ...virtualProject, dataExports: uploads.uploads || [] }
-        const meta = await DB.getEventMeta()
+        const meta = await DB.getEventMeta(dbName)
         logger.debug('Committing SET_PROJECT with dataExports:', project.dataExports.map(t => ({ id: t.id, name: t.name, color: t.color })));
         context.commit('SET_PROJECT', { objects: [project], meta })
       } catch (e) {

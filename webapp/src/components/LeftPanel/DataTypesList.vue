@@ -116,7 +116,7 @@ export default {
   methods: {
     async loadEventTypes() {
       try {
-        this.event_types = await DB.getEventTypes()
+        this.event_types = await DB.getEventTypes(this.$route.meta.dbName || 'userdata')
         var self = this
         this.event_types.forEach(function(t) {
           if (t.count > 0) self.seenKeys[t.event_type_msg] = true

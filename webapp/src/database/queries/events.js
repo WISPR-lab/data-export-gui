@@ -23,9 +23,9 @@ example of 'filter' object
   }
 */
 
-export async function searchEvents(queryString = '', filter = {}) {
+export async function searchEvents(dbName, queryString = '', filter = {}) {
   /* Builds WHERE/ORDER/PAGINATION, batch-resolves file refs and raw_data line numbers, returns Elasticsearch-shaped {_id, _index, _source} hit objects. */
-  const db = await getDB();
+  const db = await getDB(dbName);
   
   const stringColumns = ['e.id', 'e.upload_id', 'e.event_type_msg', 'e.event_category', 'e.event_action', 'e.event_kind', 'dg.model', 'dge.device_group_id', 'u.platform'];
   
@@ -174,8 +174,8 @@ export async function searchEvents(queryString = '', filter = {}) {
   }
 }
 
-export async function getEventCount() {
-  const db = await getDB();
+export async function getEventCount(dbName) {
+  const db = await getDB(dbName);
   const result = await db.exec('SELECT COUNT(*) as count FROM events', {
     returnValue: 'resultRows',
     rowMode: 'object'
@@ -185,8 +185,8 @@ export async function getEventCount() {
   return count;
 }
 
-export async function deleteEvents(eventIds) {
-  const db = await getDB();
+export async function deleteEvents(dbName, eventIds) {
+  const db = await getDB(dbName);
   
   const ids = Array.isArray(eventIds) ? eventIds : [eventIds];
   if (ids.length === 0) return;
@@ -200,8 +200,8 @@ export async function deleteEvents(eventIds) {
 // Note: Frontend uses event_action field (from manifest view static fields).
 // The event_category field (ECS event.category) is not used in UI filtering.
 
-export async function getEventActions() {
-  const db = await getDB();
+export async function getEventActions(dbName) {
+  const db = await getDB(dbName);
   const sql = `
     SELECT event_action, COUNT(*) as count 
     FROM events 
@@ -222,8 +222,8 @@ export async function getEventActions() {
 }
 
 
-export async function getEventTypes() {
-  const db = await getDB();
+export async function getEventTypes(dbName) {
+  const db = await getDB(dbName);
   const sql = `
     SELECT event_type_msg, COUNT(*) as count 
     FROM events 
@@ -248,9 +248,9 @@ export async function getEventTypes() {
 
 
 
-export async function getEventTags() {
+export async function getEventTags(dbName) {
   /* SQL-side aggregation via json_each — avoids loading all tag blobs into the WASM heap. */
-  const db = await getDB();
+  const db = await getDB(dbName);
   const sql = `
     SELECT j.value AS tag, COUNT(*) AS count
     FROM events
@@ -266,8 +266,8 @@ export async function getEventTags() {
   return rows.map(function(row) { return { tag: row.tag, count: row.count }; });
 }
 
-export async function getIPAddresses() {
-  const db = await getDB();
+export async function getIPAddresses(dbName) {
+  const db = await getDB(dbName);
   const sql = `
     SELECT json_extract(attributes, '$.client_ip') AS client_ip, COUNT(*) AS count
     FROM events
@@ -452,13 +452,13 @@ function _formatEventObject(row, filenames = [], lineNumbers = [], sources = [])
   };
 }
 
-export async function addLabelEvent(eventIds, labels) {
+export async function addLabelEvent(dbName, eventIds, labels) {
   /* Per-row read-modify-write: reads current JSON labels, merges new ones (deduped), writes back. Not batched. */
   if (!eventIds || eventIds.length === 0 || !labels || labels.length === 0) {
     return;
   }
-  
-  const db = await getDB();
+
+  const db = await getDB(dbName);
   
   for (const eventId of eventIds) {
     const result = await db.exec(
@@ -493,13 +493,13 @@ export async function addLabelEvent(eventIds, labels) {
   }
 }
 
-export async function removeLabelEvent(eventIds, labels) {
+export async function removeLabelEvent(dbName, eventIds, labels) {
   /* Per-row read-modify-write: reads current JSON labels, filters out specified ones, writes back. Not batched. */
   if (!eventIds || eventIds.length === 0 || !labels || labels.length === 0) {
     return;
   }
-  
-  const db = await getDB();
+
+  const db = await getDB(dbName);
   
   for (const eventId of eventIds) {
     const result = await db.exec(
@@ -534,8 +534,8 @@ export async function removeLabelEvent(eventIds, labels) {
   }
 }
 
-export async function updateEventTags(eventId, tags) {
-  const db = await getDB();
+export async function updateEventTags(dbName, eventId, tags) {
+  const db = await getDB(dbName);
   
   await db.exec(
     'UPDATE events SET tags = ? WHERE id = ?',
@@ -543,15 +543,15 @@ export async function updateEventTags(eventId, tags) {
   );
 }
 
-export async function clearAllTags() {
-  const db = await getDB();
+export async function clearAllTags(dbName) {
+  const db = await getDB(dbName);
   logger.debug('[Database] Clearing all tags from events');
   await db.exec("UPDATE events SET tags = '[]'");
 }
 
-export async function addTagToEventsQuery(eventsQuery, tag, remove = false) {
+export async function addTagToEventsQuery(dbName, eventsQuery, tag, remove = false) {
   if (!eventsQuery || !tag) return 0;
-  const db = await getDB();
+  const db = await getDB(dbName);
   let eventsToUpdate = [];
 
   if (eventsQuery.indexOf('client_session_id:') !== -1) {

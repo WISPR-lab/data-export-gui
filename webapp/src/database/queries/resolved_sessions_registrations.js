@@ -25,8 +25,8 @@ function parseTags(raw) {
   }
 }
 
-export async function getResolvedSessionsRegistrations() {
-  const db = await getDB();
+export async function getResolvedSessionsRegistrations(dbName) {
+  const db = await getDB(dbName);
 
   // Subquery pulls the device_group_id for sessions via their client_session_id →
   // events → device_group_events join. LIMIT 1 handles the case where multiple

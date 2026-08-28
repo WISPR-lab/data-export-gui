@@ -20,7 +20,12 @@ const SCHEMA_MISMATCH_RE = /no such (column|table)|has no column named/i;
 
 let worker = null;
 let messageId = 0;
-let activeDbName = 'userdata'; // Track which DB is active ('userdata' mode vs 'demo')
+
+function assertValidDbName(dbName) {
+  if (dbName !== 'userdata' && dbName !== 'demo') {
+    throw new Error(`[Database] Invalid dbName: ${JSON.stringify(dbName)}`);
+  }
+}
 
 function callPyodideWorker(method, args) {
   /* Promise wrapper for worker.postMessage; matches response by auto-incrementing id and reconstructs Error objects from serialized error payloads. */
@@ -44,19 +49,21 @@ function callPyodideWorker(method, args) {
   });
 }
 
-async function getDbPaths() {
+async function getDbPaths(dbName) {
+  assertValidDbName(dbName);
   const cfg = await loadConfig();
   const dbFilename = cfg.database.db_path.split('/').pop(); // e.g., "userdata.db"
-  const dbPath = activeDbName === 'userdata' ? `/${dbFilename}` : '/demo.db';
-  
+  const dbPath = dbName === 'userdata' ? `/${dbFilename}` : '/demo.db';
+
   return {
     schemaPath: cfg.paths.schema,
     dbPath,
   };
 }
 
-export async function getDB() {
-  /* Lazy-creates the sqlite worker; returns an exec-only interface that resolves DB path per-call based on activeDbName. */
+export async function getDB(dbName) {
+  /* Lazy-creates the sqlite worker; returns an exec-only interface bound to the explicitly-requested db. */
+  assertValidDbName(dbName);
   if (!worker) {
     // [Database] Initializing
     worker = new Worker('./sqlite-worker.js');
@@ -65,7 +72,7 @@ export async function getDB() {
 
   return {
     async exec(sql, options) {
-      const { schemaPath, dbPath } = await getDbPaths();
+      const { schemaPath, dbPath } = await getDbPaths(dbName);
       return callPyodideWorker('exec', {
         sql,
         options: options || {},
@@ -164,9 +171,9 @@ export async function resetAllLocalData({ unregisterServiceWorkers = false } = {
   }
 }
 
-export async function clearAllTables() {
+export async function clearAllTables(dbName) {
   /* Dynamically queries sqlite_master for all user tables and DELETEs their rows (not DROP — preserves schema). */
-  const db = await getDB();
+  const db = await getDB(dbName);
 
   // Query sqlite_master to get all tables dynamically
   const result = await db.exec(
@@ -189,16 +196,7 @@ export default {
   closeDB,
   clearAllTables,
   resetAllLocalData,
-  
-  // DB switching
-  setActiveDatabase(dbName) {
-    activeDbName = dbName; // 'userdata' or 'demo'
-    logger.info(`Switched to ${dbName} database`);
-  },
-  getActiveDatabase() {
-    return activeDbName;
-  },
-  
+
   searchEvents: events.searchEvents,
   getEventCount: events.getEventCount,
   // Note: Frontend uses getEventActions (event_action field), not getCategories (event_category field)

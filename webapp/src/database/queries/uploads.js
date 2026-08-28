@@ -3,8 +3,8 @@ import { getLogger } from '@/utils/logger';
 
 const logger = getLogger('uploadDB');
 
-export async function getUploads() {
-  const db = await getDB();
+export async function getUploads(dbName) {
+  const db = await getDB(dbName);
   
   const sql = `
     SELECT 
@@ -32,12 +32,12 @@ export async function getUploads() {
   };
 }
 
-export async function getUploadById(uploadId) {
+export async function getUploadById(dbName, uploadId) {
   if (!uploadId) {
     console.error('[Uploads DB] No uploadId provided');
     return null;
   }
-  const db = await getDB();
+  const db = await getDB(dbName);
   
   const sql = `
     SELECT 
@@ -64,8 +64,8 @@ export async function getUploadById(uploadId) {
   return rows.length > 0 ? rows[0] : null;
 }
 
-export async function updateUpload(uploadId, updates) {
-  const db = await getDB();
+export async function updateUpload(dbName, uploadId, updates) {
+  const db = await getDB(dbName);
   
   const allowedFields = ['given_name', 'color'];
   const setClauses = [];
@@ -93,8 +93,8 @@ export async function updateUpload(uploadId, updates) {
   await db.exec(sql, { bind: values });
 }
 
-export async function getUploadedFiles(uploadId) {
-  const db = await getDB();
+export async function getUploadedFiles(dbName, uploadId) {
+  const db = await getDB(dbName);
   const rows = await db.exec(
     `SELECT id, manifest_filename, opfs_filename, file_size_bytes, parse_status, upload_timestamp
      FROM uploaded_files WHERE upload_id = ? ORDER BY upload_timestamp ASC`,
@@ -103,9 +103,9 @@ export async function getUploadedFiles(uploadId) {
   return rows || [];
 }
 
-export async function deleteUpload(uploadId) {
+export async function deleteUpload(dbName, uploadId) {
   /* Manual cascade: deletes events, uploaded_files, and raw_data rows before removing the upload record itself (schema lacks ON DELETE CASCADE). */
-  const db = await getDB();
+  const db = await getDB(dbName);
   
   await db.exec('DELETE FROM events WHERE upload_id = ?', { 
     bind: [uploadId]

@@ -5,9 +5,9 @@ import { getDB } from '../index.js';
 import * as events from './events.js';
 
 
-export async function getEventMeta() {
+export async function getEventMeta(dbName) {
   /* Returns a metadata envelope with field mappings, tag aggregations, and total count; includes empty compatibility stubs for a previous Elasticsearch-based API contract. */
-  const db = await getDB();
+  const db = await getDB(dbName);
   if (!db) {
     throw new Error('Database not initialized');
   }
@@ -28,7 +28,7 @@ export async function getEventMeta() {
     totalItems = (countResult[0] && countResult[0].count) || 0;
     
     try {
-      filterLabels = await events.getEventTags();
+      filterLabels = await events.getEventTags(dbName);
     } catch (e) {
       console.warn('Failed to get event tags:', e);
       filterLabels = [];
@@ -48,8 +48,8 @@ export async function getEventMeta() {
 
 
 
-export async function getDeviceMeta() {
-    const db = await getDB();
+export async function getDeviceMeta(dbName) {
+    const db = await getDB(dbName);
     const mappings = await db.exec(
         'SELECT field, type FROM v_device_field_mappings ORDER BY field ASC', 
         { returnValue: 'resultRows', rowMode: 'object'}

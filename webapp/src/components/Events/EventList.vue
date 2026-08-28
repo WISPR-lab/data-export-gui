@@ -940,7 +940,7 @@ export default {
       const startTime = Date.now()
       
       try {
-        const response = await DB.searchEvents(this.currentQueryString, this.currentQueryFilter)
+        const response = await DB.searchEvents(this.$route.meta.dbName || 'userdata', this.currentQueryString, this.currentQueryFilter)
 
         // Response has unwrapped format:
         // - objects: array of {_id, _source} wrapped events
@@ -1067,7 +1067,7 @@ export default {
           if (idx > -1) event._source.labels.splice(idx, 1)
         }
         this.$store.dispatch('updateEventLabels', { label: 'starred', num: -1 })
-        DB.removeLabelEvent([event._id], ['starred']).catch(e => {
+        DB.removeLabelEvent(this.$route.meta.dbName || 'userdata', [event._id], ['starred']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       } else {
@@ -1077,7 +1077,7 @@ export default {
         }
         event._source.labels.push('starred')
         this.$store.dispatch('updateEventLabels', { label: 'starred', num: 1 })
-        DB.addLabelEvent([event._id], ['starred']).catch(e => {
+        DB.addLabelEvent(this.$route.meta.dbName || 'userdata', [event._id], ['starred']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       }
@@ -1114,12 +1114,12 @@ export default {
       
       // Persist changes to database
       if (eventsToStar.length > 0) {
-        DB.addLabelEvent(eventsToStar, ['starred']).catch(e => {
+        DB.addLabelEvent(this.$route.meta.dbName || 'userdata', eventsToStar, ['starred']).catch(e => {
           console.error('Error starring events:', e)
         })
       }
       if (eventsToUnstar.length > 0) {
-        DB.removeLabelEvent(eventsToUnstar, ['starred']).catch(e => {
+        DB.removeLabelEvent(this.$route.meta.dbName || 'userdata', eventsToUnstar, ['starred']).catch(e => {
           console.error('Error unstarring events:', e)
         })
       }

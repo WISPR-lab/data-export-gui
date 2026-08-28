@@ -31,7 +31,6 @@ import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 import EventBus from './event-bus.js'
 
 import store from './store.js'
-import DB from './database/index.js'
 import demoDatabaseLoader from '@/demo/DemoDatabaseLoader.js'
 
 const logger = getLogger('Router');
@@ -60,14 +59,14 @@ const routes = [
         name: 'DemoEvents',
         component: Events,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'demo' },
       },
       {
         path: 'devices',
         name: 'DemoDevices',
         component: DevicesMockup,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'demo' },
       },
     ],
   },
@@ -92,14 +91,14 @@ const routes = [
         name: 'Events',
         component: Events,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'userdata' },
       },
       {
         path: 'devices',
         name: 'Devices',
         component: DevicesMockup,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'userdata' },
       },
     ],
   },
@@ -126,41 +125,40 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  const isDemoRoute = to.path.startsWith('/demo')
-  
+  const targetDbName = to.meta.dbName || 'userdata'
+  const isDemoRoute = targetDbName === 'demo'
+
   if (isDemoRoute) {
-    if (!store.state.demoMode || DB.getActiveDatabase() !== 'demo') {
+    if (!store.state.demoMode) {
       logger.debug('Entering demo mode via route:', to.path);
-      
+
       const DemoController = require('@/demo/DemoController.js').default
       if (from && from.name) {
         DemoController.referrerRoute = from.path
       }
-      
+
       store.commit('SET_DEMO_MODE', true)
       store.commit('SET_CURRENT_DB', 'demo')
-      DB.setActiveDatabase('demo')
-      
+
       try {
         await demoDatabaseLoader.initializeDemoDb()
-        await store.dispatch('updateProject', 1)
+        await store.dispatch('updateProject', { projectId: 1, dbName: targetDbName })
       } catch (e) {
         logger.error('Demo initialization failed:', e)
       }
     }
-    
+
     // Auto-start demo state if visiting demo events
     if (to.name === 'DemoEvents') {
       store.commit('SET_DEMO_IN_PROGRESS', true)
       store.commit('SET_DEMO_STEP', 1)
     }
   } else {
-    if (store.state.demoMode || DB.getActiveDatabase() !== 'userdata') {
+    if (store.state.demoMode) {
       logger.debug('Leaving demo mode via route:', to.path);
       store.commit('SET_DEMO_MODE', false)
       store.commit('SET_CURRENT_DB', 'userdata')
-      DB.setActiveDatabase('userdata')
-      await store.dispatch('updateProject', 1)
+      await store.dispatch('updateProject', { projectId: 1, dbName: targetDbName })
     }
   }
 

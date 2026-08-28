@@ -21,15 +21,14 @@ class DemoDatabaseLoader {
 
     try {
       logger.debug('Initializing demo database...')
-      DB.setActiveDatabase('demo')
 
       // Clear any pre-existing demo data to avoid PK conflicts from persistent OPFS
-      await DB.clearAllTables()
+      await DB.clearAllTables('demo')
 
       const sqlContent = demoInstagramSql
       logger.debug('Executing SQL script')
 
-      const db = await DB.getDB()
+      const db = await DB.getDB('demo')
       await db.exec(sqlContent)
 
       this.demoDbLoaded = true
@@ -52,7 +51,7 @@ class DemoDatabaseLoader {
    */
   async clearDemoDb() {
     try {
-      await DB.clearAllTables()
+      await DB.clearAllTables('demo')
       this.demoDbLoaded = false
       logger.debug('Demo database cleared')
     } catch (e) {

@@ -360,7 +360,7 @@ export default {
     },
     async loadDocumentMetadata() {
       try {
-        this.documentMetadata = await DB.getUploadedFiles(this.dataExport.id)
+        this.documentMetadata = await DB.getUploadedFiles(this.$route.meta.dbName || 'userdata', this.dataExport.id)
       } catch (e) {
         console.error('[DataExportComponent] Failed to load uploaded files:', e)
         this.documentMetadata = []

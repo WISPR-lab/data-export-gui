@@ -103,7 +103,7 @@ export default {
   },
   async mounted() {
       try {
-        this.eventActions = await DB.getEventActions()
+        this.eventActions = await DB.getEventActions(this.$route.meta.dbName || 'userdata')
       } catch (e) {
         console.error('Error loading eventActions:', e)
         this.eventActions = []

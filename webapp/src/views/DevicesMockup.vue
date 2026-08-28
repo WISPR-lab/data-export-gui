@@ -180,15 +180,16 @@ export default {
   methods: {
     async fetchLiveData() {
       try {
-        var db = await getDB();
+        var dbName = this.$route.meta.dbName || 'userdata';
+        var db = await getDB(dbName);
         var uploads = await db.exec('SELECT * FROM uploads', { returnValue: 'resultRows', rowMode: 'object' });
         if (!uploads || uploads.length === 0) {
           this.$router.push('/');
           return;
         }
 
-        var states = await getResolvedSessionsRegistrations();
-        var allGroups = await getUnlinkedGroups();
+        var states = await getResolvedSessionsRegistrations(dbName);
+        var allGroups = await getUnlinkedGroups(dbName);
 
         this.platforms = uploads.map(function(upload) {
           var key = (upload.platform || '').toLowerCase();

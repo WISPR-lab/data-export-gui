@@ -28,7 +28,6 @@ export async function processUpload(file, platform, givenName, projectId, store)
     logger.debug(`Starting upload process for ${platform} with file: ${file.name}`);
     
     // CRITICAL: Ensure uploads always target userdata.db, never demo.db
-    DB.setActiveDatabase('userdata');
     if (store) {
       store.commit('SET_DEMO_MODE', false);
       store.commit('SET_CURRENT_DB', 'userdata');
@@ -66,7 +65,7 @@ export async function processUpload(file, platform, givenName, projectId, store)
     
     try {
       const previousIds = ((store.state.project && store.state.project.dataExports) || []).map((de) => de.id);
-      const uploads = await DB.getUploads();
+      const uploads = await DB.getUploads('userdata');
       const virtualProject = {
         id: 1,
         name: 'Local Takeout Workspace',
@@ -75,7 +74,7 @@ export async function processUpload(file, platform, givenName, projectId, store)
         dataExports: uploads.uploads || []
       };
       
-      const meta = await DB.getEventMeta();
+      const meta = await DB.getEventMeta('userdata');
       store.commit('SET_PROJECT', { objects: [virtualProject], meta });
       const newIds = virtualProject.dataExports
         .map((de) => de.id)
