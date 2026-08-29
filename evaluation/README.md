@@ -79,7 +79,8 @@ Running outside of Docker is not recommended. You must change your Docker/VM set
        --full evaluation/entity_resolution/runs/fp_stalker_<timestamp>/full/results.csv \
        --n30  evaluation/entity_resolution/runs/fp_stalker_<timestamp>/n30/results.csv \
        --n60  evaluation/entity_resolution/runs/fp_stalker_<timestamp>/n60/results.csv \
-       --metric mean_bcubed_precision # (or mean_bcubed_recall, bcubed_f05)
+       --metric bcubed_f1 # (or mean_bcubed_precision, mean_bcubed_recall, bcubed_f05)
+
    ```
 
 
