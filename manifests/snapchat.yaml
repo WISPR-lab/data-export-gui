@@ -29,6 +29,12 @@ files:
       format: "json"
       json_root: "Download My Data Reports[]"
 
+  - id: "snap_device_info"
+    path: "json/account.json"
+    parser:
+      format: "json"
+      json_root: "Device Information"
+
   - id: "snap_device_history"
     path: "json/account.json"
     parser:
@@ -82,11 +88,26 @@ views:
       - {target: "@timestamp", source: "Date", type: "datetime"}
 
   - file:
+      id: "snap_device_info"
+    static:
+      event.kind: "state"
+      event.category: ["authentication", "session"]
+      entity.type: "application"
+      entity.sub_type: "app_registration"
+    fields:
+      - {target: "device.manufacturer", source: "Make", type: "string"}
+      - {target: "device.model.identifier", source: "Model ID", type: "string"}
+      - {target: "device.model.name", source: "Model Name", type: "string"}
+      - {target: "user_agent.os.name", source: "OS Type", type: "string"}
+      - {target: "user_agent.os.version", source: "OS Version", type: "string"}
+
+  - file:
       id: "snap_device_history"
     static:
       event.kind: "state"
       event.category: ["authentication", "session"]
-      entity.type: "host"
+      entity.type: "application"
+      entity.sub_type: "app_registration"
     fields:
       - {target: "device.manufacturer", source: "Make", type: "string"}
       - {target: "device.model.identifier", source: "Model", type: "string"}

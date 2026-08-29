@@ -133,7 +133,7 @@ views:
   - {target: "client.ip", source: "Recovery IP Address", type: "string"}
   - {target: "device.model.name", source: "Device Model", type: "string"}
 
-- file: 
+- file:
     id: "apple_legacy_contacts"
   static:
       event.action: "legacy_contact_addition"
@@ -143,7 +143,7 @@ views:
   fields:
   - {target: "@timestamp", source: "Beneficiary Create Date", type: "datetime"}
   - {target: "client.ip", source: "Beneficiary IP Address", type: "string"}
-  - {target: "device.model.identifier", source: "Device Model Name", type: "string"}
+  - {target: "device.model.name", source: "Device Model Name", type: "string"}
 
 - file:
     id: "apple_passkey"
@@ -273,8 +273,7 @@ views:
   - { target: "entity.first_seen_timestamp", source: "First Register Timestamp", type: "datetime" }
   - { target: "entity.last_seen_timestamp", source: "Location Timestamp", type: "datetime" }
   - { target: "entity.display_name", source: "Device Name", type: "string" }
-  - { target: "device.model.name", source: "Device Model", type: "string" }
-  - { target: "device.model.identifier", source: "Paired Devices[0].productType", type: "string" }
+  - { target: "device.model.identifier", source: ["Device Model", "Paired Devices[0].productType"], transform: coalesce, type: "string" }
   - { target: "os.version", source: "Product Version", type: "string" }
   - { target: "user_agent.os.type", source: "Device Platform", type: "string" }
   - { target: "user_agent.original", source: "Device OS Build Version", type: "string" }
@@ -304,7 +303,7 @@ views:
   - { target: "entity.first_seen_timestamp", source: "First Register Timestamp", type: "datetime" }
   - { target: "entity.last_seen_timestamp", source: "Location Timestamp", type: "datetime" }
   - { target: "entity.display_name", source: "Device Name", type: "string" }
-  - { target: "device.model.name", source: "Device Model", type: "string" }
+  - { target: "device.model.identifier", source: "Device Model", type: "string" }
   - { target: "os.version", source: "Product Version", type: "string" }
   - { target: "device.timezone", source: "Device Timezone", type: "string" }
   - { target: "device.locale", source: "Device Locale", type: "string" }

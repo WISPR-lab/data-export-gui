@@ -30,7 +30,9 @@ views:
       - {target: "@timestamp", source: "timestamp", type: "datetime"}
       - {target: "client.ip", source: "ip", type: "string"}
       - {target: "user_agent.original", source: "browser", type: "string"}
-      - {target: "device.model.name", source: "device", type: "string"}
+      - {target: "device.model.identifier", source: ["device_product", "device"], type: "string", transform: "coalesce"}
+      - {target: "device.model.name", source: ["device_model", "device_brand"], type: "string", transform: "coalesce"}
+      - {target: "device.manufacturer", source: "device_manufacturer", type: "string"}
       - {target: "device.id.discord", source: "device_vendor_id", type: "string"}
       - {target: "user_agent.os.name", source: "os", type: "string"}
       - {target: "user_agent.os.version", source: "os_version", type: "string"}
