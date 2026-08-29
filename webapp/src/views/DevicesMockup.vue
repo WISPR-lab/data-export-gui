@@ -68,7 +68,7 @@ var SECTION_DEFS = [
   {
     key: 'hardware_registration',
     label: 'Registered Hardware',
-    description: 'These are physical devices connected to this account at the operating system level, like an iPhone signed in iCloud or an Android device signed in Google. These often include hardware identifiers like serial numbers or IMEIs.',
+    description: 'These are physical devices connected to this account at the operating system level, like an iPhone signed in to iCloud or an Android device signed in to Google. These often include hardware identifiers like serial numbers or IMEIs.',
     sortByGroup: false
   },
   {
