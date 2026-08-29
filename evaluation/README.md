@@ -1,49 +1,13 @@
 # Evaluation
 
-Evaluation scripts and data:
-- **5.1 - Entity Resolution**: `evaluation/entity_resolution/`
-- **5.2 - Time/Memory Performance**: `evaluation/efficiency/`
-- **6 - Misc User Study Scripts**: `evaluation/user_study/`
+Scripts and instructions for running evaluations:
+- **Entity Resolution Evaluation**: `evaluation/entity_resolution/`
+- **Time/Memory Performance Benchmarking**: `evaluation/efficiency/`
+- **User Study Data Analysis**: `evaluation/user_study/`
 
 ---
 
-## 5.2 - Time/Memory Performance
-
-The pipeline logs timing (duration, rows, DB calls per stage) on every run, printed as JSON to
-the console and downloaded as `<filename>_mem_perf.csv`. Column/field meanings are documented
-inline in `python_core/performance.py` and `webapp/src/utils/performanceExport.js` — read those,
-not this file, for the current schema.
-
-Memory sampling (JS heap + WASM heap, per stage) is optional — set `PERFORMANCE_MEMORY_SAMPLING=1`
-**before** `sync_assets.sh` runs (i.e. before `yarn serve`/`yarn build`):
-```bash
-PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
-```
-
-### Using Data for Efficiency Evaluation
-
-The 1x baseline archives are `evaluation/efficiency/data/{google,facebook}_original.zip`, and every
-augmented multiplier is derived from them. They come from research accounts created for Nonnenkamp et al.,
-CCS '25 ([10.1145/3719027.3765147](https://doi.org/10.1145/3719027.3765147)), used here with permission.
-See [_Sample Data_](../README.md#sample-data) in the root README for the full citation and the
-anonymization details. Please cite that paper if you use these archives.
-
-1. **Generate augmented datasets** (if testing scalability):
-   ```bash
-   uv run python -m evaluation.efficiency.augment --platform facebook --multiplier 100
-   uv run python -m evaluation.efficiency.augment --platform google --multiplier 1000
-   ```
-
-2. **Run pipeline with timing/memory profiling enabled** and upload augmented ZIP files through the web UI.
-
-3. **Analyze the downloaded CSV** to measure:
-   - How time/memory scale with data size (1x vs 10x vs 100x vs 1000x)
-   - Which stages are performance bottlenecks
-   - Peak memory usage per stage
-
----
-
-## 5.1 - Entity Resolution Evaluation
+## Entity Resolution Evaluation
 
 This measures how well the device entity resolution pipeline (`python_core/device_grouping2/`) decides
 whether two authentication or session records came from the same device. Because data exports carry no
@@ -79,15 +43,15 @@ Running outside of Docker is not recommended. You must change your Docker/VM set
    * [WSL](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configuration-setting-for-wslconfig)
 
 #### Linux users
-* If you are _not_ using a VM to run Docker, proceed (but add the `--memory="8g"` flag").
-* If you are using a VM, ensure disk/memory limits meet the requirments. But you probably already know how to do that...
+* If you are _not_ using a VM to run Docker, proceed (adding the `--memory="8g"` flag).
+* If you are using a VM, ensure disk/memory limits meet the requirements above.
 
 ### Run Instructions
 
 1. **Start the container**:
 
    ```bash
-      # from data-export-gui dir
+      # from project root
       mkdir -p evaluation/entity_resolution/data_raw
       
       # mac/windows OR linux with VM
@@ -96,7 +60,7 @@ Running outside of Docker is not recommended. You must change your Docker/VM set
       # if linux w/o VM
       docker compose run --rm eval --memory="8g" # or "4g", etc.
    ```
-   This will put you in an interactive bash session inside the container (at `/workspace`). The raw datasets will be downloaded to Docker named volume (`data_raw`) mounted at `evaluation/entity_resolution/data_raw` to speed up the SQLite writes.
+   This will put you in an interactive bash session inside the container (at `/workspace`). The raw datasets will be downloaded to Docker named volume (`data_raw`) mounted at `evaluation/entity_resolution/data_raw` to speed up SQLite writes.
 
 2. Inside the container shell, **download data and run evaluation**:
    ```bash
@@ -108,7 +72,35 @@ Running outside of Docker is not recommended. You must change your Docker/VM set
 
 ---
 
-## 6 - Misc User Study Scripts
+## Time/Memory Performance Evaluation
+
+The pipeline logs timing (duration, rows, DB calls per stage) on every run, printed as JSON to the console and downloaded as `<filename>_mem_perf.csv`. Column definitions are documented inline in `python_core/performance.py` and `webapp/src/utils/performanceExport.js`.
+
+Memory sampling (JS heap + WASM heap, per stage) is optional — set `PERFORMANCE_MEMORY_SAMPLING=1` **before** `sync_assets.sh` runs (i.e. before `yarn serve`/`yarn build`):
+```bash
+PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
+```
+
+### Using Data for Efficiency Evaluation
+
+The 1x baseline archives are `evaluation/efficiency/data/{google,facebook}_original.zip`, and every augmented multiplier is derived from them. They originate from the open research dataset published by Nonnenkamp et al. [2] ([10.1145/3719027.3765147](https://doi.org/10.1145/3719027.3765147)). See [_Sample Data_](../README.md#sample-data) in the root README for citation details.
+
+1. **Generate augmented datasets** (if testing scalability):
+   ```bash
+   uv run python -m evaluation.efficiency.augment --platform facebook --multiplier 100
+   uv run python -m evaluation.efficiency.augment --platform google --multiplier 1000
+   ```
+
+2. **Run pipeline with timing/memory profiling enabled** and upload augmented ZIP files through the web UI.
+
+3. **Analyze the downloaded CSV** to measure:
+   - How time/memory scale with data size (1x vs 10x vs 100x vs 1000x)
+   - Which stages are performance bottlenecks
+   - Peak memory usage per stage
+
+---
+
+## User Study Analysis Scripts
 
 Scripts for analyzing qualitative user study data (`evaluation/user_study/`):
 

@@ -1,12 +1,5 @@
 # Demographic Survey
 
-Screening and demographics questions administered to prospective participants
-(tech clinic consultants) via Qualtrics.
-
-Transcribed from the Qualtrics print preview of survey `SV_2fSG8xu5veHuRU2`
-(2026-07-07). Covers pages 3–8 of 8; earlier pages are not included here.
-
----
 
 ## Tech Clinic Experience
 

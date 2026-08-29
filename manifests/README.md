@@ -94,8 +94,7 @@ hardcoded ECS (Elastic Common Schema) values for every event in this view.
   `event.action`, `entity.type`, and `entity.sub_type` requires is declared in `__taxonomy.yaml` under
   `relationships:` and enforced by the validator (see below).
 
-The full accepted vocabulary for every field lives in `manifests/__taxonomy.yaml`, which is the source of
-truth. This README summarizes it, but the taxonomy and the validator are what actually gate a manifest.
+The accepted vocabulary for every field is defined in `manifests/__taxonomy.yaml`.
 
 #### Dynamic field mappings:
 Every item must have `target` (the standardized ECS field name) and a `source` (the raw data key in the file), and optionally a `type` and `transform`. Path traversal for `source` fields follows conventions above. 
