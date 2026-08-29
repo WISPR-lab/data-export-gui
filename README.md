@@ -97,7 +97,8 @@ To try the tool without requesting your own export, see [_Sample Data_](#sample-
 
 When you import your data export file, it is never transmitted over the network; all unzipping, parsing, and database transactions happen entirely inside your local browser sandbox. The codebase does not make external API requests containing your data (such as querying a remote service to parse User Agents or geolocate IP addresses).
 
-Pyodide binaries, WASM files, and Python package wheels are fully vendored and served locally from the web app bundle (`/pyodide/` and `/wheels/`). The web app can run offline once loaded.
+Pyodide binaries, WASM files, and Python package wheels are fetched during build/asset synchronization (`sync_assets.sh`) and cached locally within the web app bundle (`/pyodide/` and `/wheels/`). Once built, the web application serves all runtime assets locally and runs entirely offline.
+
 
 
 
