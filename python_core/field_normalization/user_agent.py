@@ -7,6 +7,9 @@ logger = get_logger("user_agent")
 
 
 class UserAgentParser:
+    # fallback for Google webview UAs (e.g. "OcIdWebView") that embed version in a JSON blob
+    GOOGLE_APP_VERSION_RE = re.compile(r'"appVersion":"([\d.]+)"')
+
     def __init__(self):
         self._cache = {}
         self.FBAN_RE = re.compile(r"FB([A-Z]+)/([^;\]]+)")
@@ -52,6 +55,9 @@ class UserAgentParser:
             attrs["user_agent_client_name"] = dd.client_name()
         if dd.client_version():
             attrs["user_agent_client_version"] = dd.client_version()
+        elif "OcIdWebView" in ua_string:
+            if m := self.GOOGLE_APP_VERSION_RE.search(ua_string):
+                attrs["user_agent_client_version"] = m.group(1)
         if dd.client_type():
             attrs["user_agent_client_type"] = dd.client_type()
         if dd.client_application_id():
