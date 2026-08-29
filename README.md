@@ -61,10 +61,9 @@ The web application will be live at `http://localhost:5001`.
 
 You do not need your own data export to try the tool (although you are welcome to try, see more below). Two exports are checked into this repository:
 
-| File | Platform | Upload as |
-|---|---|---|
-| `evaluation/efficiency/data/google_original.zip` | Google Takeout | *Google* |
-| `evaluation/efficiency/data/facebook_original.zip` | Facebook | *Facebook* |
+* `evaluation/efficiency/data/google_original.zip` (Google)
+* `evaluation/efficiency/data/facebook_original.zip` (Facebook)
+
 
 Start the web app, go to Explore your Data --> Add Data Export, choose the matching platform, and select the ZIP as-is.
 
