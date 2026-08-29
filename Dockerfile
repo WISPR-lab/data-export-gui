@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	git \
 	ca-certificates \
 	tar \
+	zip \
 	&& uv python install 3.12 \
 	&& ln -sf "$(uv python find 3.12)" /usr/local/bin/python \
 	&& ln -sf "$(uv python find 3.12)" /usr/local/bin/python3 \

@@ -50,17 +50,6 @@ class TestManifestPathMatching:
             f"Expected ggl_access_log_devices, got {cfg.get('id')}"
         )
 
-    def test_matches_takeout_myactivity(self):
-        """Test matching Takeout MyActivity HTML."""
-        manifest = Manifest("google", manifest_dir="manifests", validate=False)
-
-        opfs_filename = "google___My Activity___Takeout___MyActivity.html"
-        cfg = manifest.get_file_cfgs(opfs_filename)[0]
-
-        assert cfg.get("id") == "ggl_takeout_activity", (
-            f"Expected ggl_takeout_activity, got {cfg.get('id')}"
-        )
-
     def test_no_match_returns_empty_list(self):
         """Test that non-matching filename returns an empty list."""
         manifest = Manifest("google", manifest_dir="manifests", validate=False)

@@ -56,8 +56,10 @@ DIST_DIR="$SUBMODULE_DIR/dist"
 echo "[sync-assets] Syncing UA-Extract-purepy submodule wheels..."
 local_wheels=("$DIST_DIR"/*.whl)
 
-if [ ${#local_wheels[@]} -eq 0 ]; then
+# An unmatched glob stays literal, so test the first entry rather than the array length.
+if [ ! -e "${local_wheels[0]}" ]; then
 echo "[sync-assets] ERROR: No .whl files found in $DIST_DIR"
+echo "[sync-assets] build_wheels.sh ran but produced nothing - check its output above."
 exit 1
 fi
 
