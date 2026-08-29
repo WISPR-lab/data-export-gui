@@ -74,7 +74,8 @@ export default {
     async handleDelete() {
       try {
         this.isDeleting = true;
-        await clearAllTables();
+        var dbName = (this.$route && this.$route.meta && this.$route.meta.dbName) || 'userdata';
+        await clearAllTables(dbName);
 
         const opfsManager = new OPFSManager();
         await opfsManager.clearTempStorage();
