@@ -106,18 +106,13 @@ docs*
 .pytest_cache/*
 .ruff_cache
 evaluation/entity_resolution/data_raw/
-uv.lock
 webapp/public/vendor/
 webapp/public/pyodide/
-evaluation/old/demo/runs/*
-evaluation/old/demo/*.duckdb
 evaluation/entity_resolution/runs/*
 evaluation/efficiency/newdata/*
-evaluation/efficiency/OLDdata/*
 evaluation/efficiency/data/*
 
 !evaluation/efficiency/newdata/*.zip
-!evaluation/efficiency/OLDdata/*.zip
 !evaluation/efficiency/data/*_original.zip
 !evaluation/efficiency/trial_time_mem_results.zip
 evaluation/user_study/*.csv
