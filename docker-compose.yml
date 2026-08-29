@@ -5,12 +5,15 @@ services:
     build: .
     ports:
       - "5001:5001"
+    environment:
+      - PERFORMANCE_MEMORY_SAMPLING=${PERFORMANCE_MEMORY_SAMPLING:-0}
     volumes:
       - .:/workspace
       - /workspace/.venv
       - /workspace/node_modules
       - /workspace/webapp/node_modules
     command: yarn --cwd webapp serve
+
 
   eval:
     build: .

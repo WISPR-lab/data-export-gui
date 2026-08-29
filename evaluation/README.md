@@ -5,6 +5,11 @@ Scripts and instructions for running evaluations:
 - **Time/Memory Performance Benchmarking**: `evaluation/efficiency/`
 - **User Study Data Analysis**: `evaluation/user_study/`
 
+> **Docker Containers**:
+> * **`web`**: Web application server (`docker compose up web`).
+> * **`eval`**: Terminal CLI for running Python evaluation scripts (`docker compose run --rm eval`).
+
+
 ---
 
 ## Entity Resolution Evaluation
@@ -58,7 +63,8 @@ Running outside of Docker is not recommended. You must change your Docker/VM set
    # linux without VM (optional memory limit)
    docker compose run --rm eval --memory="8g"
    ```
-   This opens an interactive bash shell inside the container (`/workspace`). Raw datasets are saved to a Docker named volume (`data_raw`) mounted at `evaluation/entity_resolution/data_raw`.
+   This opens an interactive bash shell inside the container (`/workspace`). Type `exit` (or press `Ctrl+D`) to leave when finished.
+
 
 
 
@@ -81,66 +87,65 @@ Running outside of Docker is not recommended. You must change your Docker/VM set
 
 ## Time/Memory Performance Evaluation
 
-The pipeline logs timing (duration, rows, DB calls per stage) on every run, printed as JSON to the console and downloaded as `<filename>_mem_perf.csv`. Column definitions are documented inline in `python_core/performance.py` and `webapp/src/utils/performanceExport.js`.
+All python evaluation commands below are run inside the interactive `eval` container environment from Section 5.1 (`docker compose run --rm eval`).
 
-Memory sampling (JS heap + WASM heap, per stage) is optional — set `PERFORMANCE_MEMORY_SAMPLING=1` **before** `sync_assets.sh` runs (i.e. before `yarn serve`/`yarn build`):
+Pre-computed trial logs across 1x, 10x, 100x, and 1000x runs are already committed in `evaluation/efficiency/trials/`.
+
+### 1. Reproduce Performance Summary Table (Pre-computed Data)
+
+Generate the paper's efficiency benchmark summary table:
 ```bash
-PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
+uv run python -m evaluation.efficiency.summarize_trials
 ```
+*Outputs `evaluation/efficiency/stats_by_export.csv` (overall summary) and `stats_by_stage.csv` (per-stage breakdown).*
 
-### Using Data for Efficiency Evaluation
+### 2. (Optional) Run Fresh Profiling from Scratch
 
-The 1x baseline archives are `evaluation/efficiency/data/{google,facebook}_original.zip`, and every augmented multiplier is derived from them. They originate from the open research dataset published by Nonnenkamp et al. [3] ([10.1145/3719027.3765147](https://doi.org/10.1145/3719027.3765147)). See [_Sample Data_](../README.md#sample-data) in the root README for citation details.
+To generate new augmented datasets (derived from 1x baseline archives [2]) and profile fresh runs:
 
 1. **Generate augmented datasets**:
    ```bash
-   docker compose run --rm eval uv run python -m evaluation.efficiency.batch_augment
+   uv run python -m evaluation.efficiency.batch_augment
    ```
 
 2. **Profile runs in Web UI**:
-   > [!NOTE]
-   > If `docker compose up --build web` is currently running, **stop it first** (`Ctrl+C` or `docker compose down`). Memory sampling requires starting the container with `PERFORMANCE_MEMORY_SAMPLING=1`.
+   If the web application (`web`) is running in another terminal window, stop it first:
 
+   ```bash
+   docker compose down
+   ```
    Relaunch with memory sampling enabled:
    ```bash
-   PERFORMANCE_MEMORY_SAMPLING=1 docker compose up --build web
+   PERFORMANCE_MEMORY_SAMPLING=1 docker compose up web
    ```
-   Open `http://localhost:5001` and upload each archive. The browser will automatically download a `<filename>_mem_perf.csv` log file for each run.
-
-   Move all downloaded CSV log files from your Downloads folder into `evaluation/efficiency/trials/`:
+   Upload each archive at `http://localhost:5001`. Move downloaded CSV log files from your Downloads folder into `evaluation/efficiency/trials/`:
    ```bash
    mkdir -p evaluation/efficiency/trials
    mv ~/Downloads/*_mem_perf.csv evaluation/efficiency/trials/
    ```
 
-3. **Generate scaling charts and summary data**:
-   ```bash
-   docker compose run --rm eval uv run python -m evaluation.efficiency.summarize_trials
-   docker compose run --rm eval uv run python -m evaluation.efficiency.draft_charts
-   ```
-
+3. **Re-generate table**: Re-run `uv run python -m evaluation.efficiency.summarize_trials` above.
 
 
 ---
 
 ## User Study Analysis Scripts
 
-User study CSV files are omitted from the repository to protect participant privacy. 
-The following commands **will not work without the omitted data,** but we provide them to be transparent.
+User study CSV files are omitted from the repository to protect participant privacy.
 
 ### Execution
 
 - **Inter-Rater Reliability (`irr.py`)**:
   ```bash
-  docker compose run --rm eval uv run python evaluation/user_study/irr.py <path/to/codes.csv>
+  uv run python evaluation/user_study/irr.py <path/to/codes.csv>
   ```
 - **Feature Usage Chart (`feature_use_chart.py`)**:
   ```bash
-  docker compose run --rm eval uv run python evaluation/user_study/feature_use_chart.py
+  uv run python evaluation/user_study/feature_use_chart.py
   ```
 
 ### Input CSV Formats
-Below we provide the CSV formats that both of the above scripts expect.
+
 #### Qualitative Coding CSV (for `irr.py`)
 
 | Participant | Row Number | Coder 1 - Feature Use | Coder 2 - Feature Use | Coder 1 - Prompted | Coder 2 - Prompted | Coder 1 - Reaction | Coder 2 - Reaction |
@@ -154,6 +159,10 @@ Below we provide the CSV formats that both of the above scripts expect.
 | Add/Remove Tag | Unprompted | Prompted | ... |
 | Devices View | Prompted | Unprompted | ... |
 
+---
+
 ## References
-see main root README
+
+See main root [`README.md`](../README.md#references).
+
 
