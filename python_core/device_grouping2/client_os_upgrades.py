@@ -16,7 +16,7 @@ Key = (manufacturer if present else <unknown>, model, OS name, OS version, brows
 Records are grouped by key, then sorted by timestamp within each group, then walked in order.
 
 An edge is added between consecutive records A, B in that walk iff:
-(a) 0 <= B.timestamp - A.timestamp <= MAX_DAYS_CLIENT_DIFF (30 by default)
+(a) 0 <= B.timestamp - A.timestamp <= MAX_DAYS_CLIENT_DIFF (90 by default)
 (b) B.client_version >= A.client_version
 Records missing client_version or any of the key fields (other than
 manufacturer, because desktop UAs don't report it), are dropped before 
@@ -33,7 +33,7 @@ import re
 import json
 from packaging import version
 
-MAX_DAYS_CLIENT_DIFF = 30  # this is to sever spurious links across long time gaps
+MAX_DAYS_CLIENT_DIFF = 90  # default 90 days to sever spurious links across long time gaps
 
 BASE_ATTRIBUTES = [
     "attr__norm__manufacturer",

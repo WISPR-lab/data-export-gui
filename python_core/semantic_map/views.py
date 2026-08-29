@@ -73,7 +73,10 @@ def dynamic_fields(record: dict, view: dict, default=""):
 
         if ftype in ["datetime", "timestamp", "date"]:
             val = unix_ms(parse_date(str(val)))
-        fields[clean_target(target)] = val
+
+        key = clean_target(target)
+        if not is_trivial(val) or key not in fields:
+            fields[key] = val
     return fields
 
 

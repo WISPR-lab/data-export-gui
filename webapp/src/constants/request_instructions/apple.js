@@ -24,9 +24,8 @@ export const instructionApple = {
       title: 'Select security data categories',
       image: appleCategories,
       description: `1. Do not **\`Select all\`**. LEStrADE only parses security data, and smaller requests take less time.
-2. Select the following 3 categories:
+2. Select the following 2 categories:
    - **\`Apple ID account and device information\`** (Login logs, password changes, passkeys, recovery contacts, device serial numbers & IMEIs)
-   - **\`App install and push notification activity\`** (Push notification IP network logs & locations)
    - **\`Marketing communications, downloads, and other data\`** (Includes data about old devices, but sometimes not available)
 3. Click **\`Continue\`**.`
     },

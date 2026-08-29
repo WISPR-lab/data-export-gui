@@ -1,5 +1,6 @@
 # checked by scripts/validate_manifests.py
 # add new entries as needed
+# parsed_field_only: true means the field is only ever computed in Python, never a manifest target — the validator rejects any manifest that sets it
 
 fields:
   '@timestamp':
@@ -50,9 +51,11 @@ fields:
     description: Hardware serial number
     url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
   device.timezone: null
-  entity.display_name: 
+  entity.display_name:
     description: human-readable name of the entity (e.g., calling your phone "Name's iPhone")
     url: https://www.elastic.co/docs/reference/ecs/ecs-entity#field-entity-display-name
+  entity.inactive:
+    description: not ECS — true if the entity is known to no longer be active (device deleted, session inferred but never confirmed live)
   entity.first_seen_timestamp:
     description: timestamp of the first time a device/session was seen or used
   entity.id:
@@ -185,15 +188,55 @@ fields:
   geo.city_name:
     description: city name, from IP geolocation
     url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+  geo.continent_code:
+    description: continent code, derived from geo.country_iso_code
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+    parsed_field_only: true
+  geo.continent_name:
+    description: continent name, derived alongside geo.continent_code
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+    parsed_field_only: true
   geo.country_iso_code:
     description: country ISO code, from IP geolocation
     url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+  geo.country_name:
+    description: country name, derived by splitting geo.name
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+    parsed_field_only: true
   geo.name:
     description: location as a plain string (e.g. "City, State, United States"). Note that ECS's real geo.name is meant for custom location labels like data center names, this is a looser fit.
     url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
   geo.region_iso_code:
     description: region/state ISO code, from IP geolocation
     url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+  geo.region_name:
+    description: region/state name, derived by splitting geo.name
+    url: https://www.elastic.co/guide/en/ecs/current/ecs-geo.html
+    parsed_field_only: true
+  norm__client_name:
+    description: lowercased/trimmed client app name, composited from primary + secondary user-agent client names
+    parsed_field_only: true
+  norm__client_version:
+    description: lowercased/trimmed client app version
+    parsed_field_only: true
+  norm__manufacturer:
+    description: lowercased/trimmed device manufacturer, inferred from model name if not directly present
+    parsed_field_only: true
+  norm__model_identifier:
+    description: lowercased/trimmed copy of device.model.identifier, used as a stable dedup/grouping key
+    parsed_field_only: true
+  norm__model_name:
+    description: lowercased/trimmed, non-generic-preferred copy of device.model.name
+    parsed_field_only: true
+  norm__os_name:
+    description: lowercased/trimmed OS name, resolved via pattern matching
+    parsed_field_only: true
+  norm__os_type:
+    description: lowercased/trimmed broad OS category (ios/android/etc)
+    parsed_field_only: true
+  norm__os_version:
+    description: lowercased/trimmed OS version
+    parsed_field_only: true
   os.version:
     description: OS version reported directly by the platform vendor (e.g. apple's own account/device export) rather than parsed from a user-agent string — more trustworthy than user_agent.os.version, kept separate deliberately
     url: null
@@ -236,9 +279,48 @@ fields:
   user_agent.os.version:
     description: OS version parsed from the user agent, see os.version if reported directly by the oS
     url: https://www.elastic.co/guide/en/ecs/current/ecs-os.html
-
-
-
+  user_agent_client_application_id:
+    description: client application identifier parsed from user_agent.original
+    parsed_field_only: true
+  user_agent_client_type:
+    description: client type parsed from user_agent.original (e.g. "browser", "mobile app")
+    parsed_field_only: true
+  user_agent_client_version:
+    description: client app version parsed from user_agent.original
+    parsed_field_only: true
+  user_agent_device_manufacturer:
+    description: device manufacturer parsed from user_agent.original
+    parsed_field_only: true
+  user_agent_device_model_identifier:
+    description: raw Apple hardware model identifier (e.g. "iPhone11,8") extracted from Facebook/Instagram FBAN user-agent tokens
+    parsed_field_only: true
+  user_agent_device_model_name:
+    description: device model name parsed from user_agent.original, distinct from device.model.name which comes directly from a vendor export
+    parsed_field_only: true
+  user_agent_device_type:
+    description: device type parsed from user_agent.original (e.g. "smartphone", "desktop")
+    parsed_field_only: true
+  user_agent_is_desktop:
+    description: true if the user agent parsed as a desktop device
+    parsed_field_only: true
+  user_agent_is_mobile:
+    description: true if the user agent parsed as a mobile device
+    parsed_field_only: true
+  user_agent_is_television:
+    description: true if the user agent parsed as a TV/streaming device
+    parsed_field_only: true
+  user_agent_secondary_client_name:
+    description: name of a second, embedding client parsed from user_agent.original (e.g. a webview host app)
+    parsed_field_only: true
+  user_agent_secondary_client_type:
+    description: type of the secondary client
+    parsed_field_only: true
+  user_agent_secondary_client_version:
+    description: version of the secondary client
+    parsed_field_only: true
+  user_agent_uses_mobile_browser:
+    description: true if the user agent indicates a mobile browser
+    parsed_field_only: true
 
 # relationships describe how fields must relate to each other
 # for example, event.action=user_login must have event.kind=event, event.category=authentication, event.type=start

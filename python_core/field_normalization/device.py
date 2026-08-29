@@ -137,7 +137,7 @@ def normalize_device_fields(attrs: dict) -> dict:
         attrs["norm__client_name"] = (
             str(client_name).strip().lower()
         )  # TODO make sure not "unknown"
-    client_version = _get_val(attrs, "client_version")
+    client_version = _get_val(attrs, "client_version") or attrs.get("user_agent_secondary_client_version")
     if client_version:
         attrs["norm__client_version"] = str(client_version).strip().lower()
 

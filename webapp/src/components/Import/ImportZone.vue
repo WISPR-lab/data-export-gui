@@ -48,7 +48,6 @@ It replaces the generic UploadForm for the new workflow.
             <p class="mb-1 font-weight-medium">Expected files / categories:</p>
             <ul class="pl-4 my-0" style="line-height: 1.3;">
               <li>Apple ID account and device information</li>
-              <li>App install and push notification activity</li>
               <li>Other Data (optional)</li>
             </ul>
           </div>

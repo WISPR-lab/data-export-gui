@@ -1,10 +1,11 @@
-import { Unzip, UnzipInflate } from 'fflate';
+import { Unzip, UnzipInflate, unzipSync } from 'fflate';
 import jsyaml from 'js-yaml';
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js';
 import EventBus from '@/event-bus.js';
 import { getLogger } from '@/utils/logger';
 
 const logger = getLogger('OPFSManager');
+const MAX_NESTED_ZIP_DEPTH = 5; // Apple splits large exports into zips-within-zips
 
 export class OPFSManager {
   constructor() {
@@ -108,7 +109,7 @@ export class OPFSManager {
   }
 
   async processZipUpload(zipFile, platform) {
-    /* Streams zip via fflate into OPFS; only whitelist-matching entries are decompressed and saved. Rejects if any write fails or storageDir is empty after writes report success. */
+    /* Streams zip via fflate into OPFS, recursing into any nested .zip entries first; only whitelist-matching leaf entries are saved. Rejects if any write fails or storageDir is empty after writes report success. */
     await this.init(platform);
     return new Promise((resolve, reject) => {
       const savedPromises = [];
@@ -124,7 +125,17 @@ export class OPFSManager {
         if (file.name.endsWith('/')) return;
 
         totalSeen++;
-        if (this.isWhitelisted(file.name)) {
+        if (/\.zip$/i.test(file.name)) {
+          totalAccepted++; // counts the nested zip itself, not its individual leaf files
+          const p = this._bufferFileEntry(file)
+            .then((bytes) => this._extractNestedZipBuffer(bytes, 1))
+            .then(() => { writeSuccesses++; })
+            .catch((err) => {
+              writeFailures++;
+              logger.error(`Nested zip extraction FAILED for ${file.name}:`, err);
+            });
+          savedPromises.push(p);
+        } else if (this.isWhitelisted(file.name)) {
           totalAccepted++;
           // console.log(`[WHITELIST ACCEPTED] ${file.name}`);
           const safeName = this.flattenPath(file.name);
@@ -355,5 +366,46 @@ export class OPFSManager {
 
       fflateFile.start();
     });
+  }
+
+  async _bufferFileEntry(fflateFile) {
+    /* Drains an fflate entry into memory instead of OPFS — needed to unzipSync() a nested zip, which requires the complete bytes. */
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      let totalBytes = 0;
+      fflateFile.ondata = (err, data, final) => {
+        if (err) return reject(err);
+        if (data) { chunks.push(data); totalBytes += data.byteLength; }
+        if (final) {
+          const buffer = new Uint8Array(totalBytes);
+          let offset = 0;
+          for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.byteLength; }
+          resolve(buffer);
+        }
+      };
+      fflateFile.start();
+    });
+  }
+
+  async _extractNestedZipBuffer(buffer, depth) {
+    /* Apple splits large exports into zips-within-zips — recurse until we hit real files, then whitelist-filter and save them same as the top-level stream. */
+    if (depth > MAX_NESTED_ZIP_DEPTH) {
+      logger.warn(`Nested zip depth exceeded ${MAX_NESTED_ZIP_DEPTH}, stopping recursion`);
+      return;
+    }
+    const entries = unzipSync(buffer);
+    await Promise.all(Object.entries(entries).map(([name, data]) => {
+      if (name.endsWith('/')) return null;
+      if (/\.zip$/i.test(name)) return this._extractNestedZipBuffer(data, depth + 1);
+      if (this.isWhitelisted(name)) return this._saveBytes(this.flattenPath(name), data);
+      return null;
+    }));
+  }
+
+  async _saveBytes(filename, bytes) {
+    const fileHandle = await this.storageDir.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(bytes);
+    await writable.close();
   }
 }

@@ -257,6 +257,8 @@ def validate_manifest(cfg, taxonomy):
         static = v.get("static") or {}
         for name, kind, value in iter_view_fields(v):
             used_field_names.add(name)
+            if (taxonomy_fields.get(name) or {}).get("parsed_field_only"):
+                issues.append(Issue("error", f"{loc}.{kind}.{name}: parsed_field_only — computed in Python, cannot be set from a manifest"))
             if kind == "static":
                 issues.extend(check_static_value(name, value, taxonomy_fields, f"{loc}.static.{name}"))
         issues.extend(check_relationships(static, relationships, loc))
@@ -289,7 +291,8 @@ def validate_manifest(cfg, taxonomy):
 
 
 def report_unused_taxonomy_entries(taxonomy, used_fields, used_values):
-    orphaned_fields = sorted(set(taxonomy["fields"]) - set(used_fields))
+    parsed_only = {n for n, v in taxonomy["fields"].items() if isinstance(v, dict) and v.get("parsed_field_only")}
+    orphaned_fields = sorted(set(taxonomy["fields"]) - set(used_fields) - parsed_only)
     if orphaned_fields:
         print(f"taxonomy: field(s) declared but unused anywhere: {', '.join(orphaned_fields)} "
               "— safe to remove, or maybe just renamed")

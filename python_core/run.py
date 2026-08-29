@@ -75,7 +75,7 @@ def run(platform: str, given_name: str) -> dict:
             extract_res = extractor_worker.extract(platform, given_name, manifest=manifest, conn=conn)
             upload_id = extract_res.get("upload_id")
             if not upload_id:
-                raise ValueError("Extraction failed to return an upload_id")
+                raise ValueError(f"Extraction failed: {extract_res.get('error', 'no upload_id and no error message returned')}")
             result.rows = _rows_in_table(conn, "events", upload_id)
         stage_summaries.append(_stage_summary("extract", result))
 

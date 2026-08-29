@@ -18,28 +18,29 @@ class UserAgentParser:
         ua_string = attrs.get("user_agent_original", "") or attrs.get(
             "user_agent_os_full", ""
         )
+        is_google = False
         if file_info:
             mfst_id = file_info.get("manifest_file_id", "").lower()
             mfst_fname = file_info.get("manifest_filename", "").lower()
+            is_google = mfst_id.startswith("google") or mfst_id.startswith("ggl")
             if mfst_id == "ggl_access_log_activity" or (
-                mfst_id.startswith("google")
-                or mfst_id.startswith("ggl")
-                and "activities" in mfst_fname
+                is_google and "activities" in mfst_fname
             ):
                 ua_string = self._synthesize_google_ua(ua_string)
 
         if ua_string:
-            return self._parse(ua_string)
+            return self._parse(ua_string, is_google=is_google)
         return {}
 
-    def _parse(self, ua_string: str, skip_bot_detection=True) -> dict:
+    def _parse(self, ua_string: str, skip_bot_detection=True, is_google=False) -> dict:
 
         ua_string = ua_string.strip()
         if not ua_string:
             return {}
 
-        if ua_string in self._cache:
-            return self._cache[ua_string]
+        cache_key = (ua_string, is_google)
+        if cache_key in self._cache:
+            return self._cache[cache_key]
 
         attrs = {}
         try:
@@ -48,16 +49,13 @@ class UserAgentParser:
             ).parse()
         except Exception as e:
             logger.warning("DeviceDetector parse failure on UA '%s': %s", ua_string[:80], e)
-            self._cache[ua_string] = {}
+            self._cache[cache_key] = {}
             return {}
 
         if dd.client_name() and not attrs.get("user_agent_client_name"):
             attrs["user_agent_client_name"] = dd.client_name()
         if dd.client_version():
             attrs["user_agent_client_version"] = dd.client_version()
-        elif "OcIdWebView" in ua_string:
-            if m := self.GOOGLE_APP_VERSION_RE.search(ua_string):
-                attrs["user_agent_client_version"] = m.group(1)
         if dd.client_type():
             attrs["user_agent_client_type"] = dd.client_type()
         if dd.client_application_id():
@@ -66,8 +64,14 @@ class UserAgentParser:
             attrs["user_agent_secondary_client_name"] = dd.secondary_client_name()
         if dd.secondary_client_version():
             attrs["user_agent_secondary_client_version"] = dd.secondary_client_version()
+        elif "OcIdWebView" in ua_string:
+            if m := self.GOOGLE_APP_VERSION_RE.search(ua_string):
+                attrs["user_agent_secondary_client_version"] = m.group(1)
         if dd.secondary_client_type():
             attrs["user_agent_secondary_client_type"] = dd.secondary_client_type()
+
+        if is_google:
+            self._promote_google_api_client(ua_string, dd, attrs)
         if dd.is_mobile():
             attrs["user_agent_is_mobile"] = True
         if dd.is_desktop():
@@ -104,8 +108,26 @@ class UserAgentParser:
             if attrs.get(k) == "GGLUnknown":
                 attrs.pop(k)
 
-        self._cache[ua_string] = attrs
+        self._cache[cache_key] = attrs
         return attrs
+
+    def _promote_google_api_client(self, ua_string: str, dd, attrs: dict) -> None:
+        # native Google API-client UAs (e.g. "com.google.Gmail/6.0 iSL/3.4 iPhone/17.7.1 hw/...")
+        # get mislabeled "Mobile Safari" by a generic catch-all -- the real client is the secondary
+        if not (
+            " iSL/" in ua_string
+            and dd.client_name() == "Mobile Safari"
+            and not dd.client_version()
+            and dd.secondary_client_name()
+        ):
+            return
+        attrs["user_agent_client_name"] = dd.secondary_client_name()
+        attrs["user_agent_client_version"] = dd.secondary_client_version()
+        attrs["user_agent_client_type"] = dd.secondary_client_type()
+        attrs["user_agent_client_application_id"] = dd.client_application_id()
+        attrs.pop("user_agent_secondary_client_name", None)
+        attrs.pop("user_agent_secondary_client_version", None)
+        attrs.pop("user_agent_secondary_client_type", None)
 
     def _parse_fban(self, ua_string: str, attrs: dict) -> dict:
         """

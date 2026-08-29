@@ -34,7 +34,7 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
     for sid, evs in session_events.items():
         if sid not in raw_sids:
             first_ev = min(evs, key=lambda e: e["timestamp"])
-            attrs = {"client_session_id": sid, "inactive": True}
+            attrs = {"client_session_id": sid, "entity_inactive": True}
             for k in ("device_model_name", "norm__model_name", "model",
                       "user_agent_client_name", "norm__client_name", "client_name",
                       "user_agent_os_full", "norm__os_name", "os_name",
