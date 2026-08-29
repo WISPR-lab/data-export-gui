@@ -100,10 +100,12 @@ export function terminatePyodideWorker() {
 
 
 export async function executeUpload(file, platform, givenName, opfsManager, callbacks) {
-  /* Orchestrates ZIP→OPFS extraction (JS side), then delegates extract/map/normalize/group to Pyodide, then cleans temp storage. Attaches uploadId to errors for upstream cleanup. */
+  /* Orchestrates ZIP→OPFS extraction (JS side), then delegates extract/map/normalize/group to Pyodide, then cleans temp storage. Attaches uploadId to errors for upstream cleanup. file may be a single File or a File[] — multiple ZIPs are extracted into the same OPFS storage before the pipeline runs once, so they land under one upload_id. */
   const cb = callbacks || {};
   const onProgress = cb.onProgress;
   const onError = cb.onError;
+  const files = Array.isArray(file) ? file : [file];
+  const fallbackName = files[0].name;
   let uploadId;
 
   try {
@@ -112,17 +114,21 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
       onProgress({ stage: 'init_pyodide', progress: 5 });
     }
 
-    // Step 1: ZIP extraction (JS side)
-    if (onProgress) onProgress({ stage: 'extract_zip', progress: 15 });
+    // Step 1: ZIP extraction (JS side) — all files merge into the same OPFS storage dir
     await opfsManager.init(platform);
-    await opfsManager.processZipUpload(file, platform);
+    for (let i = 0; i < files.length; i++) {
+      if (onProgress) {
+        onProgress({ stage: 'extract_zip', progress: 15 + Math.round((i / files.length) * 10) });
+      }
+      await opfsManager.processZipUpload(files[i], platform);
+    }
 
     // Consolidated Step: Run entire pipeline in Pyodide (extract, semantic map, normalize, group)
     const jsHeapRelayTimer = await startJsHeapRelay();
     let result;
     try {
       // no timeout atm... todo
-      result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress, 0);
+      result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || fallbackName }, onProgress, 0);
     } finally {
       if (jsHeapRelayTimer) clearInterval(jsHeapRelayTimer);
     }
@@ -130,7 +136,7 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
 
     if (result.performance_summary && typeof process !== 'undefined' && process.env && process.env.VUE_APP_EXPORT_PERF_CSV === 'true') {
       try {
-        downloadPerformanceCsv(givenName || file.name, result.performance_summary);
+        downloadPerformanceCsv(givenName || fallbackName, result.performance_summary);
       } catch (e) {
         logger.warn('Failed to download performance CSV:', e);
       }

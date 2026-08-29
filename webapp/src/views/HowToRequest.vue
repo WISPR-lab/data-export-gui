@@ -77,14 +77,26 @@
                 </div>
               </v-col>
 
-              <v-col v-if="step.image" cols="12" md="5" class="pt-0 pt-md-3">
+              <v-col v-if="step.image || step.images" cols="12" md="5" class="pt-0 pt-md-3">
                 <v-img 
+                  v-if="step.image"
                   :src="step.image" 
                   :alt="step.title" 
                   class="rounded-lg elevation-2"
                   max-width="450"
                   contain
                 />
+                <template v-if="step.images">
+                  <v-img 
+                    v-for="(img, imgIdx) in step.images"
+                    :key="imgIdx"
+                    :src="img" 
+                    :alt="step.title" 
+                    class="rounded-lg elevation-2 mb-3"
+                    max-width="450"
+                    contain
+                  />
+                </template>
               </v-col>
             </v-row>
           </v-timeline-item>

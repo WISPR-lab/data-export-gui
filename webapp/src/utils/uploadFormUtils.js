@@ -1,10 +1,10 @@
 export const PLATFORM_METADATA = {
   google:    { name: 'Google',    icon: 'mdi-google'    },
-  // discord:   { name: 'Discord',   icon: 'mdi-discord'   },
-  // apple:     { name: 'Apple',     icon: 'mdi-apple'     },
+  discord:   { name: 'Discord',   icon: 'mdi-discord'   },
+  apple:     { name: 'Apple',     icon: 'mdi-apple', allowMultipleFiles: true },
   facebook:  { name: 'Facebook',  icon: 'mdi-facebook'  },
   instagram: { name: 'Instagram', icon: 'mdi-instagram' },
-  // snapchat:  { name: 'Snapchat',  icon: 'mdi-snapchat'  },
+  snapchat:  { name: 'Snapchat',  icon: 'mdi-snapchat'  },
 };
 
 
@@ -17,6 +17,12 @@ export function getPlatformName(platformId) {
 export function getPlatformIcon(platformId) {
   const platform = PLATFORM_METADATA[platformId];
   return platform ? platform.icon : 'mdi-package';
+}
+
+
+export function platformAllowsMultipleFiles(platformId) {
+  const platform = PLATFORM_METADATA[platformId];
+  return !!(platform && platform.allowMultipleFiles);
 }
 
 

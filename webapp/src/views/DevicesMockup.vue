@@ -113,6 +113,7 @@ function buildEntry(s) {
     lastSeen: lastSeen,
     location: location,
     is_reduced_ua: s.is_reduced_ua,
+    is_inactive: Boolean(attrs.entity_inactive || attrs.inactive || s.entity_inactive || s.inactive),
     has_trusted_cookie: s.has_trusted_cookie,
     has_passkey: s.has_passkey,
     event_count: s.event_count,
@@ -162,7 +163,7 @@ export default {
   data() {
     return {
       platforms: [],
-      PAGE_SIZE: 5
+      PAGE_SIZE: 10
     };
   },
   computed: {

@@ -10,8 +10,10 @@ const logger = getLogger('UploadService');
 
 
 export async function processUpload(file, platform, givenName, projectId, store) {
-  /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. */
+  /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. file may be a single File (most platforms) or a File[] (Apple, which splits exports across multiple ZIPs). */
   const startTime = Date.now();
+  const files = Array.isArray(file) ? file : [file];
+  const fileNames = files.map((f) => f.name).join(', ');
   const summary = {
     success: false,
     platform,
@@ -24,8 +26,8 @@ export async function processUpload(file, platform, givenName, projectId, store)
   };
 
   try {
-    if (store) store.commit('START_UPLOAD', file.name);
-    logger.debug(`Starting upload process for ${platform} with file: ${file.name}`);
+    if (store) store.commit('START_UPLOAD', fileNames);
+    logger.debug(`Starting upload process for ${platform} with file(s): ${fileNames}`);
     
     // CRITICAL: Ensure uploads always target userdata.db, never demo.db
     if (store) {

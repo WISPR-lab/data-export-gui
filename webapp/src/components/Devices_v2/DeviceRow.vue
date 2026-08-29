@@ -50,14 +50,24 @@
                     Conflicts
                   </v-chip>
 
-                  <!-- Inline Masked link -->
+                  <!-- Inline Reduced link -->
                   <span
                     v-if="isReducedUa"
                     class="masked-glossary ml-2"
                     @click.stop="triggerInfoModal"
                   >
                     <v-icon size="13" class="icon-target">mdi-fingerprint-off</v-icon>
-                    Masked
+                    Reduced UA
+                  </span>
+
+                  <!-- Inline Inactive badge -->
+                  <span
+                    v-if="isInactive"
+                    class="masked-glossary ml-2"
+                    @click.stop="triggerInactiveInfo"
+                  >
+                    <v-icon size="13" class="icon-target">mdi-clock-outline</v-icon>
+                    Inactive
                   </span>
 
                   <!-- Inline Passkey chip -->
@@ -157,6 +167,8 @@ export default {
     fallbackDateStr: { type: String, default: '' },
     eventsQuery: { type: String,  default: '' },
     isReducedUa:         { type: Boolean, default: false },
+    isInactive:          { type: Boolean, default: false },
+    entitySubType:       { type: String,  default: '' },
     hasConflictingHardwareIds: { type: Boolean, default: false },
     hasPasskey:          { type: Boolean, default: false },
     detailLabel:         { type: String,  default: 'Details' },
@@ -176,6 +188,16 @@ export default {
     },
     deviceId() {
       return this.id || (this.groupRaw && this.groupRaw.id) || null;
+    },
+    inactiveTitle() {
+      var subType = (this.entitySubType || (this.groupRaw && (this.groupRaw.entity_sub_type || this.groupRaw.entity_type)) || '').toLowerCase();
+      if (subType === 'session') {
+        return 'Inactive Session';
+      }
+      if (subType === 'app_registration') {
+        return 'Inactive App Install';
+      }
+      return 'Inactive Device';
     },
     buttonText() {
       var count = this.eventCount;
@@ -270,8 +292,17 @@ export default {
     capitalize,
     triggerInfoModal() {
       this.$emit('show-info', {
-        title: 'Masked User Agent',
+        title: 'Reduced User Agent',
         description: 'To prevent browser fingerprinting, Apple devices (like iPhones running Mobile Safari) return simplified, generic user agent strings. This hides the specific device model details from websites and exports.'
+      });
+    },
+    triggerInactiveInfo() {
+      var key = (this.entitySubType || (this.groupRaw && (this.groupRaw.entity_sub_type || this.groupRaw.entity_type)) || '').toLowerCase();
+      var noun = key === 'session' ? 'session' : (key === 'app_registration' ? 'app install' : 'device');
+      var extra_disclaimer = key === 'app_registration' ? ' This is not the same as an app uninstall.' : (key === 'session' ? ' We happen to know that this session is inactive. Other sessions may also be inactive as well, even if they do not have the same label.' : '');
+      this.$emit('show-info', {
+        title: this.inactiveTitle,
+        description: 'This ' + noun + ' is no longer active or signed-in. It was found in your historical account records.' + extra_disclaimer
       });
     },
     triggerConflictModal() {
@@ -362,6 +393,7 @@ export default {
 .masked-glossary {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   color: #616161;
   border-bottom: 1px dotted #757575;
   cursor: help;
