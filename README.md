@@ -13,15 +13,9 @@ The datasets are large and these scripts are unnecessary if you only want to exp
 
 ## Quickstart (Web App)
 
-You can either visit a hosted version of the static LEStrADE site at https://wispr-lab.github.io/data-export-gui/, or run it locally on your own machine. To do the latter:
-
-### Clone & Initialize Submodules (Required)
-This project relies on Git submodules for user-agent parsing. You **must** initialize them first:
-```bash
-git clone --recurse-submodules https://github.com/WISPR-lab/data-export-gui/
-# or if already cloned:
-git submodule update --init --recursive
-```
+Run it locally on your own machine. No submodule initialization is needed: the user-agent parser
+(`UA-Extract-purepy/`) is vendored directly into this repository, so a plain clone or a downloaded
+ZIP of the source is enough to build and run everything below.
 
 ### With Docker
 **Prerequisites**: [Docker](https://www.docker.com/products/cli/) or [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running. 

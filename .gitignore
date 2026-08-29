@@ -120,3 +120,6 @@ evaluation/user_study/*.pdf
 
 # evaluation/efficiency/trials/*.csv
 evaluation/efficiency/*.csv
+
+# vendored UA-Extract: upstream tests are excluded from the wheel by its pyproject.toml
+UA-Extract-purepy/ua_extract/tests/

@@ -1,0 +1,73 @@
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ua-extract-purepy"
+version = "1.0.0"
+description = "lightweight ua-extract for Pyodide"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ahocorapy",
+    "pyyaml",
+    "rich",
+    "aiohttp",
+    "tenacity",
+    "rich"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ua_extract"]
+exclude = [
+    "ua_extract/tests/",
+]
+
+[tool.hatch.build.targets.wheel.force-include]
+
+
+[tool.mypy]
+strict = true
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_incomplete_defs = true
+show_error_context = true
+follow_imports = 'silent'
+disable_error_code = [
+    "no-any-return",
+    "comparison-overlap",
+]
+exclude = [
+    "tests/",
+]
+
+[tool.bandit]
+exclude_dirs = [
+    "*/tests/*",
+]
+skips = [
+    "B110",
+    "B112",
+]
+
+[tool.ruff]
+line-length = 100
+preview = true
+
+exclude = [
+    "*/tests/*",
+]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401", "F403"]
+
+[tool.ruff.lint.flake8-quotes]
+multiline-quotes = "single"

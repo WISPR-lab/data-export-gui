@@ -12,15 +12,15 @@ REPO_ROOT="$(cd "$WEBAPP_DIR/.." && pwd)"
 PUBLIC="$WEBAPP_DIR/public"
 PYODIDE_DIR="$PUBLIC/pyodide"
 VENDOR_DIR="$PUBLIC/vendor"
-SUBMODULE_DIR="$REPO_ROOT/UA-Extract-purepy"
+UA_EXTRACT_DIR="$REPO_ROOT/UA-Extract-purepy"  # vendored, not a submodule
 
 
 # pre-flight checks
 
 
-if [ ! -d "$SUBMODULE_DIR" ]; then
-  echo "[sync-assets] ERROR: Submodule 'UA-Extract-purepy' is missing."
-  echo "Run: git submodule update --init --recursive"
+if [ ! -d "$UA_EXTRACT_DIR" ]; then
+  echo "[sync-assets] ERROR: 'UA-Extract-purepy/' is missing from the repository root."
+  echo "It is vendored directly into this repo - re-clone or re-download the source to restore it."
   exit 1
 fi
 
@@ -48,12 +48,12 @@ mkdir -p "$PYODIDE_DIR" "$PUBLIC" "$VENDOR_DIR"
 # ------------------------------------- 
 
 
-echo "[sync-assets] Building UA-Extract-purepy submodule wheels..."
-bash "$SUBMODULE_DIR/build_wheels.sh"
+echo "[sync-assets] Building UA-Extract-purepy wheel..."
+bash "$UA_EXTRACT_DIR/build_wheels.sh"
 
-DIST_DIR="$SUBMODULE_DIR/dist"
+DIST_DIR="$UA_EXTRACT_DIR/dist"
 
-echo "[sync-assets] Syncing UA-Extract-purepy submodule wheels..."
+echo "[sync-assets] Syncing UA-Extract-purepy wheel..."
 local_wheels=("$DIST_DIR"/*.whl)
 
 # An unmatched glob stays literal, so test the first entry rather than the array length.
