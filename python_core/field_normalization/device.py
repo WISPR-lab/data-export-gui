@@ -83,6 +83,8 @@ def normalize_device_fields(attrs: dict) -> dict:
     # resolve apple model identifiers (i.e., iPhone10,6) to model names (i.e., iPhone X)
     model_identifier = _get_val(attrs, "device_model_identifier")
     if model_identifier:
+        if str(model_identifier).lower() == "iphone":
+            attrs["device_model_name"] = "iPhone"
         name = dl.APPLE_MODELS.get(model_identifier)
         if name:
             attrs["device_model_name"] = name

@@ -31,7 +31,8 @@ fields:
     description: Google Advertising ID, sometimes used by other platforms (e.g., Meta)
   device.imei: 
     description: International Mobile Equipment Identity, a unique identifier for mobile phones
-  device.locale: null
+  device.locale:
+    description: not ECS, language/region the device is configured for (e.g. en_US)
   device.manufacturer:
     description: device manufacturer (e.g. Apple, Samsung)
     url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
@@ -46,11 +47,13 @@ fields:
   device.product.id:
     description: device product identifier, as defined by the vendor
     url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
-  device.screen_resolution: null
+  device.screen_resolution:
+    description: not ECS, device screen dimensions as reported by the platform (e.g. 1170x2532)
   device.serial_number:
     description: Hardware serial number
     url: https://www.elastic.co/guide/en/ecs/current/ecs-device.html
-  device.timezone: null
+  device.timezone:
+    description: not ECS, timezone the device is set to, as reported by the platform (e.g. America/Chicago)
   entity.display_name:
     description: human-readable name of the entity (e.g., calling your phone "Name's iPhone")
     url: https://www.elastic.co/docs/reference/ecs/ecs-entity#field-entity-display-name
@@ -248,9 +251,6 @@ fields:
   service.name:
     description: name of the service/application involved (e.g. the app name for a push notification)
     url: https://www.elastic.co/guide/en/ecs/current/ecs-service.html
-  sources:
-    description: deduped list of manifest_file_id(s) that produced this row
-    parsed_field_only: true
   url.full:
     description: the full/complete URL
     url: https://www.elastic.co/guide/en/ecs/current/ecs-url.html

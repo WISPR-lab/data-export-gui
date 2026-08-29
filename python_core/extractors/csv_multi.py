@@ -22,12 +22,16 @@ class CSVMultiParser(CSVParser):
             raise FileLevelError("Empty CSV input")
         try:
             if cls._is_concatenated(content, filepath):
-                segments = re.split("\n\n\n", content)
+                segments = []
+                pos = 0
+                for m in re.finditer(r"\n\s*\n", content):
+                    segments.append((pos, content[pos:m.start()]))
+                    pos = m.end()
+                segments.append((pos, content[pos:]))
                 all_records = []
-                current_line = 1
 
-                for segment in segments:
-                    segment_start_line = current_line
+                for seg_offset, segment in segments:
+                    segment_start_line = content.count("\n", 0, seg_offset) + 1
                     lines = [
                         line.strip()
                         for line in segment.split("\n")
@@ -38,21 +42,19 @@ class CSVMultiParser(CSVParser):
                         csvstring = "\n".join(lines[1:])
                         df, bad_lines, line_map = cls.str_to_df(csvstring)
                         if df.empty:
-                            current_line += len(segment.split("\n"))
                             continue
                         records = df.fillna("").to_dict(orient="records")
                         for i, record in enumerate(records):
                             if i in line_map:
                                 start, end = line_map[i]
                                 record["__line_numbers"] = [
-                                    segment_start_line + start - 2,
-                                    segment_start_line + end - 2,
+                                    segment_start_line + start,
+                                    segment_start_line + end,
                                 ]
                             else:
                                 record["__line_numbers"] = [segment_start_line]
                             record["__segment_header"] = header
                             all_records.append(record)
-                    current_line += len(segment.split("\n"))
                 return all_records
 
             else:  # if not concatenated, parse as a single CSV
@@ -81,7 +83,8 @@ class CSVMultiParser(CSVParser):
     @classmethod
     def _is_concatenated(cls, s: str, path: str):
 
-        pattern = re.compile(r'^[^\n",]*(\n\s*){2,}[^\n",]*', re.MULTILINE)
+        # one or more blank lines followed by a title line (no commas/quotes)
+        pattern = re.compile(r'\n[ \t]*\n\s*[^\n",]+\n')
         match = pattern.search(s)
         if match:
             return True

@@ -52,9 +52,42 @@ export async function getResolvedSessionsRegistrations(dbName) {
     rowMode: 'object'
   });
 
+  // Batch resolve raw_data ids -> filename + line numbers (same as events.js)
+  const rowRawDataIds = rows.map(row => {
+    try {
+      return row.raw_data_ids ? JSON.parse(row.raw_data_ids).filter(Boolean) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const rawDataMap = {};
+  const allRawDataIds = [...new Set(rowRawDataIds.flat())];
+  if (allRawDataIds.length > 0) {
+    const placeholders = allRawDataIds.map(() => '?').join(',');
+    const rawRows = await db.exec(
+      `SELECT rd.id, rd.line_numbers, uf.opfs_filename
+       FROM raw_data rd
+       LEFT JOIN uploaded_files uf ON uf.id = rd.file_id
+       WHERE rd.id IN (${placeholders})`,
+      { bind: allRawDataIds, returnValue: 'resultRows', rowMode: 'object' }
+    );
+    rawRows.forEach(rd => {
+      let lines = [];
+      try {
+        lines = rd.line_numbers ? JSON.parse(rd.line_numbers) : [];
+      } catch (e) {}
+      rawDataMap[rd.id] = { filename: rd.opfs_filename || 'Unknown File', line_numbers: lines };
+    });
+  }
+
   const resolved = [];
 
-  for (const row of rows) {
+  for (const [rowIndex, row] of rows.entries()) {
+    const sourcesInfo = rowRawDataIds[rowIndex].map(rid => rawDataMap[rid]).filter(Boolean);
+    const filenames = [...new Set(sourcesInfo.map(s => s.filename))];
+    const flatLineNumbers = [...new Set(sourcesInfo.flatMap(s => s.line_numbers))];
+
     let attrs = {};
     if (row.attributes) {
       try {
@@ -114,7 +147,7 @@ export async function getResolvedSessionsRegistrations(dbName) {
       entity_type: row.entity_type,
       entity_sub_type: row.entity_sub_type,
       origin: row.origin,
-      model_name: row.model_name || 'Unknown Device',
+      model_name: row.model_name || (attrs['entity_display_name'] ? `"${attrs['entity_display_name']}"` : 'Unknown Device'),
       client_name: row.client_name,
       os_name: row.os_name,
       os_version: row.os_version,
@@ -131,7 +164,11 @@ export async function getResolvedSessionsRegistrations(dbName) {
       attributes: attrs,
       events_query: eventsQuery,
       event_count: eventCount,
-      tags: parseTags(row.tags)
+      tags: parseTags(row.tags),
+      filename: filenames[0] || '',
+      filenames,
+      line_numbers: flatLineNumbers,
+      sources: sourcesInfo
     });
   }
 

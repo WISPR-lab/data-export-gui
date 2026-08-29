@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS resolved_sessions_registrations (
     os_version TEXT,
     os_type TEXT,
     attributes JSONTEXT,
+    raw_data_ids JSONTEXT,  -- multiple after merging registrations sharing a hardware ID
     is_reduced_ua INTEGER DEFAULT 0,
     has_trusted_cookie INTEGER DEFAULT 0,
     trusted_cookie_id TEXT,

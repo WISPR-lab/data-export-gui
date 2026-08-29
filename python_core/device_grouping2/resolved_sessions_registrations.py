@@ -52,7 +52,8 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
                 "entity_type": "session",
                 "entity_sub_type": None,
                 "origin": first_ev["origin"],
-                "attributes": attrs
+                "attributes": attrs,
+                "raw_data_ids": []
             })
     for d in devices:
         if d.get("entity_type") != "session":
@@ -98,7 +99,9 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
             if dev_key:
                 group_key = (sub_type, dev_key)
                 if group_key in registrations:
-                    registrations[group_key]["attributes"].update(d["attributes"])
+                    existing = registrations[group_key]
+                    existing["attributes"].update(d["attributes"])
+                    existing["raw_data_ids"].extend(d["raw_data_ids"])
                 else:
                     registrations[group_key] = d
             else:
@@ -142,6 +145,7 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
             "os_version": attrs.get("os_version") or attrs.get("norm__os_version"),
             "os_type": attrs.get("norm__os_type") or attrs.get("os_type"),
             "attributes": json.dumps(attrs),
+            "raw_data_ids": json.dumps(dev["raw_data_ids"]),
             "is_reduced_ua": 1 if "mobile/15e148" in str(attrs.get("user_agent_original") or "").lower() else 0,
             "has_trusted_cookie": 1 if cookie_id else 0,
             "trusted_cookie_id": cookie_id,
@@ -167,7 +171,8 @@ def _parsed_devices(raw_rows: list[dict]) -> list[dict]:
             "entity_type": r.get("entity_type"),
             "entity_sub_type": r.get("entity_sub_type"),
             "origin": r["origin"],
-            "attributes": attrs
+            "attributes": attrs,
+            "raw_data_ids": [r["raw_data_id"]] if r.get("raw_data_id") else [],
         })
     return parsed
 

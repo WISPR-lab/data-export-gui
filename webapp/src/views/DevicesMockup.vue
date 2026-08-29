@@ -67,8 +67,8 @@ var SECTION_DEFS = [
   },
   {
     key: 'hardware_registration',
-    label: 'OS-Linked Devices',
-    description: 'Physical devices connected to this account at the operating system level — like a phone signed in through its system account settings. These often include hardware identifiers like serial numbers or IMEIs.',
+    label: 'Registered Hardware',
+    description: 'These are physical devices connected to this account at the operating system level, like an iPhone signed in iCloud or an Android device signed in Google. These often include hardware identifiers like serial numbers or IMEIs.',
     sortByGroup: false
   },
   {
@@ -97,6 +97,16 @@ function buildEntry(s) {
         isTimestamp: TIMESTAMP_KEYS.indexOf(k) !== -1
       };
     });
+
+  if (Array.isArray(s.sources) && s.sources.length > 0) {
+    formattedAttrs.push({
+      label: 'Source File',
+      value: s.sources.map(function(src) {
+        var lines = src.line_numbers || [];
+        return src.filename + (lines.length ? ' (line ' + lines.join(', ') + ')' : '');
+      })
+    });
+  }
 
   var summary = getUASummary([s])[0] || {};
   var clientLabel = summary.primary ? (summary.primary + (summary.secondary ? ' (' + summary.secondary + ')' : '')) : s.client_name;

@@ -22,6 +22,12 @@ PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
 
 ### Using Data for Efficiency Evaluation
 
+The 1x baseline archives are `evaluation/efficiency/data/{google,facebook}_original.zip`, and every
+augmented multiplier is derived from them. They come from research accounts created for Nonnenkamp et al.,
+CCS '25 ([10.1145/3719027.3765147](https://doi.org/10.1145/3719027.3765147)), used here with permission.
+See [_Sample Data_](../README.md#sample-data) in the root README for the full citation and the
+anonymization details. Please cite that paper if you use these archives.
+
 1. **Generate augmented datasets** (if testing scalability):
    ```bash
    uv run python -m evaluation.efficiency.augment --platform facebook --multiplier 100
@@ -39,7 +45,22 @@ PERFORMANCE_MEMORY_SAMPLING=1 yarn serve
 
 ## 5.1 - Entity Resolution Evaluation
 
-This is optional and requires substantial disk and memory resources; skip it if you only want to run the web app. (todo better explanation)
+This measures how well the device entity resolution pipeline (`python_core/device_grouping2/`) decides
+whether two authentication or session records came from the same device. Because data exports carry no
+ground-truth device labels, we evaluate against the [FPStalker](https://github.com/Spirals-Team/FPStalker)
+browser-fingerprint dataset, which does: its `tracking_id` marks records known to originate from the same
+browser.
+
+- `fetch_data.py` downloads the FPStalker dumps and converts them to a local DuckDB database.
+- `sweep.py` runs the trials: for each cell of the parameter grid it samples K `tracking_id`s, groups their
+  records with our matching rules, and scores the result with **BCubed precision/recall** against the known ids.
+- `run.py` is the CLI entry point that ties those together and plots the output.
+
+The grid defaults (`K_OPTIONS`, `MAX_DAYS_CLIENT_OPTIONS`, trial count, seed) live in `config.py` and can be
+overridden with `--k`, `--days`, `--trials`, and `--seed`.
+
+This is optional and requires substantial disk and memory resources; skip it if you only want to run the
+web app.
 
 ### Docker Configuration
 

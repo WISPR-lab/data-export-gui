@@ -18,6 +18,7 @@ def is_trivial(x) -> bool:
     return (
         (x is None)
         or (isinstance(x, str) and x.strip() == "")
+        or (isinstance(x, str) and x.strip().lower() == "n/a")  # platforms' own "unknown" placeholder, not real data
         or (x == [])
         or (isinstance(x, list) and all((e == "" or e is None or e == []) for e in x))
     )
@@ -75,7 +76,9 @@ def dynamic_fields(record: dict, view: dict, default=""):
             val = unix_ms(parse_date(str(val)))
 
         key = clean_target(target)
-        if not is_trivial(val) or key not in fields:
+        if is_trivial(val):
+            fields.setdefault(key, "")  # keep the key present, but don't let e.g. a literal "N/A" through
+        else:
             fields[key] = val
     return fields
 

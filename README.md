@@ -46,6 +46,52 @@ The web application will be live at `http://localhost:5001`.
    Under the hood, this runs `sync_assets.sh` which automatically builds the `UA-Extract-purepy` wheel using `uv`.
    The frontend runs at `http://localhost:5001`.
 
+## Sample Data
+
+You do not need your own data export to try the tool. Two exports are checked into this repository:
+
+| File | Platform | Upload as |
+|---|---|---|
+| `evaluation/efficiency/data/google_original.zip` | Google Takeout | *Google* |
+| `evaluation/efficiency/data/facebook_original.zip` | Facebook | *Facebook* |
+
+Start the web app, click **Import**, choose the matching platform, and select the ZIP as-is. No unpacking
+needed. The Google export exercises the fullest path through the pipeline: device registrations, session
+history, and access-log activity); the Facebook export is smaller and is what the Beta manifest was written
+against.
+
+These are the same 1x archives the efficiency evaluation augments to 10x/100x/1000x, which is why they live
+under `evaluation/`. See [`evaluation/README.md`](evaluation/README.md).
+
+### Provenance & attribution
+
+Both exports come from research accounts created for the study below, and are used here with permission.
+They are not any real person's account data: the account identities are `*.researcher24@gmail.com`, and IP
+addresses in the security and login records the tool parses are masked to the reserved `0.0.0.x` range.
+
+> Julia Nonnenkamp, Naman Gupta, Abhimanyu Dev Gupta, and Rahul Chatterjee. 2025.
+> **Hidden in Plain Bytes: Investigating Interpersonal Account Compromise with Data Exports.**
+> In *Proceedings of the 2025 ACM SIGSAC Conference on Computer and Communications Security (CCS '25)*,
+> Taipei, Taiwan. ACM, New York, NY, USA, 4304–4318. https://doi.org/10.1145/3719027.3765147
+
+```bibtex
+@inproceedings{nonnenkamp2025hidden,
+  author    = {Nonnenkamp, Julia and Gupta, Naman and Gupta, Abhimanyu Dev and Chatterjee, Rahul},
+  title     = {Hidden in Plain Bytes: Investigating Interpersonal Account Compromise with Data Exports},
+  booktitle = {Proceedings of the 2025 ACM SIGSAC Conference on Computer and Communications Security},
+  series    = {CCS '25},
+  year      = {2025},
+  pages     = {4304--4318},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  location  = {Taipei, Taiwan},
+  doi       = {10.1145/3719027.3765147},
+  url       = {https://doi.org/10.1145/3719027.3765147}
+}
+```
+
+If you use these sample exports in your own work, please cite the paper above.
+
 ## Evaluation
 
 Evaluation scripts and instructions live in [`evaluation/README.md`](evaluation/README.md).
@@ -65,7 +111,7 @@ We are working on support for:
 * Snapchat - *Beta*
 
 For instructions on how to request your data exports, see the [How to Request Data Guide on our hosted site](https://wispr-lab.github.io/data-export-gui/#/how-to-request) (or `http://localhost:5001/#/how-to-request` when running locally). 
-We'll put some anonymized sample data up soon.
+To try the tool without requesting your own export, see [_Sample Data_](#sample-data) above.
 
 
 ## Security & Privacy
@@ -79,15 +125,20 @@ Note that the [site](https://wispr-lab.github.io/data-export-gui/) is hosted via
 ## Contributing
 
 Feel free to submit UI bugs under Issues or post there if you're interested in contributing to the project.
-To add support for a new platform (or augment supported keys for an existing one), follow the instructions in the [Manifests Schema Guide](manifests/README.md). 
+To add support for a new platform (or augment supported keys for an existing one), follow the instructions in the [Manifests Schema Guide](manifests/README.md), then validate your changes:
+```bash
+uv run python scripts/validate_manifests.py
+```
+This checks every manifest against the field vocabulary in `manifests/__taxonomy.yaml` and exits non-zero on error. It catches the mistakes that otherwise fail silently at runtime: an unknown `entity.type` or `event.kind`, a view pointing at a file id that doesn't exist, an unimplemented `transform`. Run it before opening a PR.
 
 ### Repository Structure                                                                                                                                                                                                                    
 * **`webapp/`**: Vue 2 / Vuetify frontend (modified Google Timesketch derivative).
 * **`python_core/`**: Python parsing and database logic (runs inside Pyodide in the browser).
 * **`manifests/`**: Platform YAML configurations defining mappings to ECS.
 * **`evaluation/`**: Academic paper replication package, figure scripts, and `evaluation/entity_resolution/`.
+* **`scripts/`**: Developer utilities, currently `validate_manifests.py`.
 * **`schema.sql`**: SQLite database schema. Both JS and Pyodide read/write to this DB, but never at the same time.
-* **`tests/`**: Vitest (JS) and Pytest (Python) integration tests.
+* **`tests/`**: Pytest suite for the Python engine. See [`tests/README.md`](tests/README.md).
 
 ### Pyodide Flow
 1. Vue worker downloads Pyodide WASM + package wheels (pandas, regex, sqlite3) on load.
@@ -109,6 +160,7 @@ uv sync
 uv run pytest tests/python # all python test
 uv run pytest tests/python/test_device_grouping2.py # or a specific test
 ```
+The parser tests under `tests/python/extractors/` are parameterized over real export files and skip themselves when that data isn't present. See [`tests/README.md`](tests/README.md) before relying on them for coverage.
 
 ## License
 

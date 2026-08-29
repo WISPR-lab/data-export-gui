@@ -7,12 +7,22 @@ import { getLogger } from '@/utils/logger';
 const logger = getLogger('OPFSManager');
 const MAX_NESTED_ZIP_DEPTH = 5; // Apple splits large exports into zips-within-zips
 
+function patternSegmentRegexes(pattern) {
+  // One regex per path segment of a whitelist glob, e.g. "*Other Data*/Devices*.csv" -> [/^.*other data.*$/i, /^devices.*\.csv$/i].
+  return pattern.split('/').map((seg) => {
+    const escaped = seg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const withWildcard = escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
+    return new RegExp(`^${withWildcard}$`, 'i');
+  });
+}
+
 export class OPFSManager {
   constructor() {
     this.opfsRoot = null;
     this.storageDir = null;
     this.dbFilename = null;  // e.g. "userdata.db" – populated during init()
     this.whitelistPatterns = [];
+    this.whitelistPatternSegments = [];
     this.isInitialized = false;
   }
 
@@ -84,9 +94,11 @@ export class OPFSManager {
           // console.log(`[WHITELIST] Pattern: "${p}" -> Regex: ${regex}`);
           return regex;
         });
+        this.whitelistPatternSegments = (paths || []).map(patternSegmentRegexes);
       } catch (err) {
         logger.warn('Failed to load whitelist – accepting all files:', err);
         this.whitelistPatterns = [];
+        this.whitelistPatternSegments = [];
       }
     }
 
@@ -101,6 +113,22 @@ export class OPFSManager {
     if (this.whitelistPatterns.length === 0) return true;
     const normalised = filename.replace(/\\/g, '/');
     return this.whitelistPatterns.some((re) => re.test(normalised));
+  }
+
+  couldContainWhitelistedFile(dirPath) {
+    // Same idea as isWhitelisted, but for a directory we're deciding whether to recurse into (a
+    // nested zip) rather than a leaf file. Matches segment-by-segment against each whitelist
+    // pattern (so an early wildcard like "*Other Data*/..." only excuses that one segment, not
+    // the whole path) — tried both as-is and with one leading segment stripped, since some
+    // exports (e.g. Google Takeout) wrap everything in a throwaway root folder.
+    if (this.whitelistPatternSegments.length === 0) return true;
+    const allSegs = dirPath.replace(/\\/g, '/').split('/').filter(Boolean);
+    const candidates = allSegs.length > 1 ? [allSegs, allSegs.slice(1)] : [allSegs];
+    return candidates.some((segs) =>
+      this.whitelistPatternSegments.some(
+        (patSegs) => segs.length < patSegs.length && segs.every((seg, i) => patSegs[i].test(seg))
+      )
+    );
   }
 
 
@@ -125,14 +153,15 @@ export class OPFSManager {
         if (file.name.endsWith('/')) return;
 
         totalSeen++;
-        if (/\.zip$/i.test(file.name)) {
+        const dir = file.name.includes('/') ? file.name.slice(0, file.name.lastIndexOf('/')) : '';
+        if (/\.zip$/i.test(file.name) && this.couldContainWhitelistedFile(dir)) {
           totalAccepted++; // counts the nested zip itself, not its individual leaf files
+          // Best-effort: a corrupt/unreadable nested zip shouldn't fail the whole upload — log and move on.
           const p = this._bufferFileEntry(file)
             .then((bytes) => this._extractNestedZipBuffer(bytes, 1))
             .then(() => { writeSuccesses++; })
             .catch((err) => {
-              writeFailures++;
-              logger.error(`Nested zip extraction FAILED for ${file.name}:`, err);
+              logger.error(`Nested zip extraction FAILED for ${file.name}, skipping:`, err);
             });
           savedPromises.push(p);
         } else if (this.isWhitelisted(file.name)) {
@@ -375,7 +404,7 @@ export class OPFSManager {
       let totalBytes = 0;
       fflateFile.ondata = (err, data, final) => {
         if (err) return reject(err);
-        if (data) { chunks.push(data); totalBytes += data.byteLength; }
+        if (data) { chunks.push(data.slice()); totalBytes += data.byteLength; } // copy — fflate reuses its internal buffer across ondata calls
         if (final) {
           const buffer = new Uint8Array(totalBytes);
           let offset = 0;
@@ -396,7 +425,10 @@ export class OPFSManager {
     const entries = unzipSync(buffer);
     await Promise.all(Object.entries(entries).map(([name, data]) => {
       if (name.endsWith('/')) return null;
-      if (/\.zip$/i.test(name)) return this._extractNestedZipBuffer(data, depth + 1);
+      const dir = name.includes('/') ? name.slice(0, name.lastIndexOf('/')) : '';
+      if (/\.zip$/i.test(name)) {
+        return this.couldContainWhitelistedFile(dir) ? this._extractNestedZipBuffer(data, depth + 1) : null;
+      }
       if (this.isWhitelisted(name)) return this._saveBytes(this.flattenPath(name), data);
       return null;
     }));

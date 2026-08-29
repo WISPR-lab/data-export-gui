@@ -1,15 +1,17 @@
+# Points at unpacked data exports on your own machine. Nothing here ships with the repo:
+# any file that isn't present is skipped with a warning (see tests/README.md).
 platforms:
-  facebook: 
-    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/facebook"
-  
-  apple: 
-    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/apple"
-  
-  instagram: 
-    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/instagram"
+  facebook:
+    test_data_dir: "~/takeout-test-data/facebook"
+
+  apple:
+    test_data_dir: "~/takeout-test-data/apple"
+
+  instagram:
+    test_data_dir: "~/takeout-test-data/instagram"
 
   discord:
-    test_data_dir: "~/ipv-takeout/raw-data/bob_2_24_workingset/discord"
+    test_data_dir: "~/takeout-test-data/discord"
 
 
 test_files:

@@ -70,15 +70,17 @@
                     Inactive
                   </span>
 
-                  <!-- Inline Passkey chip -->
+                  <!-- Inline Passkey badge -->
                   <v-chip
                     v-if="isRecord && hasPasskey"
                     color="success"
                     outlined
                     x-small
-                    class="ml-2 px-1.5"
-                    style="height: 18px;"
+                    class="ml-2 px-1.5 font-weight-bold"
+                    style="height: 18px; font-size: 11px; cursor: pointer;"
+                    @click.stop="triggerPasskeyInfo"
                   >
+                    <v-icon left size="12" class="mr-1">mdi-key-wireless</v-icon>
                     Passkey
                   </v-chip>
                 </div>
@@ -303,6 +305,12 @@ export default {
       this.$emit('show-info', {
         title: this.inactiveTitle,
         description: 'This ' + noun + ' is no longer active or signed-in. It was found in your historical account records.' + extra_disclaimer
+      });
+    },
+    triggerPasskeyInfo() {
+      this.$emit('show-info', {
+        title: 'Passkey Registered',
+        description: 'This device has a passkey for your Apple account on it.'
       });
     },
     triggerConflictModal() {
