@@ -19,7 +19,9 @@ The Vue frontend is forked and heavily modified from Google's Timesketch [1] (`t
 * **`python_core/`**: Python data engine, entity resolution, and parsing logic.
 * **`manifests/`**: Platform YAML configurations defining mappings to ECS.
 * **`evaluation/`**: Paper's evaluation scripts and datasets (Secs. 5, 6).
-* **`scripts/`**: Developer utilities
+* **`supplementary_materials/`**: User study survey questionnaire and consultant screening flowcharts.
+* **`UA-Extract-purepy/`**: Pure-Python user-agent parsing package, usually a submodule
+* **`scripts/`**: Developer utilities.
 * **`schema.sql`**: SQLite database schema.
 * **`tests/`**: Pytest suite for the Python engine (see [`tests/README.md`](tests/README.md)).
 
@@ -122,3 +124,6 @@ This repository uses multiple licenses to protect different components. See `LIC
 
 * **[1]** Google. 2024. **Timesketch: Collaborative forensic timeline analysis.** Software repository. https://github.com/google/timesketch
 * **[2]** Julia Nonnenkamp, Naman Gupta, Abhimanyu Dev Gupta, and Rahul Chatterjee. 2025. **Hidden in Plain Bytes: Investigating Interpersonal Account Compromise with Data Exports.** In *Proceedings of the 2025 ACM SIGSAC Conference on Computer and Communications Security (CCS '25)*, Taipei, Taiwan. ACM, New York, NY, USA, 4304–4318. https://doi.org/10.1145/3719027.3765147
+* **[3]** Antoine Vastel, Walter Rudametkin, Romain Rouvoy, and Pierre Laperdrix. 2018. **FPStalker: Tracking Browser Fingerprint Evolutions.** In *Proceedings of the 2018 IEEE Symposium on Security and Privacy (SP)*. IEEE, 728–741. https://doi.org/10.1109/SP.2018.00008
+* **[4]** Pierre Laperdrix, Walter Rudametkin, and Romain Rouvoy. 2016. **Beauty and the Beast: Diverting Modern Web Browsers to Build Unique Browser Fingerprints.** In *Proceedings of the 2016 IEEE Symposium on Security and Privacy (SP)*. IEEE, 878–894. https://doi.org/10.1109/SP.2016.57
+

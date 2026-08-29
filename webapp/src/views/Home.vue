@@ -72,23 +72,18 @@
       <div class="mt-0 mb-16">
         <v-card color="grey lighten-5" class="card-shadow pa-8">
           <h3 class="text-h5 font-weight-medium secondary--text mb-6 text-center">Supported Platforms</h3>
-          <v-row>
-            <v-col v-for="tierGroup in platformTiers" :key="tierGroup.tier" cols="12" sm="6">
-              <p class="text-body2 secondary--text mb-4 text-center font-weight-medium">{{ tierGroup.tier }}</p>
-              <div class="d-flex flex-wrap gap-2 justify-center">
-                <v-chip
-                  v-for="platform in tierGroup.platforms"
-                  :key="platform.name"
-                  outlined
-                  :to="platform.routeName ? { name: 'HowToRequest', query: { tab: platform.routeName } } : null"
-                >
-                  <DiscordIcon v-if="platform.name === 'Discord'" size="14px" margin-right="6px" />
-                  <v-icon v-else small left>{{ platform.icon }}</v-icon>
-                  {{ platform.name }}
-                </v-chip>
-              </div>
-            </v-col>
-          </v-row>
+          <div class="d-flex flex-wrap gap-2 justify-center">
+            <v-chip
+              v-for="platform in platforms"
+              :key="platform.name"
+              outlined
+              :to="platform.routeName ? { name: 'HowToRequest', query: { tab: platform.routeName } } : null"
+            >
+              <DiscordIcon v-if="platform.name === 'Discord'" size="14px" margin-right="6px" />
+              <v-icon v-else small left>{{ platform.icon }}</v-icon>
+              {{ platform.name }}
+            </v-chip>
+          </div>
         </v-card>
       </div>
 
@@ -170,7 +165,7 @@
       <v-divider class="my-8"></v-divider>
       <footer class="py-4 text-center">
         <p class="text-caption secondary--text mb-0">
-          &copy; 2026 - REDACTED
+          &copy; 2026 - REDACTED, Privacy Policy & Terms of Use are Redacted 
           <!-- &nbsp;|&nbsp; -->
           <!-- <v-btn text x-small href="#">Privacy</v-btn>
           <v-btn text x-small href="#">Terms</v-btn> -->
@@ -204,23 +199,13 @@ export default {
         { text: 'Add your own notes', icon: 'mdi-pencil' },
         { text: 'Compare data from multiple platforms', icon: 'mdi-compare' },
       ],
-      platformTiers: [
-        {
-          tier: 'Fully Supported',
-          platforms: [
-            { name: 'Google', icon: 'mdi-google', routeName: 'google' },
-            { name: 'Facebook', icon: 'mdi-facebook', routeName: 'facebook' },
-          ]
-        },
-        {
-          tier: 'Beta',
-          platforms: [
-            { name: 'Instagram', icon: 'mdi-instagram', routeName: 'facebook' },
-            { name: 'Snapchat', icon: 'mdi-snapchat', routeName: 'snapchat' },
-            { name: 'Discord', icon: 'mdi-discord', routeName: 'discord' },
-            { name: 'Apple', icon: 'mdi-apple' , routeName: 'apple' },
-          ]
-        },
+      platforms: [
+        { name: 'Google', icon: 'mdi-google', routeName: 'google' },
+        { name: 'Facebook', icon: 'mdi-facebook', routeName: 'facebook' },
+        { name: 'Instagram', icon: 'mdi-instagram', routeName: 'facebook' },
+        { name: 'Snapchat', icon: 'mdi-snapchat', routeName: 'snapchat' },
+        { name: 'Discord', icon: 'mdi-discord', routeName: 'discord' },
+        { name: 'Apple', icon: 'mdi-apple', routeName: 'apple' },
       ],
     }
   },
