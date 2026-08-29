@@ -1,4 +1,4 @@
-// added for WISPR-lab/data-export-gui
+// added for anonymous-research-group/data-export-gui
 
 import { parse as parseLiqe } from 'liqe';
 import { getLogger } from '@/utils/logger';

@@ -1,4 +1,4 @@
-// added for WISPR-lab/data-export-gui
+// added for anonymous-research-group/data-export-gui
 import appleGetACopy from '@/assets/images/how2request/apple_get_a_copy.jpg'
 import appleCategories from '@/assets/images/how2request/apple_categories.png'
 import appleDownloadAll from '@/assets/images/how2request/apple_download_all.png'

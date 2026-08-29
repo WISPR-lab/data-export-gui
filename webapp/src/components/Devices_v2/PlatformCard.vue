@@ -1,4 +1,4 @@
-// added for WISPR-lab/data-export-gui
+// added for anonymous-research-group/data-export-gui
 <template>
   <v-card outlined class="rounded-lg mb-6 overflow-hidden" style="background-color: white;">
 

@@ -1,4 +1,4 @@
-<!-- Added for wispr-lab/data-export-gui 
+<!-- Added for anonymous-research-group/data-export-gui 
  
 Shown when a SQL query fails with "no such table/column" -->
 <template>

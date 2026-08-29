@@ -1,4 +1,4 @@
-<!-- modified for WISPR-lab/data-export-gui -->
+<!-- modified for anonymous-research-group/data-export-gui -->
 <template>
   <v-dialog v-model="dialogVisible" max-width="1200px" scrollable>
     <v-card v-if="events && events.length >= 2">

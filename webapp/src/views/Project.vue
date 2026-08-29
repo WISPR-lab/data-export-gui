@@ -15,7 +15,7 @@ limitations under the License.
 -->
 
 
-<!-- NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui -->
+<!-- NOTICE --- MODIFIED FOR anonymous-research-group/data-export-gui -->
 
 <template>
   <div>

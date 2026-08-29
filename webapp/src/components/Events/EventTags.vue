@@ -10,7 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<!-- modified for WISPR-lab/data-export-gui -->
+<!-- modified for anonymous-research-group/data-export-gui -->
 <template>
   <span>
     <span v-for="tag in sortedTags" :key="tag">

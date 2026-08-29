@@ -1,4 +1,4 @@
-// added for WISPR-lab/data-export-gui
+// added for anonymous-research-group/data-export-gui
 import { getDB } from '../index.js';
 import { hexColor } from '@/utils/hex.js';
 import { getUASummary } from './ua_summary.js';

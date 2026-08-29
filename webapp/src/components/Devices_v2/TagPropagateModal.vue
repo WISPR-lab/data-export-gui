@@ -1,4 +1,4 @@
-<!-- added for WISPR-lab/data-export-gui -->
+<!-- added for anonymous-research-group/data-export-gui -->
 <template>
   <v-dialog :value="value" max-width="480px" width="auto" @input="$emit('input', $event)">
     <v-card class="pa-5" style="max-width: 480px;">

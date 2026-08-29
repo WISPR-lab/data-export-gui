@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<!-- modified  and renamed for WISPR-lab/data-export-gui -->
+<!-- modified  and renamed for anonymous-research-group/data-export-gui -->
 <!--
   A generic export component that provides common export related
   functionality and allows customization of the template. That way a export

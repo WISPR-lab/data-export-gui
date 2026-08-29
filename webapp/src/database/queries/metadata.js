@@ -1,4 +1,4 @@
-// custom to WISPR-lab/data-export-gui
+// custom to anonymous-research-group/data-export-gui
 
 
 import { getDB } from '../index.js';

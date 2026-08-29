@@ -1,4 +1,4 @@
-<!-- modified for WISPR-lab/data-export-gui -->
+<!-- modified for anonymous-research-group/data-export-gui -->
 <template>
   <div v-if="iconOnly" class="pa-4" style="cursor: pointer" @click="$emit('toggleDrawer'); expanded = true">
     <v-badge :content="compareEvents.length" color="primary" overlap :value="compareEvents.length > 0">

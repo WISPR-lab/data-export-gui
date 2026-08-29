@@ -5,7 +5,7 @@ Presents users with a choice of data export platforms,
 explains the purpose of the tool, links to instructions, and then
 proceeds to the file upload dialog
 
-Added for WISPR Lab / data-export-gui project
+Added for anonymous-research-group / data-export-gui project
 -->
 <template>
   <v-dialog

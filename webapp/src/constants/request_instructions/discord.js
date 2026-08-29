@@ -1,4 +1,4 @@
-// added for WISPR-lab/data-export-gui
+// added for anonymous-research-group/data-export-gui
 import discordSettings from '@/assets/images/how2request/discord_settings.jpg'
 import discordRequest from '@/assets/images/how2request/discord_request.jpg'
 // TODO: import discordCategories from '@/assets/images/how2request/discord_categories.jpg' once 3rd screenshot is added

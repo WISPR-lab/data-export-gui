@@ -1,4 +1,4 @@
-// modified for WISPR-lab/data-export-gui
+// modified for anonymous-research-group/data-export-gui
 
 const LOG_LEVELS = { DEBUG: 10, INFO: 20, WARN: 30, ERROR: 40, SILENT: 50 };
 var workerLogLevel = LOG_LEVELS.INFO;

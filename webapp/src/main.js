@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// NOTICE --- MODIFIED FOR WISPR-lab/data-export-gui
+// NOTICE --- MODIFIED FOR anonymous-research-group/data-export-gui
 
 import Vue from 'vue'
 import App from './App.vue'

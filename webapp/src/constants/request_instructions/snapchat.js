@@ -1,4 +1,4 @@
-// added for WISPR-lab/data-export-gui
+// added for anonymous-research-group/data-export-gui
 export const instructionSnapchat = {
   id: 'snapchat',
   name: 'Snapchat',

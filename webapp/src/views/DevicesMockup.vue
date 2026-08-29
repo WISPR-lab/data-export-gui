@@ -1,4 +1,4 @@
-// added for WISPR-lab/data-export-gui
+// added for anonymous-research-group/data-export-gui
 <template>
   <v-container class="pa-6 white min-h-100" style="max-width: 1400px;">
     <div class="mb-6">

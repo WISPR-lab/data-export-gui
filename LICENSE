@@ -9,7 +9,7 @@ webapp/
 --------------------------------------------------------------------------------
 python_core/
 manifests/
-  Produced by WISPR-lab and licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+  Produced by anonymous-research-group and licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0
   International License (CC BY-NC-SA 4.0).
   See python_core/LICENSE and manifests/LICENSE for the full license text.
 
@@ -19,5 +19,5 @@ manifests/
 
 --------------------------------------------------------------------------------
 All other files in this repository (evaluation/, supplementary_materials/ tests/, schema.sql, etc.) are
-copyright WISPR-lab and are made available for academic research and
+copyright anonymous-research-group and are made available for academic research and
 non-commercial use only.

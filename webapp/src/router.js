@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// modified for WISPR-lab/data-export-gui
+// modified for anonymous-research-group/data-export-gui
 
 
 import Vue from 'vue'
