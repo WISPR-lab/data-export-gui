@@ -22,9 +22,11 @@ let worker = null;
 let messageId = 0;
 
 function assertValidDbName(dbName) {
-  if (dbName !== 'userdata' && dbName !== 'demo') {
+  var target = dbName || 'userdata';
+  if (target !== 'userdata' && target !== 'demo') {
     throw new Error(`[Database] Invalid dbName: ${JSON.stringify(dbName)}`);
   }
+  return target;
 }
 
 function callPyodideWorker(method, args) {
@@ -197,7 +199,8 @@ export async function resetAllLocalData(options) {
 
 export async function clearAllTables(dbName) {
   /* Dynamically queries sqlite_master for all user tables and DELETEs their rows (not DROP — preserves schema). */
-  const db = await getDB(dbName);
+  const targetDb = dbName || 'userdata';
+  const db = await getDB(targetDb);
 
   // Query sqlite_master to get all tables dynamically
   const result = await db.exec(

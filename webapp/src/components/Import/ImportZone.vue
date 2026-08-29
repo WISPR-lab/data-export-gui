@@ -41,9 +41,17 @@ It replaces the generic UploadForm for the new workflow.
             <code>_mem_perf.csv</code> will download automatically when it finishes.
           </v-alert>
 
-          <v-alert v-if="allowMultipleFiles" dense text type="info" class="mb-4 text-body-2">
-            Apple often splits your export into multiple ZIP files — you can select or drop them all here at once.
-          </v-alert>
+          <div v-if="allowMultipleFiles" class="text-body-2 text--secondary mb-4">
+            <p class="mb-1">
+              Apple often splits your export into multiple ZIP files. You can select or drop them all here at once.
+            </p>
+            <p class="mb-1 font-weight-medium">Expected files / categories:</p>
+            <ul class="pl-4 my-0" style="line-height: 1.3;">
+              <li>Apple ID account and device information</li>
+              <li>App install and push notification activity</li>
+              <li>Other Data (optional)</li>
+            </ul>
+          </div>
 
           <!-- <v-card-text class="pb-0 pt-1">
           <v-alert dense text type="info" class="mb-4 text-body-2">
