@@ -134,13 +134,14 @@ export async function executeUpload(file, platform, givenName, opfsManager, call
     }
     uploadId = result.upload_id;
 
-    if (result.performance_summary && typeof process !== 'undefined' && process.env && process.env.VUE_APP_EXPORT_PERF_CSV === 'true') {
+    if (result.performance_summary && (result.performance_summary.memory_sampling_enabled || (typeof process !== 'undefined' && process.env && process.env.VUE_APP_EXPORT_PERF_CSV === 'true'))) {
       try {
         downloadPerformanceCsv(givenName || fallbackName, result.performance_summary);
       } catch (e) {
         logger.warn('Failed to download performance CSV:', e);
       }
     }
+
 
     // Step 6: Cleanup OPFS
     if (onProgress) onProgress({ stage: 'cleanup', progress: 90 });
