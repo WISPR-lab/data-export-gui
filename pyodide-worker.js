@@ -8,10 +8,67 @@
 importScripts('./vendor/js-yaml.min.js');
 importScripts('./pyodide/pyodide.js');
 
+// ponytail: lightweight worker logger matching webapp/src/utils/logger.js
+const LOG_LEVELS = { DEBUG: 10, INFO: 20, WARN: 30, ERROR: 40, SILENT: 50 };
+var workerLogLevel = LOG_LEVELS.INFO;
+var showWorkerPrefix = true;
+
+function createWorkerLogger(name) {
+  var prefix = '[' + name + ']';
+  return {
+    debug: function() {
+      if (workerLogLevel <= LOG_LEVELS.DEBUG) {
+        var args = Array.prototype.slice.call(arguments);
+        console.debug.apply(console, showWorkerPrefix ? [prefix].concat(args) : args);
+      }
+    },
+    info: function() {
+      if (workerLogLevel <= LOG_LEVELS.INFO) {
+        var args = Array.prototype.slice.call(arguments);
+        console.info.apply(console, showWorkerPrefix ? [prefix].concat(args) : args);
+      }
+    },
+    warn: function() {
+      if (workerLogLevel <= LOG_LEVELS.WARN) {
+        var args = Array.prototype.slice.call(arguments);
+        console.warn.apply(console, showWorkerPrefix ? [prefix].concat(args) : args);
+      }
+    },
+    error: function() {
+      if (workerLogLevel <= LOG_LEVELS.ERROR) {
+        var args = Array.prototype.slice.call(arguments);
+        console.error.apply(console, showWorkerPrefix ? [prefix].concat(args) : args);
+      }
+    }
+  };
+}
+
+const logger = createWorkerLogger('Pyodide Worker');
+
+// Same line shape as the Python-side PERFORMANCE_MEMORY lines (python_core/performance.py).
+// self.performance.memory is Chrome-only.
+function logPerformanceMemory(stage, durationMs, extra) {
+  const parts = ['stage=' + stage];
+  if (durationMs !== undefined) parts.push('dur_ms=' + durationMs.toFixed(1));
+  if (extra) {
+    for (const key in extra) parts.push(key + '=' + extra[key]);
+  }
+  if (self.performance && self.performance.memory) {
+    parts.push('heap_mb=' + Math.round(self.performance.memory.usedJSHeapSize / 1048576));
+  }
+  logger.info('PERFORMANCE_MEMORY ' + parts.join(' '));
+}
+
 
 let pyodide;
 let pyodideReadyPromise;
 let config = null;
+
+// JS heap relay: performance.memory doesn't exist inside a dedicated Worker (Chrome only
+// exposes it on window), so pyodide-client.js (main thread) posts readings here on an
+// interval while memory sampling is on. getJsHeapBytes() is what performance.py calls.
+let lastJsHeapBytes = null;
+self.getJsHeapBytes = () => lastJsHeapBytes;
 let baseUrl = null; // e.g. "https://.../data-export-gui/"
 let opfsMountPoint = null; // e.g. "/mnt/data" — Emscripten path where OPFS root is mounted
 const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
@@ -127,10 +184,10 @@ async function installDeps(pyodide) {
     const pkgIndexRes = await fetch(buildResourceUrl('pyodide/pyodide_packages_index.json'));
     if (!pkgIndexRes.ok) throw new Error('pyodide_packages_index.json missing');
     const pkgNames = await pkgIndexRes.json();
-    console.log('[Pyodide Worker] Loading Pyodide-native packages:', pkgNames);
+    logger.debug('Loading Pyodide-native packages:', pkgNames);
     await pyodide.loadPackage(pkgNames);
   } catch (error) {
-    console.error('[Pyodide Worker] Failed to load Pyodide packages:', error.message || String(error));
+    logger.error('Failed to load Pyodide packages:', error.message || String(error));
     failedPackages.push('pyodide_packages_index');
   }
 
@@ -143,16 +200,17 @@ async function installDeps(pyodide) {
     const micropip = pyodide.pyimport('micropip');
     for (var j = 0; j < wheelFiles.length; j++) {
       var wheelUrl = wheelsBaseUrl + '/' + wheelFiles[j];
-      console.log('[Pyodide Worker] Installing wheel:', wheelUrl);
+      logger.debug('Installing wheel:', wheelUrl);
       try {
         await micropip.install(wheelUrl);
       } catch (error) {
-        console.error('[Pyodide Worker] Failed to install ' + wheelFiles[j] + ':', error.message || String(error));
+        logger.error('Failed to install ' + wheelFiles[j] + ':', error.message || String(error));
         failedPackages.push(wheelFiles[j]);
       }
     }
+    logger.info('Installed ' + wheelFiles.length + ' Python wheels');
   } catch (error) {
-    console.error('[Pyodide Worker] Failed to fetch wheels_index.json:', error.message || String(error));
+    logger.error('Failed to fetch wheels_index.json:', error.message || String(error));
     failedPackages.push('wheels_index.json');
   }
 
@@ -177,7 +235,7 @@ async function loadManifestOnDemand(platform) {
   if (res.ok) {
     const txt = await res.text();
     pyodide.FS.writeFile(targetFile, txt);
-    console.log(`[Pyodide Worker] Loaded manifest for platform: ${platform}`);
+    logger.debug(`Loaded manifest for platform: ${platform}`);
   } else {
     throw new Error(`Failed to load manifest for platform ${platform}`);
   }
@@ -190,13 +248,21 @@ async function loadManifestOnDemand(platform) {
 
 async function initPyodide() {
   try {
-    console.log('[Pyodide Worker] Starting initialization...');
+    logger.info('Starting initialization...');
     
     config = await loadConfig();
+    if (config && config.LOG_LEVEL) {
+      var upper = String(config.LOG_LEVEL).toUpperCase();
+      if (LOG_LEVELS[upper] !== undefined) workerLogLevel = LOG_LEVELS[upper];
+    }
     baseUrl = getBaseUrl();
-    console.log(`[Pyodide Worker] Computed base URL: ${baseUrl}`);
+    logger.debug(`Computed base URL: ${baseUrl}`);
     
+    const pyodideInitStart = self.performance.now();
     pyodide = await loadPyodide({indexURL: buildResourceUrl('pyodide/')});
+    logPerformanceMemory('pyodide_init', self.performance.now() - pyodideInitStart);
+
+    self.getWasmMemoryBytes = () => pyodide._module.HEAP8.buffer.byteLength;
     
     const pyCorePath = config.paths.python_core;
     await extractPythonCoreZip(pyodide, pyCorePath);
@@ -224,8 +290,11 @@ builtins.SCHEMA_PATH = "${config.paths.schema}"
 builtins.TEMP_ZIP_DATA_STORAGE = "${config.storage.temp_zip_storage}"
 builtins.MANIFESTS_DIR = "${config.paths.manifests}"
 builtins.PYTHON_CORE = "${config.paths.python_core}"
+builtins.LOG_LEVEL = "${config.LOG_LEVEL || (typeof process !== 'undefined' && process.env && process.env.VUE_APP_LOG_LEVEL) || 'INFO'}"
 builtins.IS_FIREFOX = ${isFirefox ? 'True' : 'False'}
 builtins.IS_SAFARI = ${isSafari ? 'True' : 'False'}
+builtins.PERFORMANCE_MEMORY_SAMPLING = ${config.performance?.memory_sampling_enabled ? 'True' : 'False'}
+builtins.PERFORMANCE_MEMORY_SAMPLING_INTERVAL_MS = ${config.performance?.memory_sampling_interval_ms || 100}
     `);
 
     pyodide.FS.mkdir(config.paths.manifests);
@@ -241,15 +310,16 @@ builtins.IS_SAFARI = ${isSafari ? 'True' : 'False'}
 import sys
 sys.path.insert(0, '${config.paths.python_core}')
 sys.path.insert(0, '/')
-from utils.pyodide_utils import init_pyodide
+from runtime.pyodide_utils import init_pyodide
 init_pyodide()
     `);
     
-    console.log('[Pyodide Worker] Initialization complete');
+    logger.info('Initialization complete');
+    self.postMessage({ type: 'pyodide_ready' });
     return pyodide;
   } catch (error) {
-    console.error('[Pyodide Worker] FATAL initialization error:', error.message);
-    console.error('[Pyodide Worker] Stack trace:', error.stack);
+    logger.error('FATAL initialization error:', error.message);
+    logger.error('Stack trace:', error.stack);
     throw error;
   }
 }
@@ -299,7 +369,7 @@ pyodideReadyPromise = initPyodideWithRetry();
 async function flushOPFSDatabase() {
   /* Firefox/Safari: bypass Emscripten syncfs (crashes on stat()/BigInt) by manually writing DB bytes to OPFS via SyncAccessHandle. Chrome: standard FS.syncfs. */
   if (isFirefox || isSafari) {
-    console.log('[Pyodide Worker] Firefox/Safari: manually syncing db to OPFS.');
+    logger.debug('Firefox/Safari: manually syncing db to OPFS.');
     try {
       const dbBytes = pyodide.FS.readFile(config.database.db_path);
       const opfsRoot = await navigator.storage.getDirectory();
@@ -312,17 +382,17 @@ async function flushOPFSDatabase() {
       accessHandle.close();
       return;
     } catch (e) {
-      console.error('[Pyodide Worker] Manual OPFS sync failed:', e);
+      logger.error('Manual OPFS sync failed:', e);
       return;
     }
   }
   return new Promise((resolve, reject) => {
     pyodide.FS.syncfs(false, (err) => {
       if (err) {
-        console.error('[Pyodide Worker] sync to opfs failed:', err);
+        logger.error('sync to opfs failed:', err);
         reject(err);
       } else {
-        console.log('[Pyodide Worker] database flushed to opfs');
+        logger.debug('database flushed to opfs');
         resolve();
       }
     });
@@ -336,17 +406,23 @@ async function showPackages(pyodide) {
 import micropip, json
 json.dumps(list(micropip.list().keys()))
     `);
-    console.log('[Pyodide Worker] Installed packages:', JSON.parse(result));
+    logger.debug('Installed packages:', JSON.parse(result));
   } catch (e) {
-    console.warn('[Pyodide Worker] Could not list packages:', e);
+    logger.warn('Could not list packages:', e);
   }
 }
 
 
 self.onmessage = async (event) => {
+  // One-way push from pyodide-client.js, not a request/response — handle and return before
+  // touching the id/command dispatch below.
+  if (event.data && event.data.type === 'jsHeapSample') {
+    lastJsHeapBytes = event.data.bytes;
+    return;
+  }
+
   const { id, command, args } = event.data;
-  // console.log(`[PyodideWorker] Received message: command='${command}', id=${id}`);
-  
+
   try {
     // Wait for Pyodide to be ready
     try {
@@ -383,37 +459,64 @@ self.onmessage = async (event) => {
 
       case 'run_pipeline': {
         const { platform, givenName } = args;
-        console.log(`[Pyodide Worker] run_pipeline called: platform=${platform}, givenName=${givenName}`);
+        logger.info(`run_pipeline called: platform=${platform}, givenName=${givenName}`);
+
+        // The JSON pipeline summary (python_core/run.py) comes back as `result.performance_summary`
+        // below rather than being scraped from console output — CSV building/download from it
+        // happens in pyodide-client.js's executeUpload(), which runs on the main thread and has
+        // DOM access (this worker doesn't).
 
         await loadManifestOnDemand(platform);
 
         if (opfsMountPoint) {
-          console.log(`[Pyodide Worker] Remounting OPFS at ${opfsMountPoint}...`);
+          logger.debug(`Remounting OPFS at ${opfsMountPoint}...`);
           try {
             await setupOPFSMount(pyodide, opfsMountPoint);
           } catch (e) {
-            console.error('[Pyodide Worker] OPFS remount failed:', e);
+            logger.error('OPFS remount failed:', e);
           }
         }
 
+        // performance.mark/measure pairs show up in DevTools' Performance tab timeline.
+        let lastStageMark = null;
         self.reportProgress = (stage, progress) => {
+          const markName = 'pipeline:' + stage;
+          self.performance.mark(markName);
+          if (lastStageMark) {
+            try {
+              self.performance.measure('pipeline:' + lastStageMark.stage + '->' + stage, lastStageMark.name, markName);
+            } catch (e) { /* ignore if a mark went missing */ }
+          }
+          lastStageMark = { stage, name: markName };
+          // Fires when this stage is about to start, not when it finishes — the matching
+          // `stage=<name> dur_ms=...` line from python_core/performance.py has the actual duration.
+          logPerformanceMemory(stage + '_start', undefined, { progress });
           self.postMessage({ id, type: 'progress', stage, progress });
         };
 
         pyodide.globals.set('platform', platform);
         pyodide.globals.set('given_name', givenName);
 
+        const pipelineStart = self.performance.now();
         result = await pyodide.runPythonAsync(`
 import run
 run.run(platform, given_name)
 `);
+
+        self.performance.mark('pipeline:complete');
+        if (lastStageMark) {
+          try {
+            self.performance.measure('pipeline:' + lastStageMark.stage + '->complete', lastStageMark.name, 'pipeline:complete');
+          } catch (e) { /* ignore if a mark went missing */ }
+        }
+        logPerformanceMemory('pipeline_total', self.performance.now() - pipelineStart);
 
         delete self.reportProgress;
 
         await flushOPFSDatabase();
 
         result = result.toJs({ dict_converter: Object.fromEntries });
-        console.log(`[Pyodide Worker] run_pipeline result:`, result);
+        logger.debug(`run_pipeline result:`, result);
         break;
       }
 
@@ -439,7 +542,7 @@ Manifest(platform=platform).file_paths()
     }
     
     self.postMessage({ id, result, success: true });
-    console.log(`[Pyodide Worker] Command '${command}' completed successfully`);
+    logger.debug(`Command '${command}' completed successfully`);
   } catch (error) {
     const errorMsg = error.message || String(error);
     
