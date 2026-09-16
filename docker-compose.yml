@@ -32,7 +32,7 @@ services:
       - /workspace/.venv
       - /workspace/node_modules
       - /workspace/webapp/node_modules
-    command: uv run pytest
+    command: uv run pytest tests/python
 
 volumes:
   data_raw:
