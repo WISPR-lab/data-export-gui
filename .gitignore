@@ -105,9 +105,18 @@ docs*
 
 .pytest_cache/*
 .ruff_cache
-entity_resolution_evaluation/data/
-entity_resolution_evaluation/demo/runs/
-entity_resolution_evaluation/explore.ipynb
-uv.lock
+evaluation/entity_resolution/data_raw/
 webapp/public/vendor/
 webapp/public/pyodide/
+evaluation/entity_resolution/runs/*
+evaluation/efficiency/newdata/*
+evaluation/efficiency/data/*
+
+!evaluation/efficiency/newdata/*.zip
+!evaluation/efficiency/data/*_original.zip
+!evaluation/efficiency/trial_time_mem_results.zip
+evaluation/user_study/*.csv
+evaluation/user_study/*.pdf
+
+# evaluation/efficiency/trials/*.csv
+evaluation/efficiency/*.csv
