@@ -1,10 +1,13 @@
 services:
+  # The anonymous /workspace/... volumes keep the image's own node_modules and .venv,
+  # so the host bind mount doesn't shadow them with host-built (e.g. macOS) binaries.
   web:
     build: .
     ports:
       - "5001:5001"
     volumes:
       - .:/workspace
+      - /workspace/.venv
       - /workspace/node_modules
       - /workspace/webapp/node_modules
     command: yarn --cwd webapp serve
@@ -13,7 +16,8 @@ services:
     build: .
     volumes:
       - .:/workspace
-      - data_raw:/workspace/entity_resolution_evaluation/data/raw
+      - data_raw:/workspace/evaluation/entity_resolution/data_raw
+      - /workspace/.venv
       - /workspace/node_modules
       - /workspace/webapp/node_modules
     working_dir: /workspace
@@ -25,9 +29,10 @@ services:
     build: .
     volumes:
       - .:/workspace
+      - /workspace/.venv
       - /workspace/node_modules
       - /workspace/webapp/node_modules
-    command: uv run pytest
+    command: uv run pytest tests/python
 
 volumes:
   data_raw:

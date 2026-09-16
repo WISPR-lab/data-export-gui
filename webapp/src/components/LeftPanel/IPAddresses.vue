@@ -55,7 +55,6 @@ limitations under the License.
 <script>
 import IPAddressesList from './IPAddressesList.vue'
 import DB from '@/database/index.js'
-import EventBus from '@/event-bus.js'
 
 export default {
   props: {
@@ -87,7 +86,7 @@ export default {
   methods: {
     async loadIPAddresses() {
       try {
-        this.ipAddresses = await DB.getIPAddresses();
+        this.ipAddresses = await DB.getIPAddresses(this.$route.meta.dbName || 'userdata');
       } catch (e) {
         console.error('Error loading IP addresses:', e)
         this.ipAddresses = []

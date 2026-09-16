@@ -4,13 +4,30 @@ import * as events from './queries/events.js';
 import * as uploads from './queries/uploads.js';
 import * as comments from './queries/comments.js';
 import * as metadata from './queries/metadata.js';
+import * as devicesV2 from './queries/devices_v2.js';
 import { loadConfig } from '../utils/config.js';
+import { getLogger } from '../utils/logger.js';
 import EventBus from '../event-bus.js';
+import { terminatePyodideWorker } from '../pyodide/pyodide-client.js';
+import { OPFSManager } from '../storage/opfs_manager.js';
 
+const logger = getLogger('Database');
+
+// Matches sqlite errors that indicate the on-disk schema (from a previous app version)
+// no longer matches the shipped schema.sql, e.g. "no such column: x", "no such table: x",
+// "table x has no column named y".
+const SCHEMA_MISMATCH_RE = /no such (column|table)|has no column named/i;
 
 let worker = null;
 let messageId = 0;
-let activeDbName = 'userdata'; // Track which DB is active ('userdata' mode vs 'demo')
+
+function assertValidDbName(dbName) {
+  var target = dbName || 'userdata';
+  if (target !== 'userdata' && target !== 'demo') {
+    throw new Error(`[Database] Invalid dbName: ${JSON.stringify(dbName)}`);
+  }
+  return target;
+}
 
 function callPyodideWorker(method, args) {
   /* Promise wrapper for worker.postMessage; matches response by auto-incrementing id and reconstructs Error objects from serialized error payloads. */
@@ -34,19 +51,21 @@ function callPyodideWorker(method, args) {
   });
 }
 
-async function getDbPaths() {
+async function getDbPaths(dbName) {
+  assertValidDbName(dbName);
   const cfg = await loadConfig();
   const dbFilename = cfg.database.db_path.split('/').pop(); // e.g., "userdata.db"
-  const dbPath = activeDbName === 'userdata' ? `/${dbFilename}` : '/demo.db';
-  
+  const dbPath = dbName === 'userdata' ? `/${dbFilename}` : '/demo.db';
+
   return {
     schemaPath: cfg.paths.schema,
     dbPath,
   };
 }
 
-export async function getDB() {
-  /* Lazy-creates the sqlite worker; returns an exec-only interface that resolves DB path per-call based on activeDbName. */
+export async function getDB(dbName) {
+  /* Lazy-creates the sqlite worker; returns an exec-only interface bound to the explicitly-requested db. */
+  assertValidDbName(dbName);
   if (!worker) {
     // [Database] Initializing
     worker = new Worker('./sqlite-worker.js');
@@ -55,16 +74,18 @@ export async function getDB() {
 
   return {
     async exec(sql, options) {
-      const { schemaPath, dbPath } = await getDbPaths();
+      const { schemaPath, dbPath } = await getDbPaths(dbName);
       return callPyodideWorker('exec', {
         sql,
         options: options || {},
         schemaPath,
         dbPath,
       }).catch(function(err) {
-        // OpfsDb not a constructor = OPFS unavailable (crossOriginIsolated false at worker init time)
-        if (err && err.message && err.message.indexOf('OpfsDb') !== -1 && err.message.indexOf('constructor') !== -1) {
+        const msg = (err && err.message) || String(err);
+        if (msg.indexOf('OpfsDb') !== -1 && msg.indexOf('constructor') !== -1) {
           EventBus.$emit('opfsUnavailable');
+        } else if (SCHEMA_MISMATCH_RE.test(msg)) {
+          EventBus.$emit('schemaMismatch', msg);
         }
         throw err;
       });
@@ -128,23 +149,58 @@ export async function closeDB() {
   if (worker) {
     worker.terminate();
     worker = null;
-    // [Database] Closed
+    logger.debug('Worker terminated');
   }
-  // if (db) {
-  //   await db.close();
-  //   if (worker) {
-  //     worker.terminate();
-  //     worker = null;
-  //   }
-  //   db = null;
-  //   initPromise = null;
-  //   console.log('[Database] Connection closed');
-  // }
 }
 
-export async function clearAllTables() {
+export async function resetAllLocalData(options) {
+  /* Shared "hard refresh" mechanism: closes the sqlite worker and the pyodide worker
+     (so no open OPFS file handles block deletion), then recursively wipes OPFS and
+     browser storage. Single place this logic lives - reused by SafeExitButton,
+     DebugOPFS's "Nuke All", OpfsCompatibilityDialog, and SchemaRefreshDialog. */
+  const opts = options || {};
+  const unregisterServiceWorkers = opts.unregisterServiceWorkers || false;
+
+  try {
+    await closeDB();
+  } catch (e) {
+    logger.warn('Failed to close DB during reset:', e);
+  }
+
+  try {
+    terminatePyodideWorker();
+  } catch (e) {
+    logger.warn('Failed to terminate pyodide worker during reset:', e);
+  }
+
+  try {
+    const opfsManager = new OPFSManager();
+    await opfsManager.nukeAll();
+  } catch (e) {
+    logger.warn('Failed to nuke OPFS during reset:', e);
+  }
+
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch (e) {
+    logger.warn('Failed to clear local/session storage during reset:', e);
+  }
+
+  if (unregisterServiceWorkers && navigator.serviceWorker) {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister().catch(function() {})));
+    } catch (e) {
+      logger.warn('Failed to unregister service workers during reset:', e);
+    }
+  }
+}
+
+export async function clearAllTables(dbName) {
   /* Dynamically queries sqlite_master for all user tables and DELETEs their rows (not DROP — preserves schema). */
-  const db = await getDB();
+  const targetDb = dbName || 'userdata';
+  const db = await getDB(targetDb);
 
   // Query sqlite_master to get all tables dynamically
   const result = await db.exec(
@@ -157,7 +213,7 @@ export async function clearAllTables() {
   for (const table of tables) {
     await db.exec(`DELETE FROM ${table};`);
   }
-  // [Database] Data cleared
+  logger.debug(`Cleared all DB tables`);
 }
 
 
@@ -166,16 +222,8 @@ export default {
   getDB,
   closeDB,
   clearAllTables,
-  
-  // DB switching
-  setActiveDatabase(dbName) {
-    activeDbName = dbName; // 'userdata' or 'demo'
-    console.log(`[Database] Switched to ${dbName} database`);
-  },
-  getActiveDatabase() {
-    return activeDbName;
-  },
-  
+  resetAllLocalData,
+
   searchEvents: events.searchEvents,
   getEventCount: events.getEventCount,
   // Note: Frontend uses getEventActions (event_action field), not getCategories (event_category field)
@@ -188,7 +236,9 @@ export default {
   removeLabelEvent: events.removeLabelEvent,
   updateEventTags: events.updateEventTags,
   clearAllTags: events.clearAllTags,
-  
+  addTagToEventsQuery: events.addTagToEventsQuery,
+  updateDeviceTags: devicesV2.updateDeviceTags,
+
   getUploads: uploads.getUploads,
   getUploadById: uploads.getUploadById,
   getUploadedFiles: uploads.getUploadedFiles,

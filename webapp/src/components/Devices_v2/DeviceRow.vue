@@ -1,18 +1,26 @@
 // added for WISPR-lab/data-export-gui
 <template>
   <v-expansion-panel
-    class="mb-2 border rounded-xl overflow-hidden"
+    active-class="grey lighten-5"
+    class="device-row-panel"
   >
     <v-expansion-panel-header class="py-3 px-4">
       <template v-slot:default>
         <!-- Outer layout splits Avatar (left) from all content (right) to prevent under-avatar alignment bugs -->
         <div class="d-flex align-center w-100" style="min-width: 0;">
           
-          <!-- Permanent Left Column: Avatar Logo (resists wrapping) -->
-          <div class="flex-shrink-0 mr-3">
-            <!-- <v-avatar size="36" color="grey lighten-4">
-              <v-icon color="grey darken-2" size="18">{{ icon }}</v-icon>
-            </v-avatar> -->
+          <!-- Leftmost: Tag button & menu using shared TsEventTagMenu -->
+          <div class="flex-shrink-0 mr-2" @click.stop>
+            <ts-event-tag-menu
+              :event="{ _id: deviceId, _source: { tags: localTags } }"
+              :show-propagate-option="true"
+              :event-count="eventCount"
+              :events-query="eventsQuery"
+              :persist="persistDeviceTags"
+              silent
+              @tag-added="handleTagAdded"
+              @tag-removed="handleTagRemoved"
+            />
           </div>
 
           <!-- Permanent Right Column: All text & buttons (groups content to align together) -->
@@ -20,42 +28,71 @@
             <v-row no-gutters align="center">
               
               <!-- Title & Badges block -->
-              <v-col cols="12" md="6" class="pr-2 py-0.5">
+              <v-col cols="12" sm="6" class="pr-2 py-0.5">
                 <div class="text-body-2 font-weight-medium text--primary" style="line-height: 1.3; min-width: 0;">
-                  {{ titleCase(title) }}
+                  <!-- Tags rendered BEFORE title with right margin, matching EventList.vue -->
+                  <ts-event-tags v-if="localTags.length > 0" :item="{ _source: { tags: localTags } }" class="mr-1.5" />
+
+                  {{ capitalize(title) }}
                   <span v-if="clientName" class="text-body-2 text--secondary font-weight-regular ml-1">via {{ clientName }}</span>
-                  
-                  <!-- Inline Masked link -->
+
+                  <!-- Inline Conflicting Hardware IDs pill (event groups only) -->
+                  <v-chip
+                    v-if="!isRecord && hasConflictingHardwareIds"
+                    color="amber darken-3"
+                    outlined
+                    x-small
+                    class="ml-2 px-1.5"
+                    style="height: 18px; cursor: pointer;"
+                    @click.stop="triggerConflictModal"
+                  >
+                    <v-icon left size="12">mdi-alert</v-icon>
+                    Conflicts
+                  </v-chip>
+
+                  <!-- Inline Reduced link -->
                   <span
                     v-if="isReducedUa"
                     class="masked-glossary ml-2"
                     @click.stop="triggerInfoModal"
                   >
                     <v-icon size="13" class="icon-target">mdi-fingerprint-off</v-icon>
-                    Masked
+                    Reduced UA
                   </span>
 
-                  <!-- Inline Passkey chip -->
+                  <!-- Inline Inactive badge -->
+                  <span
+                    v-if="isInactive"
+                    class="masked-glossary ml-2"
+                    @click.stop="triggerInactiveInfo"
+                  >
+                    <v-icon size="13" class="icon-target">mdi-clock-outline</v-icon>
+                    Inactive
+                  </span>
+
+                  <!-- Inline Passkey badge -->
                   <v-chip
                     v-if="isRecord && hasPasskey"
                     color="success"
                     outlined
                     x-small
-                    class="ml-2 px-1.5"
-                    style="height: 18px;"
+                    class="ml-2 px-1.5 font-weight-bold"
+                    style="height: 18px; font-size: 11px; cursor: pointer;"
+                    @click.stop="triggerPasskeyInfo"
                   >
+                    <v-icon left size="12" class="mr-1">mdi-key-wireless</v-icon>
                     Passkey
                   </v-chip>
                 </div>
               </v-col>
 
-              <!-- Active Date Label (grows to md="6" if there is no events action button) -->
-              <v-col cols="12" :md="eventsQuery ? 4 : 6" class="text-body-2 text--secondary pr-2 py-0.5 mt-1 mt-md-0">
+              <!-- Active Date Label (grows to sm="6" if there is no events action button) -->
+              <v-col cols="12" :sm="eventsQuery ? 4 : 6" class="text-body-2 text--secondary pr-2 py-0.5 mt-1 mt-sm-0">
                 {{ activeDateLabel }}
               </v-col>
 
               <!-- Events Action Button (hidden entirely when eventsQuery is empty) -->
-              <v-col v-if="eventsQuery" cols="12" md="2" class="py-0.5 mt-1 mt-md-0">
+              <v-col v-if="eventsQuery" cols="12" sm="2" class="py-0.5 mt-1 mt-sm-0">
                 <v-tooltip bottom>
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn
@@ -84,24 +121,46 @@
       </template>
     </v-expansion-panel-header>
 
-    <v-expansion-panel-content class="grey lighten-5 border-top">
+    <v-expansion-panel-content class="transparent">
       <div class="pa-4">
         <div class="text-body-2 font-weight-medium text--secondary mb-3">{{ detailLabel }}</div>
         <attributes-table :attributes="displayAttributes" />
       </div>
     </v-expansion-panel-content>
+
+    <!-- Confirmation Modal for Tag Propagation to Events -->
+    <tag-propagate-modal
+      v-model="showPropagateModal"
+      :action="pendingTagAction.action"
+      :tag="pendingTagAction.tag"
+      :event-count="eventCount"
+      @respond="handleModalResponse"
+    />
   </v-expansion-panel>
 </template>
 
 <script>
-import AttributesTable from '@/components/Devices_v1_legacy/AttributesTable.vue';
-import { titleCase } from '@/filters/TitleCase.js';
+import DB from '@/database/index.js';
+import AttributesTable from '@/components/Devices_v2/AttributesTable.vue';
+import TsEventTagMenu from '@/components/Events/EventTagMenu.vue';
+import TsEventTags from '@/components/Events/EventTags.vue';
+import TagPropagateModal from '@/components/Devices_v2/TagPropagateModal.vue';
+import { capitalize } from '@/filters/Capitalize.js';
 
 export default {
   name: 'DeviceRow',
-  components: { AttributesTable },
+  components: { AttributesTable, TsEventTags, TsEventTagMenu, TagPropagateModal },
+  data() {
+    return {
+      localTags: Array.isArray(this.tags) ? this.tags.slice() : [],
+      showPropagateModal: false,
+      pendingTagAction: { action: 'add', tag: '' }
+    };
+  },
   props: {
     type:        { type: String,  default: 'record' },
+    id:          { type: [String, Number], default: null },
+    tags:        { type: Array,   default: function() { return []; } },
     title:       { type: String,  default: 'Unknown Device' },
     clientName:  { type: String,  default: '' },
     icon:        { type: String,  default: 'mdi-devices' },
@@ -110,15 +169,37 @@ export default {
     fallbackDateStr: { type: String, default: '' },
     eventsQuery: { type: String,  default: '' },
     isReducedUa:         { type: Boolean, default: false },
+    isInactive:          { type: Boolean, default: false },
+    entitySubType:       { type: String,  default: '' },
+    hasConflictingHardwareIds: { type: Boolean, default: false },
     hasPasskey:          { type: Boolean, default: false },
     detailLabel:         { type: String,  default: 'Details' },
     formattedAttributes: { type: Array,    default: function() { return []; } },
     eventCount: { type: Number, default: 0 },
-    clusterRaw: { type: Object, default: function() { return {}; } }
+    groupRaw: { type: Object, default: function() { return {}; } }
+  },
+  watch: {
+    // reset local tags when the source row is refetched, so remounts don't drop persisted tags
+    tags(newVal) {
+      this.localTags = Array.isArray(newVal) ? newVal.slice() : [];
+    }
   },
   computed: {
     isRecord() {
       return this.type === 'record';
+    },
+    deviceId() {
+      return this.id || (this.groupRaw && this.groupRaw.id) || null;
+    },
+    inactiveTitle() {
+      var subType = (this.entitySubType || (this.groupRaw && (this.groupRaw.entity_sub_type || this.groupRaw.entity_type)) || '').toLowerCase();
+      if (subType === 'session') {
+        return 'Inactive Session';
+      }
+      if (subType === 'app_registration') {
+        return 'Inactive App Install';
+      }
+      return 'Inactive Device';
     },
     buttonText() {
       var count = this.eventCount;
@@ -133,29 +214,28 @@ export default {
       if (this.isRecord) {
         return 'See ' + eventsText + ' with this session ID';
       }
-      return 'See ' + eventsText + ' in this activity cluster';
+      return 'See ' + eventsText + ' in this event group';
     },
     activeDateLabel() {
       var fmt = this.$options.filters && this.$options.filters.dateRange;
       if (fmt) {
-        var normalize = function(val) {
-          if (val === null || val === undefined || val === '') return null;
-          var num = Number(val);
-          if (!isNaN(num)) {
-            if (num < 10000000000) return num * 1000;
-            return num;
-          }
-          return val;
-        };
-        var range = fmt([normalize(this.firstSeen), normalize(this.lastSeen)]);
-        return range ? 'Active ' + range : this.fallbackDateStr;
+        if (this.firstSeen && this.lastSeen) {
+          var range = fmt([this.firstSeen, this.lastSeen]);
+          return range ? 'Active ' + range : this.fallbackDateStr;
+        } else if (this.firstSeen) {
+          var fDate = fmt([this.firstSeen, null]);
+          return fDate ? 'First seen ' + fDate : this.fallbackDateStr;
+        } else if (this.lastSeen) {
+          var lDate = fmt([null, this.lastSeen]);
+          return lDate ? 'Last seen ' + lDate : this.fallbackDateStr;
+        }
       }
       return this.fallbackDateStr;
     },
     displayAttributes() {
       if (this.isRecord) return this.formattedAttributes;
       var attrs = [];
-      var c = this.clusterRaw;
+      var c = this.groupRaw;
       if (!c) return attrs;
       var parseList = function(val) {
         if (!val) return [];
@@ -165,6 +245,9 @@ export default {
           return [];
         }
       };
+      if (c.id) {
+        attrs.push({ label: 'Device Group ID', value: c.id });
+      }
       if (c.latest_client_ip) {
         attrs.push({ label: 'Latest Client IP', value: c.latest_client_ip });
       }
@@ -208,26 +291,91 @@ export default {
     }
   },
   methods: {
-    titleCase,
+    capitalize,
     triggerInfoModal() {
       this.$emit('show-info', {
-        title: 'Masked User Agent',
+        title: 'Reduced User Agent',
         description: 'To prevent browser fingerprinting, Apple devices (like iPhones running Mobile Safari) return simplified, generic user agent strings. This hides the specific device model details from websites and exports.'
       });
     },
-    goToEvents() {
-      var routeName = this.$route.name === 'DemoDevices' ? 'DemoEvents' : 'Events';
-      var chipsVal = '';
-      if (this.eventsQuery.indexOf('client_session_id:') === 0) {
-        var sid = this.eventsQuery.replace('client_session_id:', '').replace(/"/g, '');
-        chipsVal = 'client_session_id:' + sid;
-      } else if (this.eventsQuery.indexOf('device_serial_number:') === 0) {
-        var serial = this.eventsQuery.replace('device_serial_number:', '').replace(/"/g, '');
-        chipsVal = 'device_serial_number:' + serial;
-      } else {
-        chipsVal = this.eventsQuery;
+    triggerInactiveInfo() {
+      var key = (this.entitySubType || (this.groupRaw && (this.groupRaw.entity_sub_type || this.groupRaw.entity_type)) || '').toLowerCase();
+      var noun = key === 'session' ? 'session' : (key === 'app_registration' ? 'app install' : 'device');
+      var extra_disclaimer = key === 'app_registration' ? ' This is not the same as an app uninstall.' : (key === 'session' ? ' We happen to know that this session is inactive. Other sessions may also be inactive as well, even if they do not have the same label.' : '');
+      this.$emit('show-info', {
+        title: this.inactiveTitle,
+        description: 'This ' + noun + ' is no longer active or signed-in. It was found in your historical account records.' + extra_disclaimer
+      });
+    },
+    triggerPasskeyInfo() {
+      this.$emit('show-info', {
+        title: 'Passkey Registered',
+        description: 'This device has a passkey for your Apple account on it.'
+      });
+    },
+    triggerConflictModal() {
+      this.$emit('show-info', {
+        title: 'Conflicts',
+        description: 'This event group contains records with conflicting hardware IDs (e.g., serial numbers or IMEI). This means that this event group contains records belonging to two or more devices, although their attributes are similar enough that we cannot tell them apart. Please analyze all of the events independently and review which devices that the platform reports are associated with your account.'
+      });
+    },
+    async persistDeviceTags(id, tags) {
+      await DB.updateDeviceTags(this.$route.meta.dbName || 'userdata', this.type, id || this.deviceId, tags);
+    },
+    async handleTagAdded(tag) {
+      if (tag && !this.localTags.includes(tag)) {
+        this.localTags.push(tag);
       }
-      this.$router.push({ name: routeName, query: { chips: chipsVal } }).catch(function() {});
+      if (tag && Array.isArray(this.tags) && !this.tags.includes(tag)) {
+        this.tags.push(tag);
+      }
+      await this.processTagAction('add', tag);
+    },
+    async handleTagRemoved(tag) {
+      if (tag) {
+        this.localTags = this.localTags.filter(t => t !== tag);
+      }
+      if (tag && Array.isArray(this.tags)) {
+        var idx = this.tags.indexOf(tag);
+        if (idx !== -1) {
+          this.tags.splice(idx, 1);
+        }
+      }
+      await this.processTagAction('remove', tag);
+    },
+    async processTagAction(action, tag) {
+      // handles only the opt-in "also apply to matching events" propagation; the tag itself is already persisted by persistDeviceTags
+      if (!tag || this.eventCount === 0 || !this.eventsQuery) return;
+      var storageKey = action === 'add' ? 'takeout_tag_propagate_add' : 'takeout_tag_propagate_remove';
+      var savedPref = localStorage.getItem(storageKey);
+
+      if (savedPref === 'always') {
+        await this.propagateToEvents(tag, action === 'remove');
+      } else if (savedPref === 'never') {
+        // device only
+      } else {
+        this.pendingTagAction = { action: action, tag: tag };
+        this.showPropagateModal = true;
+      }
+    },
+    async handleModalResponse({ propagate, dontAskAgain }) {
+      var action = this.pendingTagAction.action;
+      var tag = this.pendingTagAction.tag;
+      var storageKey = action === 'add' ? 'takeout_tag_propagate_add' : 'takeout_tag_propagate_remove';
+
+      if (dontAskAgain) {
+        localStorage.setItem(storageKey, propagate ? 'always' : 'never');
+      }
+
+      if (propagate && this.eventsQuery) {
+        await this.propagateToEvents(tag, action === 'remove');
+      }
+    },
+    async propagateToEvents(tag, remove) {
+      var changedCount = await DB.addTagToEventsQuery(this.$route.meta.dbName || 'userdata', this.eventsQuery, tag, remove);
+      if (changedCount) {
+        this.$store.dispatch('updateEventLabels', { label: tag, num: remove ? -changedCount : changedCount });
+      }
     }
   }
 };
@@ -237,9 +385,23 @@ export default {
 .border     { border: 1px solid #e0e0e0; }
 .border-top { border-top: 1px solid #e0e0e0; }
 .cursor-pointer { cursor: pointer; }
+.device-row-panel {
+  border: none !important;
+  border-radius: 0 !important;
+}
+.device-row-panel > .v-expansion-panel-header {
+  border-top: 1px solid #e0e0e0;
+}
+.device-row-panel:last-child {
+  border-bottom: 1px solid #e0e0e0 !important;
+}
+.device-row-panel::before {
+  box-shadow: none !important;
+}
 .masked-glossary {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   color: #616161;
   border-bottom: 1px dotted #757575;
   cursor: help;

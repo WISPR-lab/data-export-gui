@@ -49,10 +49,23 @@ export default {
     },
     friendlyStatus() {
       const map = {
-        validating: 'Reading ZIP file...',
-        parsing: 'Parsing records...',
-        initializing: 'Parsing records...',
-        inserting: 'Mapping events...',
+        init_pyodide: 'Starting up parser (Pyodide)...',
+        pyodide_init: 'Starting up parser (Pyodide)...',
+        initializing: 'Starting up parser (Pyodide)...',
+        init: 'Starting up parser (Pyodide)...',
+
+        extract_zip: 'Extracting data from files...',
+        extract: 'Extracting data from files...',
+        semantic_map: 'Extracting data from files...',
+        normalize: 'Extracting data from files...',
+        validating: 'Extracting data from files...',
+        parsing: 'Extracting data from files...',
+        inserting: 'Extracting data from files...',
+
+        group: 'Organizing all the data...',
+        organizing: 'Organizing all the data...',
+
+        cleanup: 'Almost done...',
         complete: 'Almost done...',
         error: 'Something went wrong',
       };

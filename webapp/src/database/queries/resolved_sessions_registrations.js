@@ -14,22 +14,33 @@ function nullTs(val) {
 
 var EPOCH_ZERO_KEYS = ['entity_first_seen_timestamp', 'entity_last_seen_timestamp', 'timestamp'];
 
-export async function getResolvedSessionsRegistrations() {
-  const db = await getDB();
+function parseTags(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (!raw) return [];
+  try {
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
 
-  // Subquery pulls the device_instance_id for sessions via their client_session_id →
-  // events → device_instance_events join. LIMIT 1 handles the case where multiple
-  // events for the same session map to the same instance.
+export async function getResolvedSessionsRegistrations(dbName) {
+  const db = await getDB(dbName);
+
+  // Subquery pulls the device_group_id for sessions via their client_session_id →
+  // events → device_group_events join. LIMIT 1 handles the case where multiple
+  // events for the same session map to the same group.
   const sql = `
     SELECT rsr.*,
-      (SELECT die.device_instance_id
+      (SELECT die.device_group_id
        FROM events e
-       JOIN device_instance_events die ON e.id = die.event_id
+       JOIN device_group_events die ON e.id = die.event_id
        WHERE e.upload_id = rsr.upload_id
          AND json_extract(rsr.attributes, '$.client_session_id') IS NOT NULL
          AND json_extract(e.attributes, '$.client_session_id')
              = json_extract(rsr.attributes, '$.client_session_id')
-       LIMIT 1) AS instance_id,
+       LIMIT 1) AS group_id,
       u.color  AS upload_color,
       u.platform AS upload_platform
     FROM resolved_sessions_registrations rsr
@@ -41,9 +52,42 @@ export async function getResolvedSessionsRegistrations() {
     rowMode: 'object'
   });
 
+  // Batch resolve raw_data ids -> filename + line numbers (same as events.js)
+  const rowRawDataIds = rows.map(row => {
+    try {
+      return row.raw_data_ids ? JSON.parse(row.raw_data_ids).filter(Boolean) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const rawDataMap = {};
+  const allRawDataIds = [...new Set(rowRawDataIds.flat())];
+  if (allRawDataIds.length > 0) {
+    const placeholders = allRawDataIds.map(() => '?').join(',');
+    const rawRows = await db.exec(
+      `SELECT rd.id, rd.line_numbers, uf.opfs_filename
+       FROM raw_data rd
+       LEFT JOIN uploaded_files uf ON uf.id = rd.file_id
+       WHERE rd.id IN (${placeholders})`,
+      { bind: allRawDataIds, returnValue: 'resultRows', rowMode: 'object' }
+    );
+    rawRows.forEach(rd => {
+      let lines = [];
+      try {
+        lines = rd.line_numbers ? JSON.parse(rd.line_numbers) : [];
+      } catch (e) {}
+      rawDataMap[rd.id] = { filename: rd.opfs_filename || 'Unknown File', line_numbers: lines };
+    });
+  }
+
   const resolved = [];
 
-  for (const row of rows) {
+  for (const [rowIndex, row] of rows.entries()) {
+    const sourcesInfo = rowRawDataIds[rowIndex].map(rid => rawDataMap[rid]).filter(Boolean);
+    const filenames = [...new Set(sourcesInfo.map(s => s.filename))];
+    const flatLineNumbers = [...new Set(sourcesInfo.flatMap(s => s.line_numbers))];
+
     let attrs = {};
     if (row.attributes) {
       try {
@@ -101,13 +145,14 @@ export async function getResolvedSessionsRegistrations() {
       id: row.id,
       upload_id: row.upload_id,
       entity_type: row.entity_type,
+      entity_sub_type: row.entity_sub_type,
       origin: row.origin,
-      model_name: row.model_name || 'Unknown Device',
+      model_name: row.model_name || (attrs['entity_display_name'] ? `"${attrs['entity_display_name']}"` : 'Unknown Device'),
       client_name: row.client_name,
       os_name: row.os_name,
       os_version: row.os_version,
       os_type: row.os_type,
-      instance_id: row.instance_id || null,
+      group_id: row.group_id || null,
       is_reduced_ua: !!row.is_reduced_ua,
       user_agent_original: attrs['user_agent_original'] || null,
       has_trusted_cookie: !!row.has_trusted_cookie,
@@ -118,7 +163,12 @@ export async function getResolvedSessionsRegistrations() {
       platform: row.upload_platform,
       attributes: attrs,
       events_query: eventsQuery,
-      event_count: eventCount
+      event_count: eventCount,
+      tags: parseTags(row.tags),
+      filename: filenames[0] || '',
+      filenames,
+      line_numbers: flatLineNumbers,
+      sources: sourcesInfo
     });
   }
 

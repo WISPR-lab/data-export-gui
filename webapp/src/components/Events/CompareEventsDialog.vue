@@ -185,12 +185,12 @@ export default {
         const idx = ev._source.labels.indexOf('starred')
         if (idx > -1) ev._source.labels.splice(idx, 1)
         this.$store.dispatch('updateEventLabels', { label: 'starred', num: -1 })
-        DB.removeLabelEvent([ev._id], ['starred']).catch((e) => console.error(e))
+        DB.removeLabelEvent(this.$route.meta.dbName || 'userdata', [ev._id], ['starred']).catch((e) => console.error(e))
       } else {
         ev._source.starred = 1
         ev._source.labels.push('starred')
         this.$store.dispatch('updateEventLabels', { label: 'starred', num: 1 })
-        DB.addLabelEvent([ev._id], ['starred']).catch((e) => console.error(e))
+        DB.addLabelEvent(this.$route.meta.dbName || 'userdata', [ev._id], ['starred']).catch((e) => console.error(e))
       }
     },
   },

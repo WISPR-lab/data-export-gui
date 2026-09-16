@@ -19,20 +19,21 @@ limitations under the License.
 
 import Vue from 'vue'
 import VueRouter from 'vue-router'
+import { getLogger } from '@/utils/logger';
 
 import Home from './views/Home.vue'
 import Events from './views/Events.vue'
 import Project from './views/Project.vue'
 import HowToRequest from './views/HowToRequest.vue'
-import Devices from './views/Devices_v1_legacy.vue'
 import DevicesMockup from './views/DevicesMockup.vue'
 import DebugOPFS from './views/DebugOPFS.vue'
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js'
 import EventBus from './event-bus.js'
 
 import store from './store.js'
-import DB from './database/index.js'
 import demoDatabaseLoader from '@/demo/DemoDatabaseLoader.js'
+
+const logger = getLogger('Router');
 
 Vue.use(VueRouter)
 
@@ -58,14 +59,14 @@ const routes = [
         name: 'DemoEvents',
         component: Events,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'demo' },
       },
       {
         path: 'devices',
         name: 'DemoDevices',
-        component: Devices,
+        component: DevicesMockup,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'demo' },
       },
     ],
   },
@@ -90,14 +91,14 @@ const routes = [
         name: 'Events',
         component: Events,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'userdata' },
       },
       {
         path: 'devices',
-        name: 'DevicesMockup',
+        name: 'Devices',
         component: DevicesMockup,
         props: { projectId: 1 },
-        meta: { requiresOpfs: true },
+        meta: { requiresOpfs: true, dbName: 'userdata' },
       },
     ],
   },
@@ -106,6 +107,23 @@ const routes = [
 // Memoize warmup promise so it only happens once
 let warmupPromise = null;
 
+// Polls until crossOriginIsolated is true or timeoutMs elapses.
+function waitForCrossOriginIsolation(timeoutMs) {
+  if (window.crossOriginIsolated) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (window.crossOriginIsolated) {
+        clearInterval(interval);
+        resolve(true);
+      } else if (Date.now() - start >= timeoutMs) {
+        clearInterval(interval);
+        resolve(false);
+      }
+    }, 100);
+  });
+}
+
 const router = new VueRouter({
   mode: 'hash',
   routes,
@@ -113,52 +131,71 @@ const router = new VueRouter({
 
 router.beforeEach(async (to, from, next) => {
   // Block navigation to OPFS-dependent routes if cross-origin isolation is unavailable.
-  // Only trigger when coi_reload_attempted is set (reload already tried) OR COI is definitively false.
-  // This fires after the coi-serviceworker reload cycle, so false positives are avoided.
   if (to.matched.some(function(r) { return r.meta && r.meta.requiresOpfs; })) {
     if (!window.crossOriginIsolated) {
-      window.opfsUnavailable = true;
-      EventBus.$emit('opfsUnavailable');
-      next(false);
-      return;
+      const reloadAlreadyAttempted = !!sessionStorage.getItem('coi_reload_attempted');
+      if (!reloadAlreadyAttempted) {
+        // Hold instead of redirecting in case a coi-serviceworker reload is soon
+        EventBus.$emit('coiBootWaitingStart');
+        const becameIsolated = await waitForCrossOriginIsolation(5000);
+        EventBus.$emit('coiBootWaitingEnd');
+        if (!becameIsolated) {
+          window.opfsUnavailable = true;
+          EventBus.$emit('opfsUnavailable');
+          next({ path: '/', query: {} });
+          return;
+        }
+      } else {
+        window.opfsUnavailable = true;
+        EventBus.$emit('opfsUnavailable');
+        next({ path: '/', query: {} });
+        return;
+      }
     }
   }
 
-  const isDemoRoute = to.path.startsWith('/demo')
-  
+  const targetDbName = to.meta.dbName || 'userdata'
+  const isDemoRoute = targetDbName === 'demo'
+
   if (isDemoRoute) {
-    if (!store.state.demoMode || DB.getActiveDatabase() !== 'demo') {
-      console.log('[Router] Entering demo mode via route:', to.path);
-      
+    if (!store.state.demoMode) {
+      logger.debug('Entering demo mode via route:', to.path);
+
       const DemoController = require('@/demo/DemoController.js').default
       if (from && from.name) {
         DemoController.referrerRoute = from.path
       }
-      
+
       store.commit('SET_DEMO_MODE', true)
       store.commit('SET_CURRENT_DB', 'demo')
-      DB.setActiveDatabase('demo')
-      
+
       try {
         await demoDatabaseLoader.initializeDemoDb()
-        await store.dispatch('updateProject', 1)
+        await store.dispatch('updateProject', { projectId: 1, dbName: targetDbName })
       } catch (e) {
-        console.error('[Router] Demo initialization failed:', e)
+        logger.error('Demo initialization failed:', e)
       }
     }
-    
+
     // Auto-start demo state if visiting demo events
     if (to.name === 'DemoEvents') {
       store.commit('SET_DEMO_IN_PROGRESS', true)
       store.commit('SET_DEMO_STEP', 1)
     }
   } else {
-    if (store.state.demoMode || DB.getActiveDatabase() !== 'userdata') {
-      console.log('[Router] Leaving demo mode via route:', to.path);
+    if (store.state.demoMode) {
+      logger.debug('Leaving demo mode via route:', to.path);
       store.commit('SET_DEMO_MODE', false)
       store.commit('SET_CURRENT_DB', 'userdata')
-      DB.setActiveDatabase('userdata')
-      await store.dispatch('updateProject', 1)
+      await store.dispatch('updateProject', { projectId: 1, dbName: targetDbName })
+    }
+  }
+
+  if (to.name === 'Devices' || to.name === 'DemoDevices') {
+    const exports = (store.state.project && store.state.project.dataExports) || [];
+    if (exports.length === 0) {
+      next('/');
+      return;
     }
   }
   next()

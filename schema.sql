@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS devices_raw ( -- filled during semantic map
     raw_data_id TEXT,
     --
     entity_type TEXT,
+    entity_sub_type TEXT,
     event_kind TEXT,
     event_category JSONTEXT DEFAULT '[]',
     --
@@ -90,44 +91,7 @@ CREATE TABLE IF NOT EXISTS devices_raw ( -- filled during semantic map
     FOREIGN KEY(raw_data_id) REFERENCES raw_data(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS atomic_devices ( -- hard merge based on static device identifiers. user cannot edit this.
-    id TEXT PRIMARY KEY,
-    upload_ids JSONTEXT NOT NULL,  -- JSON list of uploads that contributed to this merged device
-    file_ids JSONTEXT NOT NULL,    -- ^^ for uploaded_files.id 
-    devices_raw_ids JSONTEXT NOT NULL,  -- ^^ for devices_raw.id
-    --
-    attributes JSONTEXT,    -- merged attributes
-    origins JSONTEXT,  -- JSON list of origin values (e.g., ["facebook/web", "facebook/mobile_app"])
-    specificity INTEGER DEFAULT 1  -- 1=generic, 2=model+version, 3=hard_id
-);
-
-
-
-
-CREATE TABLE IF NOT EXISTS device_profile_notes (
-    id TEXT PRIMARY KEY,
-    device_profile_id TEXT,
-    note TEXT,
-    created_at REAL,
-    updated_at REAL,
-    FOREIGN KEY(device_profile_id) REFERENCES device_profiles_v2(id) ON DELETE CASCADE
-);
-
-
-
-CREATE TABLE IF NOT EXISTS event_assoc (
-    event_id TEXT,
-    atomic_device_id TEXT,
-    event_specificity INTEGER,  -- 1=generic, 2=model+version, 3=hard_id
-    match_reason TEXT, 
-    PRIMARY KEY (event_id, atomic_device_id),
-    FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
-    FOREIGN KEY(atomic_device_id) REFERENCES atomic_devices(id) ON DELETE CASCADE
-);
-
-
-
-CREATE TABLE IF NOT EXISTS device_instance_edges ( -- for device/event grouping
+CREATE TABLE IF NOT EXISTS device_group_edges ( -- for device/event grouping
     id_a TEXT, 
     id_b TEXT,  -- dropped from main dataframe in level0
     type TEXT,
@@ -137,7 +101,7 @@ CREATE TABLE IF NOT EXISTS device_instance_edges ( -- for device/event grouping
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS device_instances (
+CREATE TABLE IF NOT EXISTS device_groups (
     id TEXT PRIMARY KEY,
     upload_id TEXT,
     --
@@ -149,6 +113,7 @@ CREATE TABLE IF NOT EXISTS device_instances (
     os_type TEXT,
     --
     apple_masking TEXT,
+    has_conflicting_hardware_ids INTEGER DEFAULT 0,  -- see device_grouping2/graph.py:DeviceGroup._evaluate_hardware_conflict
     first_seen REAL,
     last_seen REAL,
     last_seen_dt TEXT,
@@ -157,70 +122,38 @@ CREATE TABLE IF NOT EXISTS device_instances (
     latest_client_version TEXT,        
     latest_client_ip TEXT, 
     --           
-    os_versions TEXT,    -- TODO jsonstring????               
-    client_versions TEXT,         -- -- TODO jsonstring????              
-    client_ips TEXT,                 -- -- TODO jsonstring????         
-    locations TEXT,  -- -- TODO jsonstring????         
-    --                  
+    os_versions TEXT,    -- TODO jsonstring????
+    client_versions TEXT,         -- -- TODO jsonstring????
+    client_ips TEXT,                 -- -- TODO jsonstring????
+    locations TEXT,  -- -- TODO jsonstring????
+    --
     created_at REAL,
+    tags JSONTEXT DEFAULT '[]',
     --
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS device_instance_events (
-    device_instance_id TEXT,
+CREATE TABLE IF NOT EXISTS device_group_events (
+    device_group_id TEXT,
     event_id TEXT,
-    PRIMARY KEY (device_instance_id, event_id),
-    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE,
+    PRIMARY KEY (device_group_id, event_id),
+    FOREIGN KEY(device_group_id) REFERENCES device_groups(id) ON DELETE CASCADE,
     FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS device_instance_raw_devices (
-    device_instance_id TEXT,
+CREATE TABLE IF NOT EXISTS device_group_raw_devices (
+    device_group_id TEXT,
     devices_raw_id TEXT,
-    PRIMARY KEY (device_instance_id, devices_raw_id),
-    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE,
+    PRIMARY KEY (device_group_id, devices_raw_id),
+    FOREIGN KEY(device_group_id) REFERENCES device_groups(id) ON DELETE CASCADE,
     FOREIGN KEY(devices_raw_id) REFERENCES devices_raw(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS device_profiles_v2 (
-    id TEXT PRIMARY KEY,
-    model TEXT,
-    manufacturer TEXT,
-    os_type TEXT,
-    user_label TEXT,
-    notes TEXT,
-    user_created INTEGER DEFAULT 0,
-    deleted INTEGER DEFAULT 0,
-    created_at REAL,
-    updated_at REAL
-);
-
-CREATE TABLE IF NOT EXISTS device_profile_instances (
-    device_profile_id TEXT,
-    device_instance_id TEXT,
-    PRIMARY KEY (device_profile_id, device_instance_id),
-    FOREIGN KEY(device_profile_id) REFERENCES device_profiles_v2(id) ON DELETE CASCADE,
-    FOREIGN KEY(device_instance_id) REFERENCES device_instances(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS user_device_edits (
-    id TEXT PRIMARY KEY,
-    action_type TEXT,
-    instance_ids JSONTEXT,
-    instance_summaries JSONTEXT,
-    source_profile_id TEXT,
-    target_profile_id TEXT,
-    source_profile_label TEXT,
-    target_profile_label TEXT,
-    reason TEXT,
-    created_at REAL
 );
 
 CREATE TABLE IF NOT EXISTS resolved_sessions_registrations (
     id TEXT PRIMARY KEY,
     upload_id TEXT,
     entity_type TEXT,
+    entity_sub_type TEXT,
     origin TEXT,
     model_name TEXT,
     client_name TEXT,
@@ -228,12 +161,14 @@ CREATE TABLE IF NOT EXISTS resolved_sessions_registrations (
     os_version TEXT,
     os_type TEXT,
     attributes JSONTEXT,
+    raw_data_ids JSONTEXT,  -- multiple after merging registrations sharing a hardware ID
     is_reduced_ua INTEGER DEFAULT 0,
     has_trusted_cookie INTEGER DEFAULT 0,
     trusted_cookie_id TEXT,
     has_passkey INTEGER DEFAULT 0,
     registration_device TEXT,
     event_count INTEGER DEFAULT 0,
+    tags JSONTEXT DEFAULT '[]',
     FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
 );
 
@@ -269,6 +204,7 @@ CREATE VIEW IF NOT EXISTS v_device_field_mappings AS
 -- static columns
 SELECT 'id' AS field, 'text' AS type
 UNION SELECT 'entity_type', 'category'
+UNION SELECT 'entity_sub_type', 'category'
 UNION SELECT 'event_kind', 'category'
 UNION SELECT 'event_category', 'category'
 UNION SELECT 'platform', 'text'
@@ -286,23 +222,9 @@ SELECT DISTINCT event_action
 FROM events
 WHERE event_action IS NOT NULL AND event_action != '';
 
+-- Speeds up ORDER BY e.timestamp (used on every search) + LIMIT pagination.
+CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
 
-
-DROP VIEW IF EXISTS v_events2profile_indexed;
-CREATE VIEW v_events2profile_indexed AS
-SELECT 
-    die.event_id,
-    json_group_array(
-        json_object(
-            'id', dp.id,
-            'model', COALESCE(dp.model, ''),
-            'user_label', COALESCE(dp.user_label, '')
-        )
-    ) AS device_profiles_data
-FROM device_instance_events die
-JOIN device_profile_instances dpi ON die.device_instance_id = dpi.device_instance_id
-JOIN device_profiles_v2 dp ON dpi.device_profile_id = dp.id
-GROUP BY die.event_id;
 
 
 

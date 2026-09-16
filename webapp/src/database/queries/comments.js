@@ -2,8 +2,8 @@
 
 import { getDB } from '../index.js';
 
-export async function getEventComments(eventId) {
-  const db = await getDB();
+export async function getEventComments(dbName, eventId) {
+  const db = await getDB(dbName);
   
   const sql = `
     SELECT id, event_id, comment, created_at, updated_at
@@ -21,8 +21,8 @@ export async function getEventComments(eventId) {
   return rows || [];
 }
 
-export async function addEventComment(eventId, commentText) {
-  const db = await getDB();
+export async function addEventComment(dbName, eventId, commentText) {
+  const db = await getDB(dbName);
   
   const now = new Date().toISOString();
   const sql = `
@@ -48,8 +48,8 @@ export async function addEventComment(eventId, commentText) {
   };
 }
 
-export async function updateEventComment(commentId, newText) {
-  const db = await getDB();
+export async function updateEventComment(dbName, commentId, newText) {
+  const db = await getDB(dbName);
   
   const now = new Date().toISOString();
   const sql = `
@@ -71,8 +71,8 @@ export async function updateEventComment(commentId, newText) {
   return result[0] || null;
 }
 
-export async function deleteEventComment(commentId) {
-  const db = await getDB();
+export async function deleteEventComment(dbName, commentId) {
+  const db = await getDB(dbName);
   
   const sql = 'DELETE FROM event_comments WHERE id = ?';
   await db.exec(sql, {

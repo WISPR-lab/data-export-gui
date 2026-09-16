@@ -19,7 +19,7 @@ limitations under the License.
     <v-row>
       <v-col :cols="event.showComments ? 8 : 0">
         <v-card outlined height="100%">
-          <v-simple-table dense>
+          <v-simple-table dense style="table-layout: fixed; width: 100%;">
             <template v-slot:default>
               <tbody>
                 <tr
@@ -73,8 +73,8 @@ limitations under the License.
                   </td>
 
                   <!-- Event field name -->
-                  <td>
-                    {{ key }}
+                  <td class="text-no-wrap font-weight-bold">
+                    {{ formatAttributeLabel(key) }}
                   </td>
 
                   <!-- Event field value action icons -->
@@ -139,8 +139,10 @@ limitations under the License.
                   </td>
 
                   <!-- Event field value -->
-                  <td width="100%" class="pl-0">
-                    {{ value }}
+                  <td class="pl-0 event-value-cell">
+                    <div class="event-value">
+                      {{ value }}
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -166,6 +168,7 @@ import TsLinkRedirectWarning from './LinkRedirectWarning.vue'
 import TsComments from './Comments.vue'
 import TsUnfurlDialog from './UnfurlDialog.vue'
 import { FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE } from '@/constants/app_constants.js'
+import { formatAttributeLabel } from '@/filters/FormatAttributeLabel.js'
 
 export default {
   components: {
@@ -205,7 +208,8 @@ export default {
     fullEventFiltered() {
       const source = this.event._source || {}
       return Object.keys(source)
-        .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && !key.startsWith('norm__') && source[key] !== '')
+        .filter((key) => !FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE.includes(key) && !key.startsWith('__ts') && source[key] !== '')
+        .sort((a, b) => formatAttributeLabel(a).localeCompare(formatAttributeLabel(b)))
         .reduce((obj, key) => {
           obj[key] = source[key]
           return obj
@@ -223,6 +227,7 @@ export default {
     },
   },
   methods: {
+    formatAttributeLabel,
     getEvent: function () {
       // Event data is already available via this.event._source - no API call needed
       const source = this.event._source || {}
@@ -354,5 +359,16 @@ export default {
 .flexcard {
   display: flex;
   flex-direction: column;
+}
+
+.event-value-cell {
+  width: 100%;
+}
+
+.event-value {
+  width: 100%;
+  white-space: normal;     
+  overflow-wrap: anywhere;  
+  word-break: break-word;  
 }
 </style>

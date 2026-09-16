@@ -92,9 +92,8 @@ class TestFileLoader:
                 continue
 
             manifest = self.manifests.get(platform)
-            parser_cfg = (
-                manifest.get_file_cfg(inner_path).get("parser", {}) if manifest else {}
-            )
+            file_cfgs = manifest.get_file_cfgs(inner_path) if manifest else []
+            parser_cfg = file_cfgs[0].get("parser", {}) if file_cfgs else {}
 
             yield TestFile(
                 platform=platform,
@@ -241,7 +240,7 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
         with zipfile.ZipFile(facebook_zip_path, "r") as z:
             z.extractall(tmpdir)
 
-        upload_id = str(uuid.uuid4())
+        upload_id = uuid.uuid4().hex
         raw_data_count = 0
 
         schema_path = os.path.join(repo_root, "schema.sql")
@@ -257,16 +256,16 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
                         filepath = os.path.join(root, filename)
                         rel_path = os.path.relpath(filepath, tmpdir)
 
-                        # Keep platform prefix so get_file_cfg can correctly strip it
+                        # Keep platform prefix so get_file_cfgs can correctly strip it
                         manifest_path = rel_path
 
-                        # Use get_file_cfg which handles path matching (including Pyodide underscore flattening)
-                        file_cfg = manifest.get_file_cfg(manifest_path)
-                        manifest_file_id = file_cfg.get("id")
+                        # Use get_file_cfgs which handles path matching (including Pyodide underscore flattening)
+                        file_cfgs = manifest.get_file_cfgs(manifest_path)
+                        manifest_file_id = file_cfgs[0].get("id") if file_cfgs else None
 
                         # Only insert files with valid manifest_file_id (files with views)
                         if manifest_file_id:
-                            file_id = str(uuid.uuid4())
+                            file_id = uuid.uuid4().hex
 
                             with open(
                                 filepath, "r", encoding="utf-8", errors="replace"
@@ -279,7 +278,7 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
                                 JSONLabelValuesParser,
                             )
 
-                            parser_cfg = file_cfg.get("parser", {})
+                            parser_cfg = file_cfgs[0].get("parser", {})
                             fmt = parser_cfg.get("format")
 
                             parser = None
@@ -304,7 +303,7 @@ def sample_upload_with_raw_data(test_db_path, facebook_zip_path) -> Tuple[str, i
                                 )
 
                                 for record in records:
-                                    raw_data_id = str(uuid.uuid4())
+                                    raw_data_id = uuid.uuid4().hex
                                     conn.execute(
                                         "INSERT INTO raw_data (id, upload_id, file_id, data) VALUES (?, ?, ?, ?)",
                                         (

@@ -1,6 +1,8 @@
 // Shared config loader - parses config.yaml once and caches result
 import yaml from 'js-yaml';
+import { getLogger } from '@/utils/logger';
 
+const logger = getLogger('Config');
 let config = null;
 
 export async function loadConfig() {
@@ -13,7 +15,7 @@ export async function loadConfig() {
   
   const text = await response.text();
   config = yaml.load(text);
-  console.log('[Config] Loaded:', config);
+  logger.debug('Loaded:', config);
   
   return config;
 }

@@ -47,20 +47,25 @@
 
       <v-alert color="primary" dense class="font-weight-medium mb-0 text-center white--text alert-top-rounded">
         <div class="d-flex flex-wrap justify-center align-center gap-2">
-          <span>LEStrADE is an academic tool in early beta. We welcome feedback to help us improve the tool on GitHub!</span>
-          <v-btn
-            outlined
-            small
-            rounded
-            color="white"
-            href="https://github.com/WISPR-lab/data-export-gui/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="ml-2"
-          >
-            <v-icon left small>mdi-github</v-icon>
-            GitHub
-          </v-btn>
+          <span>LEStrADE is an academic tool in early beta. We welcome feedback to help us improve the tool!</span>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                outlined
+                small
+                rounded
+                color="white"
+                v-bind="attrs"
+                v-on="on"
+                class="ml-2 nav-link--disabled"
+                @click.prevent
+              >
+                <v-icon left small>mdi-github</v-icon>
+                GitHub
+              </v-btn>
+            </template>
+            <span>Removed for double-blind review</span>
+          </v-tooltip>
         </div>
       </v-alert>
 
@@ -165,7 +170,7 @@
       <v-divider class="my-8"></v-divider>
       <footer class="py-4 text-center">
         <p class="text-caption secondary--text mb-0">
-          &copy; 2026 WISPR-lab 
+          &copy; 2026 - REDACTED
           <!-- &nbsp;|&nbsp; -->
           <!-- <v-btn text x-small href="#">Privacy</v-btn>
           <v-btn text x-small href="#">Terms</v-btn> -->
@@ -242,6 +247,11 @@ export default {
 
 .alert-top-rounded {
   border-radius: 4px 4px 0 0 !important;
+}
+
+.nav-link--disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .screenshot {

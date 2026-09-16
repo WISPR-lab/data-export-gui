@@ -1,7 +1,20 @@
-import { Unzip, UnzipInflate } from 'fflate';
+import { Unzip, UnzipInflate, unzipSync } from 'fflate';
 import jsyaml from 'js-yaml';
 import { callPyodideWorker } from '@/pyodide/pyodide-client.js';
 import EventBus from '@/event-bus.js';
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('OPFSManager');
+const MAX_NESTED_ZIP_DEPTH = 5; // Apple splits large exports into zips-within-zips
+
+function patternSegmentRegexes(pattern) {
+  // One regex per path segment of a whitelist glob, e.g. "*Other Data*/Devices*.csv" -> [/^.*other data.*$/i, /^devices.*\.csv$/i].
+  return pattern.split('/').map((seg) => {
+    const escaped = seg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const withWildcard = escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
+    return new RegExp(`^${withWildcard}$`, 'i');
+  });
+}
 
 export class OPFSManager {
   constructor() {
@@ -9,6 +22,7 @@ export class OPFSManager {
     this.storageDir = null;
     this.dbFilename = null;  // e.g. "userdata.db" – populated during init()
     this.whitelistPatterns = [];
+    this.whitelistPatternSegments = [];
     this.isInitialized = false;
   }
 
@@ -39,31 +53,31 @@ export class OPFSManager {
         ? storagePath.slice(mountPrefix.length)
         : storagePath;
 
-      console.log(`[OPFSManager] Config: db_path=${dbPath}, temp_zip_storage=${storagePath}`);
-      console.log(`[OPFSManager] Mount prefix: "${mountPrefix}", relative storage path: "${relativePath}"`);
+      logger.debug(`Config: db_path=${dbPath}, temp_zip_storage=${storagePath}`);
+      logger.debug(`Mount prefix: "${mountPrefix}", relative storage path: "${relativePath}"`);
 
       this.opfsRoot = await navigator.storage.getDirectory();
       const segments = relativePath.split('/').filter(Boolean);
       let currentDir = this.opfsRoot;
       for (const segment of segments) {
         currentDir = await currentDir.getDirectoryHandle(segment, { create: true });
-        console.log(`[OPFSManager] Created/opened OPFS dir segment: "${segment}"`);
+        logger.debug(`Created/opened OPFS dir segment: "${segment}"`);
       }
       this.storageDir = currentDir;
 
       const rootEntries = [];
       for await (const [name] of this.opfsRoot.entries()) rootEntries.push(name);
-      console.log(`[OPFSManager] OPFS root contents at init:`, rootEntries);
-      console.log(`[OPFSManager] Initialized. storageDir=[${segments.join('/')}], dbFilename=${this.dbFilename}`);
+      logger.debug(`OPFS root contents at init:`, rootEntries);
+      logger.debug(`Initialized. storageDir=[${segments.join('/')}], dbFilename=${this.dbFilename}`);
     } catch (err) {
-      console.error('[OPFSManager] Init failed:', err);
+      logger.error('Init failed:', err);
       EventBus.$emit('opfsUnavailable');
       throw err;
     }
     
     // SAFETY: Verify storageDir is not the root
     if (this.storageDir === this.opfsRoot) {
-      console.error('[OPFSManager] ERROR: storageDir is pointing to OPFS root! This would delete the database on cleanup.');
+      logger.error('ERROR: storageDir is pointing to OPFS root! This would delete the database on cleanup.');
       throw new Error('OPFSManager storageDir misconfiguration: pointing to OPFS root');
     }
 
@@ -71,18 +85,20 @@ export class OPFSManager {
     if (platform) {
       try {
         const paths = await callPyodideWorker('get_whitelist', { platform });
-        console.log(`[WHITELIST] Received paths from Python:`, paths);
+        console.debug(`[WHITELIST] Received paths from Python:`, paths);
         this.whitelistPatterns = (paths || []).map((p) => {
-          // Escape special chars first, then convert glob * to regex .*
-          const escaped = p.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
-          const withWildcard = escaped.replace(/\\\*/g, '.*');
+          // simple glob-to-regex converter. Escapes regex special chars (including * and ?) before replacing glob wildcards.
+          const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const withWildcard = escaped.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
           const regex = new RegExp(`(^|/)${withWildcard}$`, 'i');
           // console.log(`[WHITELIST] Pattern: "${p}" -> Regex: ${regex}`);
           return regex;
         });
+        this.whitelistPatternSegments = (paths || []).map(patternSegmentRegexes);
       } catch (err) {
-        console.warn('[OPFSManager] Failed to load whitelist – accepting all files:', err);
+        logger.warn('Failed to load whitelist – accepting all files:', err);
         this.whitelistPatterns = [];
+        this.whitelistPatternSegments = [];
       }
     }
 
@@ -99,13 +115,29 @@ export class OPFSManager {
     return this.whitelistPatterns.some((re) => re.test(normalised));
   }
 
+  couldContainWhitelistedFile(dirPath) {
+    // Same idea as isWhitelisted, but for a directory we're deciding whether to recurse into (a
+    // nested zip) rather than a leaf file. Matches segment-by-segment against each whitelist
+    // pattern (so an early wildcard like "*Other Data*/..." only excuses that one segment, not
+    // the whole path) — tried both as-is and with one leading segment stripped, since some
+    // exports (e.g. Google Takeout) wrap everything in a throwaway root folder.
+    if (this.whitelistPatternSegments.length === 0) return true;
+    const allSegs = dirPath.replace(/\\/g, '/').split('/').filter(Boolean);
+    const candidates = allSegs.length > 1 ? [allSegs, allSegs.slice(1)] : [allSegs];
+    return candidates.some((segs) =>
+      this.whitelistPatternSegments.some(
+        (patSegs) => segs.length < patSegs.length && segs.every((seg, i) => patSegs[i].test(seg))
+      )
+    );
+  }
+
 
   flattenPath(path) {
     return path.replace(/\//g, '___');
   }
 
   async processZipUpload(zipFile, platform) {
-    /* Streams zip via fflate into OPFS; only whitelist-matching entries are decompressed and saved. Rejects if any write fails or storageDir is empty after writes report success. */
+    /* Streams zip via fflate into OPFS, recursing into any nested .zip entries first; only whitelist-matching leaf entries are saved. Rejects if any write fails or storageDir is empty after writes report success. */
     await this.init(platform);
     return new Promise((resolve, reject) => {
       const savedPromises = [];
@@ -121,7 +153,18 @@ export class OPFSManager {
         if (file.name.endsWith('/')) return;
 
         totalSeen++;
-        if (this.isWhitelisted(file.name)) {
+        const dir = file.name.includes('/') ? file.name.slice(0, file.name.lastIndexOf('/')) : '';
+        if (/\.zip$/i.test(file.name) && this.couldContainWhitelistedFile(dir)) {
+          totalAccepted++; // counts the nested zip itself, not its individual leaf files
+          // Best-effort: a corrupt/unreadable nested zip shouldn't fail the whole upload — log and move on.
+          const p = this._bufferFileEntry(file)
+            .then((bytes) => this._extractNestedZipBuffer(bytes, 1))
+            .then(() => { writeSuccesses++; })
+            .catch((err) => {
+              logger.error(`Nested zip extraction FAILED for ${file.name}, skipping:`, err);
+            });
+          savedPromises.push(p);
+        } else if (this.isWhitelisted(file.name)) {
           totalAccepted++;
           // console.log(`[WHITELIST ACCEPTED] ${file.name}`);
           const safeName = this.flattenPath(file.name);
@@ -129,7 +172,7 @@ export class OPFSManager {
             .then(() => { writeSuccesses++; })
             .catch((err) => {
               writeFailures++;
-              console.error(`[OPFSManager] WRITE FAILED for ${safeName}:`, err);
+              logger.error(`WRITE FAILED for ${safeName}:`, err);
             });
           savedPromises.push(p);
         } else {
@@ -157,12 +200,12 @@ export class OPFSManager {
             unzipStream.push(new Uint8Array(0), true);
             await Promise.all(savedPromises);
 
-            console.log(`[OPFSManager] ZIP done: ${totalSeen} scanned, ${totalAccepted} accepted, ${writeSuccesses} written, ${writeFailures} failed.`);
+            logger.debug(`ZIP done: ${totalSeen} scanned, ${totalAccepted} accepted, ${writeSuccesses} written, ${writeFailures} failed.`);
             const verifyNames = [];
             for await (const [name] of storageDir.entries()) {
               verifyNames.push(name);
             }
-            console.log(`[OPFSManager] VERIFICATION: storageDir contains ${verifyNames.length} file(s):`, verifyNames);
+            logger.debug(`VERIFICATION: storageDir contains ${verifyNames.length} file(s):`, verifyNames);
 
             if (writeFailures > 0) {
               reject(new Error(`${writeFailures} of ${totalAccepted} OPFS writes failed — check console for details.`));
@@ -192,7 +235,7 @@ export class OPFSManager {
       
       // SAFETY: delete temp subdirectory
       if (!this.storageDir || this.storageDir === this.opfsRoot) {
-        console.warn('[OPFSManager] Safety check: storageDir is root or null, aborting cleanup');
+        logger.warn('Safety check: storageDir is root or null, aborting cleanup');
         return;
       }
       
@@ -236,20 +279,37 @@ export class OPFSManager {
   }
 
   async nukeAll() {
-    /* Recursively deletes everything in OPFS root and resets all instance state. */
+    // Recursively deletes everything in OPFS root and resets all instance state 
     try {
       const root = await navigator.storage.getDirectory();
       const entries = [];
       for await (const [name] of root.entries()) entries.push(name);
+
+      const failures = [];
       for (const name of entries) {
-        await root.removeEntry(name, { recursive: true });
+        try {
+          await root.removeEntry(name, { recursive: true });
+        } catch (removeErr) {
+          logger.error(`Failed to remove "${name}" during nukeAll:`, removeErr);
+          failures.push(name);
+        }
       }
+
+      const remaining = [];
+      for await (const [name] of root.entries()) remaining.push(name);
+
       this.opfsRoot = null;
       this.storageDir = null;
       this.dbFilename = null;
       this.isInitialized = false;
+
+      if (remaining.length > 0) {
+        throw new Error(
+          `OPFS nuke incomplete — ${remaining.length} entr${remaining.length === 1 ? 'y' : 'ies'} still present after wipe: ${remaining.join(', ')}`
+        );
+      }
     } catch (error) {
-      console.error('[OPFSManager] Failed to nuke OPFS:', error);
+      logger.error('Failed to nuke OPFS:', error);
       EventBus.$emit('opfsUnavailable');
       throw error;
     }
@@ -258,15 +318,13 @@ export class OPFSManager {
 
   
   async _saveFileEntry(filename, fflateFile) {
-    /* Chains fflate ondata chunks into sequential OPFS writes with a 10s stall timeout; verifies non-zero file size on disk after close. */
-    // console.log(`[OPFSManager] _saveFileEntry START: ${filename}`);
 
     let fileHandle;
     try {
       fileHandle = await this.storageDir.getFileHandle(filename, { create: true });
-      // console.log(`[OPFSManager] Got file handle for: ${filename}`);
+
     } catch (e) {
-      console.error(`[OPFSManager] getFileHandle FAILED for ${filename}:`, e);
+      logger.error(`getFileHandle FAILED for ${filename}:`, e);
       throw e;
     }
 
@@ -274,7 +332,7 @@ export class OPFSManager {
     try {
       writable = await fileHandle.createWritable();
     } catch (e) {
-      console.error(`[OPFSManager] createWritable FAILED for ${filename}:`, e);
+      logger.error(`createWritable FAILED for ${filename}:`, e);
       throw e;
     }
 
@@ -290,7 +348,7 @@ export class OPFSManager {
         timeout = setTimeout(() => {
           if (!gotFinal) {
             const msg = `[OPFSManager] TIMEOUT: ${filename} stalled (${chunkCount} chunks, ${totalBytes} bytes)`;
-            console.error(msg);
+            logger.error(msg);
             writable.close().catch(() => {});
             reject(new Error(msg));
           }
@@ -337,5 +395,49 @@ export class OPFSManager {
 
       fflateFile.start();
     });
+  }
+
+  async _bufferFileEntry(fflateFile) {
+    /* Drains an fflate entry into memory instead of OPFS — needed to unzipSync() a nested zip, which requires the complete bytes. */
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      let totalBytes = 0;
+      fflateFile.ondata = (err, data, final) => {
+        if (err) return reject(err);
+        if (data) { chunks.push(data.slice()); totalBytes += data.byteLength; } // copy — fflate reuses its internal buffer across ondata calls
+        if (final) {
+          const buffer = new Uint8Array(totalBytes);
+          let offset = 0;
+          for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.byteLength; }
+          resolve(buffer);
+        }
+      };
+      fflateFile.start();
+    });
+  }
+
+  async _extractNestedZipBuffer(buffer, depth) {
+    /* Apple splits large exports into zips-within-zips — recurse until we hit real files, then whitelist-filter and save them same as the top-level stream. */
+    if (depth > MAX_NESTED_ZIP_DEPTH) {
+      logger.warn(`Nested zip depth exceeded ${MAX_NESTED_ZIP_DEPTH}, stopping recursion`);
+      return;
+    }
+    const entries = unzipSync(buffer);
+    await Promise.all(Object.entries(entries).map(([name, data]) => {
+      if (name.endsWith('/')) return null;
+      const dir = name.includes('/') ? name.slice(0, name.lastIndexOf('/')) : '';
+      if (/\.zip$/i.test(name)) {
+        return this.couldContainWhitelistedFile(dir) ? this._extractNestedZipBuffer(data, depth + 1) : null;
+      }
+      if (this.isWhitelisted(name)) return this._saveBytes(this.flattenPath(name), data);
+      return null;
+    }));
+  }
+
+  async _saveBytes(filename, bytes) {
+    const fileHandle = await this.storageDir.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(bytes);
+    await writable.close();
   }
 }

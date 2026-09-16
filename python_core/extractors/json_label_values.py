@@ -57,7 +57,11 @@ class JSONLabelValuesParser(JSONParser):
             lv_list = jsonobj.get("label_values", None)
             if lv_list is None:
                 return jsonobj
-            return cls._flatten_lv_dict(lv_list)
+            dct = cls._flatten_lv_dict(lv_list)
+            ts = jsonobj.get("timestamp", None)
+            if not cls._is_trivial(ts):
+                dct.update({"timestamp": ts})
+            return dct
 
         if isinstance(jsonobj, list):
             res = []

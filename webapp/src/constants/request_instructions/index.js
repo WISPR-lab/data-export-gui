@@ -1,24 +1,15 @@
 import { instructionGoogle } from './google'
 import { instructionApple } from './apple'
+import { instructionFacebook } from './facebook'
+import { instructionDiscord } from './discord'
+import { instructionSnapchat } from './snapchat'
 
-export { instructionGoogle, instructionApple }
+export { instructionGoogle, instructionApple, instructionFacebook, instructionDiscord, instructionSnapchat }
 
 export const instructionRegistry = {
   google: instructionGoogle,
   apple: instructionApple,
-  discord: {
-    id: 'discord',
-    name: 'Discord',
-    comingSoon: true
-  },
-  facebook: {
-    id: 'facebook',
-    name: 'Facebook / Instagram',
-    comingSoon: true
-  },
-  snapchat: {
-    id: 'snapchat',
-    name: 'Snapchat',
-    comingSoon: true
-  }
+  discord: instructionDiscord,
+  facebook: instructionFacebook,
+  snapchat: instructionSnapchat
 }

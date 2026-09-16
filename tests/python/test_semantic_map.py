@@ -22,7 +22,6 @@ class TestSemanticMap:
             platform="facebook",
             upload_id=upload_id,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         from db_session import DatabaseSession
@@ -47,7 +46,6 @@ class TestSemanticMap:
             platform="facebook",
             upload_id=upload_id,
             db_path=test_db_path,
-            manifest_dir=builtins.MANIFESTS_DIR,
         )
 
         from db_session import DatabaseSession

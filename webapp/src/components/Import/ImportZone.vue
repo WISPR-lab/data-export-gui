@@ -31,11 +31,27 @@ It replaces the generic UploadForm for the new workflow.
           </p>
 
           <v-alert dense text type="info" class="mb-4 text-body-2">
-            This tool is limited to the data provided by {{ platformName }}. 
+            This tool is limited to the data provided by {{ platformName }}.
             For example, platforms may record incorrect time or location of events.
             Verify all results.
           </v-alert>
-          
+
+          <v-alert v-if="memorySamplingEnabled" dense text type="warning" class="mb-4 text-body-2">
+            PERFORMANCE MEMORY TRACKING: ON — this run will be ~5-10% slower and a
+            <code>_mem_perf.csv</code> will download automatically when it finishes.
+          </v-alert>
+
+          <div v-if="allowMultipleFiles" class="text-body-2 text--secondary mb-4">
+            <p class="mb-1">
+              Apple often splits your export into multiple ZIP files. You can select or drop them all here at once.
+            </p>
+            <p class="mb-1 font-weight-medium">Expected files / categories:</p>
+            <ul class="pl-4 my-0" style="line-height: 1.3;">
+              <li>Apple ID account and device information</li>
+              <li>Other Data (optional)</li>
+            </ul>
+          </div>
+
           <!-- <v-card-text class="pb-0 pt-1">
           <v-alert dense text type="info" class="mb-4 text-body-2">
             Don't have your export yet?
@@ -55,39 +71,60 @@ It replaces the generic UploadForm for the new workflow.
             class="upload-dropzone mb-2"
             :class="{
               'upload-dropzone--dragging': isDragging,
-              'upload-dropzone--filled': !!selectedFile,
+              'upload-dropzone--filled': hasFiles,
             }"
             @dragover.prevent="isDragging = true"
             @dragleave.prevent="isDragging = false"
             @drop.prevent="onDrop"
-            @click="!selectedFile && $refs.fileInput.click()"
+            @click="(!hasFiles || allowMultipleFiles) && $refs.fileInput.click()"
           >
-            <template v-if="!selectedFile">
+            <template v-if="!hasFiles">
               <div class="upload-dropzone__badge mb-3">
                 <v-icon size="24" color="primary">mdi-tray-arrow-up</v-icon>
               </div>
-              <p class="text-body-2 font-weight-medium mb-1">Drag and drop your ZIP file here</p>
+              <p class="text-body-2 font-weight-medium mb-1">
+                Drag and drop your ZIP file{{ allowMultipleFiles ? 's' : '' }} here
+              </p>
               <p class="text-caption text--secondary mb-3">or</p>
               <v-btn outlined rounded small color="primary" @click.stop="$refs.fileInput.click()">
                 Browse Files
               </v-btn>
             </template>
- 
+
             <template v-else>
               <div class="upload-dropzone__badge upload-dropzone__badge--success mb-3">
                 <v-icon size="24" color="success">mdi-file-check-outline</v-icon>
               </div>
-              <p class="text-body-2 font-weight-medium mb-0">{{ selectedFile.name }}</p>
-              <p class="text-caption text--secondary mb-3">{{ formatFileSize(selectedFile.size) }}</p>
-              <v-btn text rounded x-small color="error" @click.stop="clearFile">
-                Remove
+              <div
+                v-for="(file, idx) in selectedFiles"
+                :key="file.name + idx"
+                class="upload-dropzone__file d-flex align-center justify-center mb-1"
+                @click.stop
+              >
+                <span class="text-body-2 font-weight-medium">{{ file.name }}</span>
+                <span class="text-caption text--secondary mx-2">{{ formatFileSize(file.size) }}</span>
+                <v-btn text rounded x-small color="error" @click.stop="removeFile(idx)">
+                  Remove
+                </v-btn>
+              </div>
+              <v-btn
+                v-if="allowMultipleFiles"
+                outlined
+                rounded
+                small
+                color="primary"
+                class="mt-2"
+                @click.stop="$refs.fileInput.click()"
+              >
+                Add Another ZIP
               </v-btn>
             </template>
- 
+
             <input
               ref="fileInput"
               type="file"
               accept=".zip"
+              :multiple="allowMultipleFiles"
               class="d-none"
               @change="onInputChange"
             />
@@ -104,7 +141,7 @@ It replaces the generic UploadForm for the new workflow.
 
 
           <!-- Timeline Name -->
-          <div class="mb-4" v-if="selectedFile">
+          <div class="mb-4" v-if="hasFiles">
             <v-text-field
               v-model="dataExportName"
               label="Data Export Name"
@@ -149,10 +186,12 @@ import DiscordIcon from '../DiscordIcon.vue';
 import {
   getPlatformName,
   getPlatformIcon,
+  platformAllowsMultipleFiles,
   validateFile,
   formatFileSize,
   stripZipExtension,
 } from '../../utils/uploadFormUtils.js';
+import { loadConfig } from '../../utils/config.js';
 
 export default {
   name: 'ImportZone',
@@ -170,7 +209,7 @@ export default {
   data() {
     return {
       dialog: true,
-      selectedFile: null,
+      selectedFiles: [],
       dataExportName: '',
       nameRules: [
         (v) => !!v || 'Data export name is required',
@@ -179,6 +218,7 @@ export default {
       localErrors: [],
       fileValid: false,
       isDragging: false,
+      memorySamplingEnabled: false,
     };
   },
   computed: {
@@ -188,9 +228,15 @@ export default {
     platformIcon() {
       return getPlatformIcon(this.selectedPlatform);
     },
+    allowMultipleFiles() {
+      return platformAllowsMultipleFiles(this.selectedPlatform);
+    },
+    hasFiles() {
+      return this.selectedFiles.length > 0;
+    },
     canSubmit() {
       return (
-        this.selectedFile &&
+        this.hasFiles &&
         this.fileValid &&
         this.dataExportName.trim().length > 0 &&
         !this.isUploading
@@ -226,40 +272,60 @@ export default {
       }
     },
   },
-  mounted() {
+  async mounted() {
     this.suggestDEName();
+    try {
+      const config = await loadConfig();
+      this.memorySamplingEnabled = !!(config.performance && config.performance.memory_sampling_enabled);
+    } catch (e) {
+      // Config load failures shouldn't block the upload dialog — just skip the banner.
+      this.memorySamplingEnabled = false;
+    }
   },
   methods: {
     onDrop(event) {
       this.isDragging = false;
-      const file = event.dataTransfer && event.dataTransfer.files[0];
-      if (file) {
-        this.processFile(file);
+      const files = event.dataTransfer && Array.from(event.dataTransfer.files || []);
+      if (files && files.length) {
+        this.processFiles(files);
       }
     },
     onInputChange(event) {
-      const file = event.target.files && event.target.files[0];
-      if (file) {
-        this.processFile(file);
+      const files = event.target.files && Array.from(event.target.files);
+      if (files && files.length) {
+        this.processFiles(files);
       }
       // reset so selecting the same file again still fires @change
       event.target.value = '';
     },
-    processFile(file) {
-      this.selectedFile = file;
+    processFiles(files) {
+      const incoming = this.allowMultipleFiles ? files : [files[0]];
+      this.selectedFiles = this.allowMultipleFiles
+        ? [...this.selectedFiles, ...incoming]
+        : incoming;
       this.localErrors = [];
       this.fileValid = false;
- 
-      const validation = validateFile(file);
-      this.localErrors = validation.errors;
-      this.fileValid = validation.valid;
- 
+
+      const errors = this.selectedFiles.flatMap((f) => validateFile(f).errors);
+      this.localErrors = errors;
+      this.fileValid = errors.length === 0;
+
       if (this.fileValid) {
-        this.dataExportName = stripZipExtension(file.name);
+        this.dataExportName = stripZipExtension(this.selectedFiles[0].name);
       }
     },
+    removeFile(idx) {
+      this.selectedFiles.splice(idx, 1);
+      if (!this.hasFiles) {
+        this.clearFile();
+        return;
+      }
+      const errors = this.selectedFiles.flatMap((f) => validateFile(f).errors);
+      this.localErrors = errors;
+      this.fileValid = errors.length === 0;
+    },
     clearFile() {
-      this.selectedFile = null;
+      this.selectedFiles = [];
       this.dataExportName = '';
       this.fileValid = false;
       this.localErrors = [];
@@ -283,8 +349,9 @@ export default {
       }
 
       try {
+        const filesArg = this.allowMultipleFiles ? this.selectedFiles : this.selectedFiles[0];
         await processUpload(
-          this.selectedFile,
+          filesArg,
           this.selectedPlatform,
           this.dataExportName,
           projectId,
@@ -356,6 +423,10 @@ export default {
     &--success {
       background-color: rgba(76, 175, 80, 0.12);
     }
+  }
+
+  &__file {
+    flex-wrap: wrap;
   }
 }
 

@@ -34,8 +34,9 @@ module.exports = {
       },
     },
   },
-  // For gh-pages deployment: use repo name as path
-  publicPath: process.env.NODE_ENV === 'production' ? '/data-export-gui/' : '/',
+  // For gh-pages deployment: use repo name as path.
+  // Override with PUBLIC_PATH=/ for local prod builds (e.g. eval runs served at localhost root).
+  publicPath: process.env.PUBLIC_PATH || (process.env.NODE_ENV === 'production' ? '/data-export-gui/' : '/'),
   configureWebpack: (config) => {
     config.watchOptions = {
       aggregateTimeout: 500,

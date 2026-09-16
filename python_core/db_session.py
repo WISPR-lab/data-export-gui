@@ -1,9 +1,16 @@
 import sqlite3
 import os
-import logging
 import json
-import python_core.utils.safe_file_utils as safefileutils
-from python_core.utils.pyodide_utils import get_config_value
+import python_core.runtime.safe_file_utils as safefileutils
+from python_core.runtime.pyodide_utils import get_config_value
+from python_core.logger import get_logger
+
+logger = get_logger("DBSession")
+
+
+class _CountingConnection(sqlite3.Connection):
+    """ sqlite3.Connection subclass to deal with the fact that the regular connection 
+    object has no __dict__ and thus _execute_call_count can't be set"""
 
 
 def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -> dict:
@@ -20,6 +27,15 @@ def dict_factory(cursor: sqlite3.Cursor, row: tuple, json_columns: set = None) -
     return d
 
 
+def configure_row_factory(conn: sqlite3.Connection, use_dict_factory: bool = False, json_columns: set = None) -> None:
+    # Set/reset row_factory on an already-open connection
+    conn.row_factory = (
+        (lambda cursor, row: dict_factory(cursor, row, json_columns or set()))
+        if use_dict_factory
+        else None
+    )
+
+
 class DatabaseSession:
     """synchronous context manager for SQLite"""
 
@@ -29,6 +45,7 @@ class DatabaseSession:
         schema_path: str = None,
         use_dict_factory: bool = False,
         json_columns: list = None,
+        existing_conn: sqlite3.Connection = None,
     ) -> None:
         self.db_path_orig = db_path or get_config_value("DB_PATH")
         self.db_path_target = None
@@ -41,7 +58,33 @@ class DatabaseSession:
 
         self.use_dict_factory = use_dict_factory
         self.conn = None
-        self.logger = logging.getLogger(__name__)
+        # If set, __enter__/__exit__ borrow this connection (just reconfigure row_factory)
+        # instead of opening/closing/copying their own — lets pipeline stages share one
+        # connection across a run instead of each paying the Firefox/Safari OPFS<->MEMFS
+        # copy cost separately. See run.py.
+        self.existing_conn = existing_conn
+
+    def _wrap_execute_counting(self) -> None:
+        # Counts execute/executemany calls on conn (see python_core/performance.py).
+        # Idempotent so stages sharing a connection (existing_conn) share one running count.
+        if getattr(self.conn, "_execute_counting_wrapped", False):
+            return
+
+        self.conn._execute_call_count = 0
+        orig_execute = self.conn.execute
+        orig_executemany = self.conn.executemany
+
+        def execute(sql, params=None):
+            self.conn._execute_call_count += 1
+            return orig_execute(sql, params) if params is not None else orig_execute(sql)
+
+        def executemany(sql, params_list):
+            self.conn._execute_call_count += 1
+            return orig_executemany(sql, params_list)
+
+        self.conn.execute = execute
+        self.conn.executemany = executemany
+        self.conn._execute_counting_wrapped = True
 
     def _wrap_json_serialization(self) -> None:
         orig_execute = self.conn.execute
@@ -97,17 +140,15 @@ class DatabaseSession:
             self.firefox_internal_temp_path = None
 
     def __enter__(self) -> sqlite3.Connection:
+        if self.existing_conn is not None:
+            self.conn = self.existing_conn
+            configure_row_factory(self.conn, self.use_dict_factory, self.json_columns)
+            self._wrap_execute_counting()
+            return self.conn
 
         try:
             if self.is_firefox or self.is_safari:
-                browser = "Safari" if self.is_safari else "Firefox"
-                print(
-                    f"[DBSession] {browser} detected, applying OPFS to MEMFS workaround for DB path: {self.db_path_orig}"
-                )
                 self.db_path_target = self._firefox_workaround_opfs_to_memfs()
-                print(
-                    f"[DBSession] Using temporary MEMFS path for SQLite connection: {self.db_path_target}"
-                )
             else:
                 db_dir = os.path.dirname(self.db_path_orig)
                 if db_dir and not os.path.exists(db_dir):
@@ -115,18 +156,19 @@ class DatabaseSession:
                 self.db_path_target = self.db_path_orig
 
             self.conn = sqlite3.connect(
-                self.db_path_target, timeout=10.0, check_same_thread=False
+                self.db_path_target,
+                timeout=10.0,
+                check_same_thread=False,
+                factory=_CountingConnection,
             )
-            print(f"[DB] Successfully connected to {self.db_path_target}")
 
-            if self.use_dict_factory:
-                self.conn.row_factory = lambda cursor, row: dict_factory(
-                    cursor, row, self.json_columns
-                )
-            # else: defaults to tuple, used in worker bc more efficient
+            configure_row_factory(self.conn, self.use_dict_factory, self.json_columns)
+            self._wrap_execute_counting()
 
             self.conn.execute("PRAGMA journal_mode = DELETE; ")
             self.conn.execute("PRAGMA foreign_keys = ON;")
+            self.conn.execute("PRAGMA cache_size = -32000;")   # 32 MB page cache
+            self.conn.execute("PRAGMA synchronous = OFF;")
 
             if self.schema_path:
                 if not safefileutils.exists(self.schema_path):
@@ -148,13 +190,20 @@ class DatabaseSession:
                 self.firefox_internal_temp_path
             ):
                 os.remove(self.firefox_internal_temp_path)
-            print(f"[DBSession] Error during __enter__: {type(e).__name__}: {e}")
+            logger.error(f"Error during __enter__: {type(e).__name__}: {e}")
             import traceback
 
             traceback.print_exc()
             raise e
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        if self.existing_conn is not None:
+            # Borrowed connection — its owner (see run.py) closes/copies it once,
+            # after every stage sharing it has finished. Just commit this stage's work.
+            if self.conn and exc_type is None:
+                self.conn.commit()
+            return
+
         if self.conn:
             try:
                 if exc_type is None:
@@ -170,7 +219,7 @@ class DatabaseSession:
                         os.remove(self.firefox_internal_temp_path)
 
             except Exception as e:
-                print(f"[DBSession] Error during __exit__: {type(e).__name__}: {e}")
+                logger.error(f"Error during __exit__: {type(e).__name__}: {e}")
                 import traceback
 
                 traceback.print_exc()

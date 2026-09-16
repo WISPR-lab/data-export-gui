@@ -207,6 +207,9 @@ limitations under the License.
                         dense
                         @input="updateSelectedFields"
                       >
+                        <template v-slot:item.field="{ item }">
+                          {{ formatAttributeLabel(item.field) }}
+                        </template>
                       </v-data-table>
                     </v-card-text>
 
@@ -214,7 +217,7 @@ limitations under the License.
 
                     <v-card-actions>
                       <v-spacer></v-spacer>
-                      <v-btn text @click="selectedFields = [{ field: 'event_type_msg', type: 'text' }]"> Reset </v-btn>
+                      <v-btn text @click="selectedFields = [{ field: 'event_type_msg', type: 'text' }, { field: 'norm__model_name', type: 'text' }]"> Reset </v-btn>
                       <v-btn text color="primary" @click="columnDialog = false"> Set columns </v-btn>
                     </v-card-actions>
                   </v-card>
@@ -411,17 +414,17 @@ limitations under the License.
           <template v-slot:item._source.primary_timestamp="{ item }">
             <!-- <div v-bind:style="getDataExportColor(item)" class="datetime-table-cell"> -->
             <div class="datetime-table-cell">
-              <span v-if="(item._source.primary_timestamp !== null && item._source.primary_timestamp !== '')">
+              <span v-if="isDisplayableTimestamp(item._source.primary_timestamp)">
                 <!-- {{ item._source.primary_timestamp }} -->
                 <!-- {{ (item._source.primary_timestamp | formatTimestamp | shortDateTime ) }} -->
                   {{ $options.filters.shortDateTimeLocal(item._source.primary_timestamp) }}
               </span>
-              <span v-else style="font-style: italic">undated</span>
+              <span v-else class="text--secondary font-italic">N/A</span>
             </div>
           </template>
 
           <!-- Generic slot for any field type. Adds tags and emojis to the first column. -->
-          <template v-for="(field, index) in headers" :slot="getFieldName(field.text)" slot-scope="{ item }">
+          <template v-for="(field, index) in headers" v-slot:[getFieldName(field.field)]="{ item }">
             <div
               :key="field.text"
               class="ts-event-field-container"
@@ -445,7 +448,7 @@ limitations under the License.
                 </span>
                 
                 
-                <span>{{ field.text === 'Event Type' ? item._source.event_type_msg : item._source[field.text] }}</span>
+                <span>{{ field.text === 'Event Type' ? item._source.event_type_msg : capitalize(item._source[field.field]) }}</span>
               </span>
             </div>
           </template>
@@ -454,7 +457,7 @@ limitations under the License.
           <template v-slot:item.data_export_name="{ item }">
             <!-- <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em"> -->
             <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em" v-bind:style="getDataExportColor(item)">
-              <span class="export-name-ellipsis" style="width: 130px; text-align: center">{{
+              <span class="export-name-ellipsis" style="width: 100px; text-align: center">{{
                 getDataExport(item).name
               }}</span></v-chip>
           </template>
@@ -467,32 +470,7 @@ limitations under the License.
             </v-chip>
           </template>
 
-          <!-- Old device chip (replaced with origin chip pattern)
-          <template v-slot:item._source.device_profiles_data="{ item }">
-            <v-chip 
-              v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0"
-              :style="getTimeBubbleColor()"
-              class="pr-1 data-export-chip"
-            >
-              <div class="chip-content">
-                <span class="export-name-ellipsis">{{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}</span>
-              </div>
-            </v-chip>
-            <v-chip v-else :style="getTimeBubbleColor()" class="pr-1 data-export-chip">
-              <div class="chip-content">
-                <span class="export-name-ellipsis"></span>
-              </div>
-            </v-chip>
-          </template>
-          -->
 
-          <template v-slot:item._source.device_profiles_data="{ item }">
-            <div v-if="item._source.device_profiles_data && item._source.device_profiles_data.length > 0">
-              <v-chip :style="getTimeBubbleColor()">
-                {{ getDeviceProfileLabel(item._source.device_profiles_data[0]) }}
-              </v-chip>
-            </div>
-          </template>
 
           <!-- Comment field -->
           <!-- <template v-slot:item._source.comment="{ item }">
@@ -526,13 +504,15 @@ limitations under the License.
 <script>
 import DB from '@/database/index.js'
 import EventBus from '@/event-bus.js'
+import { formatAttributeLabel } from '@/filters/FormatAttributeLabel.js'
+import { capitalize } from '@/filters/Capitalize.js'
 
 import TsBarChart from './BarChart.vue'
 import TsEventDetail from './EventDetail.vue'
 import TsEventTagMenu from './EventTagMenu.vue'
 import EventTagDialog from './EventTagDialog.vue'
 import TsEventActionMenu from './EventActionMenu.vue'
-import TsEventTags from './EventTags.vue'
+import TsEventTags, { QUICK_TAG_CONFIG } from './EventTags.vue'
 import WelcomeCard from './WelcomeCard.vue'
 import SearchNotFoundCard from './SearchNotFoundCard.vue'
 
@@ -619,18 +599,17 @@ export default {
       isSummaryLoading: false,
       currentItemsPerPage: this.itemsPerPage,
       expandedRows: [],
-      selectedFields: [{ field: 'event_type_msg', type: 'text' }],
+      selectedFields: [
+        { field: 'event_type_msg', type: 'text' },
+        { field: 'norm__model_name', type: 'text' },
+      ],
       searchColumns: '',
       columnDialog: false,
       saveSearchMenu: false,
       saveSearchFormName: '',
       saveSearchNameRules: [(v) => !!v || 'Name is required.', (v) => (v && v.length <= 255) || 'Name is too long.'],
       selectedEventTags: [],
-      tagConfig: {
-        good: { color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-        bad: { color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        suspicious: { color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-      },
+      tagConfig: QUICK_TAG_CONFIG,
       searchInProgress: false,
       exportDialog: false,
       currentPage: 1,
@@ -732,31 +711,27 @@ export default {
       let extraHeaders = []
       this.selectedFields.forEach((field) => {
         let header = {
-          text: field.field !== 'event_type_msg' ? field.field : 'Event Type',
+          text: formatAttributeLabel(field.field),
           align: 'start',
           value: '_source.' + field.field,
+          field: field.field,
           sortable: false,
         }
         if (field.field === 'event_type_msg') {
           header.width = '100%'
-          // header.text = 'Event Type'
           extraHeaders.unshift(header)
-        } else {
+        } else if (field.field === 'norm__model_name') {
+          header.width = '120'
           extraHeaders.push(header)
+        } else {
+          header.width = '130'
+          extraHeaders.push(header) // Positions next to platform chip
         }
       })
 
       // Extend the column headers from position 3 (after the actions column)
       baseHeaders.splice(3, 0, ...extraHeaders)
 
-      // Add Device column first
-      baseHeaders.push({
-        value: '_source.device_profiles_data',
-        text: 'Device',
-        align: 'center',
-        width: '200',
-        sortable: false,
-      })
       // Add export name based on configuration
       if (this.displayOptions.showDataExportName) {
         baseHeaders.push({
@@ -773,7 +748,6 @@ export default {
           sortable: false,
         })
       }
-      // console.log('[EventList.headers] Generated headers:', baseHeaders)
       return baseHeaders
     },
 
@@ -793,6 +767,12 @@ export default {
     },
   },
   methods: {
+    capitalize,
+    formatAttributeLabel,
+    isDisplayableTimestamp(timestamp) {
+      const numericTimestamp = Number(timestamp)
+      return Number.isFinite(numericTimestamp) && numericTimestamp > 0
+    },
     toggleCompareEvent(item) {
       this.$store.commit('TOGGLE_COMPARE_EVENT', item)
     },
@@ -815,7 +795,7 @@ export default {
       this.search(true, true, false)
     },
     getFieldName: function (field) {
-      if (field === 'Event Type') {
+      if (field === 'Event Type' || field === 'event_type_msg') {
         return 'item._source.event_type_msg'
       }
       return 'item._source.' + field
@@ -916,13 +896,6 @@ export default {
         'background-color': backgroundColor,
       }
     },
-    getDeviceProfileLabel(profile) {
-      if (!profile) return ''
-      if (profile.user_label && profile.user_label.trim()) {
-        return `${profile.user_label} (${profile.model})`
-      }
-      return profile.model || ''
-    },
     getAllUploadIds: function () {
       // Browser model: return IDs directly
       return this.project.dataExports.map((de) => de.id)
@@ -967,7 +940,7 @@ export default {
       const startTime = Date.now()
       
       try {
-        const response = await DB.searchEvents(this.currentQueryString, this.currentQueryFilter)
+        const response = await DB.searchEvents(this.$route.meta.dbName || 'userdata', this.currentQueryString, this.currentQueryFilter)
 
         // Response has unwrapped format:
         // - objects: array of {_id, _source} wrapped events
@@ -1094,7 +1067,7 @@ export default {
           if (idx > -1) event._source.labels.splice(idx, 1)
         }
         this.$store.dispatch('updateEventLabels', { label: 'starred', num: -1 })
-        DB.removeLabelEvent([event._id], ['starred']).catch(e => {
+        DB.removeLabelEvent(this.$route.meta.dbName || 'userdata', [event._id], ['starred']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       } else {
@@ -1104,7 +1077,7 @@ export default {
         }
         event._source.labels.push('starred')
         this.$store.dispatch('updateEventLabels', { label: 'starred', num: 1 })
-        DB.addLabelEvent([event._id], ['starred']).catch(e => {
+        DB.addLabelEvent(this.$route.meta.dbName || 'userdata', [event._id], ['starred']).catch(e => {
           console.error('Error updating star in database:', e)
         })
       }
@@ -1141,12 +1114,12 @@ export default {
       
       // Persist changes to database
       if (eventsToStar.length > 0) {
-        DB.addLabelEvent(eventsToStar, ['starred']).catch(e => {
+        DB.addLabelEvent(this.$route.meta.dbName || 'userdata', eventsToStar, ['starred']).catch(e => {
           console.error('Error starring events:', e)
         })
       }
       if (eventsToUnstar.length > 0) {
-        DB.removeLabelEvent(eventsToUnstar, ['starred']).catch(e => {
+        DB.removeLabelEvent(this.$route.meta.dbName || 'userdata', eventsToUnstar, ['starred']).catch(e => {
           console.error('Error unstarring events:', e)
         })
       }

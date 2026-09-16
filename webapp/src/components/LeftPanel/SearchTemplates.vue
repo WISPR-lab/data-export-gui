@@ -99,7 +99,7 @@ export default {
   },
   created() {
     // Search templates not available in browser-only mode
-    console.log('[SearchTemplates] Search templates not implemented')
+    console.debug('[SearchTemplates] Search templates not implemented')
     Promise.resolve({ data: { objects: [] } })
       .then((response) => {
         this.searchtemplates = response.data.objects[0]

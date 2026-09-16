@@ -213,6 +213,9 @@ import SettingsDialog from '../components/SettingsDialog.vue'
 import DeleteDataButton from '../components/DeleteDataButton.vue'
 import WelcomeDialog from '../components/Demo/WelcomeDialog.vue'
 import CompareEvents from '../components/LeftPanel/CompareEvents.vue'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('Project');
 
 export default {
   props: ['projectId'],
@@ -268,7 +271,7 @@ export default {
   mounted() {
     this.loadingProject = true
 
-    this.$store.dispatch('updateProject', this.projectId)
+    this.$store.dispatch('updateProject', { projectId: this.projectId, dbName: this.$route.meta.dbName || 'userdata' })
       .then(() => {
         this.loadingProject = false
         this.checkShowDemoModal()
@@ -323,12 +326,12 @@ export default {
       }
     },
     startDemo() {
-      console.log('[Project] User clicked "Try Demo"');
+      logger.debug('User clicked "Try Demo"');
       this.showFirstTimeModal = false;
       this.$router.push('/demo/events');
     },
     skipDemo() {
-      console.log('[Project] User skipped demo');
+      logger.debug('User skipped demo');
       this.$store.commit('INCREMENT_DEMO_VISIT_OR_SKIP_COUNT');
       this.showFirstTimeModal = false;
     },
@@ -339,7 +342,7 @@ export default {
       this.$router.push('/')
     },
     startInteractiveDemo() {
-      console.log('[Project] Starting interactive demo');
+      logger.debug('Starting interactive demo');
       this.$router.push('/demo/events')
     },
     generateContextQuery(event) {
@@ -405,9 +408,6 @@ export default {
       localStorage.setItem('isDarkTheme', this.$vuetify.theme.dark.toString())
       let element = document.body
       element.dataset.theme = this.$vuetify.theme.dark ? 'dark' : 'light'
-    },
-    switchUI: function () {
-      window.location.href = window.location.href.replace('/sketch/', '/legacy/sketch/')
     },
     toggleDrawer: function () {
       this.showLeftPanel = !this.showLeftPanel

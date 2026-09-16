@@ -28,13 +28,13 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
     raw_sids = {
         d["attributes"].get("client_session_id")
         for d in devices
-        if d["entity_type"] == "session" and d["attributes"].get("client_session_id")
+        if d.get("entity_type") == "session" and d["attributes"].get("client_session_id")
     }
 
     for sid, evs in session_events.items():
         if sid not in raw_sids:
             first_ev = min(evs, key=lambda e: e["timestamp"])
-            attrs = {"client_session_id": sid, "inactive": True}
+            attrs = {"client_session_id": sid, "entity_inactive": True}
             for k in ("device_model_name", "norm__model_name", "model",
                       "user_agent_client_name", "norm__client_name", "client_name",
                       "user_agent_os_full", "norm__os_name", "os_name",
@@ -44,17 +44,19 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
                     if k in ev["attributes"]:
                         attrs[k] = ev["attributes"][k]
                         break
-            session_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"synthetic_session_{sid}"))
+            session_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, f"synthetic_session_{first_ev['upload_id']}_{sid}").hex
 
             devices.append({
                 "id": session_uuid,
                 "upload_id": first_ev["upload_id"],
                 "entity_type": "session",
+                "entity_sub_type": None,
                 "origin": first_ev["origin"],
-                "attributes": attrs
+                "attributes": attrs,
+                "raw_data_ids": []
             })
     for d in devices:
-        if d["entity_type"] != "session":
+        if d.get("entity_type") != "session":
             continue
         sid = d["attributes"].get("client_session_id")
         if not sid or sid not in session_events:
@@ -75,29 +77,31 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
         attrs["entity_first_seen_timestamp"] = final_first
         attrs["entity_last_seen_timestamp"] = final_last
 
-    passkeys = [d for d in devices if d["entity_type"] == "passkey_registration"]
-    cookies = [d for d in devices if d["entity_type"] == "trusted_cookie"]
+    passkeys = [d for d in devices if d.get("entity_sub_type") == "passkey_registration"]
+    cookies = [d for d in devices if d.get("entity_sub_type") == "trusted_cookie"]
 
-    # Deduplicate registrations of the SAME type sharing same hardware ID
+    # Deduplicate registrations of the SAME sub_type sharing same hardware ID
     registrations = {}
     other_devices = []
-    
+
     for d in devices:
-        if d["entity_type"] in ("trusted_cookie", "passkey_registration"):
+        if d.get("entity_sub_type") in ("trusted_cookie", "passkey_registration"):
             continue
-            
-        entity_type = d["entity_type"]
-        if entity_type in ("app_registration", "hardware_registration"):
+
+        sub_type = d.get("entity_sub_type")
+        if sub_type in ("app_registration", "hardware_registration"):
             dev_key = None
             for k, v in d["attributes"].items():
                 if v and (k.startswith("device_id") or k in ("device_serial_number", "device_imei")):
                     dev_key = str(v)
                     break
-                    
+
             if dev_key:
-                group_key = (entity_type, dev_key)
+                group_key = (sub_type, dev_key)
                 if group_key in registrations:
-                    registrations[group_key]["attributes"].update(d["attributes"])
+                    existing = registrations[group_key]
+                    existing["attributes"].update(d["attributes"])
+                    existing["raw_data_ids"].extend(d["raw_data_ids"])
                 else:
                     registrations[group_key] = d
             else:
@@ -132,7 +136,8 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
         rows.append({
             "id": dev["id"],
             "upload_id": dev["upload_id"],
-            "entity_type": dev["entity_type"],
+            "entity_type": dev.get("entity_type"),
+            "entity_sub_type": dev.get("entity_sub_type"),
             "origin": dev["origin"],
             "model_name": attrs.get("device_model_name") or attrs.get("norm__model_name") or attrs.get("model"),
             "client_name": attrs.get("user_agent_client_name") or attrs.get("norm__client_name") or attrs.get("client_name"),
@@ -140,6 +145,7 @@ def resolve(raw_rows: list[dict], event_rows: list[dict] = None) -> list[dict]:
             "os_version": attrs.get("os_version") or attrs.get("norm__os_version"),
             "os_type": attrs.get("norm__os_type") or attrs.get("os_type"),
             "attributes": json.dumps(attrs),
+            "raw_data_ids": json.dumps(dev["raw_data_ids"]),
             "is_reduced_ua": 1 if "mobile/15e148" in str(attrs.get("user_agent_original") or "").lower() else 0,
             "has_trusted_cookie": 1 if cookie_id else 0,
             "trusted_cookie_id": cookie_id,
@@ -162,9 +168,11 @@ def _parsed_devices(raw_rows: list[dict]) -> list[dict]:
         parsed.append({
             "id": r["id"],
             "upload_id": r["upload_id"],
-            "entity_type": r["entity_type"],
+            "entity_type": r.get("entity_type"),
+            "entity_sub_type": r.get("entity_sub_type"),
             "origin": r["origin"],
-            "attributes": attrs
+            "attributes": attrs,
+            "raw_data_ids": [r["raw_data_id"]] if r.get("raw_data_id") else [],
         })
     return parsed
 

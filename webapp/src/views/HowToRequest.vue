@@ -29,6 +29,11 @@
       </div>
 
       <div v-else>
+        <!-- Top Security & Access Alert -->
+        <v-alert type="warning" text class="mb-8 font-weight-medium">
+          Requesting an export sends a security alert to this email account. If someone else is logged into your account or has access to your password and/or 2FA methods, they will be notified and able to view or download the data.
+        </v-alert>
+
         <v-timeline align-top dense class="px-0">
           <v-timeline-item
             v-for="(step, index) in displayedSteps"
@@ -59,20 +64,39 @@
                 </div>
 
                 <div v-if="step.alert" class="mt-4" style="max-width: 100%;">
-                  <v-alert :type="step.alert.type || 'warning'" dense class="font-weight-medium">
+                  <v-alert :type="step.alert.type || 'warning'" text dense class="font-weight-medium">
                     <span v-html="renderMarkdown(step.alert.text)"></span>
+                  </v-alert>
+                </div>
+
+                <!-- Generic Orange Sensitive Data Alert inside final step block -->
+                <div v-if="index === displayedSteps.length - 1" class="mt-4" style="max-width: 100%;">
+                  <v-alert type="warning" text class="font-weight-medium mb-0">
+                    This export contains your sensitive information. Treat it as securely as you would a password or financial records.
                   </v-alert>
                 </div>
               </v-col>
 
-              <v-col v-if="step.image" cols="12" md="5" class="pt-0 pt-md-3">
+              <v-col v-if="step.image || step.images" cols="12" md="5" class="pt-0 pt-md-3">
                 <v-img 
+                  v-if="step.image"
                   :src="step.image" 
                   :alt="step.title" 
                   class="rounded-lg elevation-2"
                   max-width="450"
                   contain
                 />
+                <template v-if="step.images">
+                  <v-img 
+                    v-for="(img, imgIdx) in step.images"
+                    :key="imgIdx"
+                    :src="img" 
+                    :alt="step.title" 
+                    class="rounded-lg elevation-2 mb-3"
+                    max-width="450"
+                    contain
+                  />
+                </template>
               </v-col>
             </v-row>
           </v-timeline-item>
@@ -99,33 +123,51 @@ export default {
   name: 'HowToRequest',
   components: { PageHeader },
   data() {
+    const routeKey = (this.$route.hash ? this.$route.hash.replace('#', '') : null) || this.$route.query.platform || this.$route.query.tab;
+    const initialPlatform = (routeKey && instructionRegistry[routeKey]) ? instructionRegistry[routeKey] : instructionRegistry.google;
     return {
       instructionRegistry,
-      selectedPlatform: instructionRegistry[this.$route.query.tab] || instructionRegistry.google,
-      platforms: Object.values(instructionRegistry).map(platform => ({
-        id: platform.id,
-        name: platform.name
-      }))
+      selectedPlatform: initialPlatform,
+      platforms: Object.values(instructionRegistry).map(function(platform) {
+        return {
+          id: platform.id,
+          name: platform.name
+        };
+      })
+    };
+  },
+  watch: {
+    '$route'(to) {
+      const platformKey = (to.hash ? to.hash.replace('#', '') : null) || to.query.platform || to.query.tab;
+      if (platformKey && this.instructionRegistry[platformKey]) {
+        this.selectedPlatform = this.instructionRegistry[platformKey];
+      }
     }
   },
   mounted() {
-    window.scrollTo({ top: 0 })
+    window.scrollTo({ top: 0 });
   },
   computed: {
     displayedSteps() {
-      return this.selectedPlatform && this.selectedPlatform.steps ? this.selectedPlatform.steps : []
+      return this.selectedPlatform && this.selectedPlatform.steps ? this.selectedPlatform.steps : [];
     }
   },
   methods: {
     selectPlatform(platformId) {
-      this.selectedPlatform = this.instructionRegistry[platformId]
+      if (this.instructionRegistry[platformId]) {
+        this.selectedPlatform = this.instructionRegistry[platformId];
+        this.$router.replace({
+          name: 'HowToRequest',
+          query: { tab: platformId }
+        }).catch(function() {});
+      }
     },
     renderMarkdown(text) {
-      if (!text) return ''
-      return marked.parse(text)
+      if (!text) return '';
+      return marked.parse(text);
     }
   }
-}
+};
 </script>
 
 <style scoped lang="scss">

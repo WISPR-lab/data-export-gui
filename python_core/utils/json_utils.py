@@ -1,5 +1,7 @@
 import re
-import logging
+from python_core.logger import get_logger
+
+logger = get_logger(__name__)
 
 # regex
 # '([^']*)'   -> Captures quoted keys: 'Device ID'
@@ -56,5 +58,5 @@ def get_value_at_path(data, path, default=""):
         return current
 
     except Exception as e:
-        logging.getLogger(__name__).debug(f"Error traversing path {path}: {e}")
+        logger.debug(f"Error traversing path {path}: {e}")
         return default

@@ -1,5 +1,8 @@
 import DB from '@/database/index.js'
 import { demoInstagramSql } from './demoData.js'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('DemoDatabaseLoader');
 
 /**
  * DemoDatabaseLoader manages the database state for the demo.
@@ -8,52 +11,54 @@ import { demoInstagramSql } from './demoData.js'
 class DemoDatabaseLoader {
   constructor() {
     this.demoDbLoaded = false
+    this._initPromise = null
   }
 
-  /**
-   * Initializes the demo database by executing sample SQL statements.
-   */
   async initializeDemoDb() {
     if (this.demoDbLoaded) return
+    if (this._initPromise) return this._initPromise
 
+    this._initPromise = this._doInit().finally(() => {
+      this._initPromise = null
+    })
+    return this._initPromise
+  }
+
+  async _doInit() {
     try {
-      console.log('[DemoDatabaseLoader] Initializing demo database...')
-      DB.setActiveDatabase('demo')
+      logger.debug('Initializing demo database...')
 
       // Clear any pre-existing demo data to avoid PK conflicts from persistent OPFS
-      await DB.clearAllTables()
+      await DB.clearAllTables('demo')
 
       const sqlContent = demoInstagramSql
-      console.log(`[DemoDatabaseLoader] Executing SQL script`)
+      logger.debug('Executing SQL script')
 
-      const db = await DB.getDB()
+      const db = await DB.getDB('demo')
       await db.exec(sqlContent)
 
       this.demoDbLoaded = true
-      console.log('[DemoDatabaseLoader] Demo database initialized successfully')
+      logger.debug('Demo database initialized successfully')
     } catch (e) {
-      console.error('[DemoDatabaseLoader] Critical initialization error:', e)
+      logger.error('Critical initialization error:', e)
       throw e
     }
   }
 
-  /**
-   * Resets the loaded state, allowing re-initialization if needed.
-   */
   reset() {
     this.demoDbLoaded = false
   }
 
-  /**
-   * Clears the demo database entirely.
-   */
   async clearDemoDb() {
+    if (this._initPromise) {
+      await this._initPromise.catch(() => {}) // already logged by _doInit
+    }
     try {
-      await DB.clearAllTables()
+      await DB.clearAllTables('demo')
       this.demoDbLoaded = false
-      console.log('[DemoDatabaseLoader] Demo database cleared')
+      logger.debug('Demo database cleared')
     } catch (e) {
-      console.error('[DemoDatabaseLoader] Failed to clear demo database:', e)
+      logger.error('Failed to clear demo database:', e)
     }
   }
 }

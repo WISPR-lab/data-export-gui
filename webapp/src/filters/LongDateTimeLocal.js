@@ -4,8 +4,8 @@ import dayjs from '@/plugins/dayjs'
 export default {
   name: 'longDateTimeLocal',
   filter: function (ts) {
-    if (!ts) return '';
     let dateInput = Number(ts);
+    if (!Number.isFinite(dateInput) || dateInput <= 0) return 'N/A';
     const strLen = parseInt(ts).toString().length;
     if (strLen === 10) {
       dateInput = dateInput * 1000;

@@ -18,9 +18,10 @@ import dayjs from '@/plugins/dayjs'
 export default {
   name: 'toISO8601',
   filter: function (timestampMillis) {
-    if (timestampMillis < 0) {
-      return 'No timestamp'
+    const numericTimestamp = Number(timestampMillis)
+    if (!Number.isFinite(numericTimestamp) || numericTimestamp <= 0) {
+      return 'N/A'
     }
-    return dayjs(timestampMillis).toISOString()
+    return dayjs(numericTimestamp).toISOString()
   },
 }

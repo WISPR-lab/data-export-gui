@@ -183,6 +183,7 @@ limitations under the License.
 
 <script>
 import EventBus from '../event-bus.js'
+import { getLogger } from '@/utils/logger';
 
 import { dragscroll } from 'vue-dragscroll'
 
@@ -193,6 +194,8 @@ import TsAddManualEvent from '../components/Events/AddManualEvent.vue'
 import EventList from '../components/Events/EventList.vue'
 import SearchBar from '../components/Events/SearchBar.vue'
 import FilterChip from '../components/Events/FilterChip.vue'
+
+const logger = getLogger('Events');
 
 const defaultQueryFilter = () => {
   return {
@@ -243,12 +246,6 @@ export default {
         x: 0,
         y: 0,
       },
-      // TODO: Refactor this into a configurable option
-      quickTags: [
-        { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-      ],
       showDataExports: true,
     }
   },
@@ -308,7 +305,7 @@ export default {
     },
     hasDataExports(newVal) {
       if (newVal && this.$route.name === 'DemoEvents') {
-        console.log('[Events] Data loaded for DemoEvents, auto-starting demo');
+        logger.debug('Data loaded for DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
@@ -316,7 +313,7 @@ export default {
     },
     $route(to) {
       if (to.name === 'DemoEvents' && this.hasDataExports) {
-        console.log('[Events] Route changed to DemoEvents, auto-starting demo');
+        logger.debug('Route changed to DemoEvents, auto-starting demo');
         this.$nextTick(() => {
           this.startDemo();
         });
@@ -330,16 +327,13 @@ export default {
     },
   },
   methods: {
-    getQuickTag(tag) {
-      return this.quickTags.find((el) => el.tag === tag)
-    },
     parseRouteParams(query = {}) {
       let doSearch = false;
       
       // 1. Text Search Bar (q=)
       if (query.q !== undefined) {
         let qStr = query.q || '';
-        const match = qStr.match(/^(client_session_id|device_instance_id|device_serial_number|client_ip):"?([^"]+)"?$/);
+        const match = qStr.match(/^(client_session_id|device_group_id|device_serial_number|client_ip):"?([^"]+)"?$/);
         if (match) {
           this.addQueryChip(match[1], match[2], true);
           if (this.currentQueryString !== '') {
@@ -443,7 +437,7 @@ export default {
       }
     },
     startDemo() {
-      console.log('[Events] Starting interactive demo');
+      logger.debug('Starting interactive demo');
       const DemoController = require('@/demo/DemoController.js').default
       DemoController.start(this.$store)
     },
@@ -770,7 +764,7 @@ export default {
     
     // Auto-start demo if in DemoEvents route
     if (this.$route.name === 'DemoEvents' && this.hasDataExports) {
-      console.log('[Events] Auto-starting demo on mount');
+      logger.debug('Auto-starting demo on mount');
       this.$nextTick(() => {
         this.startDemo();
       });

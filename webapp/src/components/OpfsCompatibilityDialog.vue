@@ -9,10 +9,14 @@
 
       <v-card-text>
         <p class="mb-3">
-          This browser window doesn't support local data storage through OPFS (common in private browsing or restricted browser settings). You can browse documentation, but data import and event analysis are disabled.
+          Right now, this browser window hasn't been properly initialized to store your data safely.
+        </p>
+        <p class="mb-3">
+          This might be just a temporary issue that can be fixed by <strong>reloading the page</strong>, or because your browser does not support the required features (common in private browsing or Safari).
         </p>
         <p class="mb-3">
           Please try clicking <strong>Clear app data &amp; reload</strong> below. If the issue persists, try opening the app in a <strong>different browser</strong> or a non-private window.
+          If you click X, you can still browse documentation, but data import and event analysis are disabled.
         </p>
 
         <div v-if="opfsDiag" class="mb-4">
@@ -75,7 +79,7 @@
 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="error" text @click="clearAndReload">Clear app data &amp; reload</v-btn>
+        <v-btn color="error" text @click="wipe">Clear app data &amp; reload</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -83,6 +87,7 @@
 
 <script>
 import { diagnoseOpfsFailure } from '@/utils/opfsDiagnostics.js'
+import { resetAllLocalData } from '@/database/index.js'
 import EventBus from '@/event-bus.js'
 
 export default {
@@ -116,11 +121,13 @@ export default {
     this._handler = function() {
       self.internalOpen = true
       self.runDiagnostics()
+      self.navigateToCleanHome()
     }
     EventBus.$on('opfsUnavailable', this._handler)
 
     if (this.dialogOpen) {
       this.runDiagnostics()
+      this.navigateToCleanHome()
     }
   },
   beforeDestroy: function() {
@@ -129,6 +136,11 @@ export default {
     }
   },
   methods: {
+    navigateToCleanHome: function() {
+      if (this.$route && (this.$route.path !== '/' || (this.$route.query && Object.keys(this.$route.query).length > 0))) {
+        this.$router.replace({ path: '/' }).catch(function() {})
+      }
+    },
     setDialogOpen: function(val) {
       this.internalOpen = val
       this.$emit('input', val)
@@ -141,19 +153,20 @@ export default {
     },
     close: function() {
       this.setDialogOpen(false)
+      this.navigateToCleanHome()
     },
-    clearAndReload: function() {
-      // ponytail: Unregisters stale service workers, clears local/session storage and reloads page
-      var p = navigator.serviceWorker
-        ? navigator.serviceWorker.getRegistrations().then(function(regs) {
-            return Promise.all(regs.map(function(r) { return r.unregister(); }));
-          })
-        : Promise.resolve();
-      p.then(function() {
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.reload();
-      });
+    wipe: function() {
+      var reload = function() {
+        window.location.href = window.location.origin + window.location.pathname + '#/'
+        window.location.reload()
+      }
+      try {
+        resetAllLocalData({ unregisterServiceWorkers: true })
+          .then(reload)
+          .catch(reload)
+      } catch (e) {
+        reload()
+      }
     }
   }
 }

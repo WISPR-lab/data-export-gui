@@ -105,7 +105,7 @@ export const tagMetadata = {
 
 export const FIELDS_EXCLUDED_FROM_ATTRIBUTE_TABLE = [
   'label', 'labels', 'starred', '__ts_comment', '_index', '_id', '_type', 'tag', 'tags', 'category', 'type',
-  'filename', 'device_profiles_data', 'data_export_name', 'data_export_id', 'comment',
+  'filename', 'data_export_name', 'data_export_id', 'comment',
 ];
 
 

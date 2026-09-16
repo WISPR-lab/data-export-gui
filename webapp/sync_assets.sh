@@ -40,8 +40,7 @@ rm -rf \
   "$PUBLIC/sqlite-worker.js" \
   "$PUBLIC/pyodide-worker.js" \
   "$PUBLIC/config.yaml" \
-  "$PUBLIC/schema.sql" \
-  "$PYODIDE_DIR"
+  "$PUBLIC/schema.sql"
 
 mkdir -p "$PYODIDE_DIR" "$PUBLIC" "$VENDOR_DIR"
 
@@ -57,8 +56,10 @@ DIST_DIR="$SUBMODULE_DIR/dist"
 echo "[sync-assets] Syncing UA-Extract-purepy submodule wheels..."
 local_wheels=("$DIST_DIR"/*.whl)
 
-if [ ${#local_wheels[@]} -eq 0 ]; then
+# An unmatched glob stays literal, so test the first entry rather than the array length.
+if [ ! -e "${local_wheels[0]}" ]; then
 echo "[sync-assets] ERROR: No .whl files found in $DIST_DIR"
+echo "[sync-assets] build_wheels.sh ran but produced nothing - check its output above."
 exit 1
 fi
 
@@ -202,6 +203,13 @@ cp -f "$WEBAPP_DIR/src/pyodide/pyodide-worker.js" "$PUBLIC/pyodide-worker.js"
 cp -f "$WEBAPP_DIR/src/database/sqlite-worker.js" "$PUBLIC/sqlite-worker.js"
 cp -f "$REPO_ROOT/config.yaml" "$PUBLIC/config.yaml"
 cp -f "$REPO_ROOT/schema.sql"  "$PUBLIC/schema.sql"
+
+# PERFORMANCE_MEMORY_SAMPLING=1 (or "true") flips memory_sampling_enabled on in the *public* config.yaml copy only.
+if [ "${PERFORMANCE_MEMORY_SAMPLING:-}" = "1" ] || [ "${PERFORMANCE_MEMORY_SAMPLING:-}" = "true" ]; then
+  echo "[sync-assets] PERFORMANCE_MEMORY_SAMPLING set — enabling memory_sampling_enabled in public/config.yaml"
+  sed -i.bak 's/memory_sampling_enabled: false/memory_sampling_enabled: true/' "$PUBLIC/config.yaml"
+  rm -f "$PUBLIC/config.yaml.bak"
+fi
 
 
 

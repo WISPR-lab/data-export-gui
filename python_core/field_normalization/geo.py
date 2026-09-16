@@ -1,7 +1,7 @@
-# ECS geo field normalization for client/server geo attributes.
-# Decomposes client_geo_name (e.g. "City, State, Country") into ECS geo subfields.
+# ECS geo field normalization.
+# Decomposes geo_name (e.g. "City, State, Country") into ECS geo subfields.
 
-_PREFIXES = ("client_geo_", "server_geo_", "source_geo_", "destination_geo_")
+_PREFIXES = ("geo_", "client_geo_", "server_geo_", "source_geo_", "destination_geo_")
 
 GEO_ISO2 = {
     "afghanistan": "AF",

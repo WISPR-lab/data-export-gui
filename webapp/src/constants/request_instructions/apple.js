@@ -1,69 +1,53 @@
-// TODO: Apple images are missing from public/how2request/images/
-// Referenced: apple_menu.jpg, apple_selection.jpg, apple_size.jpg, apple_email.jpg
-// Add these images to src/assets/images/how2request/ and import them below
+// added for WISPR-lab/data-export-gui
+import appleGetACopy from '@/assets/images/how2request/apple_get_a_copy.jpg'
+import appleCategories from '@/assets/images/how2request/apple_categories.png'
+import appleDownloadAll from '@/assets/images/how2request/apple_download_all.png'
+import appleDownloadReady from '@/assets/images/how2request/apple_download_ready.png'
+import appleNotAvailable from '@/assets/images/how2request/apple_not_available.jpg'
 
 export const instructionApple = {
   id: 'apple',
   name: 'Apple',
   icon: 'mdi-apple',
-  overview: 'Apple provides a data export through their Data and Privacy portal. Note that this process is stricter than Google\'s and may take longer to verify your identity.',
+  overview: 'Apple provides a data export through their Data and Privacy portal.',
   steps: [
     {
       title: 'Visit Apple Privacy and sign in',
+      image: appleGetACopy,
       link: {
         url: 'https://privacy.apple.com',
         text: 'Apple Data & Privacy'
       },
-      alert: {
-        type: 'warning',
-        text: 'This action may notify other devices on your iCloud account. You may need your Apple ID password and a **Two-Factor Authentication (2FA)** code from a trusted device or phone number.'
-      }
+      description: `Under the **\`Get a copy of your data\`** section, click **\`Request a copy of your data\`**.`
     },
     {
-      title: 'Start the request',
-      // image: appleMenu,  // TODO: Image file missing
-      description: `1. Under the "Get a copy of your data" section, click **\`Request a copy of your data\`**.
-2. This will open a list of available data categories.`
+      title: 'Select security data categories',
+      image: appleCategories,
+      description: `1. Do not **\`Select all\`**. LEStrADE only parses security data, and smaller requests take less time.
+2. Select the following 2 categories:
+   - **\`Apple ID account and device information\`** (Login logs, password changes, passkeys, recovery contacts, device serial numbers & IMEIs)
+   - **\`Marketing communications, downloads, and other data\`** (Includes data about old devices, but sometimes not available)
+3. Click **\`Continue\`**.`
     },
     {
-      title: 'Select data categories',
-      // image: appleSelection,  // TODO: Image file missing
-      alert: {
-        type: 'info',
-        text: 'Apple **does not** export iMessage or SMS content through this tool. It only provides metadata (who you contacted), not what was said.'
-      },
-      description: `1. Scroll through the list. You do not need to "Select All".
-2. **Mandatory**: Select the core audit data:
-   - **\`Apple ID account and device information\`** (Login logs/Devices)
-   - **\`Apple Media Services information\`** (App usage/Activity)
-   - **\`Sign-in with Apple\`** (Third-party apps using your ID)
-3. **Optional**: Select these if relevant:
-   - **\`iCloud Bookmarks and Reading List\`** (Web history)
-   - **\`iCloud Calendars and Reminders\`**
-   - **\`Maps\`** (Saved locations/Guides)
-   - **\`Wallet Activity\`**
-4. **Optional**: You may add **\`iCloud Mail\`**, **\`iCloud Photos\`**, or **\`iCloud Drive\`**, but these will create massive files.
-   - Only select these if you have the storage space and bandwidth to download them.`
-    },
-    {
-      title: 'Choose file size',
-      // image: appleSize,  // TODO: Image file missing
-      description: `- Click **\`Continue\`**.
-- Apple will ask for a maximum file size to split the download.
-- We recommend selecting **\`1GB\`** or **\`2GB\`** to ensure the files are manageable.
-- Click **\`Complete Request\`**.`
+      title: 'Configure export settings',
+      description: `1. Select **\`2GB\`** for maximum file size.
+2. Click **\`Complete Request\`**.`
     },
     {
       title: 'Wait and download',
-      // image: appleEmail,  // TODO: Image file missing
-      alert: {
-        type: 'warning',
-        text: 'This export contains your sensitive information. Treat it as securely as you would a password or financial records.'
-      },
-      description: `- **Timeline**: Apple takes longer than Google. It typically takes **up to 7 days** to verify your identity and prepare the data.
-- **Notification**: You will receive an email when the data is ready.
-- **Retention**: The download link is valid for **14 days**.
-- **Safety**: Download to a secure location and [permanently delete](https://support.apple.com/guide/icloud/delete-email-mm6b1a17e3/icloud) the notification email immediately after downloading if you share an account or device.`
+      images: [appleDownloadReady, appleDownloadAll],
+      description: `1. Apple will email you when your data is ready (typically takes up to **7 days**).
+   - Download links remain available for up to **75 days**.
+2. Return to [Apple Privacy](https://privacy.apple.com) and click **\`Get your data\`**.
+3. Click the download arrow next to each category.
+   - You do not need to download the File Guides.
+   - You can import individual ZIP files directly into LEStrADE.`
+    },
+    {
+      title: 'If services are unavailable...',
+      image: appleNotAvailable,
+      description: `Apple services or categories (like "Other data") are sometimes temporarily unavailable. Apple will email you when they become available, but this often takes weeks, unfortunately.`
     }
   ]
 }

@@ -1,12 +1,36 @@
 // modified for WISPR-lab/data-export-gui
 
+const LOG_LEVELS = { DEBUG: 10, INFO: 20, WARN: 30, ERROR: 40, SILENT: 50 };
+var workerLogLevel = LOG_LEVELS.INFO;
+var showWorkerPrefix = true;
+
+function createWorkerLogger(name) {
+  var prefix = '[' + name + ']';
+  return {
+    debug: function() {
+      if (workerLogLevel <= LOG_LEVELS.DEBUG) {
+        var args = Array.prototype.slice.call(arguments);
+        console.debug.apply(console, showWorkerPrefix ? [prefix].concat(args) : args);
+      }
+    },
+    error: function() {
+      if (workerLogLevel <= LOG_LEVELS.ERROR) {
+        var args = Array.prototype.slice.call(arguments);
+        console.error.apply(console, showWorkerPrefix ? [prefix].concat(args) : args);
+      }
+    }
+  };
+}
+
+const logger = createWorkerLogger('Sqlite Worker');
+
 let sqlite3 = null;
 let initializedDbs = new Set(); // Track which DBs have been initialized
 
 async function getSqlite() {
   if (!sqlite3) {
     const { default: init } = await import('./sqlite-wasm/index.mjs');
-    sqlite3 = await init({ print: console.log, printErr: console.error });
+    sqlite3 = await init({ print: logger.debug, printErr: logger.error });
   }
   return sqlite3;
 }
@@ -26,9 +50,9 @@ async function ensureSchema(db, schemaPath, dbPath) {
     }
     db.exec(sql);
     initializedDbs.add(dbPath); // Mark as initialized
-    console.log(`[Sqlite Worker] schema initialized for ${dbPath}`);
+    logger.debug(`schema initialized for ${dbPath}`);
   } catch (e) {
-    console.error('[sqlite Worker] error initializing schema:', e);
+    logger.error('error initializing schema:', e);
     throw e;
   }
 }

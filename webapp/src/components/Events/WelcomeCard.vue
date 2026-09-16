@@ -64,8 +64,9 @@ export default {
   },
   async mounted() {
     try {
-      this.eventActions = await DB.getEventActions()
-      this.eventTypes = await DB.getEventTypes()
+      var dbName = this.$route.meta.dbName || 'userdata'
+      this.eventActions = await DB.getEventActions(dbName)
+      this.eventTypes = await DB.getEventTypes(dbName)
     } catch (e) {
       console.error('Error loading event types:', e)
       this.eventTypes = []

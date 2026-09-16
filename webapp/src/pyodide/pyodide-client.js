@@ -1,14 +1,24 @@
+import { getLogger } from '@/utils/logger';
+import { downloadPerformanceCsv } from '@/utils/performanceExport';
+import { loadConfig } from '@/utils/config';
+
+const logger = getLogger('PyodideClient');
 let pyodideWorker = null;
 let workerMessageId = 0;
 
 
+let isPyodideReady = false;
+
 export function getPyodideWorker() {
   if (!pyodideWorker) {
     pyodideWorker = new Worker('./pyodide-worker.js');
-    console.log('[PyodideClient] Created Pyodide worker (singleton)');
+    logger.debug('Created Pyodide worker (singleton)');
     pyodideWorker.addEventListener('message', (event) => {
-      if (event.data.type === 'packageInstallFailure') {
-        console.error('[PyodideClient] Packages failed to install in Pyodide:', event.data.packages);
+      if (event.data && event.data.type === 'packageInstallFailure') {
+        logger.error('Packages failed to install in Pyodide:', event.data.packages);
+      } else if (event.data && event.data.type === 'pyodide_ready') {
+        isPyodideReady = true;
+        logger.debug('Pyodide worker initialized and ready');
       }
     });
   }
@@ -59,31 +69,79 @@ export function callPyodideWorker(command, args, onProgress, timeoutMs) {
 }
 
 
+async function startJsHeapRelay() {
+  /* performance.memory only exists on window, not inside pyodide-worker.js's dedicated Worker -
+     so relay it in from here on an interval while a run is in flight. Returns the interval
+     handle (or null if sampling is off / this browser doesn't expose performance.memory at all,
+     e.g. Firefox/Safari) so the caller can clearInterval() it when the run finishes. */
+  let config;
+  try {
+    config = await loadConfig();
+  } catch (e) {
+    return null;
+  }
+  const perf = window.performance;
+  if (!config.performance || !config.performance.memory_sampling_enabled || !perf || !perf.memory) {
+    return null;
+  }
+  const worker = getPyodideWorker();
+  const send = () => worker.postMessage({ type: 'jsHeapSample', bytes: perf.memory.usedJSHeapSize });
+  send(); // seed immediately - don't make the pipeline's first stage wait a full interval for a reading
+  return setInterval(send, config.performance.memory_sampling_interval_ms || 100);
+}
+
 export function terminatePyodideWorker() {
   if (pyodideWorker) {
     pyodideWorker.terminate();
     pyodideWorker = null;
-    console.log('[PyodideClient] Worker terminated');
+    logger.debug('Worker terminated');
   }
 }
 
 
 export async function executeUpload(file, platform, givenName, opfsManager, callbacks) {
-  /* Orchestrates ZIP→OPFS extraction (JS side), then delegates extract/map/normalize/group to Pyodide, then cleans temp storage. Attaches uploadId to errors for upstream cleanup. */
+  /* Orchestrates ZIP→OPFS extraction (JS side), then delegates extract/map/normalize/group to Pyodide, then cleans temp storage. Attaches uploadId to errors for upstream cleanup. file may be a single File or a File[] — multiple ZIPs are extracted into the same OPFS storage before the pipeline runs once, so they land under one upload_id. */
   const cb = callbacks || {};
   const onProgress = cb.onProgress;
   const onError = cb.onError;
+  const files = Array.isArray(file) ? file : [file];
+  const fallbackName = files[0].name;
   let uploadId;
 
   try {
-    // Step 1: ZIP extraction (JS side)
-    if (onProgress) onProgress({ stage: 'extract_zip', progress: 15 });
+    // Step 0: Notify Pyodide startup if worker is still booting
+    if (!isPyodideReady && onProgress) {
+      onProgress({ stage: 'init_pyodide', progress: 5 });
+    }
+
+    // Step 1: ZIP extraction (JS side) — all files merge into the same OPFS storage dir
     await opfsManager.init(platform);
-    await opfsManager.processZipUpload(file, platform);
+    for (let i = 0; i < files.length; i++) {
+      if (onProgress) {
+        onProgress({ stage: 'extract_zip', progress: 15 + Math.round((i / files.length) * 10) });
+      }
+      await opfsManager.processZipUpload(files[i], platform);
+    }
 
     // Consolidated Step: Run entire pipeline in Pyodide (extract, semantic map, normalize, group)
-    const result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || file.name }, onProgress);
+    const jsHeapRelayTimer = await startJsHeapRelay();
+    let result;
+    try {
+      // no timeout atm... todo
+      result = await callPyodideWorker('run_pipeline', { platform, givenName: givenName || fallbackName }, onProgress, 0);
+    } finally {
+      if (jsHeapRelayTimer) clearInterval(jsHeapRelayTimer);
+    }
     uploadId = result.upload_id;
+
+    if (result.performance_summary && (result.performance_summary.memory_sampling_enabled || (typeof process !== 'undefined' && process.env && process.env.VUE_APP_EXPORT_PERF_CSV === 'true'))) {
+      try {
+        downloadPerformanceCsv(givenName || fallbackName, result.performance_summary);
+      } catch (e) {
+        logger.warn('Failed to download performance CSV:', e);
+      }
+    }
+
 
     // Step 6: Cleanup OPFS
     if (onProgress) onProgress({ stage: 'cleanup', progress: 90 });

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- modified for WISPR-lab/data-export-gui -->
+
 <template>
   <div
     v-if="iconOnly"
@@ -48,7 +50,7 @@ export default {
   },
   computed: {
     isActive() {
-      return this.$route.name === 'Devices' || this.$route.name === 'DemoDevices'
+      return this.$route.name === 'Devices' || this.$route.name === 'DevicesMockup' || this.$route.name === 'DemoDevices'
     }
   },
   methods: {

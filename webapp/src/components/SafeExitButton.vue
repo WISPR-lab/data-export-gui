@@ -2,19 +2,17 @@
 <!-- Added for wispr-lab/data-export-gui -->
 <template>
   <div v-if="!demoMode" class="safe-exit-button">
-    <v-tooltip left>
+    <v-tooltip bottom>
       <template v-slot:activator="{ on, attrs }">
         <v-btn
-          fixed
-          bottom
-          right
-          rounded
-          color="#d32f2f"
           dark
+          color="#d32f2f"
           v-bind="attrs"
           v-on="on"
+          :loading="exiting"
+          :disabled="exiting"
           @click="safeExit"
-          class="mr-4 mb-4"
+          class="nav-link"
         >
           Safe Exit
         </v-btn>
@@ -25,12 +23,19 @@
 </template>
 
 <script>
-import { terminatePyodideWorker } from '@/pyodide/pyodide-client.js'
-import { OPFSManager } from '@/storage/opfs_manager';   
+import { resetAllLocalData } from '@/database/index.js'
 import EventBus from '@/event-bus.js'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('SafeExit');
 
 export default {
   name: 'SafeExitButton',
+  data: function() {
+    return {
+      exiting: false // race condition guard to prevent multiple clicks
+    }
+  },
   computed: {
     demoMode() {
       return this.$store.state.demoMode
@@ -38,33 +43,35 @@ export default {
   },
   methods: {
     async safeExit() {
+      if (this.exiting) return
+      this.exiting = true
+      logger.debug('Initiating safe exit...')
+
+      let dataFullyCleared = true
       try {
-        console.log('[SafeExit] Initiating safe exit...')
-        
-        // Unregister service workers (including coi-serviceworker) so they don't interfere on next visit
-        if (navigator.serviceWorker) {
-          const regs = await navigator.serviceWorker.getRegistrations()
-          await Promise.all(regs.map(function(r) { return r.unregister(); }))
-        }
-
-        terminatePyodideWorker();
-        const opfsManager = new OPFSManager();
-        await opfsManager.nukeAll();
-        localStorage.clear();
-        console.log('[SafeExit] Storage cleared')
-        
-        this.$store.commit('RESET_STATE')
-        console.log('[SafeExit] Store reset')
-        
-        document.body.innerHTML = ''
-
-        window.close()
-        window.location.replace('https://www.google.com')
+        await resetAllLocalData({ unregisterServiceWorkers: true })
       } catch (error) {
-        console.error('[SafeExit] Error during safe exit:', error)
+        dataFullyCleared = false
+        logger.error('Error during safe exit — local data may not be fully cleared:', error)
         EventBus.$emit('opfsUnavailable')
-        window.close()
       }
+      try {
+        this.$store.commit('RESET_STATE')
+        document.body.innerHTML = ''
+      } catch (error) {
+        logger.error('Error clearing app state during safe exit:', error)
+      }
+      if (!dataFullyCleared) {
+        window.alert(
+          'Some local data may not have been fully cleared. Please close this browser tab/window manually to be safe.'
+        )
+      }
+      try {
+        window.close()
+      } catch (error) {
+        logger.error('window.close() failed:', error)
+      }
+      window.location.replace('https://www.google.com')
     }
   }
 }
@@ -72,9 +79,13 @@ export default {
 
 <style scoped>
 .safe-exit-button {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 1000;
+  display: flex;
+  align-items: center;
+}
+
+.safe-exit-button ::v-deep .v-btn {
+  margin: 0 4px;
+  box-shadow: none !important;
+  font-weight: 500;
 }
 </style>

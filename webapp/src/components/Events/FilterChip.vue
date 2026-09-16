@@ -92,6 +92,7 @@
 
 <script>
 import FilterMenu from './FilterMenu.vue'
+import { getQuickTag } from './EventTags.vue'
 
 export default {
   name: 'FilterChip',
@@ -105,13 +106,7 @@ export default {
     },
   },
   data() {
-    return {
-      quickTags: [
-        { tag: 'bad', color: 'red', textColor: 'white', label: 'mdi-alert-circle-outline' },
-        { tag: 'suspicious', color: 'orange', textColor: 'white', label: 'mdi-help-circle-outline' },
-        { tag: 'good', color: 'green', textColor: 'white', label: 'mdi-check-circle-outline' },
-      ],
-    }
+    return {}
   },
   computed: {
     isTimeChip() {
@@ -119,11 +114,7 @@ export default {
     },
   },
   methods: {
-    getQuickTag(tag) {
-      return this.quickTags.find(function (el) {
-        return el.tag === tag
-      })
-    },
+    getQuickTag,
     formatChipDisplay(chip) {
       if (chip && chip.value === 'starred') {
         return 'Starred'

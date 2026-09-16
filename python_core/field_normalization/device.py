@@ -83,6 +83,8 @@ def normalize_device_fields(attrs: dict) -> dict:
     # resolve apple model identifiers (i.e., iPhone10,6) to model names (i.e., iPhone X)
     model_identifier = _get_val(attrs, "device_model_identifier")
     if model_identifier:
+        if str(model_identifier).lower() == "iphone":
+            attrs["device_model_name"] = "iPhone"
         name = dl.APPLE_MODELS.get(model_identifier)
         if name:
             attrs["device_model_name"] = name
@@ -137,7 +139,7 @@ def normalize_device_fields(attrs: dict) -> dict:
         attrs["norm__client_name"] = (
             str(client_name).strip().lower()
         )  # TODO make sure not "unknown"
-    client_version = _get_val(attrs, "client_version")
+    client_version = _get_val(attrs, "client_version") or attrs.get("user_agent_secondary_client_version")
     if client_version:
         attrs["norm__client_version"] = str(client_version).strip().lower()
 

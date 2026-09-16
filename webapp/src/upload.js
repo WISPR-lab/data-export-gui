@@ -2,19 +2,18 @@ import { OPFSManager } from '@/storage/opfs_manager.js';
 import { ERROR_TYPES } from '@/constants/error_types';
 import DB from '@/database/index.js';
 import { executeUpload } from '@/pyodide/pyodide-client.js';
+import EventBus from '@/event-bus.js';
 
-const DEBUG_LOGGING = true;
+import { getLogger } from '@/utils/logger.js';
 
-function log(...args) {
-  if (DEBUG_LOGGING) { console.log('[UploadService]', ...args); }
-}
-
-function logError(...args) { console.error('[UploadService]', ...args); }
+const logger = getLogger('UploadService');
 
 
 export async function processUpload(file, platform, givenName, projectId, store) {
-  /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. */
+  /* Forces DB context to userdata.db, runs the full extract→pipeline→UI-refresh cycle, and cleans up on failure. Returns a summary object. file may be a single File (most platforms) or a File[] (Apple, which splits exports across multiple ZIPs). */
   const startTime = Date.now();
+  const files = Array.isArray(file) ? file : [file];
+  const fileNames = files.map((f) => f.name).join(', ');
   const summary = {
     success: false,
     platform,
@@ -27,28 +26,27 @@ export async function processUpload(file, platform, givenName, projectId, store)
   };
 
   try {
-    if (store) store.commit('START_UPLOAD', file.name);
-    log(`Starting upload process for ${platform} with file: ${file.name}`);
+    if (store) store.commit('START_UPLOAD', fileNames);
+    logger.debug(`Starting upload process for ${platform} with file(s): ${fileNames}`);
     
     // CRITICAL: Ensure uploads always target userdata.db, never demo.db
-    DB.setActiveDatabase('userdata');
     if (store) {
       store.commit('SET_DEMO_MODE', false);
       store.commit('SET_CURRENT_DB', 'userdata');
     }
-    log('Database context set to userdata.db');
+    logger.debug('Database context set to userdata.db');
     
     const opfsManager = new OPFSManager();
     
     const result = await executeUpload(file, platform, givenName, opfsManager, {
       onProgress: (evt) => {
-        log(`${evt.stage} (${evt.progress}%)`);
+        logger.debug(`${evt.stage} (${evt.progress}%)`);
         if (store) {
           store.commit('UPDATE_UPLOAD_PROGRESS', { status: evt.stage, progress: evt.progress });
         }
       },
       onError: (evt) => {
-        logError(`${evt.stage}: ${evt.error}`);
+        logger.error(`${evt.stage}: ${evt.error}`);
       }
     });
 
@@ -64,12 +62,12 @@ export async function processUpload(file, platform, givenName, projectId, store)
     }
 
     // Update UI store
-    log('Refreshing UI...');
+    logger.debug('Refreshing UI...');
     if (store) store.commit('UPDATE_UPLOAD_PROGRESS', { status: 'complete', progress: 95 });
     
     try {
       const previousIds = ((store.state.project && store.state.project.dataExports) || []).map((de) => de.id);
-      const uploads = await DB.getUploads();
+      const uploads = await DB.getUploads('userdata');
       const virtualProject = {
         id: 1,
         name: 'Local Takeout Workspace',
@@ -78,7 +76,7 @@ export async function processUpload(file, platform, givenName, projectId, store)
         dataExports: uploads.uploads || []
       };
       
-      const meta = await DB.getEventMeta();
+      const meta = await DB.getEventMeta('userdata');
       store.commit('SET_PROJECT', { objects: [virtualProject], meta });
       const newIds = virtualProject.dataExports
         .map((de) => de.id)
@@ -86,9 +84,10 @@ export async function processUpload(file, platform, givenName, projectId, store)
       if (newIds.length > 0) {
         store.commit('SET_ENABLED_DATA_EXPORTS', newIds);
       }
+      EventBus.$emit('data-export-updated', newIds);
       summary.success = true;
       store.commit('COMPLETE_UPLOAD', summary);
-      log('Upload complete');
+      logger.debug('Upload complete');
     } catch (error) {
       const msg = `Failed to refresh UI: ${error.message}`;
       summary.errors.push(msg);
@@ -97,21 +96,21 @@ export async function processUpload(file, platform, givenName, projectId, store)
     }
     
   } catch (error) {
-    console.error('[UploadService] Upload failed:', error);
+    logger.error('Upload failed:', error);
     summary.errors.push(error.message);
     summary.errorType = error.errorType || ERROR_TYPES.PARSER_ERROR;
     if (error.uploadId) {
-      log(`Cleaning up failed upload data for ID: ${error.uploadId}`);
+      logger.debug(`Cleaning up failed upload data for ID: ${error.uploadId}`);
       try {
         await DB.deleteUpload(error.uploadId);
       } catch (deleteError) {
-        logError(`Failed to clean up upload data: ${deleteError.message}`);
+        logger.error(`Failed to clean up upload data: ${deleteError.message}`);
       }
     }
     if (store) store.commit('FAIL_UPLOAD', summary);
   } finally {
     summary.processingTimeMs = Date.now() - startTime;
-    log(`Upload completed in ${summary.processingTimeMs}ms`);
+    logger.debug(`Upload completed in ${summary.processingTimeMs}ms`);
   }
   
   return summary;

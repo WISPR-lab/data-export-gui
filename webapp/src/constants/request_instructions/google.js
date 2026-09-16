@@ -14,58 +14,35 @@ export const instructionGoogle = {
       link: {
         url: 'https://takeout.google.com',
         text: 'Google Takeout'
-      },
-      alert: {
-        type: 'warning',
-        text: 'This action may notify other devices on your account. Two-Factor Authentication (2FA) may be required.'
       }
     },
     {
-      title: 'Select data categories',
+      title: 'Select security data categories',
       image: googleJson,
       alert: {
         type: 'info',
-        text: 'If a category offers a **Multiple format** button, you should click it and select **JSON** if given the option. If there is no option, the default format is compatible.'
+        text: 'If a category offers a **Multiple format** button, click it and select **JSON** if available.'
       },
-      description: `1. Click **\`Deselect all\`** first.
-2. **Mandatory**: Select the core audit data:
-   - **\`Access Log Activity\`** (IP/Device logs)
-   - **\`Google Account\`** (Recovery info)
-   - **\`My Activity\`** (Search/Maps history)
-3. **Optional**: Select these if you need specific logs:
-   - **\`Chrome\`** (Synced web history)
-   - **\`Messages\`** (Google Voice & Fi texts)
-   - **\`Pixel\`** (Pixel phone data)
-   - **\`Profile\`** (Biographic account details)
-4. **Optional**: You may also add **\`Mail\`** (all Gmail messages), but the file is huge and may crash the tool.
-   - If you choose to add it, click **\`All Mail data included\`** and filter by category to reduce file size.`
+      description: `1. Click **\`Deselect all\`** first. LEStrADE only parses security data, and smaller requests usually take less time.
+2. Select the main security data categories:
+   - **\`Access Log Activity\`** (IP address & device connection logs)
+   - **\`Google Account\`** (Login history, recovery email/phone updates, and security events)
+3. **If using Android devices**:
+   - **\`Android Device Configuration Service\`** (Hardware IDs, IMEI/serial numbers, and network connections)`
     },
     {
-      title: 'Choose file type and destination',
-      image: googleFreq,
-      alert: {
-        type: 'warning',
-        text: 'Anyone with access to this Google Account could download your data. [Review](https://support.google.com/accounts/answer/3067630?hl=en) which devices are logged in.'
-      },
-      description: `- Destination: **\`Send download link via email\`**
-  - **Safety**: We do not recommend selecting "Add to Drive/Dropbox/etc". This leaves a permanent record in the cloud that may sync to shared devices.
-- Frequency: **\`Export once\`**
-- File type & size: **\`.zip\`** and **\`2GB\`**`
-    },
-    {
-      title: 'Create export',
+      title: 'Configure and Create Export',
       image: googleCreate,
-      description: 'Review your selections and click **`Create export`**.'
+      description: `1. Destination: Select **\`Send download link via email\`**.
+2. Frequency: Select **\`Export once\`**.
+3. File type & size: Select **\`.zip\`** and **\`2GB\`**.
+4. Click **\`Create export\`**.`
     },
     {
       title: 'Wait and download',
       image: googleEmail,
-      alert: {
-        type: 'warning',
-        text: 'This export contains your sensitive information. Treat it as securely as you would a password or financial records'
-      },
-      description: `- You don't need to stay on this page. Google will email you when the file is ready. This may take 1 hour to 5 days depending on file size.
-- The link is usually only valid for **7 days**.
+      description: `- You don't need to stay on the page. Google will email you when the file is ready.
+- The download link is usually valid for **7 days**.
 - **Safety**: Download to a secure location and [permanently delete](https://support.google.com/mail/answer/7401?hl=en&sjid=14515300465516538433-NC) the notification email immediately after downloading if you share an account or device.`
     }
   ]

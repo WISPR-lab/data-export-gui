@@ -20,7 +20,10 @@ limitations under the License.
 
 import Vue from 'vue'
 import Vuex from 'vuex'
-import  DB from '@/database/index.js'
+import DB from '@/database/index.js'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('Store');
 
 
 Vue.use(Vuex)
@@ -252,36 +255,43 @@ export default new Vuex.Store({
     INCREMENT_DEMO_FINISH_COUNT(state) {
       Vue.set(state, 'demoFinishCount', state.demoFinishCount + 1)
     },
+    INCREMENT_DEMO_FINISHED_COUNT(state) {
+      Vue.set(state, 'demoFinishCount', state.demoFinishCount + 1)
+    },
   },
   actions: {
-    async updateProject(context, projectId) {
+    async updateProject(context, { projectId, dbName } = {}) {
+      if (!dbName) {
+        throw new Error("[Store.updateProject] Missing required dbName ('userdata' or 'demo') — caller must say which db it means.");
+      }
       if (!window.crossOriginIsolated) {
         console.warn('[Store.updateProject] security headers missing, attempting DB access anyway...');
       }
 
+      const isDemo = dbName === 'demo'
       let projectName = localStorage.getItem('projectName') || 'My Data'
-      if (context.state.demoMode) {
+      if (isDemo) {
         projectName = 'Instagram Demo Data'
       }
-      
+
       const virtualProject = {
-        id: context.state.demoMode ? 2 : 1,
+        id: isDemo ? 2 : 1,
         name: projectName,
         description: 'Browser-only processing',
         status: [{ status: 'ready' }],
         dataExports: []
       }
-      
+
       try {
-        console.log('[Store.updateProject] Fetching uploads from database...');
-        const uploads = await DB.getUploads()
-        console.log('[Store.updateProject] Received uploads:', uploads.uploads);
+        logger.debug('Fetching uploads from database...');
+        const uploads = await DB.getUploads(dbName)
+        logger.debug('Received uploads:', uploads.uploads);
         const project = { ...virtualProject, dataExports: uploads.uploads || [] }
-        const meta = await DB.getEventMeta()
-        console.log('[Store.updateProject] Committing SET_PROJECT with dataExports:', project.dataExports.map(t => ({ id: t.id, name: t.name, color: t.color })));
+        const meta = await DB.getEventMeta(dbName)
+        logger.debug('Committing SET_PROJECT with dataExports:', project.dataExports.map(t => ({ id: t.id, name: t.name, color: t.color })));
         context.commit('SET_PROJECT', { objects: [project], meta })
       } catch (e) {
-        console.error('[Store] updateProject error:', e)
+        logger.error('updateProject error:', e)
       }
     },
     resetState(context) {

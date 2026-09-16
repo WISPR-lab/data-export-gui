@@ -106,7 +106,7 @@ Provides broad area highlighting via SVG mask and a precise pulsing pointer for 
       </v-btn>
     </div>
 
-    <!-- The Shield: Blocks clicks outside the specific interaction area -->
+    <!-- demo shield blocks clicks outside the specific interaction area -->
     <!-- mousedown.stop.prevent is key to preventing v-menu from closing on outside click -->
     <div 
       class="demo-shield" 
@@ -121,6 +121,9 @@ Provides broad area highlighting via SVG mask and a precise pulsing pointer for 
 <script>
 import EventBus from '@/event-bus.js'
 import DemoController from '@/demo/DemoController.js'
+import { getLogger } from '@/utils/logger';
+
+const logger = getLogger('DemoOverlay');
 
 export default {
   data() {
@@ -290,7 +293,7 @@ export default {
           if (!menuVisible) {
               const menuActivator = document.querySelector('#tsDataExportChipMenu')
               if (menuActivator) {
-                  console.log('[DemoOverlay] Menu closed during Step 3, re-opening');
+                  logger.debug('Menu closed during Step 3, re-opening');
                   menuActivator.click()
               }
           }
@@ -398,7 +401,7 @@ export default {
     // Pull initial state immediately to catch up if we mounted late (fix hard refresh race)
     const initialState = DemoController.getCurrentUiState()
     if (initialState) {
-        console.log('[DemoOverlay] Catching up with initial state:', initialState.id);
+        logger.debug('Catching up with initial state:', initialState.id);
         handleUpdate(initialState)
     }
   },
